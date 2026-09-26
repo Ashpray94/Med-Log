@@ -1,0 +1,17 @@
+{
+  "versionName": "2.7.0",
+  "versionCode": 270,
+  "notes": "- Updates from inside the app: Settings \u2192 Check for updates. MedLog also checks once a day, and shows \"A new MedLog is ready\" on the home screen. It only installs files signed by MedLog.\n- Quick messages between helpers: \"I'm going there now\", \"Can someone check on Amma?\", \"I'll call her\", \"I can't go today\". When one helper answers, the others see it.\n- Understands your voice much better, in English and other languages. MedLog now uses your phone's own speech (the same as the keyboard microphone).\n- The whole app in Hindi or Tamil, every screen and everything read aloud. Tamil uses everyday spoken words.\n- Reads aloud slower, and doesn't say the same thing twice. Choose Very slow, Slow or Normal in Settings.\n- Family, one tap away: your three favourite messages and \"Call\" on the home screen, a new Family widget, and a Family button on the main widget.\n- Choose your own messages: pick from the list or write your own, and keep them for next time.\n- Answers arrive in a second or two. You see \"Ravi's phone got it\" and then their answer. A text message goes after 15 seconds to anyone whose phone didn't get it.\n- Helpers can ask \"How are you?\" Big buttons to answer: I'm good, I'm OK, Not so well, Please call me.\n- Clear \"Whose phone is this?\" switch between your own phone and a helper's phone.\n- Save your setup to a file and load it on a new phone, or skip setup.\n- Recent problems only show what you actually noted.\n- Calmer messages to family. The \"Undo\" bar goes away after 3 seconds.",
+  "apk": {
+    "arm64-v8a": {
+      "url": "https://raw.githubusercontent.com/Ashpray94/Med-Log/downloads/MedLog-arm64.apk",
+      "sha256": "fee76fdb8177448a59f1318acc39caeffb9aa28f8269c73c273ae43c5e3f62a2",
+      "size": 89050806
+    },
+    "armeabi-v7a": {
+      "url": "https://raw.githubusercontent.com/Ashpray94/Med-Log/downloads/MedLog-armv7.apk",
+      "sha256": "408cacc975258c4e470561ceac49f37cb7abe907eb7f8b806e6eeedbf2537377",
+      "size": 82372852
+    }
+  }
+}
