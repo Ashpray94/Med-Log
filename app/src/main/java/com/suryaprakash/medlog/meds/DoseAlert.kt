@@ -20,8 +20,11 @@ object DoseAlert {
 
     suspend fun show(ctx: Context, doses: List<Dose>, louder: Boolean) {
         val app = ctx.medlog
-        val meds = doses.mapNotNull { d -> app.db.medicines().get(d.medicineId)?.let { d to it } }
+        val all = doses.mapNotNull { d -> app.db.medicines().get(d.medicineId)?.let { d to it } }
+        all.filter { it.second.form == "feed" }.takeIf { it.isNotEmpty() }?.let { showFeeds(ctx, it) }
+        val meds = all.filter { it.second.form != "feed" }
         if (meds.isEmpty()) return
+        @Suppress("NAME_SHADOWING") val doses = meds.map { it.first }
         val title = if (meds.all { it.second.form == "feed" }) "Time to give the feed" else if (meds.size == 1) "Time for ${meds[0].second.name}" else "Time for your medicines"
         val text = meds.joinToString(", ") { (_, m) -> "${m.name} ${m.strength}".trim() }
         val open = Intent(ctx, DoseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("louder", louder)
@@ -38,6 +41,7 @@ object DoseAlert {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setFullScreenIntent(full, true).setContentIntent(full)
             .setOngoing(true).setAutoCancel(false)
+            .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, BASE_ID, com.suryaprakash.medlog.ui.tr(title), "Not taken yet. Tap to open.", full))
             .addAction(0, if (meds.size == 1) "I took it" else "I took them", action("take"))
             .addAction(0, "In ${app.settings.value.snoozeMinutes} min", action("snooze"))
             .build()
@@ -45,6 +49,23 @@ object DoseAlert {
         // Also start the screen directly: on older phones and when the phone is unlocked
         runCatching { ctx.startActivity(open) }
     }
+
+    /** Feed time: a normal reminder (no alarm), answered right from the notification. */
+    private fun showFeeds(ctx: Context, feeds: List<Pair<com.suryaprakash.medlog.data.Dose, com.suryaprakash.medlog.data.Medicine>>) {
+        val d = feeds.first().first
+        fun action(kind: String) = PendingIntent.getBroadcast(ctx, (d.id * 10 + kind.length + 3).toInt(),
+            Intent(ctx, DoseActionReceiver::class.java).putExtra("dose", d.id).putExtra("all", feeds.map { it.first.id }.toLongArray()).putExtra("kind", kind).putExtra("nid", FEED_ID),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val open = PendingIntent.getActivity(ctx, 71, Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://food")), PendingIntent.FLAG_IMMUTABLE)
+        val n = NotificationCompat.Builder(ctx, MedLogApp.CH_CARE).setSmallIcon(R.drawable.ic_stat)
+            .setContentTitle(com.suryaprakash.medlog.ui.tr("Time to give the feed"))
+            .setContentText(feeds.joinToString(", ") { (_, m) -> "${m.name}, ${m.amount}" })
+            .setOnlyAlertOnce(true).setContentIntent(open).setAutoCancel(true)
+            .addAction(0, "Given", action("take")).addAction(0, "Not given", action("skip"))
+            .build()
+        runCatching { NotificationManagerCompat.from(ctx).notify(FEED_ID, n) }
+    }
+    private const val FEED_ID = 7100
 
     fun cancel(ctx: Context, @Suppress("UNUSED_PARAMETER") doseId: Long) {
         CoroutineScope(Dispatchers.IO).launch {
@@ -67,9 +88,10 @@ class DoseActionReceiver : BroadcastReceiver() {
                 for (id in all) when (kind) {
                     "take" -> Scheduler.take(ctx, id)
                     "snooze" -> Scheduler.snooze(ctx, id)
+                    "skip" -> Scheduler.skip(ctx, id, "Not given")
                 }
                 AlarmTone.stop()
-                NotificationManagerCompat.from(ctx).cancel(7000)
+                NotificationManagerCompat.from(ctx).cancel(intent.getIntExtra("nid", 7000))
             } finally { pending.finish() }
         }
     }

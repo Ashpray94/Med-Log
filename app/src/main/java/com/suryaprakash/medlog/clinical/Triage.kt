@@ -186,7 +186,7 @@ object DangerRules {
         // ── other "see a doctor soon" signs ──
         when (problemId) {
             "swollen_ankles", "leg_pain", "swelling" -> if (yes(facts, "oneSide") && (yes(facts, "painful") || yes(facts, "redHot") || problemId != "swelling")) amber += "Swelling of one leg (needs checking for a clot)"
-            "cough" -> if ((num(facts, "weeks") ?: 0.0) >= 3) amber += "Cough for 3 weeks or more"
+            "cough" -> if ((num(facts, "days") ?: 0.0) >= 21 || (num(facts, "weeks") ?: 0.0) >= 3) amber += "Cough for 3 weeks or more"
             "blood_urine" -> amber += "Blood in urine"
             "blood_stool" -> amber += "Blood in stool"
             "postmeno_bleeding" -> amber += "Bleeding after menopause"

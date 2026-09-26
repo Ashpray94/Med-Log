@@ -111,7 +111,7 @@ fun DoctorScreen(nav: Nav) {
     fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!, nutShown) }; busy = false; then(f) } }
 
     var doctors by remember { mutableStateOf<List<com.suryaprakash.medlog.data.CarePlan.Doctor>>(emptyList()) }
-    LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.repo.profile().plan).doctors }
+    LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.viewRepo.profile().plan).doctors }
     // the page's job is to be shown or sent: those two actions stay pinned at the bottom, side by side
     Screen("For the doctor", speak, onHome = { nav.home() }, onBack = { nav.back() }, actions = {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -180,7 +180,7 @@ fun DoctorScreen(nav: Nav) {
             Group {
                 doctors.forEachIndexed { i, d ->
                     if (i > 0) Line()
-                    com.suryaprakash.medlog.ui.ValueRow(d.name, if (d.phone.isNotBlank()) "Call" else null, sub = d.speciality,
+                    com.suryaprakash.medlog.ui.ValueRow(d.name, if (d.phone.isNotBlank()) "Call" else null, sub = listOf(d.speciality, d.hospital).filter { it.isNotBlank() }.joinToString(" · "),
                         onClick = if (d.phone.isNotBlank()) ({ com.suryaprakash.medlog.help.Calls.call(ctx, d.phone) }) else null)
                 }
             }
@@ -197,7 +197,7 @@ fun DoctorScreen(nav: Nav) {
 
     if (asking) AddQuestionDialog(onDismiss = { asking = false }) { q ->
         asking = false
-        scope.launch { ctx.medlog.repo.addQuestion(q); note = buildNote(ctx, days) }
+        scope.launch { ctx.medlog.viewRepo.addQuestion(q); note = buildNote(ctx, days) }
     }
 }
 

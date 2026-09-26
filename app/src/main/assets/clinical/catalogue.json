@@ -255,10 +255,10 @@
     "wet"
    ]
   },
-  "weeks": {
-   "label": "For how many weeks",
+  "days": {
+   "label": "For how many days",
    "type": "number",
-   "unit": "weeks"
+   "unit": "days"
   },
   "hitHead": {
    "label": "Hit head",
@@ -536,8 +536,8 @@
    "priority": 90
   },
   "q_weeks": {
-   "field": "weeks",
-   "ask": "For how many weeks?",
+   "field": "days",
+   "ask": "For how many days?",
    "type": "number",
    "priority": 30
   },
@@ -876,7 +876,7 @@
    ],
    "fields": [
     "reading",
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"
@@ -1479,7 +1479,7 @@
     "husky voice"
    ],
    "fields": [
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"
@@ -1879,7 +1879,7 @@
    ],
    "fields": [
     "count",
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"
@@ -2120,7 +2120,7 @@
     "dryWet",
     "colour",
     "blood",
-    "weeks",
+    "days",
     "context"
    ],
    "fu": [
@@ -2661,7 +2661,7 @@
    ],
    "fields": [
     "swallowWater",
-    "weeks",
+    "days",
     "context"
    ],
    "fu": [
@@ -3357,7 +3357,7 @@
     "diabetic foot"
    ],
    "fields": [
-    "weeks",
+    "days",
     "redHot",
     "colour",
     "temperature"
@@ -3419,7 +3419,7 @@
     "hair fall"
    ],
    "fields": [
-    "weeks"
+    "days"
    ],
    "fu": []
   },
@@ -4183,7 +4183,7 @@
    "fields": [
     "side",
     "painful",
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"

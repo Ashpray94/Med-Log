@@ -88,6 +88,7 @@ class Describe(private val cat: Catalogue) {
             "context" -> "$v"
             "duration" -> "$v"
             "weeks" -> "for $v weeks"
+            "days" -> "for $v day${if (v.toString() == "1") "" else "s"}"
             "pillows" -> "needs $v pillows"
             "hours" -> "$v hours"
             "timeOnFloor" -> "$v minutes on the floor"

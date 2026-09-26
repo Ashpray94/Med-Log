@@ -59,6 +59,7 @@ object Care {
         }
         list += at(today().plusDays(1), LocalTime.of(3, 0))    // daily housekeeping
         FollowUp.pending(ctx).forEach { (_, t) -> list += t }
+        Drafts.due(ctx).forEach { (_, t) -> list += t }
         return list.filter { it > now + 1000 && st.getLong("fired_$it") == 0L }.minOrNull()
     }
 
@@ -94,6 +95,7 @@ object Care {
             val label = app.catalogue.problem(n.problemId)?.label?.lowercase() ?: "how you feel"
             notify(ctx, 8400 + (noteId % 500).toInt(), "Can you tell me a bit more?", "A few more details about your $label help your doctor. Tap when you're ready.", "medlog://tell?note=$noteId")
         }
+        for ((key, t) in Drafts.due(ctx)) if (now >= t) Drafts.remind(ctx, key)
         for (a in app.db.appointments().upcoming(now - 3 * HOUR)) {
             val eve = at(java.time.Instant.ofEpochMilli(a.at).atZone(zone()).toLocalDate().minusDays(1), LocalTime.of(19, 0))
             if (due(eve)) { mark(eve); notify(ctx, 8100 + a.id.toInt(), "Doctor visit tomorrow", "Your doctor page is ready. Take your medicines with you.", "medlog://doctor") }
@@ -123,6 +125,35 @@ object Care {
     @Suppress("unused") private val keepDay = DAY
 }
 
+/**
+ * Half-done entries, kept as you go so closing MedLog loses nothing. One gentle reminder 30 minutes after the
+ * last change; finishing or discarding the entry clears it.
+ */
+object Drafts {
+    const val DELAY = 30 * 60_000L
+    private fun all(ctx: Context) = runCatching { org.json.JSONObject(ctx.medlog.settings.getString("drafts") ?: "{}") }.getOrDefault(org.json.JSONObject())
+    fun get(ctx: Context, key: String): String? = all(ctx).optJSONObject(key)?.optString("data")?.ifBlank { null }
+    fun save(ctx: Context, key: String, title: String, link: String, data: String) {
+        val a = all(ctx)
+        a.put(key, org.json.JSONObject().put("title", title).put("link", link).put("data", data).put("at", System.currentTimeMillis()))
+        ctx.medlog.settings.putString("drafts", a.toString())
+    }
+    fun clear(ctx: Context, key: String) {
+        val a = all(ctx); a.remove(key); ctx.medlog.settings.putString("drafts", a.toString())
+        runCatching { NotificationManagerCompat.from(ctx).cancel(8700 + key.hashCode() % 100) }
+    }
+    /** (key, when to remind) for drafts not yet reminded about. */
+    fun due(ctx: Context): List<Pair<String, Long>> {
+        val a = all(ctx)
+        return a.keys().asSequence().mapNotNull { k -> a.optJSONObject(k)?.takeIf { !it.optBoolean("reminded") }?.let { k to it.optLong("at") + DELAY } }.toList()
+    }
+    fun remind(ctx: Context, key: String) {
+        val a = all(ctx); val d = a.optJSONObject(key) ?: return
+        d.put("reminded", true); ctx.medlog.settings.putString("drafts", a.toString())
+        Care.notify(ctx, 8700 + key.hashCode() % 100, "Finish your ${d.optString("title")}?", "It's saved where you left it. Tap to finish.", d.optString("link"))
+    }
+}
+
 /** "Tell me more later": one gentle reminder, 30 minutes after a short answer (plan: don't pester). */
 object FollowUp {
     const val DELAY = 30 * 60_000L
@@ -143,3 +174,59 @@ object CheckIn {
 }
 
 private fun kotlinx.coroutines.CoroutineScope.launchIo(block: suspend () -> Unit) { launch { block() } }
+
+
+/**
+ * A helper's phone reminds the helper too, from its copy of each person's medicines and feeds: a quiet
+ * notification when something's due, and, for a medicine still not marked taken 15 minutes later, a loud one that
+ * keeps ringing until answered or swiped (a swipe silences it). Feeds only ever get quiet reminders.
+ */
+object HelperCare {
+    private const val LATE = 15 * 60_000L
+
+    private suspend fun due(ctx: Context, now: Long): List<Triple<com.suryaprakash.medlog.data.CaredFor, com.suryaprakash.medlog.data.Dose, com.suryaprakash.medlog.data.Medicine>> {
+        val out = ArrayList<Triple<com.suryaprakash.medlog.data.CaredFor, com.suryaprakash.medlog.data.Dose, com.suryaprakash.medlog.data.Medicine>>()
+        for (p in com.suryaprakash.medlog.data.People.all(ctx)) {
+            val db = com.suryaprakash.medlog.data.Mirror.db(ctx, p.pairId)
+            val meds = db.medicines().all().filter { it.active }.associateBy { it.id }
+            db.doses().between(now - 6 * HOUR, now + 2 * DAY).filter { it.status == "DUE" || it.status == "SNOOZED" }
+                .forEach { d -> meds[d.medicineId]?.let { out += Triple(p, d, it) } }
+        }
+        return out
+    }
+
+    suspend fun nextWake(ctx: Context, now: Long): Long? {
+        val st = ctx.medlog.settings
+        return due(ctx, now).flatMap { (_, d, m) -> listOfNotNull(d.scheduledAt, (d.scheduledAt + LATE).takeIf { m.form != "feed" }) }
+            .filter { it > now + 1000 && st.getLong("hfired_$it") == 0L }.minOrNull()
+    }
+
+    suspend fun tick(ctx: Context, now: Long) {
+        val st = ctx.medlog.settings
+        for ((p, d, m) in due(ctx, now)) {
+            val who = p.name.ifBlank { "Your person" }
+            val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
+            val key = "hfired_${d.uid}"
+            if (now >= d.scheduledAt && now - d.scheduledAt < 2 * HOUR && st.getString(key) == null) {
+                st.putString(key, "quiet")
+                Care.notify(ctx, 8800 + (d.id % 100).toInt(), if (m.form == "feed") "$who: time for the feed" else "$who: time for ${m.name}",
+                    "$time · ${m.amount}", "medlog://helper")
+            }
+            if (m.form != "feed" && now >= d.scheduledAt + LATE && now - d.scheduledAt < 3 * HOUR && st.getString(key) != "loud") {
+                st.putString(key, "loud")
+                val title = "$who hasn't taken ${m.name}"
+                val open = android.app.PendingIntent.getActivity(ctx, 8900, Intent(ctx, MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")),
+                    android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+                val id = 8900 + (d.id % 100).toInt()
+                val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
+                    .setContentTitle(title).setContentText("Due at $time. Please check on them.")
+                    .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
+                    .setContentIntent(open).setOngoing(true).setAutoCancel(false)
+                    .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, id, title, "Due at $time. Tap to open.", open))
+                    .build()
+                runCatching { NotificationManagerCompat.from(ctx).notify(id, n) }
+                com.suryaprakash.medlog.help.AlertSound.start(ctx, urgent = false)
+            }
+        }
+    }
+}

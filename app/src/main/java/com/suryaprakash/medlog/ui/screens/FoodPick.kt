@@ -1,4 +1,5 @@
 package com.suryaprakash.medlog.ui.screens
+import androidx.compose.material.icons.rounded.Add
 
 import com.suryaprakash.medlog.ui.savedFeedback
 import androidx.compose.foundation.background
@@ -70,6 +71,7 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
     var custom by remember { mutableStateOf(Foods.customFrom(app.settings.getString("custom_foods"))) }
     val basket = remember { mutableStateMapOf<String, Double>() }
     val sizes = remember { mutableStateMapOf<String, String>() }
+    var at by remember { mutableStateOf<Long?>(null) }
     var query by remember { mutableStateOf("") }
     val hour = LocalTime.now().hour
     var meal by remember { mutableStateOf(when (hour) { in 5..10 -> "Breakfast"; in 11..15 -> "Lunch"; in 16..18 -> "Snacks"; else -> "Lunch" }) }
@@ -81,10 +83,32 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
     val foods = custom + Foods.all
     fun find(name: String) = foods.firstOrNull { it.name == name }
 
+    // a meal started earlier and not finished: carry on from there
+    LaunchedEffect(Unit) {
+        if (noteId != null) return@LaunchedEffect
+        com.suryaprakash.medlog.care.Drafts.get(ctx, "food")?.let { d ->
+            runCatching {
+                val o = JSONObject(d); val b = o.getJSONObject("basket"); val z = o.optJSONObject("sizes")
+                b.keys().forEach { k -> basket[k] = b.getDouble(k) }
+                z?.keys()?.forEach { k -> sizes[k] = z.getString(k) }
+                if (o.has("at")) at = o.getLong("at")
+            }
+        }
+    }
+    LaunchedEffect(basket.toMap(), sizes.toMap(), at) {
+        if (noteId != null) return@LaunchedEffect
+        if (basket.isEmpty()) com.suryaprakash.medlog.care.Drafts.clear(ctx, "food")
+        else com.suryaprakash.medlog.care.Drafts.save(ctx, "food", "meal", "medlog://open?name=foodadd",
+            JSONObject().put("basket", JSONObject(basket.toMap())).put("sizes", JSONObject(sizes.toMap())).apply { at?.let { put("at", it) } }.toString())
+        kotlinx.coroutines.delay(2000)   // once changes settle, set the reminder's wake-up
+        com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
+    }
+
     // changing a meal: start from what was logged
     LaunchedEffect(noteId) {
         if (noteId == null) return@LaunchedEffect
-        val n = app.db.notes().get(noteId) ?: return@LaunchedEffect
+        val n = app.viewDb.notes().get(noteId) ?: return@LaunchedEffect
+        at = n.occurredAt
         runCatching { JSONObject(n.details ?: "").getJSONArray("items") }.getOrNull()?.let { a ->
             for (i in 0 until a.length()) {
                 val o = a.getJSONObject(i)
@@ -100,7 +124,7 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
     // what they eat most, from the last month
     LaunchedEffect(Unit) {
         val counts = mutableMapOf<String, Int>()
-        app.db.notes().kindSince(Kind.FOOD, System.currentTimeMillis() - 30L * 86_400_000).forEach { n ->
+        app.viewDb.notes().kindSince(Kind.FOOD, System.currentTimeMillis() - 30L * 86_400_000).forEach { n ->
             runCatching { JSONObject(n.details ?: "").getJSONArray("items") }.getOrNull()?.let { a ->
                 for (i in 0 until a.length()) a.getJSONObject(i).optString("name").takeIf { it.isNotBlank() }?.let { counts[it] = (counts[it] ?: 0) + 1 }
             }
@@ -111,7 +135,6 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
     fun add(f: Foods.Food) {
         val first = (basket[f.name] ?: 0.0) == 0.0
         basket[f.name] = if (first) f.start else (basket[f.name] ?: 0.0) + f.step
-        if (first && Foods.sidesFor(f).isNotEmpty()) sidesOf = f
     }
     fun remove(f: Foods.Food) { val v = (basket[f.name] ?: 0.0) - f.step; if (v <= 0.0) basket.remove(f.name) else basket[f.name] = v }
 
@@ -132,8 +155,10 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
                 val portions = chosen
                 val words = portions.joinToString(", ") { "${it.food.name} ${it.words}" }
                 scope.launch {
-                    val id = noteId ?: app.repo.addFood(words, null)
-                    app.db.notes().get(id)?.let { n -> app.db.notes().update(n.copy(transcript = words, text = "Ate: $words", details = Foods.portionsJson(portions))) }
+                    val id = noteId ?: app.viewRepo.addFood(words, null, at ?: System.currentTimeMillis())
+                    app.viewDb.notes().get(id)?.let { n -> app.viewDb.notes().update(n.copy(transcript = words, text = "Ate: $words", details = Foods.portionsJson(portions),
+                        occurredAt = at ?: n.occurredAt)) }
+                    com.suryaprakash.medlog.care.Drafts.clear(ctx, "food")
                     savedFeedback(ctx); app.speaker.say("Saved.")
                     nav.back()
                 }
@@ -141,6 +166,7 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
         }
     }
     Screen(if (noteId != null) "Change meal" else "What did you eat?", "Tap ADD on each dish, set how many, then Done.", onHome = { nav.home() }, onBack = { nav.back() }, actions = if (chosen.isEmpty()) null else basketBar) {
+        com.suryaprakash.medlog.ui.WhenRow(at) { at = it }
         com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search dishes")
         if (query.isBlank()) {
             // when, then where from
@@ -150,11 +176,11 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
             }
             if (usual.isNotEmpty()) {
                 SectionHeader("Eat again", "Your usual dishes", null)
-                usual.forEach { f -> DishRow(f, basket[f.name] ?: 0.0, sizes[f.name] ?: "medium", { sizes[f.name] = it }, { add(f) }, { remove(f) }) }
+                usual.forEach { f -> DishRow(f, basket[f.name] ?: 0.0, sizes[f.name] ?: "medium", { sizes[f.name] = it }, { add(f) }, { remove(f) }, basket) { sidesOf = f } }
             }
             SectionHeader(if (meal == "Lunch") "Lunch & dinner" else meal, "${list.size} dishes" + (cuisine?.let { " · $it" } ?: ""), null)
         }
-        list.forEach { f -> DishRow(f, basket[f.name] ?: 0.0, sizes[f.name] ?: "medium", { sizes[f.name] = it }, { add(f) }, { remove(f) }) }
+        list.forEach { f -> DishRow(f, basket[f.name] ?: 0.0, sizes[f.name] ?: "medium", { sizes[f.name] = it }, { add(f) }, { remove(f) }, basket) { sidesOf = f } }
         com.suryaprakash.medlog.ui.DashedAddCard("Something else") { adding = true }
         Spacer(Modifier.height(8.dp))
     }
@@ -193,8 +219,10 @@ fun FoodPicture(@Suppress("UNUSED_PARAMETER") f: Foods.Food?, size: Dp) {
 }
 
 /** One dish, food-app style: name and numbers on the left, the picture on the right with ADD (or − n +) sitting on it. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-private fun DishRow(f: Foods.Food, qty: Double, size: String, onSize: (String) -> Unit, onAdd: () -> Unit, onRemove: () -> Unit) {
+private fun DishRow(f: Foods.Food, qty: Double, size: String, onSize: (String) -> Unit, onAdd: () -> Unit, onRemove: () -> Unit,
+                    basket: Map<String, Double> = emptyMap(), onSides: (() -> Unit)? = null) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
@@ -211,6 +239,25 @@ private fun DishRow(f: Foods.Food, qty: Double, size: String, onSize: (String) -
             Box(contentAlignment = Alignment.BottomCenter) {
                 Box(Modifier.padding(bottom = 18.dp)) { FoodPicture(f, 112.dp) }
                 AddButton(qty, f, onAdd, onRemove)
+            }
+        }
+        // what usually comes with it, as pills: tap to choose how much of each
+        val sides = if (qty > 0 && onSides != null) Foods.sidesFor(f) else emptyList()
+        if (sides.isNotEmpty()) {
+            Text("With it", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                sides.forEach { sd ->
+                    val q = basket[sd.name] ?: 0.0
+                    val on = q > 0
+                    val psh = RoundedCornerShape(50)
+                    Row(Modifier.heightIn(min = 48.dp).clip(psh).background(if (on) p.brandSoft else p.card).border(if (on) 2.dp else 1.dp, if (on) p.brand else p.line, psh)
+                        .steady("${sd.name}${if (on) ", " + Foods.Portion(sd, q).words else ""}. Tap to choose how much") { onSides?.invoke() }.padding(horizontal = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(sd.name.replaceFirstChar(Char::uppercase) + if (on) " · ${Foods.Portion(sd, q).words}" else "", fontSize = sc.small, fontWeight = FontWeight.SemiBold,
+                            color = if (on) p.brand else p.ink, maxLines = 1)
+                        if (!on) Icon(Icons.Rounded.Add, null, tint = p.brand, modifier = Modifier.padding(start = 4.dp).size(18.dp))
+                    }
+                }
             }
         }
         // counted foods: how big each one was

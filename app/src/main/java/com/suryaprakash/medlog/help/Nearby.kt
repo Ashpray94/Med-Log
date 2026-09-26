@@ -116,9 +116,30 @@ object Nearby {
         ctx.medlog.scope.launch { ctx.medlog.repo.addEvent(com.suryaprakash.medlog.data.Kind.MESSAGE, "${h.name} replied: ${replyWords(reply)}") }
     }
 
+    /** One helper asked another to go: the other helper's phone rings with the message, and it's noted here. */
+    private fun handoff(ctx: Context, from: Helper, o: JSONObject) {
+        val app = ctx.medlog
+        app.scope.launch {
+            val to = app.db.helpers().all().firstOrNull { it.pairId == o.optString("handoff") && it.pairKey != null } ?: return@launch
+            val me = app.repo.profile().name.ifBlank { "MedLog" }
+            val text = "${from.name} asked you to go: ${o.optString("text")}"
+            Relay.post(ctx, key(to), Relay.DOWN, JSONObject().put("kind", "HANDOFF").put("text", text).put("from", me)
+                .put("at", System.currentTimeMillis()).put("mid", Keys.randomB64(9)))
+            app.repo.addEvent(com.suryaprakash.medlog.data.Kind.MESSAGE, "${from.name} asked ${to.name} to go")
+        }
+    }
+
+    /** Helper's phone: pass the latest message to another helper, through the person's phone. */
+    fun askOther(ctx: Context, pairId: String, toPairId: String, text: String) {
+        val p = person(ctx, pairId) ?: return
+        val me = ctx.medlog.settings.getString("my_name") ?: "A helper"
+        ctx.medlog.scope.launch { Relay.post(ctx, p.keyBytes, Relay.UP, JSONObject().put("handoff", toPairId).put("text", text).put("from", me).put("at", System.currentTimeMillis())) }
+    }
+
     /** Everything a helper's phone sends to the person's phone: receipts, replies and "How are you?". */
     internal fun fromHelper(ctx: Context, h: Helper, o: JSONObject) {
         when {
+            o.optString("handoff").isNotEmpty() -> handoff(ctx, h, o)
             o.has("reply") -> onReply(ctx, h, o)
             o.optString("ask").isNotEmpty() -> askedByHelper(ctx, h, o)
         }
@@ -287,6 +308,12 @@ object Nearby {
 
     internal suspend fun onRelayNote(ctx: Context, topic: String, o: JSONObject) {
         val app = ctx.medlog
+        if (o.has("sync") || o.has("syncAsk")) {
+            val peer = People.all(ctx).firstOrNull { topic == Relay.topic(it.keyBytes, Relay.DOWN) }?.pairId
+                ?: app.db.helpers().all().firstOrNull { it.pairKey != null && Relay.topic(key(it), Relay.UP) == topic }?.pairId ?: return
+            com.suryaprakash.medlog.data.Sync.received(ctx, peer, o)
+            return
+        }
         for (p in People.all(ctx)) {
             if (topic == Relay.topic(p.keyBytes, Relay.DOWN)) { received(ctx, o, viaNearby = false, pairId = p.pairId); return }
             if (p.familyBytes?.let { Relay.topic(it, "family") } == topic) { FamilyChat.received(ctx, o); return }
@@ -322,6 +349,7 @@ object Nearby {
     /** Helper's phone: something arrived from the person's phone. */
     internal fun received(ctx: Context, o: JSONObject, viaNearby: Boolean, pairId: String = "") {
         val app = ctx.medlog
+        if ((o.has("sync") || o.has("syncAsk")) && pairId.isNotEmpty()) { app.scope.launch { com.suryaprakash.medlog.data.Sync.received(ctx, pairId, o) }; return }
         if (o.optString("kind") == "FAMILY_KEY") { FamilyChat.gotKey(ctx, o, pairId); return }
         // a receipt for the helper's own "How are you?"
         if (o.has("reply")) {
@@ -379,7 +407,9 @@ object Nearby {
             val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.alertTitle(o.optString("from"), urgent))).setContentText(com.suryaprakash.medlog.ui.tr(o.optString("text")))
                 .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(true).build()
+                .setFullScreenIntent(pi, true).setContentIntent(pi).setOngoing(true).setAutoCancel(false)
+                .setDeleteIntent(SilenceReceiver.intent(ctx, 5000 + id.toInt(), "${o.optString("from")}: ${o.optString("text")}", "Not answered yet. Tap to answer.", pi))
+                .build()
             runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
             runCatching { ctx.startActivity(open) }
         }
@@ -459,6 +489,7 @@ object Nearby {
                         .put("family", FamilyChat.familyKey(ctx)).toString().toByteArray()))
                     app.scope.launch {
                         val existing = app.db.helpers().all().firstOrNull { it.phone.filter(Char::isDigit).takeLast(10) == helperPhone.filter(Char::isDigit).takeLast(10) && helperPhone.isNotBlank() }
+                        com.suryaprakash.medlog.data.Sync.forget(ctx, pairId)
                         if (existing != null) app.db.helpers().update(existing.copy(pairId = pairId, pairKey = key))
                         else app.db.helpers().insert(Helper(name = helperName, phone = helperPhone, pairId = pairId, pairKey = key))
                         pair.value = pair.value.copy(done = helperName)
@@ -501,8 +532,16 @@ class NearbyService : Service() {
         if (helper && Nearby.allowed(this)) Nearby.advertise(this)
         val ctx = this
         Relay.listen(this, medlog.scope, { Nearby.listenTopics(ctx) }) { topic, o -> Nearby.onRelayNote(ctx, topic, o) }
+        medlog.scope.launch {
+            kotlinx.coroutines.delay(5_000)
+            People.all(ctx).forEach { com.suryaprakash.medlog.data.Sync.askSince(ctx, it.pairId) }
+            com.suryaprakash.medlog.data.Sync.push(ctx)
+        }
         return START_STICKY
     }
     override fun onDestroy() { runCatching { Nearby.client(this).stopAdvertising() }; Relay.stop(); super.onDestroy() }
+
+    /** MedLog swiped away from recent apps: stop any alarm sound (the message itself stays on the helper page). */
+    override fun onTaskRemoved(rootIntent: Intent?) { AlertSound.stop(); com.suryaprakash.medlog.meds.AlarmTone.stop(); super.onTaskRemoved(rootIntent) }
 }
 

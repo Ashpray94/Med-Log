@@ -43,8 +43,18 @@ fun Text(
 ) {
     // read the language so every text redraws when it changes
     LocalSettings.current.languages.firstOrNull()
-    M3Text(I18n.tr(text), modifier, color, fontSize, fontStyle, fontWeight, fontFamily, letterSpacing, textDecoration, textAlign, lineHeight,
-        overflow, softWrap, maxLines, minLines, onTextLayout, style)
+    val script = LocalScript.current
+    val shown = I18n.tr(text)
+    // Hindi and Tamil have marks above and below the letters: never set their lines tighter than the script needs
+    val size = if (fontSize.isSp) fontSize else style.fontSize
+    val lh = if (script.indic && size.isSp && (!lineHeight.isSp || lineHeight.value < size.value * script.lines)) size * script.lines else lineHeight
+    // the phone's font was asked for by name: use the script's own, so it matches the rest of the page
+    val family = if (fontFamily == AppFont) null else fontFamily
+    // marked with its language, so TalkBack reads it in a Hindi or Tamil voice, not an English one
+    val marked = if (script.indic && shown != text) AnnotatedString(shown, listOf(AnnotatedString.Range(androidx.compose.ui.text.SpanStyle(localeList = script.locale), 0, shown.length)))
+        else AnnotatedString(shown)
+    M3Text(marked, modifier, color, fontSize, fontStyle, fontWeight, family, letterSpacing, textDecoration, textAlign, lh,
+        overflow, softWrap, maxLines, minLines, emptyMap(), onTextLayout ?: {}, style)
 }
 
 @Composable

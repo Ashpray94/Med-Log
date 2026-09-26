@@ -33,7 +33,11 @@ object People {
     fun byPairId(ctx: Context, pairId: String) = all(ctx).firstOrNull { it.pairId == pairId }
 
     /** Adds or replaces (same pairing id) one person. */
-    fun put(ctx: Context, p: CaredFor) = save(ctx, all(ctx).filter { it.pairId != p.pairId } + p)
+    fun put(ctx: Context, p: CaredFor) {
+        // paired again (a new key): start the shared records over
+        if (all(ctx).none { it.pairId == p.pairId && it.key == p.key }) Sync.forget(ctx, p.pairId)
+        save(ctx, all(ctx).filter { it.pairId != p.pairId } + p)
+    }
 
     fun remove(ctx: Context, pairId: String) = save(ctx, all(ctx).filter { it.pairId != pairId })
 

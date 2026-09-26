@@ -1,5 +1,9 @@
 package com.suryaprakash.medlog.ui
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.ui.draw.drawBehind
@@ -67,6 +71,7 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import com.suryaprakash.medlog.ui.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -242,6 +247,7 @@ fun Screen(
     val nav = LocalNav.current
     val full = "$title. $speak"
     val hasNav = nav != null && s.role != "helper"
+    val typing = imeShowing()
     LaunchedEffect(full) { ReadAloud.text = full }
     LaunchedEffect(title) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
     Box(Modifier.fillMaxSize().background(background ?: p.paper)) {
@@ -273,14 +279,20 @@ fun Screen(
                     // room so the Read aloud button never covers the last row
                     if (scroll) Spacer(Modifier.height(24.dp))
                 }
-                if (scroll) MoreBelow(state, Modifier.align(Alignment.BottomCenter))
+                if (scroll && !typing) MoreBelow(state, Modifier.align(Alignment.BottomCenter))
             }
             if (actions != null) ActionArea(actions)
-            if (hasNav) BottomBar(onHome)
+            // while typing, the keyboard needs the room: the bottom bar steps aside
+            if (hasNav && !typing) BottomBar(onHome)
         }
         UndoBar(Modifier.align(Alignment.BottomCenter).padding(bottom = sc.target + 28.dp).navigationBarsPadding())
     }
 }
+
+/** True while the on-screen keyboard is up. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun imeShowing(): Boolean = androidx.compose.foundation.layout.WindowInsets.isImeVisible
 
 /** The pinned area for a screen's main action: a thin line above, then the buttons. */
 @Composable
@@ -541,10 +553,39 @@ fun SectionHeader(title: String, caption: String, action: String?, actionIcon: I
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.semantics { heading() })
             Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        if (action != null) Row(Modifier.clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("$action: $title", onClick = onAction)
+        if (action != null) Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("$action: $title", onClick = onAction)
             .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             if (actionIcon != null) { Icon(actionIcon, null, tint = p.brand, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)) }
             Text(action, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.brand)
+        }
+    }
+}
+
+/**
+ * One part of a longer form, in its own white container: an icon, the part's name and what's chosen so far, and a
+ * chevron. Tap the head to open or close it; only what's inside the open one needs reading.
+ */
+@Composable
+fun Panel(title: String, icon: ImageVector, tint: Color, summary: String, open: Boolean, onToggle: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(sc.radius)
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (open) 2.dp else 1.dp, if (open) p.brand else p.line, sh)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title, $summary. ${if (open) "Close" else "Open"}", onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            OptionIcon(icon, tint, 44.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1)
+                Text(summary, fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(260), label = "chevron")
+            Icon(Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.size(28.dp).graphicsLayer { rotationZ = turn })
+        }
+        androidx.compose.animation.AnimatedVisibility(open,
+            enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(260), expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, delayMillis = 60)),
+            exit = androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(220), shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
         }
     }
 }
@@ -688,18 +729,62 @@ fun IconTile(icon: ImageVector, tint: Color, size: Dp) {
     }
 }
 
-/** Equal-sized tiles in a grid: every tile in every row has the same width and height. */
+/** Set by [TileGrid] when it lays tiles out: the height every tile gets, and the height the tallest tile needs. */
+data class TileFit(val height: Dp, val tallest: Dp)
+val LocalTileFit = androidx.compose.runtime.compositionLocalOf<TileFit?> { null }
+
+/**
+ * Tiles in a grid, all exactly the same size: every tile is first measured at its natural height, and all of them get
+ * the tallest one's (never less than [aspect] allows). So the longest label, at the largest text size, sets the size
+ * for all, and nothing is ever cut off or squeezed.
+ */
 @Composable
 fun <T> TileGrid(items: List<T>, cols: Int, aspect: Float = 1f, gap: Dp = 12.dp, tile: @Composable (T, Modifier) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-        items.chunked(cols).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                row.forEach { tile(it, Modifier.weight(1f).aspectRatio(aspect)) }
-                repeat(cols - row.size) { Spacer(Modifier.weight(1f).aspectRatio(aspect)) }
-            }
+    androidx.compose.ui.layout.SubcomposeLayout { c ->
+        val g = gap.roundToPx()
+        val w = ((c.maxWidth - g * (cols - 1)) / cols).coerceAtLeast(0)
+        val natural = subcompose("measure") { items.forEach { tile(it, Modifier) } }
+            .map { it.measure(androidx.compose.ui.unit.Constraints(minWidth = w, maxWidth = w)) }
+        val tallest = natural.maxOfOrNull { it.height } ?: 0
+        val h = maxOf(tallest, (w / aspect).toInt())
+        val fit = TileFit(h.toDp(), tallest.toDp())
+        val placed = subcompose("place") {
+            CompositionLocalProvider(LocalTileFit provides fit) { items.forEach { tile(it, Modifier) } }
+        }.map { it.measure(androidx.compose.ui.unit.Constraints.fixed(w, h)) }
+        val rows = (items.size + cols - 1) / cols
+        layout(c.maxWidth, (rows * h + (rows - 1).coerceAtLeast(0) * g)) {
+            placed.forEachIndexed { i, pl -> pl.place((i % cols) * (w + g), (i / cols) * (h + g)) }
         }
     }
 }
+
+/**
+ * The one picture-and-label tile. The picture sits on the same line in every tile of the grid, and the label is
+ * centred in a box as tall as the longest label needs. Labels are never cut: they wrap, and long words hyphenate.
+ */
+@Composable
+fun PicTile(label: String, modifier: Modifier, picture: Dp, selected: Boolean = false, speak: String = label, color: Color? = null,
+            onClick: () -> Unit, under: (@Composable () -> Unit)? = null, pic: @Composable () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val fit = LocalTileFit.current
+    Tile(speak, modifier, selected = selected, color = color, onClick = onClick) {
+        // everything but the label box has a fixed height, so the label box gets what the tallest tile's label needed
+        val fixed = TILE_PAD * 2 + picture + TILE_GAP
+        Box(Modifier.size(picture), contentAlignment = Alignment.Center) { pic() }
+        Spacer(Modifier.height(TILE_GAP))
+        Column(Modifier.fillMaxWidth().then(if (fit != null) Modifier.height(fit.tallest - fixed) else Modifier),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(label, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = sc.small * 1.3f, style = androidx.compose.ui.text.TextStyle(hyphens = androidx.compose.ui.text.style.Hyphens.Auto,
+                    lineBreak = androidx.compose.ui.text.style.LineBreak.Paragraph))
+            under?.invoke()
+        }
+    }
+}
+
+val TILE_PAD = 12.dp
+val TILE_GAP = 10.dp
 
 /**
  * A tappable tile, same size as its neighbours: white with a grey outline. Chosen tiles get the accent outline,
@@ -716,7 +801,7 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
             .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.line, sh)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
-        Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
+        Column(Modifier.fillMaxSize().padding(TILE_PAD), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
     }
 }
 
@@ -1162,9 +1247,9 @@ fun Point(icon: ImageVector, title: String, sub: String) {
 data class DayPart(val icon: ImageVector, val tint: Color, val name: String)
 
 fun dayPart(hour: Int): DayPart = when (hour) {
-    in 4..9 -> DayPart(DayIcons.Sunrise, Color(0xFFEA7310), "Morning")
-    in 10..15 -> DayPart(Icons.Rounded.WbSunny, Color(0xFFD99A00), if (hour < 12) "Morning" else "Afternoon")
-    in 16..19 -> DayPart(DayIcons.Sunset, Color(0xFFD63B2F), "Evening")
+    in 4..9 -> DayPart(DayIcons.Sunrise, Color(0xFFC4600A), "Morning")
+    in 10..15 -> DayPart(Icons.Rounded.WbSunny, Color(0xFFA06F00), if (hour < 12) "Morning" else "Afternoon")
+    in 16..19 -> DayPart(DayIcons.Sunset, Color(0xFFC0271F), "Evening")
     else -> DayPart(Icons.Rounded.NightsStay, Color(0xFF2266DD), "Night")
 }
 

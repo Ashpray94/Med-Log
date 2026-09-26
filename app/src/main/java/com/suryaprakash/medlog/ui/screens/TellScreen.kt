@@ -138,16 +138,16 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
 
     suspend fun evaluate(): Triage {
         val p = problem ?: return Triage.OK
-        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.repo.recentForRules(), app.repo.person())
+        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.viewRepo.recentForRules(), app.viewRepo.person())
     }
 
     /** Saves progress: the note exists from the start, so nothing is ever lost. */
     suspend fun persist() {
         val id = noteId ?: return
-        app.repo.updateFacts(id, facts)
+        app.viewRepo.updateFacts(id, facts)
         val t = evaluate()
         triage = t
-        app.repo.updateTriage(id, t)
+        app.viewRepo.updateTriage(id, t)
         app.refreshWidgets()
         if (t.level == Level.RED && phase != Phase.DANGER) {
             Alerts.dangerToHelpers(ctx, problem?.label.orEmpty(), t)
@@ -198,14 +198,15 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             val id = noteId
             if (id == null) {
                 val at = parsed?.occurredAt ?: System.currentTimeMillis()
-                noteId = app.repo.saveTold(listOf(Mention(pid, facts = facts.toMutableMap())) + others, transcript, at, Triage.OK,
+                noteId = app.viewRepo.saveTold(listOf(Mention(pid, facts = facts.toMutableMap())) + others, transcript, at, Triage.OK,
                     parsed?.readings.orEmpty(), parsed?.medicinesTaken.orEmpty(), null).firstOrNull()
-            } else app.repo.changeProblem(id, pid)
+                noteId?.let { FollowUp.schedule(ctx, it) }
+            } else app.viewRepo.changeProblem(id, pid)
             queue.clear(); queue.addAll(Interview.core(cat, p, facts)); index = 0
             persist()
             if (phase == Phase.DANGER) return@launch
             // one of the person's own emergencies: their helpers are called now, without waiting for answers
-            val plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan)
+            val plan = com.suryaprakash.medlog.data.CarePlan.parse(app.viewRepo.profile().plan)
             if (pid in plan.emergencies) { Alerts.emergency(ctx, p.label); triage = Triage(Level.RED, "Your helpers are being called.", listOf(p.label)); phase = Phase.DANGER; return@launch }
             if (queue.isEmpty()) { offeredMore = true; val ext = Interview.extended(cat, p, facts); if (ext.isNotEmpty()) { queue.add(Interview.MORE); phase = Phase.ASK } else toSummary() }
             else phase = Phase.ASK
@@ -215,7 +216,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     // "Tell me more" reminder: the extended questions of an existing note.
     LaunchedEffect(route.noteId) {
         val id = route.noteId ?: return@LaunchedEffect
-        val n = app.db.notes().get(id) ?: return@LaunchedEffect
+        val n = app.viewDb.notes().get(id) ?: return@LaunchedEffect
         val p = cat.problem(n.problemId) ?: return@LaunchedEffect
         FollowUp.remove(ctx, id)
         problem = p; facts.putAll(factsFromJson(n.details))
@@ -299,6 +300,29 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
                     rows.forEach { (k, v) -> SummaryRow(k, v) }
                     if (rows.isEmpty()) Hint("No details yet.")
                 }
+                run {
+                    var at by remember { mutableStateOf<Long?>(null) }
+                    com.suryaprakash.medlog.ui.WhenRow(at) { t -> at = t; noteId?.let { id -> scope.launch { app.viewRepo.setOccurred(id, t ?: System.currentTimeMillis()) } } }
+                }
+                run {
+                    // what often comes with it: one tap notes that too
+                    val related = com.suryaprakash.medlog.clinical.Related.to(pr.id, 3).filter { cat.problem(it) != null }
+                    if (related.isNotEmpty()) {
+                        com.suryaprakash.medlog.ui.SectionHeader("Often comes with it", "Tap if you have this too", null)
+                        com.suryaprakash.medlog.ui.TileGrid(related, 3, aspect = 0.9f) { rid, mod ->
+                            val label = cat.problem(rid)?.label ?: rid
+                            com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 64.dp, onClick = {
+                                scope.launch {
+                                    persist()
+                                    noteId?.let { if (!toldMore) FollowUp.schedule(ctx, it) }
+                                    nav.replace(Route.Tell(rid))
+                                }
+                            }) {
+                                SpriteIcon(rid, 64.dp)
+                            }
+                        }
+                    }
+                }
                 if (triage.level == Level.AMBER) Card(border = p.amber) {
                     Text("▲ " + triage.say, color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body)
                     triage.reasons.forEach { Hint(it) }
@@ -312,7 +336,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
                         com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
                         savedFeedback(ctx)
                         app.speaker.say("Saved. Get well soon.")
-                        UndoHost.show("Saved.") { scope.launch { id?.let { app.repo.remove(listOf(it)); app.refreshWidgets() } } }
+                        UndoHost.show("Saved.") { scope.launch { id?.let { app.viewRepo.remove(listOf(it)); app.refreshWidgets() } } }
                         nav.home()
                     }
                 })
@@ -413,11 +437,13 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
         Kind.YESNO -> YesNoBig(onYes = { onAnswer(true, "Yes") }, onNo = { onAnswer(false, "No") })
         Kind.CHOICE, Kind.SCALE -> {
             if (a.choices.any { it.sprite != null }) TileGrid(a.choices, if (a.kind == Kind.SCALE) 3 else 2, aspect = if (a.kind == Kind.SCALE) 0.92f else 1.0f) { c, m ->
-                Tile(c.label, m, onClick = { onAnswer(if (a.kind == Kind.SCALE) c.value.toInt() else c.value, c.label) }) {
-                    c.sprite?.let { SpriteIcon(it, if (a.kind == Kind.SCALE) 56.dp else 76.dp) }
-                    if (a.kind == Kind.SCALE && a.choices.size == 6) Text(c.value, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(top = 4.dp))
-                    Spacer(Modifier.height(if (a.kind == Kind.SCALE && a.choices.size == 6) 2.dp else 8.dp))
-                    Text(label(c.label), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 3, minLines = 2, lineHeight = sc.small * 1.2f)
+                val numbered = a.kind == Kind.SCALE && a.choices.size == 6
+                val pic = if (a.kind == Kind.SCALE) 56.dp else 84.dp
+                com.suryaprakash.medlog.ui.PicTile(label(c.label), m, picture = if (numbered) pic + 28.dp else pic, onClick = { onAnswer(if (a.kind == Kind.SCALE) c.value.toInt() else c.value, c.label) }) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        c.sprite?.let { SpriteIcon(it, pic) }
+                        if (numbered) Text(c.value, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
+                    }
                 }
             } else Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 a.choices.forEach { c -> BigButton(label(c.label), tone = Tone.SECONDARY, onClick = { onAnswer(c.value, c.label) }) }
@@ -439,9 +465,10 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
             val chosen = remember(a.id) { mutableStateListOf<String>() }
             val pics = a.choices.any { it.sprite != null }
             TileGrid(a.choices, 2, aspect = if (pics) 1.0f else 2.6f) { c, m ->
-                Tile(c.label, m, selected = c.value in chosen, onClick = { if (c.value in chosen) chosen.remove(c.value) else chosen.add(c.value) }) {
-                    c.sprite?.let { SpriteIcon(it, 64.dp); Spacer(Modifier.height(8.dp)) }
-                    Text(label(c.label), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 3)
+                val tap = { if (c.value in chosen) chosen.remove(c.value) else chosen.add(c.value); Unit }
+                if (pics) com.suryaprakash.medlog.ui.PicTile(label(c.label), m, picture = 84.dp, selected = c.value in chosen, onClick = tap) { c.sprite?.let { SpriteIcon(it, 84.dp) } }
+                else Tile(c.label, m, selected = c.value in chosen, onClick = tap) {
+                    Text(label(c.label), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center)
                 }
             }
             BigButton(if (chosen.isEmpty()) "Tap all that fit" else "That's it", tone = Tone.PRIMARY, enabled = chosen.isNotEmpty(), icon = Icons.Rounded.Check,

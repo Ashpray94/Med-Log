@@ -21,6 +21,9 @@ object I18n {
 
     val active get() = lang != "en" && exact.isNotEmpty()
 
+    /** For dates and times on screen: "रविवार, 27 सितंबर", "ஞாயிறு, 27 செப்டம்பர்". */
+    val locale: java.util.Locale get() = if (lang == "en") java.util.Locale.ENGLISH else java.util.Locale(lang, "IN")
+
     /** Loads the language for [tag] ("ta-IN"); English, or a language with no file, turns translation off. */
     @Synchronized
     fun use(ctx: Context, tag: String) {
@@ -88,12 +91,23 @@ object I18n {
         if ('\n' in core) return lead + core.split('\n').joinToString("\n") { translate(it) } + trail
         val sentences = core.split(Regex("(?<=[.?!])\\s+"))
         if (sentences.size > 1) {
-            val parts = sentences.map { s -> exact[s] ?: s }
+            val parts = sentences.map { s -> translate(s) }
             if (parts != sentences) return lead + parts.joinToString(" ") + trail
+        }
+        // a list of short parts, the way notes are written: translate each part that has a translation
+        val end = core.lastOrNull()?.takeIf { it == '.' || it == '?' }?.toString() ?: ""
+        val body = core.removeSuffix(end)
+        for (sep in listOf("; ", ", ", " · ")) {
+            if (sep !in body) continue
+            val parts = body.split(sep)
+            val done = parts.map { translate(it) }
+            val hits = parts.indices.count { done[it] != parts[it] || parts[it].none(Char::isLetter) }
+            if (hits * 2 >= parts.size) return lead + done.joinToString(sep) + end + trail
         }
         return text
     }
 
     /** A value inside a pattern: a problem name or a word is translated, a person's name or number is left alone. */
-    private fun translateValue(v: String) = exact[v.trim()] ?: exact[v.trim().replaceFirstChar { it.uppercase() }] ?: v
+    private fun translateValue(v: String) = exact[v.trim()] ?: exact[v.trim().replaceFirstChar { it.uppercase() }]
+        ?: exact[v.trim().replaceFirstChar { it.lowercase() }] ?: v
 }

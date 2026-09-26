@@ -18,6 +18,8 @@ sealed interface Route {
     data class MedEdit(val id: Long? = null) : Route
     data object DidITake : Route
     data object Food : Route
+    data class SpeakAll(val text: String? = null) : Route
+    data class Output(val tab: Int = 0) : Route
     data class FoodPick(val noteId: Long? = null) : Route
     data object FeedNew : Route
     data object Readings : Route

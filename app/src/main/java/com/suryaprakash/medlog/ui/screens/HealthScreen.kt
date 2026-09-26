@@ -125,13 +125,13 @@ fun ReportsScreen(nav: Nav) {
 
     LaunchedEffect(days) {
         val since = now - 365 * DAY
-        points = app.db.notes().kindSince(Kind.READING, since).mapNotNull { n ->
+        points = app.viewDb.notes().kindSince(Kind.READING, since).mapNotNull { n ->
             runCatching { JSONObject(n.details) }.getOrNull()?.let { o -> o.getString("type") to Point(n.occurredAt, o.getDouble("v1"), o.optDouble("v2").takeIf { !it.isNaN() }) }
         }.groupBy({ it.first }, { it.second }).mapValues { e -> e.value.sortedBy { it.at } }
         fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
-        val water = app.db.notes().kindSince(Kind.WATER, since).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
-        val symptoms = app.db.notes().symptomsSince(since).groupBy { day(it.occurredAt) }.mapValues { it.value.size.toDouble() }
-        val meds = app.db.doses().between(since, now).filter { it.scheduledAt <= now }.groupBy { day(it.scheduledAt) }
+        val water = app.viewDb.notes().kindSince(Kind.WATER, since).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
+        val symptoms = app.viewDb.notes().symptomsSince(since).groupBy { day(it.occurredAt) }.mapValues { it.value.size.toDouble() }
+        val meds = app.viewDb.doses().between(since, now).filter { it.scheduledAt <= now }.groupBy { day(it.scheduledAt) }
             .mapValues { e -> 100.0 * e.value.count { it.status == DoseStatus.TAKEN } / e.value.size }
         daily = mapOf("water" to water, "symptoms" to symptoms, "meds" to meds)
         // open on the first measure that has something to show
