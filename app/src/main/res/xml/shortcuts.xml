@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="tell" android:enabled="true" android:icon="@drawable/ic_sc_mic"
+        android:shortcutShortLabel="@string/shortcut_tell">
+        <intent android:action="android.intent.action.VIEW" android:data="medlog://tell"
+            android:targetPackage="com.suryaprakash.medlog" android:targetClass="com.suryaprakash.medlog.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="meds" android:enabled="true" android:icon="@drawable/ic_sc_pill"
+        android:shortcutShortLabel="@string/shortcut_meds">
+        <intent android:action="android.intent.action.VIEW" android:data="medlog://meds"
+            android:targetPackage="com.suryaprakash.medlog" android:targetClass="com.suryaprakash.medlog.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="help" android:enabled="true" android:icon="@drawable/ic_sc_help"
+        android:shortcutShortLabel="@string/shortcut_help">
+        <intent android:action="android.intent.action.VIEW" android:data="medlog://help"
+            android:targetPackage="com.suryaprakash.medlog" android:targetClass="com.suryaprakash.medlog.MainActivity" />
+    </shortcut>
+    <capability android:name="actions.intent.OPEN_APP_FEATURE">
+        <intent android:action="android.intent.action.VIEW" android:targetPackage="com.suryaprakash.medlog"
+            android:targetClass="com.suryaprakash.medlog.MainActivity">
+            <url-template android:value="medlog://feature{?feature}" />
+            <parameter android:name="feature" android:key="feature" />
+        </intent>
+    </capability>
+</shortcuts>

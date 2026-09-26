@@ -1,0 +1,96 @@
+# Builds MedLog on every push to main and publishes it as a GitHub release with latest.json, which the app's
+# updater reads (Settings → Check for updates).
+#
+# Signing: one Actions secret, MEDLOG_SIGNING, holding
+#     storePassword=...
+#     keyAlias=...
+#     keyPassword=...
+#     keystore=<the .jks file in base64, one line>
+# Every release must be signed with that same key, or phones can't update. Without the secret (a fork, or a
+# fresh copy) the build and tests still run, but nothing is published.
+name: Release
+
+on:
+  push:
+    branches: [main, master, master-ejlvhp]
+    paths-ignore: ["README.md", "PLAN.md", "RELEASE_NOTES.md", "docs/**", "design/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      SIGNING: ${{ secrets.MEDLOG_SIGNING }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+
+      - name: Signing key
+        run: |
+          K="$RUNNER_TEMP/medlog.jks"
+          if [ -n "$SIGNING" ]; then
+            printf '%s\n' "$SIGNING" > "$RUNNER_TEMP/signing.txt"
+            grep -oP '^keystore=\K.*' "$RUNNER_TEMP/signing.txt" | base64 -d > "$K"
+            P="$RUNNER_TEMP/signing.txt"
+            PUBLISH=yes
+          elif [ -f signing/release.properties ]; then
+            cp signing/medlog-release.jks "$K"; P=signing/release.properties
+            PUBLISH=yes
+          else
+            P="$RUNNER_TEMP/oneoff.txt"; PW="$(openssl rand -hex 16)"
+            printf 'storePassword=%s\nkeyAlias=medlog\nkeyPassword=%s\n' "$PW" "$PW" > "$P"
+            keytool -genkeypair -keystore "$K" -storepass "$PW" -keypass "$PW" -alias medlog -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=MedLog"
+            PUBLISH=no
+          fi
+          SP="$(grep -oP '^storePassword=\K.*' "$P")"; KA="$(grep -oP '^keyAlias=\K.*' "$P")"; KP="$(grep -oP '^keyPassword=\K.*' "$P")"
+          echo "::add-mask::$SP"; echo "::add-mask::$KP"
+          rm -f "$RUNNER_TEMP/signing.txt"
+          { echo "MEDLOG_STORE_FILE=$K"; echo "MEDLOG_STORE_PASSWORD=$SP"; echo "MEDLOG_KEY_ALIAS=$KA"
+            echo "MEDLOG_KEY_PASSWORD=$KP"; echo "PUBLISH=$PUBLISH"; } >> "$GITHUB_ENV"
+
+      - name: Test and build
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease
+
+      - name: Name the files
+        id: files
+        run: |
+          V="$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)"
+          C="$(grep -oP 'versionCode = \K[0-9]+' app/build.gradle.kts)"
+          mkdir out
+          cp app/build/outputs/apk/release/app-arm64-v8a-release.apk "out/MedLog-$V-arm64.apk"
+          cp app/build/outputs/apk/release/app-armeabi-v7a-release.apk "out/MedLog-$V-armv7.apk"
+          sed "s/VERSION/$V/g" RELEASE_NOTES.md > out/notes.md
+          sed -n '/## What.s new/,$p' out/notes.md | grep '^- ' | sed 's/\*\*//g' > out/short.txt
+          python3 scripts/app_release.py out "$V" "$C" out out/short.txt --release
+          echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      # the app files stay with the run even when nothing is published
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MedLog-${{ steps.files.outputs.version }}
+          path: out/*.apk
+
+      - uses: softprops/action-gh-release@v2
+        if: env.PUBLISH == 'yes'
+        # some repositories don't let workflows make releases; the build itself still counts
+        continue-on-error: true
+        with:
+          tag_name: v${{ steps.files.outputs.version }}
+          name: MedLog ${{ steps.files.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: |
+            out/*.apk
+            out/latest.json
+          body_path: out/notes.md
+          make_latest: true

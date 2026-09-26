@@ -1,0 +1,19 @@
+.gradle/
+.kotlin/
+build/
+app/build/
+local.properties
+*.jks
+*.keystore
+keystore.properties
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+*.log
+release/
+__pycache__/
+
+# the signing key never goes in this public repository (see signing/README.md)
+signing/*.jks
+signing/*.properties

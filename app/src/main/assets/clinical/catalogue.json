@@ -1,0 +1,4349 @@
+{
+ "version": "0.1.0",
+ "reviewed": false,
+ "reviewNote": "Draft content written from published red-flag guidance. Must be reviewed and signed off by a licensed clinician (plan D6) before real-world use.",
+ "groups": [
+  {
+   "id": "general",
+   "label": "Whole body",
+   "glyph": "heat"
+  },
+  {
+   "id": "head",
+   "label": "Head, eyes, ears, mouth",
+   "glyph": "pain"
+  },
+  {
+   "id": "chest",
+   "label": "Chest & breathing",
+   "glyph": "wind"
+  },
+  {
+   "id": "tummy",
+   "label": "Tummy",
+   "glyph": "pain"
+  },
+  {
+   "id": "toilet",
+   "label": "Toilet",
+   "glyph": "toilet"
+  },
+  {
+   "id": "pain",
+   "label": "Back, joints, muscles",
+   "glyph": "pain"
+  },
+  {
+   "id": "skin",
+   "label": "Skin",
+   "glyph": "dots"
+  },
+  {
+   "id": "mind",
+   "label": "Mind & sleep",
+   "glyph": "cloud"
+  },
+  {
+   "id": "injury",
+   "label": "Falls & injuries",
+   "glyph": "bandage"
+  },
+  {
+   "id": "women",
+   "label": "Women's health",
+   "glyph": "flower"
+  },
+  {
+   "id": "daily",
+   "label": "Daily living",
+   "glyph": "walker"
+  }
+ ],
+ "fields": {
+  "count": {
+   "label": "How many times",
+   "type": "number",
+   "unit": "times"
+  },
+  "severity": {
+   "label": "How bad",
+   "type": "scale"
+  },
+  "side": {
+   "label": "Which side",
+   "type": "choice",
+   "choices": [
+    "left",
+    "right",
+    "both",
+    "middle"
+   ]
+  },
+  "character": {
+   "label": "What it feels like",
+   "type": "multi",
+   "choices": [
+    "sharp",
+    "dull",
+    "burning",
+    "throbbing",
+    "cramping",
+    "pressing",
+    "tight",
+    "stabbing",
+    "aching",
+    "shooting",
+    "tingling",
+    "heavy"
+   ]
+  },
+  "radiation": {
+   "label": "Spreads to",
+   "type": "text"
+  },
+  "onset": {
+   "label": "Started",
+   "type": "choice",
+   "choices": [
+    "sudden",
+    "slow"
+   ]
+  },
+  "pattern": {
+   "label": "Pattern",
+   "type": "choice",
+   "choices": [
+    "constant",
+    "comes and goes"
+   ]
+  },
+  "worse": {
+   "label": "Worse with",
+   "type": "text"
+  },
+  "better": {
+   "label": "Better with",
+   "type": "text"
+  },
+  "context": {
+   "label": "When",
+   "type": "text"
+  },
+  "colour": {
+   "label": "Colour",
+   "type": "choice",
+   "choices": [
+    "clear",
+    "white",
+    "yellow",
+    "green",
+    "brown",
+    "red",
+    "black",
+    "pink",
+    "grey"
+   ]
+  },
+  "blood": {
+   "label": "Blood",
+   "type": "yesno",
+   "danger": true
+  },
+  "coffeeGround": {
+   "label": "Looks like coffee grounds",
+   "type": "yesno",
+   "danger": true
+  },
+  "keepWater": {
+   "label": "Can keep water down",
+   "type": "yesno"
+  },
+  "urineToday": {
+   "label": "Passed urine in last 8 hours",
+   "type": "yesno"
+  },
+  "projectile": {
+   "label": "Forceful vomiting",
+   "type": "yesno"
+  },
+  "content": {
+   "label": "What came out",
+   "type": "choice",
+   "choices": [
+    "food",
+    "liquid",
+    "bile",
+    "blood"
+   ]
+  },
+  "stoolType": {
+   "label": "Stool type",
+   "type": "choice",
+   "choices": [
+    "hard lumps",
+    "lumpy",
+    "cracked",
+    "smooth",
+    "soft blobs",
+    "mushy",
+    "watery"
+   ]
+  },
+  "blackStool": {
+   "label": "Black, sticky stool",
+   "type": "yesno",
+   "danger": true
+  },
+  "mucus": {
+   "label": "Mucus",
+   "type": "yesno"
+  },
+  "temperature": {
+   "label": "Temperature",
+   "type": "temp",
+   "unit": "°F"
+  },
+  "chills": {
+   "label": "Shivering",
+   "type": "yesno"
+  },
+  "sweating": {
+   "label": "Sweating",
+   "type": "yesno"
+  },
+  "confusion": {
+   "label": "Confused or not making sense",
+   "type": "yesno",
+   "danger": true
+  },
+  "breathless": {
+   "label": "Hard to breathe",
+   "type": "yesno",
+   "danger": true
+  },
+  "atRest": {
+   "label": "Even when resting",
+   "type": "yesno"
+  },
+  "lyingFlat": {
+   "label": "Worse lying flat",
+   "type": "yesno"
+  },
+  "pillows": {
+   "label": "Pillows needed to sleep",
+   "type": "number",
+   "unit": "pillows"
+  },
+  "armJaw": {
+   "label": "Spreads to arm, jaw or back",
+   "type": "yesno",
+   "danger": true
+  },
+  "exertion": {
+   "label": "Comes on walking or climbing",
+   "type": "yesno"
+  },
+  "phlegm": {
+   "label": "Brings up phlegm",
+   "type": "yesno"
+  },
+  "dryWet": {
+   "label": "Dry or wet",
+   "type": "choice",
+   "choices": [
+    "dry",
+    "wet"
+   ]
+  },
+  "weeks": {
+   "label": "For how many weeks",
+   "type": "number",
+   "unit": "weeks"
+  },
+  "hitHead": {
+   "label": "Hit head",
+   "type": "yesno",
+   "danger": true
+  },
+  "couldGetUp": {
+   "label": "Could get up alone",
+   "type": "yesno"
+  },
+  "timeOnFloor": {
+   "label": "Minutes on the floor",
+   "type": "number",
+   "unit": "minutes"
+  },
+  "dizzyBefore": {
+   "label": "Dizzy before",
+   "type": "yesno"
+  },
+  "worstEver": {
+   "label": "Sudden, worst ever",
+   "type": "yesno",
+   "danger": true
+  },
+  "visionChange": {
+   "label": "Vision changed",
+   "type": "yesno",
+   "danger": true
+  },
+  "stiffNeck": {
+   "label": "Stiff neck",
+   "type": "yesno",
+   "danger": true
+  },
+  "faceDroop": {
+   "label": "Face drooping",
+   "type": "yesno",
+   "danger": true
+  },
+  "armWeak": {
+   "label": "Arm or leg weak",
+   "type": "yesno",
+   "danger": true
+  },
+  "speech": {
+   "label": "Speech slurred",
+   "type": "yesno",
+   "danger": true
+  },
+  "spinning": {
+   "label": "Room spinning",
+   "type": "yesno"
+  },
+  "onStanding": {
+   "label": "On standing up",
+   "type": "yesno"
+  },
+  "itchy": {
+   "label": "Itchy",
+   "type": "yesno"
+  },
+  "spreading": {
+   "label": "Spreading",
+   "type": "yesno"
+  },
+  "blisters": {
+   "label": "Blisters",
+   "type": "yesno"
+  },
+  "newMedicine": {
+   "label": "New medicine recently",
+   "type": "yesno"
+  },
+  "lipSwelling": {
+   "label": "Lips, face or tongue swelling",
+   "type": "yesno",
+   "danger": true
+  },
+  "oneSide": {
+   "label": "Only one side",
+   "type": "yesno"
+  },
+  "redHot": {
+   "label": "Red and hot",
+   "type": "yesno"
+  },
+  "painful": {
+   "label": "Painful",
+   "type": "yesno"
+  },
+  "burning": {
+   "label": "Burning",
+   "type": "yesno"
+  },
+  "frequent": {
+   "label": "Going often",
+   "type": "yesno"
+  },
+  "cannotPass": {
+   "label": "Cannot pass urine",
+   "type": "yesno",
+   "danger": true
+  },
+  "hours": {
+   "label": "For how many hours",
+   "type": "number",
+   "unit": "hours"
+  },
+  "reading": {
+   "label": "Reading",
+   "type": "number"
+  },
+  "selfHarm": {
+   "label": "Thoughts of hurting self",
+   "type": "yesno",
+   "danger": true
+  },
+  "sleepHours": {
+   "label": "Hours of sleep",
+   "type": "number",
+   "unit": "hours"
+  },
+  "wound": {
+   "label": "Open wound",
+   "type": "yesno"
+  },
+  "bleedingStops": {
+   "label": "Bleeding stopped with pressure",
+   "type": "yesno"
+  },
+  "bloodThinner": {
+   "label": "On blood thinner",
+   "type": "yesno"
+  },
+  "choking": {
+   "label": "Choking now",
+   "type": "yesno",
+   "danger": true
+  },
+  "fits": {
+   "label": "Shaking fit",
+   "type": "yesno",
+   "danger": true
+  },
+  "lostConsciousness": {
+   "label": "Passed out",
+   "type": "yesno",
+   "danger": true
+  },
+  "swallowWater": {
+   "label": "Can swallow water",
+   "type": "yesno"
+  },
+  "duration": {
+   "label": "How long it lasted",
+   "type": "text"
+  },
+  "impact": {
+   "label": "Stopped daily things",
+   "type": "multi",
+   "choices": [
+    "eating",
+    "sleeping",
+    "walking",
+    "work",
+    "bathing"
+   ]
+  },
+  "note": {
+   "label": "Other details",
+   "type": "text"
+  },
+  "burnDepth": {
+   "label": "Burn looks",
+   "type": "choice",
+   "choices": [
+    "red, no blisters",
+    "blisters",
+    "white, brown or black"
+   ]
+  },
+  "burnSize": {
+   "label": "Burn size",
+   "type": "choice",
+   "choices": [
+    "smaller than a coin",
+    "about a palm",
+    "bigger than a palm"
+   ]
+  }
+ },
+ "questions": {
+  "q_blood_vomit": {
+   "field": "blood",
+   "ask": "Was there any blood?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_coffee": {
+   "field": "coffeeGround",
+   "ask": "Did it look like coffee grounds?",
+   "type": "yesno",
+   "priority": 90
+  },
+  "q_keepwater": {
+   "field": "keepWater",
+   "ask": "Can you keep water down?",
+   "type": "yesno",
+   "priority": 80
+  },
+  "q_urine": {
+   "field": "urineToday",
+   "ask": "Have you passed urine in the last 8 hours?",
+   "type": "yesno",
+   "priority": 70
+  },
+  "q_count": {
+   "field": "count",
+   "ask": "How many times?",
+   "type": "number",
+   "priority": 40
+  },
+  "q_blood_stool": {
+   "field": "blood",
+   "ask": "Any blood in it?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_black_stool": {
+   "field": "blackStool",
+   "ask": "Was it black and sticky?",
+   "type": "yesno",
+   "priority": 95
+  },
+  "q_temp": {
+   "field": "temperature",
+   "ask": "Did you check your temperature? Say the number.",
+   "type": "temp",
+   "priority": 60
+  },
+  "q_confused": {
+   "field": "confusion",
+   "ask": "Is there any confusion?",
+   "type": "yesno",
+   "priority": 85
+  },
+  "q_armjaw": {
+   "field": "armJaw",
+   "ask": "Does it spread to your arm, jaw or back?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_sweat": {
+   "field": "sweating",
+   "ask": "Are you sweating?",
+   "type": "yesno",
+   "priority": 95
+  },
+  "q_breathless": {
+   "field": "breathless",
+   "ask": "Is it hard to breathe?",
+   "type": "yesno",
+   "priority": 98
+  },
+  "q_atrest": {
+   "field": "atRest",
+   "ask": "Is it hard even when resting?",
+   "type": "yesno",
+   "priority": 90
+  },
+  "q_blood_cough": {
+   "field": "blood",
+   "ask": "Any blood when you cough?",
+   "type": "yesno",
+   "priority": 90
+  },
+  "q_weeks": {
+   "field": "weeks",
+   "ask": "For how many weeks?",
+   "type": "number",
+   "priority": 30
+  },
+  "q_hithead": {
+   "field": "hitHead",
+   "ask": "Did you hit your head?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_getup": {
+   "field": "couldGetUp",
+   "ask": "Could you get up by yourself?",
+   "type": "yesno",
+   "priority": 90
+  },
+  "q_worst": {
+   "field": "worstEver",
+   "ask": "Did it start suddenly, the worst ever?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_vision": {
+   "field": "visionChange",
+   "ask": "Any change in your eyesight?",
+   "type": "yesno",
+   "priority": 85
+  },
+  "q_face": {
+   "field": "faceDroop",
+   "ask": "Is one side of the face drooping?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_armweak": {
+   "field": "armWeak",
+   "ask": "Is an arm or leg weak?",
+   "type": "yesno",
+   "priority": 99
+  },
+  "q_speech": {
+   "field": "speech",
+   "ask": "Is speech slurred?",
+   "type": "yesno",
+   "priority": 98
+  },
+  "q_standing": {
+   "field": "onStanding",
+   "ask": "Does it happen when you stand up?",
+   "type": "yesno",
+   "priority": 50
+  },
+  "q_spinning": {
+   "field": "spinning",
+   "ask": "Is the room spinning?",
+   "type": "yesno",
+   "priority": 45
+  },
+  "q_lips": {
+   "field": "lipSwelling",
+   "ask": "Any swelling of lips, face or tongue?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_spreading": {
+   "field": "spreading",
+   "ask": "Is it spreading?",
+   "type": "yesno",
+   "priority": 60
+  },
+  "q_newmed": {
+   "field": "newMedicine",
+   "ask": "Did you start a new medicine recently?",
+   "type": "yesno",
+   "priority": 55
+  },
+  "q_onesided": {
+   "field": "oneSide",
+   "ask": "Is it only one leg?",
+   "type": "yesno",
+   "priority": 80
+  },
+  "q_cannotpass": {
+   "field": "cannotPass",
+   "ask": "Are you unable to pass urine?",
+   "type": "yesno",
+   "priority": 90
+  },
+  "q_selfharm": {
+   "field": "selfHarm",
+   "ask": "Are you having thoughts of hurting yourself?",
+   "type": "yesno",
+   "priority": 100
+  },
+  "q_severity": {
+   "field": "severity",
+   "ask": "How bad is it? Say a number from 0 to 10.",
+   "type": "scale",
+   "priority": 20
+  },
+  "q_bleedstop": {
+   "field": "bleedingStops",
+   "ask": "Does the bleeding stop when you press on it?",
+   "type": "yesno",
+   "priority": 95
+  },
+  "q_thinner": {
+   "field": "bloodThinner",
+   "ask": "Do you take a blood thinner?",
+   "type": "yesno",
+   "priority": 92
+  },
+  "q_swallow": {
+   "field": "swallowWater",
+   "ask": "Can you swallow water?",
+   "type": "yesno",
+   "priority": 85
+  },
+  "q_reading": {
+   "field": "reading",
+   "ask": "What was the reading? Say the number.",
+   "type": "number",
+   "priority": 90
+  },
+  "q_stiffneck": {
+   "field": "stiffNeck",
+   "ask": "Is your neck stiff?",
+   "type": "yesno",
+   "priority": 80
+  },
+  "q_lostcon": {
+   "field": "lostConsciousness",
+   "ask": "Did you pass out?",
+   "type": "yesno",
+   "priority": 95
+  }
+ },
+ "problems": [
+  {
+   "id": "fever",
+   "label": "Fever",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "head",
+   "glyph": "heat",
+   "syn": [
+    "fever",
+    "feverish",
+    "temperature",
+    "high temperature",
+    "feeling hot",
+    "body hot",
+    "jwar",
+    "bukhar",
+    "kaichal",
+    "suram",
+    "pyrexia",
+    "bukhaar",
+    "taap",
+    "jvar",
+    "kaychal",
+    "kaaichal",
+    "juram",
+    "jvaram",
+    "jwara"
+   ],
+   "fields": [
+    "temperature",
+    "chills",
+    "sweating",
+    "pattern",
+    "confusion"
+   ],
+   "fu": [
+    "q_confused",
+    "q_temp"
+   ]
+  },
+  {
+   "id": "chills",
+   "label": "Shivering",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "cold",
+   "syn": [
+    "chills",
+    "shivering",
+    "shivers",
+    "feeling cold",
+    "rigors",
+    "shaking with cold",
+    "kulir",
+    "kaanpna",
+    "thand lagna",
+    "kulirudhu",
+    "chaligali",
+    "vira yal"
+   ],
+   "fields": [
+    "temperature",
+    "sweating"
+   ],
+   "fu": [
+    "q_temp"
+   ]
+  },
+  {
+   "id": "tired",
+   "label": "Tired",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "zzz",
+   "syn": [
+    "tired",
+    "tiredness",
+    "fatigue",
+    "exhausted",
+    "no energy",
+    "worn out",
+    "sleepy all day",
+    "lethargic",
+    "thakan",
+    "sorvu",
+    "thakaan",
+    "thaka hua",
+    "kamzori",
+    "kalaippu",
+    "alasata",
+    "kshinam",
+    "klanti"
+   ],
+   "fields": [
+    "severity",
+    "impact"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "weakness",
+   "label": "Weak",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "down",
+   "syn": [
+    "weak",
+    "weakness",
+    "no strength",
+    "feeble",
+    "body weak",
+    "balaheenam",
+    "kamjori",
+    "neerasam",
+    "balaheenata",
+    "durbalata"
+   ],
+   "fields": [
+    "severity",
+    "oneSide",
+    "impact"
+   ],
+   "fu": [
+    "q_armweak",
+    "q_severity"
+   ]
+  },
+  {
+   "id": "unwell",
+   "label": "Feeling unwell",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "cloud",
+   "syn": [
+    "unwell",
+    "not well",
+    "feeling bad",
+    "feeling sick",
+    "not feeling good",
+    "under the weather",
+    "body pain all over"
+   ],
+   "fields": [
+    "severity",
+    "note"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "no_appetite",
+   "label": "No appetite",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "mouth",
+   "glyph": "plate",
+   "syn": [
+    "no appetite",
+    "not hungry",
+    "loss of appetite",
+    "don't feel like eating",
+    "cannot eat",
+    "not eating",
+    "bhook nahi",
+    "bhookh nahi",
+    "bhuk nahi",
+    "pasi illa",
+    "pasi illai",
+    "aakali ledu",
+    "hasivu illa",
+    "vishappilla"
+   ],
+   "fields": [
+    "impact",
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "weight_loss",
+   "label": "Losing weight",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "down",
+   "syn": [
+    "weight loss",
+    "losing weight",
+    "lost weight",
+    "getting thin",
+    "becoming thin"
+   ],
+   "fields": [
+    "reading",
+    "weeks"
+   ],
+   "fu": [
+    "q_weeks"
+   ]
+  },
+  {
+   "id": "night_sweats",
+   "label": "Night sweats",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "drops",
+   "syn": [
+    "night sweats",
+    "sweating at night",
+    "wet bed with sweat"
+   ],
+   "fields": [
+    "count",
+    "temperature"
+   ],
+   "fu": []
+  },
+  {
+   "id": "thirsty",
+   "label": "Very thirsty",
+   "group": "general",
+   "dept": "Endocrinology",
+   "region": "mouth",
+   "glyph": "glass",
+   "syn": [
+    "thirsty",
+    "very thirsty",
+    "thirst",
+    "always thirsty",
+    "dry mouth thirst"
+   ],
+   "fields": [
+    "frequent",
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "dehydrated",
+   "label": "Not drinking enough",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "mouth",
+   "glyph": "glass",
+   "syn": [
+    "dehydrated",
+    "dehydration",
+    "not drinking",
+    "not drinking enough water",
+    "dry lips"
+   ],
+   "fields": [
+    "urineToday",
+    "keepWater"
+   ],
+   "fu": [
+    "q_urine"
+   ]
+  },
+  {
+   "id": "headache",
+   "label": "Headache",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "head",
+   "glyph": "pain",
+   "syn": [
+    "headache",
+    "head ache",
+    "head pain",
+    "head is paining",
+    "head hurts",
+    "sar dard",
+    "thalai vali",
+    "talai vali",
+    "head is heavy",
+    "heavy head",
+    "sir dard",
+    "sir me dard",
+    "matha dard",
+    "talaivali",
+    "tala noppi",
+    "tale novu",
+    "thalavedana",
+    "talavedana",
+    "matha byatha"
+   ],
+   "fields": [
+    "side",
+    "character",
+    "severity",
+    "worstEver",
+    "visionChange",
+    "stiffNeck",
+    "onset",
+    "context"
+   ],
+   "fu": [
+    "q_worst",
+    "q_vision",
+    "q_severity"
+   ]
+  },
+  {
+   "id": "migraine",
+   "label": "Migraine",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "temple",
+   "glyph": "throb",
+   "syn": [
+    "migraine",
+    "migraine attack",
+    "one sided headache with light"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "visionChange",
+    "worstEver"
+   ],
+   "fu": [
+    "q_worst",
+    "q_severity"
+   ]
+  },
+  {
+   "id": "dizzy",
+   "label": "Dizzy",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "head",
+   "glyph": "spin",
+   "syn": [
+    "dizzy",
+    "dizziness",
+    "giddy",
+    "giddiness",
+    "light headed",
+    "lightheaded",
+    "head spinning",
+    "room spinning",
+    "vertigo",
+    "chakkar",
+    "thalai suthal",
+    "mayakkam",
+    "off balance",
+    "chakkar aana",
+    "chakar",
+    "sir ghoomna",
+    "talai sutral",
+    "thalai suthuthu",
+    "kallu tirugudu",
+    "tala tirugudu",
+    "thala karakkam",
+    "mathay ghurche"
+   ],
+   "fields": [
+    "spinning",
+    "onStanding",
+    "count",
+    "duration",
+    "context"
+   ],
+   "fu": [
+    "q_standing",
+    "q_spinning"
+   ]
+  },
+  {
+   "id": "fainted",
+   "label": "Fainted",
+   "group": "head",
+   "dept": "Cardiology",
+   "region": "head",
+   "glyph": "stars",
+   "syn": [
+    "fainted",
+    "faint",
+    "fainting",
+    "passed out",
+    "blacked out",
+    "black out",
+    "lost consciousness",
+    "collapsed",
+    "unconscious",
+    "behosh",
+    "mayakkam pottu"
+   ],
+   "fields": [
+    "hitHead",
+    "duration",
+    "dizzyBefore",
+    "fits",
+    "context"
+   ],
+   "fu": [
+    "q_hithead"
+   ],
+   "red": true
+  },
+  {
+   "id": "fits",
+   "label": "Fit / seizure",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "head",
+   "glyph": "shake",
+   "syn": [
+    "fit",
+    "fits",
+    "seizure",
+    "convulsion",
+    "epilepsy attack",
+    "jerking",
+    "valippu"
+   ],
+   "fields": [
+    "duration",
+    "hitHead",
+    "lostConsciousness"
+   ],
+   "fu": [
+    "q_hithead"
+   ],
+   "red": true
+  },
+  {
+   "id": "face_droop",
+   "label": "Face drooping",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "face",
+   "glyph": "stroke",
+   "syn": [
+    "face drooping",
+    "face droop",
+    "face is drooping",
+    "drooping face",
+    "face has dropped",
+    "face dropped",
+    "mouth is drooping",
+    "mouth drooping",
+    "face is crooked",
+    "face deviated",
+    "face fell on one side"
+   ],
+   "fields": [
+    "side",
+    "armWeak",
+    "speech"
+   ],
+   "fu": [
+    "q_armweak",
+    "q_speech"
+   ],
+   "red": true
+  },
+  {
+   "id": "speech_trouble",
+   "label": "Speech trouble",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "mouth",
+   "glyph": "stroke",
+   "syn": [
+    "slurred speech",
+    "cannot speak",
+    "can't talk properly",
+    "speech problem",
+    "words not coming",
+    "talking funny"
+   ],
+   "fields": [
+    "faceDroop",
+    "armWeak"
+   ],
+   "fu": [
+    "q_face",
+    "q_armweak"
+   ],
+   "red": true
+  },
+  {
+   "id": "one_side_weak",
+   "label": "Weak on one side",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "arm",
+   "glyph": "stroke",
+   "syn": [
+    "one side weak",
+    "weakness on one side",
+    "arm weak",
+    "leg weak",
+    "can't lift arm",
+    "paralysis",
+    "one side not working"
+   ],
+   "fields": [
+    "side",
+    "faceDroop",
+    "speech"
+   ],
+   "fu": [
+    "q_face",
+    "q_speech"
+   ],
+   "red": true
+  },
+  {
+   "id": "numbness",
+   "label": "Numbness",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "hand",
+   "glyph": "tingle",
+   "syn": [
+    "numb",
+    "numbness",
+    "no feeling",
+    "dead feeling",
+    "sunn",
+    "sun ho gaya",
+    "jhunjhuni",
+    "marathu",
+    "marattu pochu",
+    "timmirlu",
+    "jomm",
+    "tharippu"
+   ],
+   "fields": [
+    "side",
+    "oneSide",
+    "duration"
+   ],
+   "fu": [
+    "q_armweak"
+   ]
+  },
+  {
+   "id": "tingling",
+   "label": "Tingling",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "foot",
+   "glyph": "tingle",
+   "syn": [
+    "tingling",
+    "pins and needles",
+    "burning feet",
+    "burning feet at night",
+    "jhanjhanahat"
+   ],
+   "fields": [
+    "side",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "confusion",
+   "label": "Confused",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "head",
+   "glyph": "question",
+   "syn": [
+    "confused",
+    "confusion",
+    "not making sense",
+    "disoriented",
+    "doesn't know where",
+    "mixed up",
+    "talking nonsense",
+    "uljhan",
+    "samajh nahi aa raha",
+    "kuzhappam",
+    "ayomayam",
+    "gondala",
+    "vibhramam"
+   ],
+   "fields": [
+    "onset",
+    "temperature",
+    "context"
+   ],
+   "fu": [
+    "q_temp"
+   ],
+   "red": true
+  },
+  {
+   "id": "memory",
+   "label": "Forgetting things",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "head",
+   "glyph": "question",
+   "syn": [
+    "forgetful",
+    "forgetting",
+    "memory loss",
+    "memory problem",
+    "can't remember",
+    "bhoolna",
+    "maranthu",
+    "bhool jaana",
+    "yaad nahi",
+    "marandhu pochu",
+    "marchipotunna",
+    "maretu hoguttade",
+    "marannu pokunnu"
+   ],
+   "fields": [
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "tremor",
+   "label": "Shaking hands",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "hand",
+   "glyph": "shake",
+   "syn": [
+    "tremor",
+    "shaking hands",
+    "hands shaking",
+    "shaky",
+    "trembling",
+    "shivering hands"
+   ],
+   "fields": [
+    "side",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "balance",
+   "label": "Poor balance",
+   "group": "head",
+   "dept": "Neurology",
+   "region": "leg",
+   "glyph": "walker",
+   "syn": [
+    "balance problem",
+    "unsteady",
+    "losing balance",
+    "wobbly",
+    "can't walk straight"
+   ],
+   "fields": [
+    "dizzyBefore",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "earache",
+   "label": "Earache",
+   "group": "head",
+   "dept": "ENT",
+   "region": "ear",
+   "glyph": "pain",
+   "syn": [
+    "earache",
+    "ear ache",
+    "ear pain",
+    "ear is paining",
+    "kaan dard",
+    "kaadhu vali",
+    "kan dard",
+    "kadhu vali",
+    "chevi noppi",
+    "kivi novu",
+    "chevi vedana"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "temperature"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "ear_discharge",
+   "label": "Ear discharge",
+   "group": "head",
+   "dept": "ENT",
+   "region": "ear",
+   "glyph": "drip",
+   "syn": [
+    "ear discharge",
+    "pus from ear",
+    "water from ear",
+    "ear leaking"
+   ],
+   "fields": [
+    "side",
+    "colour"
+   ],
+   "fu": []
+  },
+  {
+   "id": "ringing_ears",
+   "label": "Ringing in ears",
+   "group": "head",
+   "dept": "ENT",
+   "region": "ear",
+   "glyph": "waves",
+   "syn": [
+    "ringing in ears",
+    "ringing ears",
+    "tinnitus",
+    "buzzing in ear",
+    "noise in ear"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "hearing_loss",
+   "label": "Hearing less",
+   "group": "head",
+   "dept": "ENT",
+   "region": "ear",
+   "glyph": "waves",
+   "syn": [
+    "hearing loss",
+    "can't hear",
+    "hard of hearing",
+    "hearing less",
+    "deaf",
+    "ear blocked",
+    "blocked ear"
+   ],
+   "fields": [
+    "side",
+    "onset"
+   ],
+   "fu": []
+  },
+  {
+   "id": "sore_throat",
+   "label": "Sore throat",
+   "group": "head",
+   "dept": "ENT",
+   "region": "throat",
+   "glyph": "pain",
+   "syn": [
+    "sore throat",
+    "throat pain",
+    "throat is paining",
+    "painful swallowing",
+    "gala kharab",
+    "thondai vali",
+    "throat infection",
+    "gale me dard",
+    "gala dard",
+    "tondai vali",
+    "gontu noppi",
+    "gantalu novu",
+    "thonda vedana"
+   ],
+   "fields": [
+    "severity",
+    "temperature",
+    "swallowWater"
+   ],
+   "fu": [
+    "q_swallow"
+   ]
+  },
+  {
+   "id": "hoarse",
+   "label": "Hoarse voice",
+   "group": "head",
+   "dept": "ENT",
+   "region": "throat",
+   "glyph": "waves",
+   "syn": [
+    "hoarse",
+    "hoarse voice",
+    "lost voice",
+    "voice change",
+    "voice gone",
+    "husky voice"
+   ],
+   "fields": [
+    "weeks"
+   ],
+   "fu": [
+    "q_weeks"
+   ]
+  },
+  {
+   "id": "runny_nose",
+   "label": "Runny nose",
+   "group": "head",
+   "dept": "ENT",
+   "region": "nose",
+   "glyph": "drip",
+   "syn": [
+    "runny nose",
+    "running nose",
+    "cold",
+    "common cold",
+    "nose running",
+    "sardi",
+    "jaladosham",
+    "sali",
+    "naak behna",
+    "zukam",
+    "jukam",
+    "mukku ozhukal",
+    "neginda",
+    "jaladosha"
+   ],
+   "fields": [
+    "colour",
+    "temperature"
+   ],
+   "fu": []
+  },
+  {
+   "id": "blocked_nose",
+   "label": "Blocked nose",
+   "group": "head",
+   "dept": "ENT",
+   "region": "nose",
+   "glyph": "block",
+   "syn": [
+    "blocked nose",
+    "stuffy nose",
+    "nose block",
+    "nose blocked",
+    "congestion"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "sneeze",
+   "label": "Sneezing",
+   "group": "head",
+   "dept": "ENT",
+   "region": "nose",
+   "glyph": "spray",
+   "syn": [
+    "sneeze",
+    "sneezing",
+    "sneezes",
+    "chheenk",
+    "thummal",
+    "chhink",
+    "tummal",
+    "tummu",
+    "seenu"
+   ],
+   "fields": [
+    "count",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "nosebleed",
+   "label": "Nose bleeding",
+   "group": "head",
+   "dept": "ENT",
+   "region": "nose",
+   "glyph": "blood",
+   "syn": [
+    "nosebleed",
+    "nose bleed",
+    "bloody nose",
+    "blood from nose",
+    "nose bleeding",
+    "nakseer"
+   ],
+   "fields": [
+    "duration",
+    "bleedingStops",
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_bleedstop",
+    "q_thinner"
+   ]
+  },
+  {
+   "id": "sinus",
+   "label": "Sinus pain",
+   "group": "head",
+   "dept": "ENT",
+   "region": "face",
+   "glyph": "pain",
+   "syn": [
+    "sinus",
+    "sinus pain",
+    "sinusitis",
+    "pain in cheeks",
+    "face pain"
+   ],
+   "fields": [
+    "side",
+    "severity"
+   ],
+   "fu": []
+  },
+  {
+   "id": "no_smell",
+   "label": "Lost smell or taste",
+   "group": "head",
+   "dept": "ENT",
+   "region": "nose",
+   "glyph": "question",
+   "syn": [
+    "loss of smell",
+    "no smell",
+    "can't smell",
+    "loss of taste",
+    "no taste",
+    "can't taste"
+   ],
+   "fields": [
+    "onset"
+   ],
+   "fu": []
+  },
+  {
+   "id": "eye_pain",
+   "label": "Eye pain",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "pain",
+   "syn": [
+    "eye pain",
+    "eye ache",
+    "eyes paining",
+    "pain in eye",
+    "aankh dard",
+    "kann vali",
+    "aankh me dard",
+    "ankh dard",
+    "kan vali",
+    "kallu noppi",
+    "kannu novu",
+    "kannu vedana"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "visionChange"
+   ],
+   "fu": [
+    "q_vision"
+   ]
+  },
+  {
+   "id": "red_eye",
+   "label": "Red eye",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "dots",
+   "syn": [
+    "red eye",
+    "red eyes",
+    "pink eye",
+    "eye infection",
+    "conjunctivitis",
+    "madras eye",
+    "eye redness"
+   ],
+   "fields": [
+    "side",
+    "painful",
+    "visionChange"
+   ],
+   "fu": [
+    "q_vision"
+   ]
+  },
+  {
+   "id": "watery_eye",
+   "label": "Watery eyes",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "drip",
+   "syn": [
+    "watery eyes",
+    "eyes watering",
+    "tears",
+    "eye watering"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "blurred_vision",
+   "label": "Blurred vision",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "blur",
+   "syn": [
+    "blurred vision",
+    "blurry vision",
+    "blurred",
+    "can't see clearly",
+    "vision blurry",
+    "hazy vision"
+   ],
+   "fields": [
+    "side",
+    "onset"
+   ],
+   "fu": []
+  },
+  {
+   "id": "vision_loss",
+   "label": "Sudden vision loss",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "blur",
+   "syn": [
+    "sudden vision loss",
+    "lost vision",
+    "can't see",
+    "went blind",
+    "blindness",
+    "curtain over eye",
+    "dark curtain"
+   ],
+   "fields": [
+    "side",
+    "onset"
+   ],
+   "fu": [],
+   "red": true
+  },
+  {
+   "id": "double_vision",
+   "label": "Seeing double",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "blur",
+   "syn": [
+    "double vision",
+    "seeing double",
+    "seeing two"
+   ],
+   "fields": [
+    "onset",
+    "faceDroop"
+   ],
+   "fu": [
+    "q_face"
+   ]
+  },
+  {
+   "id": "dry_eyes",
+   "label": "Dry eyes",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "heat",
+   "syn": [
+    "dry eyes",
+    "dry eye",
+    "gritty eyes",
+    "sandy eyes"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "floaters",
+   "label": "Floaters or flashes",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "stars",
+   "syn": [
+    "floaters",
+    "flashes",
+    "flashing lights",
+    "spots in vision",
+    "black spots"
+   ],
+   "fields": [
+    "side",
+    "onset"
+   ],
+   "fu": []
+  },
+  {
+   "id": "itchy_eyes",
+   "label": "Itchy eyes",
+   "group": "head",
+   "dept": "Ophthalmology",
+   "region": "eye",
+   "glyph": "itch",
+   "syn": [
+    "itchy eyes",
+    "eyes itching",
+    "itching eyes"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "toothache",
+   "label": "Toothache",
+   "group": "head",
+   "dept": "Dental",
+   "region": "tooth",
+   "glyph": "pain",
+   "syn": [
+    "toothache",
+    "tooth ache",
+    "tooth pain",
+    "teeth pain",
+    "dant dard",
+    "pal vali",
+    "gum pain",
+    "daant dard",
+    "pallu vali",
+    "pallu noppi",
+    "hallu novu",
+    "pallu vedana",
+    "dant byatha"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "context"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "bleeding_gums",
+   "label": "Bleeding gums",
+   "group": "head",
+   "dept": "Dental",
+   "region": "mouth",
+   "glyph": "blood",
+   "syn": [
+    "bleeding gums",
+    "gums bleeding",
+    "blood from gums"
+   ],
+   "fields": [
+    "bloodThinner"
+   ],
+   "fu": []
+  },
+  {
+   "id": "mouth_ulcer",
+   "label": "Mouth ulcer",
+   "group": "head",
+   "dept": "Dental",
+   "region": "mouth",
+   "glyph": "dots",
+   "syn": [
+    "mouth ulcer",
+    "ulcer in mouth",
+    "mouth sore",
+    "mouth ulcers",
+    "chhale",
+    "vaai pun"
+   ],
+   "fields": [
+    "count",
+    "weeks"
+   ],
+   "fu": [
+    "q_weeks"
+   ]
+  },
+  {
+   "id": "denture_pain",
+   "label": "Denture pain",
+   "group": "head",
+   "dept": "Dental",
+   "region": "mouth",
+   "glyph": "pain",
+   "syn": [
+    "denture pain",
+    "dentures hurting",
+    "false teeth pain",
+    "set teeth pain"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "dry_mouth",
+   "label": "Dry mouth",
+   "group": "head",
+   "dept": "Dental",
+   "region": "mouth",
+   "glyph": "heat",
+   "syn": [
+    "dry mouth",
+    "mouth dry",
+    "no saliva"
+   ],
+   "fields": [
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "chest_pain",
+   "label": "Chest pain",
+   "group": "chest",
+   "dept": "Cardiology",
+   "region": "chest",
+   "glyph": "pain",
+   "syn": [
+    "chest pain",
+    "pain in chest",
+    "chest is paining",
+    "chest hurts",
+    "heart pain",
+    "seene mein dard",
+    "nenju vali",
+    "chest ache",
+    "seene me dard",
+    "chhati me dard",
+    "chhati dard",
+    "nenjuvali",
+    "chati noppi",
+    "ede novu",
+    "nenju vedana",
+    "buke byatha"
+   ],
+   "fields": [
+    "character",
+    "armJaw",
+    "sweating",
+    "breathless",
+    "exertion",
+    "severity",
+    "duration",
+    "onset"
+   ],
+   "fu": [
+    "q_armjaw",
+    "q_sweat",
+    "q_breathless"
+   ],
+   "red": true
+  },
+  {
+   "id": "chest_tight",
+   "label": "Chest tightness",
+   "group": "chest",
+   "dept": "Cardiology",
+   "region": "chest",
+   "glyph": "press",
+   "syn": [
+    "chest tightness",
+    "tight chest",
+    "chest heavy",
+    "heaviness in chest",
+    "pressure in chest",
+    "chest pressure",
+    "chest squeezing",
+    "elephant on chest"
+   ],
+   "fields": [
+    "armJaw",
+    "sweating",
+    "breathless",
+    "exertion",
+    "duration"
+   ],
+   "fu": [
+    "q_armjaw",
+    "q_sweat",
+    "q_breathless"
+   ],
+   "red": true
+  },
+  {
+   "id": "palpitations",
+   "label": "Heart racing",
+   "group": "chest",
+   "dept": "Cardiology",
+   "region": "heart",
+   "glyph": "beat",
+   "syn": [
+    "palpitations",
+    "heart racing",
+    "heart pounding",
+    "heart beating fast",
+    "fast heartbeat",
+    "fluttering",
+    "dhadkan",
+    "irregular heartbeat",
+    "heart skipping",
+    "dil ki dhadkan",
+    "dhadkan tez",
+    "dil dhadakna",
+    "nenju padapadappu",
+    "padapadappu",
+    "gunde dadaguttundi",
+    "ede badita",
+    "nenjidippu"
+   ],
+   "fields": [
+    "duration",
+    "dizzyBefore",
+    "breathless",
+    "reading"
+   ],
+   "fu": [
+    "q_breathless"
+   ]
+  },
+  {
+   "id": "breathless",
+   "label": "Hard to breathe",
+   "group": "chest",
+   "dept": "Pulmonology",
+   "region": "lungs",
+   "glyph": "wind",
+   "syn": [
+    "breathless",
+    "breathlessness",
+    "short of breath",
+    "shortness of breath",
+    "hard to breathe",
+    "difficulty breathing",
+    "can't breathe",
+    "cannot breathe",
+    "breathing problem",
+    "saans phoolna",
+    "moochu vaangudhu",
+    "gasping",
+    "out of breath",
+    "saans phulna",
+    "saans lene me takleef",
+    "dam ghutna",
+    "mucchu tinaral",
+    "moochu thinaral",
+    "aayasam",
+    "shwasa",
+    "swasa",
+    "shwaas"
+   ],
+   "fields": [
+    "atRest",
+    "lyingFlat",
+    "pillows",
+    "exertion",
+    "reading"
+   ],
+   "fu": [
+    "q_atrest"
+   ]
+  },
+  {
+   "id": "wheeze",
+   "label": "Wheezing",
+   "group": "chest",
+   "dept": "Pulmonology",
+   "region": "lungs",
+   "glyph": "wind",
+   "syn": [
+    "wheeze",
+    "wheezing",
+    "whistling breath",
+    "asthma attack",
+    "chest whistling"
+   ],
+   "fields": [
+    "atRest",
+    "breathless"
+   ],
+   "fu": [
+    "q_atrest"
+   ]
+  },
+  {
+   "id": "cough",
+   "label": "Cough",
+   "group": "chest",
+   "dept": "Pulmonology",
+   "region": "throat",
+   "glyph": "puff",
+   "syn": [
+    "cough",
+    "coughing",
+    "khansi",
+    "irumal",
+    "cough cough",
+    "dry cough",
+    "wet cough",
+    "cough with phlegm",
+    "khaansi",
+    "khasi",
+    "daggu",
+    "kemmu",
+    "chuma",
+    "kashi"
+   ],
+   "fields": [
+    "dryWet",
+    "colour",
+    "blood",
+    "weeks",
+    "context"
+   ],
+   "fu": [
+    "q_blood_cough",
+    "q_weeks"
+   ]
+  },
+  {
+   "id": "cough_blood",
+   "label": "Coughing blood",
+   "group": "chest",
+   "dept": "Pulmonology",
+   "region": "throat",
+   "glyph": "blood",
+   "syn": [
+    "coughing blood",
+    "blood in cough",
+    "blood in phlegm",
+    "blood in sputum",
+    "spitting blood"
+   ],
+   "fields": [
+    "count",
+    "breathless"
+   ],
+   "fu": [
+    "q_breathless"
+   ],
+   "red": true
+  },
+  {
+   "id": "low_oxygen",
+   "label": "Low oxygen reading",
+   "group": "chest",
+   "dept": "Pulmonology",
+   "region": "lungs",
+   "glyph": "down",
+   "syn": [
+    "low oxygen",
+    "oxygen low",
+    "spo2 low",
+    "saturation low",
+    "oxygen level low"
+   ],
+   "fields": [
+    "reading",
+    "breathless"
+   ],
+   "fu": [
+    "q_reading"
+   ]
+  },
+  {
+   "id": "swollen_ankles",
+   "label": "Swollen ankles",
+   "group": "chest",
+   "dept": "Cardiology",
+   "region": "foot",
+   "glyph": "swell",
+   "syn": [
+    "swollen ankles",
+    "ankle swelling",
+    "swollen feet",
+    "feet swelling",
+    "legs swollen",
+    "pedal edema",
+    "kaal veekkam",
+    "pair mein sujan",
+    "pair me sujan",
+    "pairon me sujan",
+    "kaalu vaapu",
+    "kaalu bavu",
+    "kaal neeru"
+   ],
+   "fields": [
+    "oneSide",
+    "painful",
+    "redHot",
+    "lyingFlat"
+   ],
+   "fu": [
+    "q_onesided"
+   ]
+  },
+  {
+   "id": "snoring",
+   "label": "Stops breathing in sleep",
+   "group": "chest",
+   "dept": "Pulmonology",
+   "region": "nose",
+   "glyph": "zzz",
+   "syn": [
+    "snoring",
+    "stops breathing at night",
+    "sleep apnea",
+    "choking in sleep"
+   ],
+   "fields": [
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "high_bp",
+   "label": "High BP reading",
+   "group": "chest",
+   "dept": "Cardiology",
+   "region": "heart",
+   "glyph": "up",
+   "syn": [
+    "high bp",
+    "high blood pressure",
+    "bp high",
+    "bp is high",
+    "pressure high",
+    "hypertension"
+   ],
+   "fields": [
+    "reading",
+    "worstEver",
+    "visionChange"
+   ],
+   "fu": [
+    "q_reading"
+   ]
+  },
+  {
+   "id": "low_bp",
+   "label": "Low BP reading",
+   "group": "chest",
+   "dept": "Cardiology",
+   "region": "heart",
+   "glyph": "down",
+   "syn": [
+    "low bp",
+    "low blood pressure",
+    "bp low",
+    "bp is low",
+    "pressure low"
+   ],
+   "fields": [
+    "reading",
+    "onStanding",
+    "dizzyBefore"
+   ],
+   "fu": [
+    "q_reading"
+   ]
+  },
+  {
+   "id": "stomach_pain",
+   "label": "Stomach pain",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "stomach",
+   "glyph": "pain",
+   "syn": [
+    "stomach pain",
+    "stomach ache",
+    "stomachache",
+    "tummy pain",
+    "tummy ache",
+    "belly pain",
+    "abdominal pain",
+    "abdomen pain",
+    "stomach is paining",
+    "pet dard",
+    "vayiru vali",
+    "vayiru pain",
+    "gas pain",
+    "stomach cramps",
+    "cramps in stomach",
+    "pet me dard",
+    "pet mein dard",
+    "vayitru vali",
+    "kadupu noppi",
+    "hotte novu",
+    "vayaru vedana",
+    "pet byatha"
+   ],
+   "fields": [
+    "side",
+    "character",
+    "severity",
+    "context",
+    "worse",
+    "better",
+    "onset"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "acidity",
+   "label": "Acidity / heartburn",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "chest",
+   "glyph": "heat",
+   "syn": [
+    "acidity",
+    "heartburn",
+    "heart burn",
+    "acid",
+    "burning in chest after food",
+    "sour burps",
+    "gastric",
+    "gastritis",
+    "indigestion",
+    "acid reflux",
+    "seene me jalan",
+    "khatti dakar",
+    "gas",
+    "nenju erichal",
+    "gundelo manta",
+    "edhe uri",
+    "nenju erichil"
+   ],
+   "fields": [
+    "context",
+    "severity"
+   ],
+   "fu": []
+  },
+  {
+   "id": "nausea",
+   "label": "Feel like vomiting",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "stomach",
+   "glyph": "green",
+   "syn": [
+    "nausea",
+    "nauseous",
+    "nauseated",
+    "feel like vomiting",
+    "feel like throwing up",
+    "queasy",
+    "feel sick in stomach",
+    "ji machalna",
+    "kumattal",
+    "vomiting sensation",
+    "ji machla",
+    "ji michla",
+    "matli",
+    "vikaram",
+    "okkarinta",
+    "manam puratal"
+   ],
+   "fields": [
+    "context",
+    "severity"
+   ],
+   "fu": []
+  },
+  {
+   "id": "vomiting",
+   "label": "Vomiting",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "stomach",
+   "glyph": "vomit",
+   "syn": [
+    "vomiting",
+    "vomit",
+    "vomited",
+    "vomits",
+    "threw up",
+    "throw up",
+    "throwing up",
+    "puked",
+    "puke",
+    "puking",
+    "sick",
+    "ulti",
+    "vanthi",
+    "vaanthi",
+    "vomit panniten",
+    "vomitted",
+    "vomitting",
+    "ultee",
+    "ulti hui",
+    "ulti ho rahi",
+    "vanti",
+    "vaanti",
+    "vamti",
+    "chardi",
+    "okkaanam",
+    "chhardi",
+    "bomi"
+   ],
+   "fields": [
+    "count",
+    "colour",
+    "content",
+    "blood",
+    "coffeeGround",
+    "keepWater",
+    "urineToday",
+    "projectile",
+    "context"
+   ],
+   "fu": [
+    "q_blood_vomit",
+    "q_keepwater",
+    "q_urine"
+   ]
+  },
+  {
+   "id": "vomit_blood",
+   "label": "Vomiting blood",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "stomach",
+   "glyph": "blood",
+   "syn": [
+    "vomiting blood",
+    "vomited blood",
+    "blood in vomit",
+    "blood vomit",
+    "coffee ground vomit"
+   ],
+   "fields": [
+    "count",
+    "coffeeGround"
+   ],
+   "fu": [],
+   "red": true
+  },
+  {
+   "id": "loose_motions",
+   "label": "Loose motions",
+   "group": "toilet",
+   "dept": "Gastroenterology",
+   "region": "belly",
+   "glyph": "toilet",
+   "syn": [
+    "loose motions",
+    "loose motion",
+    "diarrhea",
+    "diarrhoea",
+    "watery stool",
+    "running stomach",
+    "upset stomach",
+    "dast",
+    "vayiru pokku",
+    "motions",
+    "frequent motions",
+    "stomach upset",
+    "dasta",
+    "patla paikhana",
+    "vayitruppokku",
+    "virechanalu",
+    "athisaram",
+    "pet kharab"
+   ],
+   "fields": [
+    "count",
+    "stoolType",
+    "blood",
+    "blackStool",
+    "mucus",
+    "keepWater",
+    "urineToday"
+   ],
+   "fu": [
+    "q_blood_stool",
+    "q_keepwater",
+    "q_count"
+   ]
+  },
+  {
+   "id": "constipation",
+   "label": "Constipation",
+   "group": "toilet",
+   "dept": "Gastroenterology",
+   "region": "belly",
+   "glyph": "toilet",
+   "syn": [
+    "constipation",
+    "constipated",
+    "no motion",
+    "hard stool",
+    "can't pass stool",
+    "not passing stool",
+    "kabz",
+    "malachikkal",
+    "kabj",
+    "malabaddhata",
+    "malabaddakam",
+    "malabandha"
+   ],
+   "fields": [
+    "stoolType",
+    "count",
+    "painful",
+    "blood"
+   ],
+   "fu": []
+  },
+  {
+   "id": "blood_stool",
+   "label": "Blood in stool",
+   "group": "toilet",
+   "dept": "Gastroenterology",
+   "region": "belly",
+   "glyph": "blood",
+   "syn": [
+    "blood in stool",
+    "bloody stool",
+    "blood in motion",
+    "bleeding from bottom",
+    "rectal bleeding",
+    "piles bleeding"
+   ],
+   "fields": [
+    "count",
+    "colour",
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_thinner"
+   ]
+  },
+  {
+   "id": "black_stool",
+   "label": "Black stool",
+   "group": "toilet",
+   "dept": "Gastroenterology",
+   "region": "belly",
+   "glyph": "blood",
+   "syn": [
+    "black stool",
+    "black motion",
+    "tarry stool",
+    "black sticky stool",
+    "dark stool",
+    "melena"
+   ],
+   "fields": [
+    "count"
+   ],
+   "fu": [],
+   "red": true
+  },
+  {
+   "id": "bloating",
+   "label": "Bloating / gas",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "belly",
+   "glyph": "swell",
+   "syn": [
+    "bloating",
+    "bloated",
+    "gas trouble",
+    "stomach full",
+    "flatulence",
+    "wind",
+    "stomach swollen",
+    "pet phoolna",
+    "pet fulna",
+    "vayiru ubbal",
+    "kadupu ubbaram",
+    "hotte ubbara",
+    "vayar veerppu"
+   ],
+   "fields": [
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "burp",
+   "label": "Burping",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "mouth",
+   "glyph": "puff",
+   "syn": [
+    "burp",
+    "burping",
+    "burps",
+    "belching",
+    "dakar",
+    "yeppam",
+    "dakaar",
+    "erappam",
+    "tenupu",
+    "tegu",
+    "ettal"
+   ],
+   "fields": [
+    "count",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "hiccup",
+   "label": "Hiccups",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "throat",
+   "glyph": "hic",
+   "syn": [
+    "hiccup",
+    "hiccups",
+    "hiccough",
+    "hichki",
+    "vikkal",
+    "hichaki",
+    "ekkillu",
+    "bikkalu",
+    "ekkil"
+   ],
+   "fields": [
+    "duration"
+   ],
+   "fu": []
+  },
+  {
+   "id": "swallowing",
+   "label": "Hard to swallow",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "throat",
+   "glyph": "block",
+   "syn": [
+    "difficulty swallowing",
+    "hard to swallow",
+    "can't swallow",
+    "food stuck",
+    "food sticking",
+    "dysphagia",
+    "choking on food"
+   ],
+   "fields": [
+    "swallowWater",
+    "weeks",
+    "context"
+   ],
+   "fu": [
+    "q_swallow"
+   ]
+  },
+  {
+   "id": "jaundice",
+   "label": "Yellow eyes or skin",
+   "group": "tummy",
+   "dept": "Gastroenterology",
+   "region": "eye",
+   "glyph": "yellow",
+   "syn": [
+    "jaundice",
+    "yellow eyes",
+    "yellow skin",
+    "eyes yellow",
+    "piliya",
+    "manjal kaamalai"
+   ],
+   "fields": [
+    "colour",
+    "temperature"
+   ],
+   "fu": []
+  },
+  {
+   "id": "burning_urine",
+   "label": "Burning urine",
+   "group": "toilet",
+   "dept": "Urology",
+   "region": "bladder",
+   "glyph": "heat",
+   "syn": [
+    "burning urine",
+    "burning while passing urine",
+    "urine burning",
+    "painful urination",
+    "burning when peeing",
+    "peshab mein jalan",
+    "urine infection",
+    "uti",
+    "peshab me jalan",
+    "pishab me jalan",
+    "peshaab jalan",
+    "neer erichal",
+    "siruneer erichal",
+    "mutram manta",
+    "uri moothra",
+    "moothra erichil"
+   ],
+   "fields": [
+    "frequent",
+    "blood",
+    "temperature",
+    "confusion"
+   ],
+   "fu": [
+    "q_temp"
+   ]
+  },
+  {
+   "id": "frequent_urine",
+   "label": "Passing urine often",
+   "group": "toilet",
+   "dept": "Urology",
+   "region": "bladder",
+   "glyph": "toilet",
+   "syn": [
+    "frequent urination",
+    "passing urine often",
+    "urinating often",
+    "going to toilet often",
+    "peeing a lot",
+    "urine again and again",
+    "night urination",
+    "baar baar peshab",
+    "bar bar pishab",
+    "adikkadi siruneer",
+    "maatimaatiki mutram",
+    "pade pade moothra"
+   ],
+   "fields": [
+    "count",
+    "burning"
+   ],
+   "fu": []
+  },
+  {
+   "id": "no_urine",
+   "label": "Can't pass urine",
+   "group": "toilet",
+   "dept": "Urology",
+   "region": "bladder",
+   "glyph": "block",
+   "syn": [
+    "can't pass urine",
+    "cannot pass urine",
+    "urine not coming",
+    "no urine",
+    "urine stopped",
+    "retention",
+    "not passed urine"
+   ],
+   "fields": [
+    "hours",
+    "painful"
+   ],
+   "fu": [
+    "q_cannotpass"
+   ]
+  },
+  {
+   "id": "blood_urine",
+   "label": "Blood in urine",
+   "group": "toilet",
+   "dept": "Urology",
+   "region": "bladder",
+   "glyph": "blood",
+   "syn": [
+    "blood in urine",
+    "red urine",
+    "bloody urine",
+    "urine is red"
+   ],
+   "fields": [
+    "painful",
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_thinner"
+   ]
+  },
+  {
+   "id": "leaking_urine",
+   "label": "Leaking urine",
+   "group": "toilet",
+   "dept": "Urology",
+   "region": "bladder",
+   "glyph": "drip",
+   "syn": [
+    "leaking urine",
+    "urine leak",
+    "can't hold urine",
+    "incontinence",
+    "wetting",
+    "urine accident"
+   ],
+   "fields": [
+    "count",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "kidney_pain",
+   "label": "Pain in side",
+   "group": "toilet",
+   "dept": "Nephrology",
+   "region": "back",
+   "glyph": "pain",
+   "syn": [
+    "kidney pain",
+    "flank pain",
+    "pain in side",
+    "side pain",
+    "loin pain",
+    "stone pain"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "temperature",
+    "blood"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "face_swelling_morning",
+   "label": "Puffy face",
+   "group": "toilet",
+   "dept": "Nephrology",
+   "region": "face",
+   "glyph": "swell",
+   "syn": [
+    "puffy face",
+    "face swelling in morning",
+    "swollen face",
+    "eyes puffy"
+   ],
+   "fields": [
+    "context"
+   ],
+   "fu": [
+    "q_lips"
+   ]
+  },
+  {
+   "id": "back_pain",
+   "label": "Back pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "back",
+   "glyph": "pain",
+   "syn": [
+    "back pain",
+    "backache",
+    "back ache",
+    "lower back pain",
+    "back is paining",
+    "kamar dard",
+    "mudhugu vali",
+    "waist pain",
+    "hip back pain",
+    "peeth dard",
+    "pith dard",
+    "mudugu vali",
+    "nadumu noppi",
+    "sonta novu",
+    "naduvu vedana",
+    "komor byatha"
+   ],
+   "fields": [
+    "side",
+    "character",
+    "radiation",
+    "severity",
+    "worse",
+    "better"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "neck_pain",
+   "label": "Neck pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "neck",
+   "glyph": "pain",
+   "syn": [
+    "neck pain",
+    "stiff neck",
+    "neck stiffness",
+    "neck ache",
+    "gardan dard",
+    "kazhuthu vali"
+   ],
+   "fields": [
+    "side",
+    "radiation",
+    "temperature"
+   ],
+   "fu": []
+  },
+  {
+   "id": "knee_pain",
+   "label": "Knee pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "knee",
+   "glyph": "pain",
+   "syn": [
+    "knee pain",
+    "knees paining",
+    "knee ache",
+    "ghutno mein dard",
+    "muttu vali",
+    "knee swelling",
+    "ghutne me dard",
+    "ghutno me dard",
+    "ghutna dard",
+    "mokalu noppi",
+    "mandi novu",
+    "kalmuttu vedana",
+    "hatu byatha"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "worse",
+    "impact"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "hip_pain",
+   "label": "Hip pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "hip",
+   "glyph": "pain",
+   "syn": [
+    "hip pain",
+    "pain in hip",
+    "hip ache"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "impact"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "shoulder_pain",
+   "label": "Shoulder pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "shoulder",
+   "glyph": "pain",
+   "syn": [
+    "shoulder pain",
+    "shoulder ache",
+    "frozen shoulder",
+    "kandha dard",
+    "thol vali"
+   ],
+   "fields": [
+    "side",
+    "severity",
+    "exertion"
+   ],
+   "fu": [
+    "q_severity"
+   ]
+  },
+  {
+   "id": "joint_swelling",
+   "label": "Swollen joint",
+   "group": "pain",
+   "dept": "Rheumatology",
+   "region": "hand",
+   "glyph": "swell",
+   "syn": [
+    "joint swelling",
+    "swollen joint",
+    "joints swollen",
+    "swollen fingers",
+    "joint pain",
+    "joints paining",
+    "arthritis pain",
+    "body joints pain",
+    "jodon me dard",
+    "jodo me dard",
+    "joint dard",
+    "moottu vali",
+    "keelu noppi",
+    "keelu novu",
+    "sandhi vedana",
+    "gathe byatha"
+   ],
+   "fields": [
+    "side",
+    "redHot",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "morning_stiffness",
+   "label": "Stiff in the morning",
+   "group": "pain",
+   "dept": "Rheumatology",
+   "region": "whole",
+   "glyph": "block",
+   "syn": [
+    "morning stiffness",
+    "stiff in the morning",
+    "stiffness",
+    "body stiff"
+   ],
+   "fields": [
+    "duration"
+   ],
+   "fu": []
+  },
+  {
+   "id": "cramps",
+   "label": "Muscle cramps",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "leg",
+   "glyph": "pain",
+   "syn": [
+    "cramps",
+    "muscle cramps",
+    "leg cramps",
+    "calf cramps",
+    "catch in leg",
+    "nas chadhna"
+   ],
+   "fields": [
+    "side",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "leg_pain",
+   "label": "Leg pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "leg",
+   "glyph": "pain",
+   "syn": [
+    "leg pain",
+    "legs paining",
+    "pain in leg",
+    "calf pain",
+    "thigh pain",
+    "pair dard",
+    "kaal vali",
+    "pair me dard",
+    "tang me dard",
+    "kaalu noppi",
+    "kaalu novu",
+    "kaal vedana",
+    "pa byatha"
+   ],
+   "fields": [
+    "side",
+    "oneSide",
+    "redHot",
+    "exertion"
+   ],
+   "fu": [
+    "q_onesided"
+   ]
+  },
+  {
+   "id": "arm_pain",
+   "label": "Arm pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "arm",
+   "glyph": "pain",
+   "syn": [
+    "arm pain",
+    "hand pain",
+    "arm ache",
+    "pain in arm",
+    "wrist pain",
+    "elbow pain"
+   ],
+   "fields": [
+    "side",
+    "armJaw",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "foot_pain",
+   "label": "Foot pain",
+   "group": "pain",
+   "dept": "Orthopedics",
+   "region": "foot",
+   "glyph": "pain",
+   "syn": [
+    "foot pain",
+    "heel pain",
+    "sole pain",
+    "feet paining",
+    "ankle pain"
+   ],
+   "fields": [
+    "side",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "gout",
+   "label": "Gout attack",
+   "group": "pain",
+   "dept": "Rheumatology",
+   "region": "foot",
+   "glyph": "heat",
+   "syn": [
+    "gout",
+    "gout attack",
+    "big toe pain",
+    "toe swelling"
+   ],
+   "fields": [
+    "side",
+    "redHot"
+   ],
+   "fu": []
+  },
+  {
+   "id": "body_ache",
+   "label": "Body ache",
+   "group": "pain",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "pain",
+   "syn": [
+    "body ache",
+    "body pain",
+    "body aches",
+    "whole body pain",
+    "badan dard",
+    "udambu vali",
+    "sharir me dard",
+    "sareer dard",
+    "udal vali",
+    "olllu noppi",
+    "mai kai novu",
+    "shareera vedana",
+    "gaye byatha"
+   ],
+   "fields": [
+    "temperature",
+    "severity"
+   ],
+   "fu": []
+  },
+  {
+   "id": "rash",
+   "label": "Rash",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "arm",
+   "glyph": "dots",
+   "syn": [
+    "rash",
+    "rashes",
+    "skin rash",
+    "red spots",
+    "spots on skin",
+    "allergy on skin",
+    "daane",
+    "thadippu",
+    "chakatte",
+    "dadhoorlu",
+    "gulle",
+    "chunangu"
+   ],
+   "fields": [
+    "itchy",
+    "spreading",
+    "blisters",
+    "newMedicine",
+    "lipSwelling"
+   ],
+   "fu": [
+    "q_lips",
+    "q_newmed",
+    "q_spreading"
+   ]
+  },
+  {
+   "id": "itching",
+   "label": "Itching",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "arm",
+   "glyph": "itch",
+   "syn": [
+    "itching",
+    "itchy",
+    "itch",
+    "scratching",
+    "khujli",
+    "arippu",
+    "khujlee",
+    "kharish",
+    "arippa",
+    "durada",
+    "turike",
+    "chorichil"
+   ],
+   "fields": [
+    "spreading",
+    "newMedicine"
+   ],
+   "fu": []
+  },
+  {
+   "id": "hives",
+   "label": "Hives",
+   "group": "skin",
+   "dept": "Allergy",
+   "region": "arm",
+   "glyph": "dots",
+   "syn": [
+    "hives",
+    "urticaria",
+    "welts",
+    "raised red patches"
+   ],
+   "fields": [
+    "lipSwelling",
+    "breathless",
+    "newMedicine"
+   ],
+   "fu": [
+    "q_lips",
+    "q_breathless"
+   ]
+  },
+  {
+   "id": "allergic_reaction",
+   "label": "Allergic reaction",
+   "group": "skin",
+   "dept": "Allergy",
+   "region": "face",
+   "glyph": "swell",
+   "syn": [
+    "allergic reaction",
+    "allergy",
+    "swollen lips",
+    "lip swelling",
+    "face swelling",
+    "tongue swelling",
+    "allergy to medicine",
+    "allergy to food"
+   ],
+   "fields": [
+    "lipSwelling",
+    "breathless",
+    "newMedicine",
+    "context"
+   ],
+   "fu": [
+    "q_breathless",
+    "q_lips"
+   ]
+  },
+  {
+   "id": "blisters",
+   "label": "Blisters",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "arm",
+   "glyph": "bubble",
+   "syn": [
+    "blisters",
+    "blister",
+    "water bubbles on skin",
+    "shingles"
+   ],
+   "fields": [
+    "side",
+    "painful",
+    "spreading"
+   ],
+   "fu": []
+  },
+  {
+   "id": "sunburn",
+   "label": "Sunburn",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "face",
+   "glyph": "sun",
+   "syn": [
+    "sunburn",
+    "sun burn",
+    "sun tan burn"
+   ],
+   "fields": [
+    "blisters",
+    "burnDepth",
+    "burnSize"
+   ],
+   "fu": []
+  },
+  {
+   "id": "wound_not_healing",
+   "label": "Wound not healing",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "foot",
+   "glyph": "bandage",
+   "syn": [
+    "wound not healing",
+    "non healing wound",
+    "ulcer on leg",
+    "foot ulcer",
+    "sore not healing",
+    "wound",
+    "diabetic foot"
+   ],
+   "fields": [
+    "weeks",
+    "redHot",
+    "colour",
+    "temperature"
+   ],
+   "fu": [
+    "q_weeks"
+   ]
+  },
+  {
+   "id": "bed_sore",
+   "label": "Bed sore",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "back",
+   "glyph": "bandage",
+   "syn": [
+    "bed sore",
+    "bedsore",
+    "pressure sore",
+    "pressure ulcer"
+   ],
+   "fields": [
+    "colour",
+    "painful"
+   ],
+   "fu": []
+  },
+  {
+   "id": "mole",
+   "label": "Changing mole",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "arm",
+   "glyph": "dots",
+   "syn": [
+    "mole",
+    "changing mole",
+    "new mole",
+    "mole bleeding",
+    "black spot on skin"
+   ],
+   "fields": [
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "hair_loss",
+   "label": "Hair loss",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "head",
+   "glyph": "down",
+   "syn": [
+    "hair loss",
+    "hair falling",
+    "losing hair",
+    "baldness",
+    "hair fall"
+   ],
+   "fields": [
+    "weeks"
+   ],
+   "fu": []
+  },
+  {
+   "id": "fungal",
+   "label": "Fungal infection",
+   "group": "skin",
+   "dept": "Dermatology",
+   "region": "foot",
+   "glyph": "dots",
+   "syn": [
+    "fungal infection",
+    "ringworm",
+    "fungus",
+    "itchy groin",
+    "athlete's foot",
+    "daad"
+   ],
+   "fields": [
+    "itchy",
+    "spreading"
+   ],
+   "fu": []
+  },
+  {
+   "id": "bruising_easily",
+   "label": "Bruising easily",
+   "group": "skin",
+   "dept": "Hematology",
+   "region": "arm",
+   "glyph": "bruise",
+   "syn": [
+    "bruising easily",
+    "easy bruising",
+    "purple patches",
+    "bruises without injury"
+   ],
+   "fields": [
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_thinner"
+   ]
+  },
+  {
+   "id": "low_mood",
+   "label": "Feeling low",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "cloud",
+   "syn": [
+    "feeling low",
+    "sad",
+    "depressed",
+    "depression",
+    "unhappy",
+    "feeling down",
+    "crying",
+    "no interest",
+    "not enjoying",
+    "udaas",
+    "sogam",
+    "feeling empty",
+    "udasi",
+    "dukhi",
+    "man nahi lagta",
+    "kavalai",
+    "baadha",
+    "dukha",
+    "vishamam"
+   ],
+   "fields": [
+    "selfHarm",
+    "sleepHours",
+    "impact"
+   ],
+   "fu": [
+    "q_selfharm"
+   ]
+  },
+  {
+   "id": "anxious",
+   "label": "Worried / anxious",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "worry",
+   "syn": [
+    "anxious",
+    "anxiety",
+    "worried",
+    "worry",
+    "tense",
+    "nervous",
+    "panic",
+    "panic attack",
+    "fear",
+    "restless",
+    "ghabrahat",
+    "bayam",
+    "ghabrahat ho rahi",
+    "chinta",
+    "dar lag raha",
+    "bhayam",
+    "padattam",
+    "aandolana",
+    "bhaya"
+   ],
+   "fields": [
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "cant_sleep",
+   "label": "Can't sleep",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "zzz",
+   "syn": [
+    "can't sleep",
+    "cannot sleep",
+    "no sleep",
+    "insomnia",
+    "sleepless",
+    "waking up at night",
+    "poor sleep",
+    "neend nahi",
+    "thookam varala",
+    "neend nahi aati",
+    "nind nahi",
+    "thookkam illai",
+    "nidra raavatam ledu",
+    "nidde barolla",
+    "urakkam varunnilla"
+   ],
+   "fields": [
+    "sleepHours",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "sleep_too_much",
+   "label": "Sleeping too much",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "zzz",
+   "syn": [
+    "sleeping too much",
+    "sleeping all day",
+    "too sleepy",
+    "drowsy"
+   ],
+   "fields": [
+    "sleepHours",
+    "confusion"
+   ],
+   "fu": [
+    "q_confused"
+   ]
+  },
+  {
+   "id": "lonely",
+   "label": "Feeling alone",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "cloud",
+   "syn": [
+    "lonely",
+    "feeling alone",
+    "alone",
+    "nobody to talk",
+    "isolated"
+   ],
+   "fields": [
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "hallucination",
+   "label": "Seeing or hearing things",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "question",
+   "syn": [
+    "hallucination",
+    "seeing things",
+    "hearing voices",
+    "hearing things",
+    "seeing people who are not there"
+   ],
+   "fields": [
+    "confusion",
+    "temperature"
+   ],
+   "fu": [
+    "q_confused"
+   ]
+  },
+  {
+   "id": "self_harm",
+   "label": "Thoughts of self-harm",
+   "group": "mind",
+   "dept": "Psychiatry",
+   "region": "mind",
+   "glyph": "heart",
+   "syn": [
+    "want to die",
+    "suicide",
+    "suicidal",
+    "kill myself",
+    "end my life",
+    "hurt myself",
+    "self harm",
+    "no reason to live",
+    "better off dead"
+   ],
+   "fields": [
+    "note"
+   ],
+   "fu": [],
+   "red": true
+  },
+  {
+   "id": "fall",
+   "label": "Fall",
+   "group": "injury",
+   "dept": "Orthopedics",
+   "region": "whole",
+   "glyph": "fall",
+   "syn": [
+    "fall",
+    "fell",
+    "fell down",
+    "i fell",
+    "slipped",
+    "slipped and fell",
+    "tripped",
+    "fallen",
+    "gir gaya",
+    "gir gayi",
+    "vizhunthuten",
+    "vilunthen",
+    "gir pada",
+    "gir padi",
+    "vizhunthen",
+    "vizhundhuten",
+    "padipoyanu",
+    "biddu",
+    "vinu",
+    "pore gechi"
+   ],
+   "fields": [
+    "hitHead",
+    "bloodThinner",
+    "couldGetUp",
+    "timeOnFloor",
+    "dizzyBefore",
+    "context"
+   ],
+   "fu": [
+    "q_hithead",
+    "q_thinner",
+    "q_getup"
+   ]
+  },
+  {
+   "id": "near_fall",
+   "label": "Nearly fell",
+   "group": "injury",
+   "dept": "Geriatrics",
+   "region": "leg",
+   "glyph": "walker",
+   "syn": [
+    "nearly fell",
+    "almost fell",
+    "near fall",
+    "lost balance but didn't fall"
+   ],
+   "fields": [
+    "dizzyBefore",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "head_injury",
+   "label": "Head injury",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "head",
+   "glyph": "bandage",
+   "syn": [
+    "head injury",
+    "hit my head",
+    "hit head",
+    "bumped head",
+    "head wound",
+    "sar pe chot"
+   ],
+   "fields": [
+    "bloodThinner",
+    "lostConsciousness",
+    "confusion",
+    "context"
+   ],
+   "fu": [
+    "q_thinner",
+    "q_lostcon"
+   ]
+  },
+  {
+   "id": "cut",
+   "label": "Cut",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "hand",
+   "glyph": "bandage",
+   "syn": [
+    "cut",
+    "cut myself",
+    "knife cut",
+    "gash",
+    "kat gaya",
+    "kat gayi",
+    "katna",
+    "vettu",
+    "koyindi",
+    "koythu",
+    "murivu"
+   ],
+   "fields": [
+    "bleedingStops",
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_bleedstop"
+   ]
+  },
+  {
+   "id": "bleeding",
+   "label": "Bleeding",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "arm",
+   "glyph": "blood",
+   "syn": [
+    "bleeding",
+    "bleed",
+    "blood coming",
+    "lot of blood",
+    "won't stop bleeding",
+    "khoon beh raha",
+    "khun nikal raha",
+    "ratham varudhu",
+    "raktam vastundi",
+    "rakta baruttide",
+    "chora varunnu"
+   ],
+   "fields": [
+    "bleedingStops",
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_bleedstop",
+    "q_thinner"
+   ]
+  },
+  {
+   "id": "burn",
+   "label": "Burn",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "hand",
+   "glyph": "flame",
+   "syn": [
+    "burn",
+    "burnt",
+    "burned",
+    "scald",
+    "hot water burn",
+    "jal gaya",
+    "jal gayi",
+    "jalna",
+    "chot jalne ki",
+    "sudu",
+    "theekkayam",
+    "kaalindi",
+    "suttu",
+    "pollal"
+   ],
+   "fields": [
+    "blisters",
+    "side",
+    "burnDepth",
+    "burnSize"
+   ],
+   "fu": []
+  },
+  {
+   "id": "bruise",
+   "label": "Bruise",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "arm",
+   "glyph": "bruise",
+   "syn": [
+    "bruise",
+    "bruised",
+    "black and blue",
+    "blue mark"
+   ],
+   "fields": [
+    "bloodThinner",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "swelling",
+   "label": "Swelling",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "arm",
+   "glyph": "swell",
+   "syn": [
+    "swelling",
+    "swollen",
+    "sujan",
+    "veekkam",
+    "soojan",
+    "vaapu",
+    "bavu",
+    "neeru"
+   ],
+   "fields": [
+    "side",
+    "redHot",
+    "painful",
+    "oneSide"
+   ],
+   "fu": []
+  },
+  {
+   "id": "sprain",
+   "label": "Sprain",
+   "group": "injury",
+   "dept": "Orthopedics",
+   "region": "foot",
+   "glyph": "swell",
+   "syn": [
+    "sprain",
+    "twisted ankle",
+    "twisted",
+    "moch",
+    "sulukku"
+   ],
+   "fields": [
+    "side",
+    "couldGetUp"
+   ],
+   "fu": []
+  },
+  {
+   "id": "broken_bone",
+   "label": "Broken bone",
+   "group": "injury",
+   "dept": "Orthopedics",
+   "region": "arm",
+   "glyph": "cast",
+   "syn": [
+    "broken bone",
+    "broken arm",
+    "broken leg",
+    "fracture",
+    "bone broke",
+    "haddi toot"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": [],
+   "red": true
+  },
+  {
+   "id": "bite",
+   "label": "Animal bite",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "leg",
+   "glyph": "bite",
+   "syn": [
+    "dog bite",
+    "animal bite",
+    "cat bite",
+    "monkey bite",
+    "bitten",
+    "snake bite",
+    "rat bite"
+   ],
+   "fields": [
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "sting",
+   "label": "Insect sting",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "arm",
+   "glyph": "sting",
+   "syn": [
+    "insect sting",
+    "bee sting",
+    "wasp sting",
+    "sting",
+    "insect bite",
+    "scorpion sting"
+   ],
+   "fields": [
+    "lipSwelling",
+    "breathless"
+   ],
+   "fu": [
+    "q_lips"
+   ]
+  },
+  {
+   "id": "choking",
+   "label": "Choking",
+   "group": "injury",
+   "dept": "Urgent care",
+   "region": "throat",
+   "glyph": "block",
+   "syn": [
+    "choking",
+    "choked",
+    "something stuck in throat",
+    "food stuck in throat"
+   ],
+   "fields": [
+    "choking",
+    "breathless"
+   ],
+   "fu": [],
+   "red": true
+  },
+  {
+   "id": "period_pain",
+   "label": "Period pain",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "belly",
+   "glyph": "pain",
+   "syn": [
+    "period pain",
+    "period cramps",
+    "menstrual pain",
+    "periods paining"
+   ],
+   "fields": [
+    "severity"
+   ],
+   "fu": []
+  },
+  {
+   "id": "heavy_bleeding",
+   "label": "Heavy bleeding",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "pelvis",
+   "glyph": "blood",
+   "syn": [
+    "heavy bleeding",
+    "heavy periods",
+    "heavy period",
+    "bleeding a lot in periods"
+   ],
+   "fields": [
+    "count",
+    "dizzyBefore"
+   ],
+   "fu": []
+  },
+  {
+   "id": "postmeno_bleeding",
+   "label": "Bleeding after menopause",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "pelvis",
+   "glyph": "blood",
+   "syn": [
+    "bleeding after menopause",
+    "postmenopausal bleeding",
+    "bleeding after periods stopped",
+    "vaginal bleeding"
+   ],
+   "fields": [
+    "count"
+   ],
+   "fu": []
+  },
+  {
+   "id": "discharge",
+   "label": "White discharge",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "pelvis",
+   "glyph": "drip",
+   "syn": [
+    "white discharge",
+    "vaginal discharge",
+    "discharge"
+   ],
+   "fields": [
+    "colour",
+    "itchy"
+   ],
+   "fu": []
+  },
+  {
+   "id": "breast_lump",
+   "label": "Breast lump",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "breast",
+   "glyph": "lump",
+   "syn": [
+    "breast lump",
+    "lump in breast"
+   ],
+   "fields": [
+    "side",
+    "painful"
+   ],
+   "fu": []
+  },
+  {
+   "id": "breast_pain",
+   "label": "Breast pain",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "breast",
+   "glyph": "pain",
+   "syn": [
+    "breast pain",
+    "pain in breast"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "hot_flush",
+   "label": "Hot flushes",
+   "group": "women",
+   "dept": "Gynecology",
+   "region": "face",
+   "glyph": "heat",
+   "syn": [
+    "hot flush",
+    "hot flushes",
+    "hot flashes",
+    "sudden heat"
+   ],
+   "fields": [
+    "count"
+   ],
+   "fu": []
+  },
+  {
+   "id": "low_sugar",
+   "label": "Low sugar",
+   "group": "general",
+   "dept": "Endocrinology",
+   "region": "whole",
+   "glyph": "sugar",
+   "syn": [
+    "low sugar",
+    "sugar low",
+    "hypo",
+    "hypoglycemia",
+    "sugar dropped",
+    "shaky and sweaty"
+   ],
+   "fields": [
+    "reading",
+    "sweating",
+    "confusion"
+   ],
+   "fu": [
+    "q_reading",
+    "q_confused"
+   ]
+  },
+  {
+   "id": "high_sugar",
+   "label": "High sugar",
+   "group": "general",
+   "dept": "Endocrinology",
+   "region": "whole",
+   "glyph": "sugar",
+   "syn": [
+    "high sugar",
+    "sugar high",
+    "sugar is high",
+    "blood sugar high",
+    "diabetes high"
+   ],
+   "fields": [
+    "reading",
+    "confusion"
+   ],
+   "fu": [
+    "q_reading"
+   ]
+  },
+  {
+   "id": "foot_numb",
+   "label": "Numb feet",
+   "group": "general",
+   "dept": "Endocrinology",
+   "region": "foot",
+   "glyph": "tingle",
+   "syn": [
+    "numb feet",
+    "feet numb",
+    "foot numbness",
+    "no feeling in feet"
+   ],
+   "fields": [
+    "side"
+   ],
+   "fu": []
+  },
+  {
+   "id": "lump",
+   "label": "Lump",
+   "group": "general",
+   "dept": "Oncology",
+   "region": "neck",
+   "glyph": "lump",
+   "syn": [
+    "lump",
+    "swelling lump",
+    "new lump",
+    "gland swelling",
+    "swollen glands",
+    "gaanth",
+    "katti"
+   ],
+   "fields": [
+    "side",
+    "painful",
+    "weeks"
+   ],
+   "fu": [
+    "q_weeks"
+   ]
+  },
+  {
+   "id": "pale",
+   "label": "Pale / very tired",
+   "group": "general",
+   "dept": "Hematology",
+   "region": "face",
+   "glyph": "down",
+   "syn": [
+    "pale",
+    "looking pale",
+    "anemia",
+    "anaemia",
+    "low hemoglobin",
+    "low hb"
+   ],
+   "fields": [
+    "breathless",
+    "dizzyBefore"
+   ],
+   "fu": []
+  },
+  {
+   "id": "side_effect",
+   "label": "Medicine side effect",
+   "group": "general",
+   "dept": "General medicine",
+   "region": "whole",
+   "glyph": "pill",
+   "syn": [
+    "side effect",
+    "side effects",
+    "reaction to medicine",
+    "after the tablet",
+    "after taking medicine",
+    "medicine not suiting",
+    "tablet not suiting"
+   ],
+   "fields": [
+    "newMedicine",
+    "context",
+    "note"
+   ],
+   "fu": [
+    "q_lips"
+   ]
+  },
+  {
+   "id": "trouble_walking",
+   "label": "Trouble walking",
+   "group": "daily",
+   "dept": "Geriatrics",
+   "region": "leg",
+   "glyph": "walker",
+   "syn": [
+    "trouble walking",
+    "can't walk",
+    "difficulty walking",
+    "walking problem",
+    "legs not supporting"
+   ],
+   "fields": [
+    "onset",
+    "oneSide",
+    "painful"
+   ],
+   "fu": [
+    "q_armweak"
+   ]
+  },
+  {
+   "id": "trouble_eating",
+   "label": "Trouble eating",
+   "group": "daily",
+   "dept": "Geriatrics",
+   "region": "mouth",
+   "glyph": "plate",
+   "syn": [
+    "trouble eating",
+    "can't eat",
+    "difficulty eating",
+    "not able to chew"
+   ],
+   "fields": [
+    "swallowWater",
+    "note"
+   ],
+   "fu": []
+  },
+  {
+   "id": "toilet_accident",
+   "label": "Toilet accident",
+   "group": "daily",
+   "dept": "Geriatrics",
+   "region": "bladder",
+   "glyph": "toilet",
+   "syn": [
+    "toilet accident",
+    "wet myself",
+    "soiled",
+    "couldn't reach toilet in time",
+    "accident in bed"
+   ],
+   "fields": [
+    "count",
+    "context"
+   ],
+   "fu": []
+  },
+  {
+   "id": "night_pain",
+   "label": "Pain at night",
+   "group": "daily",
+   "dept": "Geriatrics",
+   "region": "whole",
+   "glyph": "zzz",
+   "syn": [
+    "pain at night",
+    "night pain",
+    "pain wakes me up"
+   ],
+   "fields": [
+    "side",
+    "severity"
+   ],
+   "fu": []
+  }
+ ],
+ "regions": [
+  "head",
+  "temple",
+  "face",
+  "eye",
+  "ear",
+  "nose",
+  "mouth",
+  "tooth",
+  "throat",
+  "neck",
+  "shoulder",
+  "chest",
+  "heart",
+  "lungs",
+  "breast",
+  "stomach",
+  "belly",
+  "back",
+  "hip",
+  "pelvis",
+  "bladder",
+  "arm",
+  "hand",
+  "leg",
+  "knee",
+  "foot",
+  "whole",
+  "mind"
+ ]
+}

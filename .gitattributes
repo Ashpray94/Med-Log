@@ -1,0 +1,5 @@
+# Speech model, fonts and sprite sheets must stay byte-for-byte identical
+app/src/main/assets/** binary
+*.png binary
+*.ttf binary
+*.sh text eol=lf

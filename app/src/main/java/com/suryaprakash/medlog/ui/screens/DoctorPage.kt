@@ -1,0 +1,532 @@
+package com.suryaprakash.medlog.ui.screens
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Print
+import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.StickyNote2
+import androidx.compose.material3.Icon
+import com.suryaprakash.medlog.ui.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import com.suryaprakash.medlog.doctor.DoctorNote
+import com.suryaprakash.medlog.doctor.Pdf
+import com.suryaprakash.medlog.medlog
+import com.suryaprakash.medlog.pictogram.BodyArt
+import com.suryaprakash.medlog.pictogram.SpriteIcon
+import com.suryaprakash.medlog.pictogram.WHOLE
+import com.suryaprakash.medlog.ui.BigButton
+import com.suryaprakash.medlog.ui.BigField
+import com.suryaprakash.medlog.ui.LocalPalette
+import com.suryaprakash.medlog.ui.LocalScale
+import com.suryaprakash.medlog.ui.Nav
+import com.suryaprakash.medlog.ui.Palette
+import com.suryaprakash.medlog.ui.Perms
+import com.suryaprakash.medlog.ui.Route
+import com.suryaprakash.medlog.ui.Screen
+import com.suryaprakash.medlog.ui.Tone
+import com.suryaprakash.medlog.ui.steady
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+private val PERIODS = listOf(7 to "Last week", 14 to "Last 2 weeks", 30 to "Last month", 90 to "Last 3 months")
+
+/**
+ * The doctor page. One job: show a doctor, in under five minutes, what has been happening.
+ * One main action (Share), one quiet setting (how far back), then the content in clearly separated sections.
+ * The patient's own extras (adding a question, visits) wait lower down, out of the way.
+ */
+@Composable
+fun DoctorScreen(nav: Nav) {
+    val ctx = LocalContext.current
+    val p = LocalPalette.current
+    val scope = rememberCoroutineScope()
+    var days by remember { mutableStateOf(14) }
+    var note by remember { mutableStateOf<DoctorNote?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
+    var sharing by remember { mutableStateOf(false) }
+    var asking by remember { mutableStateOf(false) }
+    LaunchedEffect(days) { note = withContext(Dispatchers.IO) { buildNote(ctx, days) } }
+    val n = note
+    val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share with the doctor."
+    fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!) }; busy = false; then(f) } }
+
+    Screen("For the doctor", speak, onHome = { nav.home() }, onBack = { nav.back() }) {
+        PeriodCard(days, n?.period) { picking = true }
+        BigButton("Share with the doctor", icon = Icons.Rounded.Share, enabled = n != null && !busy, onClick = { sharing = true })
+        if (n == null) return@Screen
+
+        Stats(n)
+
+        if (n.concerns.isNotEmpty()) {
+            Section("Most important")
+            Group { n.concerns.forEachIndexed { i, c -> if (i > 0) Line(); ConcernRow(c, n.concernLevels.getOrElse(i) { "GREEN" }) } }
+        }
+
+        if (n.pins.isNotEmpty()) {
+            Section("Where on the body")
+            Group { BodyPins(n) }
+        }
+
+        Section("Symptoms")
+        if (n.symptoms.isEmpty()) Group { Plain("No symptoms noted in this time.") }
+        n.symptoms.forEach { SymptomCard(it, n.days) }
+
+        if (n.medicines.isNotEmpty()) {
+            Section("Medicines")
+            Group { n.medicines.forEachIndexed { i, m -> if (i > 0) Line(); MedRow(m) } }
+        }
+
+        if (n.tiles.isNotEmpty()) {
+            Section("Readings")
+            n.tiles.chunked(2).forEach { row ->
+                Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    row.forEach { ReadingCard(it, Modifier.weight(1f).fillMaxHeight()) }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+
+        if (n.links.isNotEmpty()) {
+            Section("Patterns noticed")
+            Group { n.links.forEachIndexed { i, l -> if (i > 0) Line(); Plain(l) } }
+        }
+
+        // the patient's own part, kept apart from the medical summary
+        Spacer(Modifier.height(20.dp))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        Section("My questions for the doctor")
+        Group {
+            if (n.questions.isEmpty()) Plain("No questions yet.", soft = true)
+            n.questions.forEachIndexed { i, q -> if (i > 0) Line(); Plain(q) }
+        }
+        BigButton("Add a question", tone = Tone.QUIET, icon = Icons.Rounded.Add, onClick = { asking = true })
+
+        Section("Visits")
+        Group {
+            NavRow(Icons.Rounded.StickyNote2, "Write what the doctor said") { nav.go(Route.Visit) }
+            Line(60.dp)
+            NavRow(Icons.Rounded.CalendarMonth, "Appointments") { nav.go(Route.Appointments) }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
+
+    if (picking) ChoiceDialog("How far back?", PERIODS.map { it.second to null }, PERIODS.indexOfFirst { it.first == days }, { picking = false }) { days = PERIODS[it].first; picking = false }
+    if (sharing) ChoiceDialog("Share with the doctor", listOf<Pair<String, ImageVector?>>("Send it (WhatsApp, email…)" to Icons.Rounded.Send, "Print it" to Icons.Rounded.Print), -1, { sharing = false }) { i ->
+        sharing = false
+        if (i == 0) pdf { Pdf.share(ctx, it) } else pdf { Pdf.print(ctx, it) }
+    }
+    if (asking) AddQuestionDialog(onDismiss = { asking = false }) { q ->
+        asking = false
+        scope.launch { ctx.medlog.repo.addQuestion(q); note = buildNote(ctx, days) }
+    }
+}
+
+// ───────────────────────── building blocks ─────────────────────────
+
+/** A white group of rows. */
+@Composable
+private fun Group(content: @Composable ColumnScope.() -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(LocalPalette.current.card), content = content)
+}
+
+/** A section heading, with room above it so sections read as separate. */
+@Composable
+private fun Section(text: String) {
+    Text(text, fontSize = LocalScale.current.headline, fontWeight = FontWeight.Bold, color = LocalPalette.current.ink,
+        modifier = Modifier.padding(top = 18.dp, start = 4.dp).semantics { heading() })
+}
+
+@Composable
+private fun Line(inset: Dp = 16.dp) {
+    Box(Modifier.padding(start = inset).fillMaxWidth().height(1.dp).background(LocalPalette.current.line))
+}
+
+@Composable
+private fun Plain(text: String, soft: Boolean = false) {
+    Text(text, fontSize = LocalScale.current.body, color = if (soft) LocalPalette.current.inkSoft else LocalPalette.current.ink,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp))
+}
+
+/** Label on top, answer below: reads in one glance and never squeezes long answers into a narrow column. */
+@Composable
+private fun Fact(label: String, value: String, color: Color? = null) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(label, fontSize = sc.small, color = p.inkSoft)
+        Text(value, fontSize = sc.body, color = color ?: p.ink, fontWeight = if (color != null) FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
+@Composable
+private fun Tag(text: String, fg: Color, bg: Color) {
+    Text(text, fontSize = LocalScale.current.small, fontWeight = FontWeight.Bold, color = fg, maxLines = 1,
+        modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(bg).padding(horizontal = 10.dp, vertical = 4.dp))
+}
+
+private fun levelColor(level: String, p: Palette) = when (level) { "RED" -> p.red; "AMBER" -> p.amber; else -> p.brand }
+private fun levelWord(level: String) = when (level) { "RED" -> "Urgent"; "AMBER" -> "Watch"; else -> null }
+
+// ───────────────────────── top of the page ─────────────────────────
+
+/** How far back the summary goes: one quiet card, tap to change. */
+@Composable
+private fun PeriodCard(days: Int, period: String?, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val name = PERIODS.first { it.first == days }.second
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).steady("Covers $name. Tap to change", onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+            if (period != null) Text(period, fontSize = sc.small, color = p.inkSoft)
+        }
+        Spacer(Modifier.width(12.dp))
+        Text("Change", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand)
+    }
+}
+
+/** Three numbers as three cards, side by side. */
+@Composable
+private fun Stats(n: DoctorNote) {
+    val p = LocalPalette.current
+    val urgent = n.symptoms.count { it.urgent == "RED" }
+    val watch = n.symptoms.count { it.urgent == "AMBER" }
+    val due = n.medicines.filter { !it.asNeeded }.sumOf { it.due }
+    val done = n.medicines.filter { !it.asNeeded }.sumOf { it.done }
+    val pct = if (due == 0) null else done * 100 / due
+    Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        StatCard("${n.symptoms.size}", "Symptoms", p.ink, p.card)
+        StatCard("${urgent + watch}", "Need care", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, if (urgent > 0) p.redSoft else if (watch > 0) p.amberSoft else p.card)
+        if (pct != null) StatCard("$pct%", "Doses taken", if (pct < 80) p.amber else p.ink, p.card)
+    }
+}
+
+@Composable
+private fun RowScope.StatCard(value: String, label: String, fg: Color, bg: Color) {
+    val sc = LocalScale.current
+    Column(
+        Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(18.dp)).background(bg).padding(vertical = 16.dp, horizontal = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        Text(value, fontSize = sc.title, fontWeight = FontWeight.Bold, color = fg, maxLines = 1)
+        Text(label, fontSize = sc.small, color = LocalPalette.current.inkSoft, textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun ConcernRow(text: String, level: String) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val title = text.substringBefore(":")
+    val rest = text.substringAfter(":", "").trim()
+    val date = Regex("""\(([^()]*)\)$""").find(rest)?.groupValues?.get(1)
+    val what = rest.removeSuffix(date?.let { "($it)" } ?: "").trim()
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = 16.dp)) {
+        Box(Modifier.padding(vertical = 16.dp).width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(levelColor(level, p)))
+        Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Text(title, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
+                levelWord(level)?.let { Spacer(Modifier.width(8.dp)); Tag(it, Color.White, levelColor(level, p)) }
+            }
+            if (what.isNotEmpty()) Text(what.replaceFirstChar(Char::uppercase), fontSize = sc.body, color = p.ink)
+            date?.let { Text(it, fontSize = sc.small, color = p.inkSoft) }
+        }
+    }
+}
+
+// ───────────────────────── body ─────────────────────────
+
+/** Front and/or back with numbered pins. Pain "all over" tints the whole figure. */
+@Composable
+private fun BodyPins(n: DoctorNote) {
+    val ctx = LocalContext.current
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val urgency = n.symptoms.associate { it.n to it.urgent }
+    val views = listOf(false, true).filter { b -> n.pins.any { it.second.startsWith("back") == b } }
+    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+            for (back in views) {
+                val art by produceState<ImageBitmap?>(null, back) { value = withContext(Dispatchers.IO) { BodyArt.bitmap(ctx, back, WHOLE, 500)?.asImageBitmap() } }
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val mine = n.pins.filter { it.second.startsWith("back") == back }
+                    Canvas(Modifier.height(280.dp).aspectRatio(100f / 170f)) {
+                        val u = size.width / 100f
+                        val box = IntSize(size.width.toInt(), size.height.toInt())
+                        art?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = box) }
+                        mine.filter { it.second.endsWith(":all") }.forEach { (num, _) ->
+                            art?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = box, alpha = 0.4f, colorFilter = ColorFilter.tint(levelColor(urgency[num] ?: "GREEN", p), BlendMode.SrcIn)) }
+                        }
+                        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                            color = android.graphics.Color.WHITE; textSize = 12.dp.toPx(); textAlign = android.graphics.Paint.Align.CENTER; isFakeBoldText = true
+                        }
+                        for ((num, code) in mine) {
+                            val xy = if (code.endsWith(":all")) listOf(50f, 62f) else code.substringAfter(":").split(",").mapNotNull { it.toFloatOrNull() }
+                            if (xy.size != 2) continue
+                            val c = Offset(xy[0] * u, xy[1] * u)
+                            drawCircle(Color.White, 12.dp.toPx(), c)
+                            drawCircle(levelColor(urgency[num] ?: "GREEN", p), 10.dp.toPx(), c)
+                            drawContext.canvas.nativeCanvas.drawText("$num", c.x, c.y + 4.3.dp.toPx(), paint)
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (back) "Back" else "Front", fontSize = sc.small, color = p.inkSoft)
+                }
+            }
+        }
+        if (n.pins.any { it.second.endsWith(":all") }) {
+            Spacer(Modifier.height(10.dp))
+            Text("Shaded body: felt all over", fontSize = sc.small, color = p.inkSoft)
+        }
+    }
+}
+
+// ───────────────────────── symptoms ─────────────────────────
+
+/** One symptom: its name, two numbers as cards, when it happened, then plain facts. */
+@Composable
+private fun SymptomCard(r: DoctorNote.Row, days: Int) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val tone = levelColor(r.urgent, p)
+    Group {
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("${r.n}", fontSize = sc.small, fontWeight = FontWeight.Bold, color = Color.White,
+                modifier = Modifier.size(28.dp).clip(CircleShape).background(tone).wrapContentSize(Alignment.Center))
+            Spacer(Modifier.width(12.dp))
+            SpriteIcon(r.problemId, 40.dp)
+            Spacer(Modifier.width(10.dp))
+            Text(r.name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
+            levelWord(r.urgent)?.let { Tag(it, Color.White, tone) }
+        }
+        // the two numbers a doctor asks first
+        Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            MiniCard("Times", if (r.total == 1) "Once" else "${r.total}", if (r.total > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
+            r.sevHigh?.let { MiniCard("Worst pain", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
+        }
+        if (r.daily.count { it > 0 } > 1) DayStrip(r.daily, tone, days)
+        Spacer(Modifier.height(4.dp))
+        r.began?.let { Line(); Fact("Started", it) }
+        r.trend?.let { t ->
+            Line()
+            when (t) {
+                "increasing" -> Fact("Over time", "Getting worse", p.red)
+                "decreasing" -> Fact("Over time", "Happening less often", p.ok)
+                else -> Fact("Over time", "Getting better", p.ok)
+            }
+        }
+        if (r.places.isNotEmpty()) { Line(); Fact("Where", r.places.joinToString(", ")) }
+        if (r.feels.isNotEmpty()) { Line(); Fact("What it feels like", r.feels.joinToString(", ")) }
+        if (r.flags.isNotEmpty()) { Line(); Fact("Warning signs", r.flags.joinToString(", ") { it.replaceFirstChar(Char::uppercase) }, p.red) }
+        r.quote?.let { Line(); Fact("In the patient's words", "“$it”") }
+        Spacer(Modifier.height(4.dp))
+    }
+}
+
+@Composable
+private fun RowScope.MiniCard(label: String, value: String, sub: String?, color: Color? = null) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(14.dp)).background(p.paper).padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Text(label, fontSize = sc.small, color = p.inkSoft)
+        Text(value, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = color ?: p.ink)
+        if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
+    }
+}
+
+private fun sevWord(v: Int) = when { v >= 9 -> "Very severe"; v >= 7 -> "Severe"; v >= 4 -> "Moderate"; v >= 1 -> "Mild"; else -> "None" }
+private fun sevColor(v: Int, p: Palette) = when { v >= 7 -> p.red; v >= 4 -> Color(0xFFC2410C); else -> p.ok }
+
+/** When it happened: one bar per day. */
+@Composable
+private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val max = (daily.maxOrNull() ?: 1).coerceAtLeast(1)
+    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Each bar is one day", fontSize = sc.small, color = p.inkSoft)
+        Canvas(Modifier.fillMaxWidth().height(32.dp)) {
+            val slot = size.width / daily.size
+            val bw = (slot * 0.64f).coerceAtLeast(1.5f)
+            daily.forEachIndexed { i, v ->
+                val x = i * slot + (slot - bw) / 2
+                val bh = if (v == 0) 2.dp.toPx() else size.height * (0.3f + 0.7f * v / max)
+                drawRoundRect(if (v == 0) Color(0x1F000000) else tone, Offset(x, size.height - bh), Size(bw, bh), CornerRadius(minOf(bw / 2, 3.dp.toPx())))
+            }
+        }
+        Row {
+            Text("$days days ago", fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
+            Text("Today", fontSize = sc.small, color = p.inkSoft)
+        }
+    }
+}
+
+// ───────────────────────── medicines & readings ─────────────────────────
+
+@Composable
+private fun MedRow(m: DoctorNote.Med) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val low = m.due > 0 && m.done * 100 / m.due < 80
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.Top) {
+            Column(Modifier.weight(1f)) {
+                Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                Text(plainDose(m.dose), fontSize = sc.small, color = p.inkSoft)
+            }
+            Spacer(Modifier.width(12.dp))
+            Text(if (m.asNeeded || m.due == 0) m.taken.replaceFirstChar(Char::uppercase) else "${m.done} of ${m.due} taken", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = if (low) p.amber else p.ink)
+        }
+        if (!m.asNeeded && m.due > 0) {
+            val f = (m.done.toFloat() / m.due).coerceIn(0f, 1f)
+            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(p.fill)) {
+                if (f > 0f) Box(Modifier.fillMaxWidth(f).height(6.dp).clip(RoundedCornerShape(3.dp)).background(if (low) p.amber else p.ok))
+            }
+        }
+        if (m.change.isNotBlank()) Text(m.change.replaceFirstChar(Char::uppercase), fontSize = sc.small, color = p.inkSoft)
+    }
+}
+
+/** "500 mg BD" becomes "500 mg, twice a day": plain for the patient, still exact for the doctor. */
+private fun plainDose(d: String) = d.replace(" OD", ", once a day").replace(" BD", ", twice a day").replace(" TDS", ", 3 times a day")
+    .replace(" QID", ", 4 times a day").replace("as needed", "when needed").trim().trimStart(',').trim()
+
+@Composable
+private fun ReadingCard(r: DoctorNote.Reading, modifier: Modifier) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(if (r.off) p.redSoft else p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(r.name, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (r.off) p.red else p.inkSoft)
+        Text(r.latest, fontSize = sc.title, fontWeight = FontWeight.Bold, color = if (r.off) p.red else p.ink, maxLines = 1)
+        Text(r.unit, fontSize = sc.small, color = p.inkSoft)
+        Spacer(Modifier.height(6.dp))
+        Text(if (r.off) "Outside the usual range" else "Latest, ${r.date}", fontSize = sc.small, color = if (r.off) p.red else p.inkSoft)
+        r.range?.let { Text("Lowest to highest: $it", fontSize = sc.small, color = p.inkSoft) }
+    }
+}
+
+// ───────────────────────── rows and windows ─────────────────────────
+
+@Composable
+private fun NavRow(icon: ImageVector, title: String, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).steady(title, onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(p.brandSoft), contentAlignment = Alignment.Center) { Icon(icon, null, tint = p.brand, modifier = Modifier.size(20.dp)) }
+        Spacer(Modifier.width(12.dp))
+        Text(title, fontSize = sc.body, color = p.ink, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
+    }
+}
+
+/** A calm window with a few big choices. */
+@Composable
+private fun ChoiceDialog(title: String, options: List<Pair<String, ImageVector?>>, selected: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Dialog(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(bottom = 6.dp))
+            options.forEachIndexed { i, (label, icon) ->
+                val on = i == selected
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = sc.target).clip(RoundedCornerShape(16.dp)).background(if (on) p.brandSoft else p.paper)
+                        .then(if (on) Modifier.border(2.dp, p.brand, RoundedCornerShape(16.dp)) else Modifier)
+                        .steady(label) { onPick(i) }.padding(horizontal = 18.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    icon?.let { Icon(it, null, tint = p.brand, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(14.dp)) }
+                    Text(label, fontSize = sc.body, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = p.ink, modifier = Modifier.weight(1f))
+                    if (on) Icon(Icons.Rounded.Check, null, tint = p.brand, modifier = Modifier.size(24.dp))
+                }
+            }
+            BigButton("Cancel", tone = Tone.SECONDARY, onClick = onDismiss)
+        }
+    }
+}
+
+/** Adding a question gets its own quiet window: type it, or say it. */
+@Composable
+private fun AddQuestionDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    var q by remember { mutableStateOf("") }
+    Dialog(onDismissRequest = { app.listener.stop(); onDismiss() }) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Your question", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+            Text("Something you want to ask the doctor.", fontSize = sc.small, color = p.inkSoft)
+            BigField("Type it here", q, { q = it })
+            if (Perms.has(ctx, *Perms.MIC)) BigButton("Say it instead", tone = Tone.QUIET, icon = Icons.Rounded.Mic,
+                onClick = { app.listener.start(keepAudio = false, maxMs = 20_000) { h -> if (h.text.isNotBlank()) q = h.original } })
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigButton("Cancel", Modifier.weight(1f), Tone.SECONDARY, onClick = { app.listener.stop(); onDismiss() })
+                BigButton("Add", Modifier.weight(1f), enabled = q.isNotBlank(), onClick = { app.listener.stop(); onAdd(q.trim()) })
+            }
+        }
+    }
+}
