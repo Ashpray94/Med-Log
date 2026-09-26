@@ -3,9 +3,7 @@
     <string name="app_name">MedLog</string>
     <string name="tile_label">Tell MedLog</string>
     <string name="widget_label">MedLog</string>
-    <string name="widget_desc">Tell how you feel, medicines and help</string>
-    <string name="family_widget_label">MedLog family</string>
-    <string name="family_widget_desc">Send your messages to family, call a helper, or SOS</string>
+    <string name="widget_desc">Note how you feel and message your family in one tap</string>
     <string name="whatsapp_service_label">MedLog SOS: start WhatsApp group call</string>
     <string name="whatsapp_service_desc">Used only during an SOS you start. When MedLog opens your family SOS group in WhatsApp, this presses the call button for you. It reads nothing else and does nothing at any other time.</string>
     <string name="shortcut_tell">Tell how I feel</string>

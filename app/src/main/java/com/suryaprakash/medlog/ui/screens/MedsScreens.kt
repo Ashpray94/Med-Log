@@ -128,7 +128,7 @@ fun MedsScreen(nav: Nav) {
     val due = doses.filter { it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED }
     val speak = if (doses.isEmpty()) "No medicines today." else "Today: " + doses.joinToString(". ") { d -> "${DoseActivity.time(d.scheduledAt)}, ${byId[d.medicineId]?.name ?: ""}, ${statusWord(d, now)}" }
     Screen("Medicines", speak, onHome = { nav.home() }, onBack = { nav.back() }) {
-        if (doses.isEmpty() && meds.none { it.asNeeded }) Card(color = p.brandSoft) {
+        if (doses.isEmpty() && meds.none { it.asNeeded }) Card() {
             Text("No medicines yet", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Body("Add each medicine once. MedLog will ring at the right time, even on silent, and tell your family if one is missed.")
         }
@@ -332,7 +332,7 @@ fun DidITakeScreen(nav: Nav) {
         if (later.isNotEmpty()) append("Later today: " + later.joinToString(", ") { "${byId[it.medicineId]?.name} at ${DoseActivity.time(it.scheduledAt)}" } + ".")
     }
     Screen("Did I take my medicines?", say, onHome = { nav.home() }, onBack = { nav.back() }) {
-        Card(color = if (pending.isEmpty()) p.okSoft else p.amberSoft) { Text(say, fontSize = sc.body * 1.05f, color = p.ink, fontWeight = FontWeight.Bold) }
+        Card(border = if (pending.isEmpty()) p.ok else p.amber) { Text(say, fontSize = sc.body * 1.05f, color = p.ink, fontWeight = FontWeight.Bold) }
         taken.forEach { d -> byId[d.medicineId]?.let { m -> Row(verticalAlignment = Alignment.CenterVertically) { MedPhoto(m.photoPath); Spacer(Modifier.width(12.dp)); Body("✓ ${m.name} · ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}", bold = true) } } }
         if (pending.isNotEmpty()) BigButton("Take them now", tone = Tone.OK, onClick = { nav.replace(Route.Meds) })
         Spacer(Modifier.height(4.dp))

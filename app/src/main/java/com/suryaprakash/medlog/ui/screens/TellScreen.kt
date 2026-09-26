@@ -30,6 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Mic
@@ -54,6 +55,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -80,7 +82,6 @@ import com.suryaprakash.medlog.pictogram.Body
 import com.suryaprakash.medlog.pictogram.BodyMap
 import com.suryaprakash.medlog.pictogram.Pin
 import com.suryaprakash.medlog.pictogram.SpriteIcon
-import com.suryaprakash.medlog.speech.Listener
 import com.suryaprakash.medlog.speech.Localize
 import com.suryaprakash.medlog.ui.BigButton
 import com.suryaprakash.medlog.ui.Card
@@ -104,12 +105,12 @@ import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private enum class Phase { OPEN, CONFIRM, PICK, ASK, SUMMARY, DANGER }
+private enum class Phase { CONFIRM, PICK, ASK, SUMMARY, DANGER }
 
 /**
- * "Tell how you feel" as a conversation:
- * one short question at a time, spoken and shown as large captions, with a live caption of the answer.
- * Answers save as they come. Core questions first; more only if the person wants to.
+ * "Tell how you feel", tap first: choose the problem (suggestions and search), then one short question at a
+ * time with big answers to tap. Answers save as they come. Core questions first; more only if the person wants.
+ * Questions are read out only when the person chose that in setup (or taps Read aloud).
  */
 @Composable
 fun TellScreen(nav: Nav, route: Route.Tell) {
@@ -120,7 +121,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     val scope = rememberCoroutineScope()
     val lang = s.languages.firstOrNull() ?: "en-IN"
 
-    var phase by remember { mutableStateOf(if (route.pick) Phase.PICK else if (route.problemId != null || route.noteId != null) Phase.ASK else Phase.OPEN) }
+    var phase by remember { mutableStateOf(if (route.problemId != null || route.noteId != null) Phase.ASK else Phase.PICK) }
     var problem by remember { mutableStateOf(cat.problem(route.problemId)) }
     val facts = remember { mutableStateMapOf<String, Fact>() }
     val queue = remember { mutableStateListOf<Ask>() }
@@ -130,15 +131,10 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     var toldMore by remember { mutableStateOf(route.noteId != null) }
     var triage by remember { mutableStateOf(Triage.OK) }
     var parsed by remember { mutableStateOf<Parsed?>(null) }
-    var caption by remember { mutableStateOf("") }
-    var unclear by remember { mutableStateOf(0) }
-    var micOk by remember { mutableStateOf(Perms.has(ctx, *Perms.MIC)) }
     var pins by remember { mutableStateOf<List<Pin>>(emptyList()) }
     var reAsk by remember { mutableStateOf(false) }
-    var openAudio by remember { mutableStateOf<String?>(null) }
-    val askMic = rememberPermissionAsker { micOk = it }
 
-    DisposableEffect(Unit) { onDispose { app.listener.stop(); app.speaker.stop() } }
+    DisposableEffect(Unit) { onDispose { app.speaker.stop() } }
 
     suspend fun evaluate(): Triage {
         val p = problem ?: return Triage.OK
@@ -154,7 +150,6 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         app.repo.updateTriage(id, t)
         app.refreshWidgets()
         if (t.level == Level.RED && phase != Phase.DANGER) {
-            app.listener.stop()
             Alerts.dangerToHelpers(ctx, problem?.label.orEmpty(), t)
             savedFeedback(ctx)
             phase = Phase.DANGER
@@ -162,12 +157,11 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     }
 
     fun toSummary() {
-        app.listener.stop(); app.speaker.stop()
+        app.speaker.stop()
         scope.launch { persist(); if (phase != Phase.DANGER) phase = Phase.SUMMARY }
     }
 
     fun advance() {
-        caption = ""; unclear = 0
         if (index + 1 < queue.size) { index++; return }
         if (reAsk) { reAsk = false; toSummary(); return }
         val p = problem ?: return toSummary()
@@ -179,9 +173,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     }
 
     fun answer(a: Ask, value: Any, label: String) {
-        app.listener.stop()
         app.speaker.stop()
-        caption = label
         when (a.id) {
             Interview.MORE.id -> {
                 if (value == true) { toldMore = true; problem?.let { p -> queue.addAll(Interview.extended(cat, p, facts)) } }
@@ -198,7 +190,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     }
 
     /** Starts the conversation about [pid]: the note is created straight away. */
-    fun begin(pid: String, known: Map<String, Fact> = emptyMap(), others: List<Mention> = emptyList(), transcript: String? = null, audio: String? = null) {
+    fun begin(pid: String, known: Map<String, Fact> = emptyMap(), others: List<Mention> = emptyList(), transcript: String? = null) {
         val p = cat.problem(pid) ?: return
         scope.launch {
             problem = p
@@ -207,11 +199,14 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             if (id == null) {
                 val at = parsed?.occurredAt ?: System.currentTimeMillis()
                 noteId = app.repo.saveTold(listOf(Mention(pid, facts = facts.toMutableMap())) + others, transcript, at, Triage.OK,
-                    parsed?.readings.orEmpty(), parsed?.medicinesTaken.orEmpty(), audio).firstOrNull()
+                    parsed?.readings.orEmpty(), parsed?.medicinesTaken.orEmpty(), null).firstOrNull()
             } else app.repo.changeProblem(id, pid)
-            queue.clear(); queue.addAll(Interview.core(cat, p, facts)); index = 0; caption = ""
+            queue.clear(); queue.addAll(Interview.core(cat, p, facts)); index = 0
             persist()
             if (phase == Phase.DANGER) return@launch
+            // one of the person's own emergencies: their helpers are called now, without waiting for answers
+            val plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan)
+            if (pid in plan.emergencies) { Alerts.emergency(ctx, p.label); triage = Triage(Level.RED, "Your helpers are being called.", listOf(p.label)); phase = Phase.DANGER; return@launch }
             if (queue.isEmpty()) { offeredMore = true; val ext = Interview.extended(cat, p, facts); if (ext.isNotEmpty()) { queue.add(Interview.MORE); phase = Phase.ASK } else toSummary() }
             else phase = Phase.ASK
         }
@@ -234,73 +229,32 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         val t = route.text ?: return@LaunchedEffect
         val pr = app.parser.parse(t, null)
         parsed = pr
-        phase = if (pr.main != null) Phase.CONFIRM else Phase.OPEN
+        phase = if (pr.main != null) Phase.CONFIRM else Phase.PICK
     }
 
     val p = LocalPalette.current
     val sc = LocalScale.current
 
     when (phase) {
-        // ───────────── free talk ─────────────
-        Phase.OPEN -> {
-            val q = "How are you feeling? Tell me in your own words."
-            val listening by app.listener.listening.collectAsState()
-            val partial by app.listener.partial.collectAsState()
-            val ready by app.listener.state.collectAsState()
-            fun listen() {
-                if (!micOk) { askMic(Perms.MIC); return }
-                caption = ""
-                app.listener.start { h ->
-                    caption = h.original
-                    openAudio = h.audio?.absolutePath
-                    if (h.text.isBlank()) { unclear++; return@start }
-                    scope.launch {
-                        val pr = app.parser.parse(h.text, null, app.db.medicines().active().map { it.name })
-                        parsed = pr
-                        if (pr.main == null) unclear++ else { unclear = 0; phase = Phase.CONFIRM }
-                    }
-                }
-            }
-            LaunchedEffect(micOk, ready, unclear) {
-                if (unclear < 3 && micOk && (ready is Listener.State.Ready || app.listener.phoneAvailable()) && !app.listener.listening.value)
-                    speak(app, if (unclear > 0) "Sorry, I didn't catch that. Please say it again." else q, lang) { listen() }
-            }
-            Conversation(
-                title = "Tell how you feel", problem = null, onChange = null, onBack = { nav.back() }, progress = null,
-                question = if (unclear > 0) "Sorry, I didn't catch that. Please say it again." else q, lang = lang,
-                caption = if (listening) partial else caption, listening = listening,
-                onMic = { if (listening) app.listener.finish() else listen() },
-                onSkip = null, onDone = null,
-            ) {
-                if (!micOk) BigButton("Allow the microphone", onClick = { askMic(Perms.MIC) })
-                Hint("For example: “I have a headache since morning”", center = true, modifier = Modifier.fillMaxWidth())
-                BigButton("Choose from pictures", tone = Tone.QUIET, icon = Icons.Rounded.GridView, onClick = { app.listener.stop(); phase = Phase.PICK })
-            }
-        }
-
-        // ───────────── "Is it headache?" ─────────────
+        // ───────────── "Is it headache?" (words from Google Assistant or a link) ─────────────
         Phase.CONFIRM -> {
             val pr = parsed ?: return
             val m = pr.main ?: return
             val label = cat.problem(m.problemId)?.label ?: ""
             val q = "Is it ${label.lowercase()}?"
-            fun yes() = begin(m.problemId, m.facts, pr.others, pr.transcript, openAudio)
-            LaunchedEffect(q) { speak(app, q, lang) { listenYesNo(app) { ok -> if (ok) yes() else phase = Phase.PICK } } }
-            val listening by app.listener.listening.collectAsState()
-            val partial by app.listener.partial.collectAsState()
-            Conversation("Tell how you feel", cat.problem(m.problemId), null, { phase = Phase.OPEN }, null, q, lang, if (listening) partial else caption, listening,
-                onMic = { listenYesNo(app) { ok -> if (ok) yes() else phase = Phase.PICK } }, onSkip = null, onDone = null) {
-                YesNoBig(onYes = { app.listener.stop(); yes() }, onNo = { app.listener.stop(); phase = Phase.PICK })
+            fun yes() = begin(m.problemId, m.facts, pr.others, pr.transcript)
+            LaunchedEffect(q) { if (s.autoRead && s.readAloud) speak(app, q, lang) }
+            Conversation("Tell how you feel", cat.problem(m.problemId), null, { phase = Phase.PICK }, null, q, lang, onSkip = null, onDone = null) {
+                YesNoBig(onYes = { yes() }, onNo = { phase = Phase.PICK })
             }
         }
 
         // ───────────── choose, or change, the problem ─────────────
         Phase.PICK -> PickProblem(
             nav,
-            onPicked = { pid -> app.listener.stop(); begin(pid) },
-            onBack = { phase = if (problem != null) Phase.ASK else Phase.OPEN },
-            onSay = if (problem == null) ({ phase = Phase.OPEN }) else null,
-            title = if (problem != null) "Change to…" else "What's wrong?",
+            onPicked = { pid -> begin(pid) },
+            onBack = { if (problem != null) phase = Phase.ASK else nav.back() },
+            title = if (problem != null) "Change to…" else "How are you feeling?",
         )
 
         // ───────────── one question at a time ─────────────
@@ -308,62 +262,22 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             val pr = problem
             val a = queue.getOrNull(index)
             if (pr == null || a == null) { Box(Modifier.fillMaxSize().background(p.paper)); return }
-            val listening by app.listener.listening.collectAsState()
-            val partial by app.listener.partial.collectAsState()
-            fun onHeard(h: Listener.Heard) {
-                if (a.kind == Kind.BODY) {
-                    val t = " " + Normalize.text(h.text) + " "
-                    if (listOf(" all over ", " whole body ", " everywhere ", " full body ", " all my body ").any { t.contains(it) }) {
-                        pins = emptyList(); facts["pin"] = Fact(ALL_OVER_PIN, Source.ASKED); facts.remove("side")
-                        answer(a, ALL_OVER, ALL_OVER); return
-                    }
-                    val part = Body.parts.filter { !it.back }.filter { part -> part.label.lowercase().split(" ").all { w -> t.contains(" $w ") } }.maxByOrNull { it.label.length }
-                    if (part != null) {
-                        val pin = Pin(false, part.cx, part.cy, part)
-                        pins = listOf(pin)
-                        facts["pin"] = Fact(pin.encode(), Source.ASKED)
-                        part.side?.let { facts["side"] = Fact(it, Source.ASKED) }
-                        answer(a, part.label, part.label)
-                    } else { caption = h.original; unclear++ }
-                    return
-                }
-                when (val r = Interview.understand(a, h.text)) {
-                    is Interview.Heard.Value -> answer(a, if (a.kind == Kind.FREE) h.text else r.value, if (a.kind == Kind.FREE) h.original else r.label)
-                    Interview.Heard.Skip -> { caption = h.original; advance() }
-                    Interview.Heard.Done -> toSummary()
-                    Interview.Heard.Unclear -> { caption = h.original; unclear++ }
-                }
-            }
-            fun listen() {
-                if (!micOk) { askMic(Perms.MIC); return }
-                app.listener.start(grammar = grammarFor(a), keepAudio = false, maxMs = if (a.kind == Kind.FREE) 45_000 else 12_000, silenceMs = if (a.kind == Kind.FREE) 2200 else 1300) { h ->
-                    if (h.text.isNotBlank()) onHeard(h)
-                }
-            }
-            val question = if (unclear > 0) "Sorry, I didn't catch that. ${a.text}" else a.text
-            LaunchedEffect(a.id, index, unclear) {
-                if (unclear >= 3) return@LaunchedEffect           // stop asking by voice; wait for a tap
-                speak(app, question, lang) { listen() }
-            }
+            val question = a.text
+            LaunchedEffect(a.id, index) { if (s.autoRead && s.readAloud) speak(app, question, lang) }
             val coreCount = queue.count { it.core && it.id != Interview.MORE.id }
             val progress = if (a.core && a.id != Interview.MORE.id && !reAsk) "Question ${(index + 1).coerceAtMost(coreCount)} of $coreCount" else null
             Conversation(
-                title = pr.label, problem = pr, onChange = { app.listener.stop(); phase = Phase.PICK },
-                onBack = { app.listener.stop(); if (index > 0) { index--; caption = ""; unclear = 0 } else nav.back() },
+                title = pr.label, problem = pr, onChange = { phase = Phase.PICK },
+                onBack = { if (index > 0) index-- else nav.back() },
                 progress = progress, question = question, lang = lang,
-                caption = if (listening) partial else caption, listening = listening,
-                onMic = { if (listening) app.listener.finish() else listen() },
-                onSkip = if (a.id == Interview.MORE.id) null else ({ app.listener.stop(); advance() }),
+                onSkip = if (a.id == Interview.MORE.id) null else ({ advance() }),
                 onDone = { toSummary() },
             ) {
                 AnswerPad(a, pins, pr.region, onPin = { pin ->
-                    app.listener.stop()
                     pins = listOf(pin)
                     facts["pin"] = Fact(pin.encode(), Source.ASKED)
                     pin.part.side?.let { facts["side"] = Fact(it, Source.ASKED) }
-                    caption = pin.part.label
                 }, onAll = {
-                    app.listener.stop()
                     pins = emptyList(); facts["pin"] = Fact(ALL_OVER_PIN, Source.ASKED); facts.remove("side")
                     answer(a, ALL_OVER, ALL_OVER)
                 }, onAnswer = { v, l -> answer(a, v, l) })
@@ -385,12 +299,12 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
                     rows.forEach { (k, v) -> SummaryRow(k, v) }
                     if (rows.isEmpty()) Hint("No details yet.")
                 }
-                if (triage.level == Level.AMBER) Card(color = p.amberSoft) {
+                if (triage.level == Level.AMBER) Card(border = p.amber) {
                     Text("▲ " + triage.say, color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body)
                     triage.reasons.forEach { Hint(it) }
-                    DoctorCallButton()
+                    DoctorCallButton(pr.dept)
                 }
-                BigButton("Done", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.2f, onClick = {
+                BigButton("Save", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.2f, onClick = {
                     scope.launch {
                         persist()
                         val id = noteId
@@ -426,24 +340,9 @@ private fun speak(app: MedLogApp, text: String, lang: String, then: (() -> Unit)
     if (local != null && app.speaker.hasVoice(lang)) app.speaker.sayIn(local, lang, onDone = then) else app.speaker.say(text, onDone = then)
 }
 
-private fun listenYesNo(app: MedLogApp, onAnswer: (Boolean) -> Unit) {
-    app.listener.start(grammar = Listener.YES_NO, keepAudio = false, maxMs = 9000, silenceMs = 1100) { h ->
-        when (val r = Interview.understand(Interview.MORE, h.text)) { is Interview.Heard.Value -> onAnswer(r.value == true); else -> {} }
-    }
-}
-
-/** Words the bundled English model listens for (the phone's own recogniser ignores this). */
-private fun grammarFor(a: Ask): List<String>? = when (a.kind) {
-    Kind.YESNO -> Listener.YES_NO
-    Kind.NUMBER, Kind.TEMP -> Listener.NUMBERS
-    Kind.CHOICE, Kind.MULTI, Kind.SCALE -> (a.choices.flatMap { it.words + it.label.lowercase() }.filter { w -> w.all { it.code < 128 } } +
-        listOf("skip", "i don't know", "don't know", "that's all", "done", "stop") + if (a.kind == Kind.SCALE) Listener.NUMBERS else emptyList()).distinct()
-    else -> null
-}
-
 // ───────────────────────── layout ─────────────────────────
 
-/** Big question caption, the live "You said…" caption, the answers, and Skip / I'm done always there. */
+/** The question (largest words on the screen), its translation, the answers, and Skip / I'm done pinned at the bottom. */
 @Composable
 private fun Conversation(
     title: String,
@@ -453,38 +352,31 @@ private fun Conversation(
     progress: String?,
     question: String,
     lang: String,
-    caption: String,
-    listening: Boolean,
-    onMic: () -> Unit,
     onSkip: (() -> Unit)?,
     onDone: (() -> Unit)?,
     answers: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val local = Localize.of(question.removePrefix("Sorry, I didn't catch that. "), lang)
+    val local = Localize.of(question, lang)
     LaunchedEffect(question) { ReadAloud.text = question }
     Column(Modifier.fillMaxSize().background(p.paper).statusBarsPadding().navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = sc.margin, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(52.dp).clip(CircleShape).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.brand, modifier = Modifier.size(28.dp))
+        // task bar: Back, the problem's name small in the middle, Change on the right
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.suryaprakash.medlog.ui.RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack)
+            Row(Modifier.weight(1f).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                if (problem != null) { SpriteIcon(problem.id, 32.dp); Spacer(Modifier.width(8.dp)) }
+                Text(problem?.label ?: title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            if (problem != null) {
-                SpriteIcon(problem.id, 40.dp); Spacer(Modifier.width(10.dp))
-                Text(problem.label, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-            } else Text(title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = Modifier.weight(1f))
-            if (onChange != null) Row(
-                Modifier.height(52.dp).clip(RoundedCornerShape(26.dp)).background(p.fill).steady("Change the problem", onClick = onChange).padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) { Icon(Icons.Rounded.Edit, null, tint = p.ink, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(6.dp)); Text("Change", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink) }
+            if (onChange != null) com.suryaprakash.medlog.ui.RoundButton(Icons.Rounded.Edit, "Change the problem", onChange) else Spacer(Modifier.size(56.dp))
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = sc.margin), verticalArrangement = Arrangement.spacedBy(sc.gap)) {
             Spacer(Modifier.height(4.dp))
             if (progress != null) Text(progress, fontSize = sc.small, color = p.inkSoft, fontWeight = FontWeight.SemiBold)
-            Text(question, fontSize = sc.title * 0.95f, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.14f,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+            Text(question, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.18f,
+                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite; heading() })
             if (local != null) Text(local, fontSize = sc.headline, color = p.inkSoft, lineHeight = sc.headline * 1.35f)
-            CaptionBox(caption, listening, onMic)
+            Spacer(Modifier.height(4.dp))
             answers()
             Spacer(Modifier.height(8.dp))
         }
@@ -492,43 +384,11 @@ private fun Conversation(
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             Row(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (onSkip != null) BigButton("Skip", Modifier.weight(1f), Tone.SECONDARY, onClick = onSkip)
-                if (onDone != null) BigButton("I'm done", Modifier.weight(1f), Tone.PRIMARY, onClick = onDone)
+                if (onDone != null) BigButton("Finish", Modifier.weight(1f), Tone.SECONDARY, onClick = onDone)
             }
         }
         val nav = com.suryaprakash.medlog.ui.LocalNav.current
         com.suryaprakash.medlog.ui.BottomBar(onHome = { nav?.home() })
-    }
-}
-
-/** The live caption: what the person is saying, large, with the microphone state. */
-@Composable
-private fun CaptionBox(caption: String, listening: Boolean, onMic: () -> Unit) {
-    val p = LocalPalette.current
-    val sc = LocalScale.current
-    val pulse = rememberInfiniteTransition(label = "mic")
-    val k by pulse.animateFloat(1f, 1.2f, infiniteRepeatable(tween(650), RepeatMode.Reverse), label = "k")
-    val reduce = LocalSettings.current.lessMotion
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 88.dp).clip(RoundedCornerShape(sc.radius))
-            .background(if (listening) p.brandSoft else p.card)
-            .border(if (listening) 2.dp else 1.dp, if (listening) p.brand else p.line, RoundedCornerShape(sc.radius))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-            if (listening) Box(Modifier.size(50.dp).scale(if (reduce) 1f else k).clip(CircleShape).background(p.brand.copy(alpha = 0.18f)))
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).background(if (listening) p.brand else p.fill).steady(if (listening) "Stop listening" else "Answer by voice", onClick = onMic),
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Rounded.Mic, null, tint = if (listening) Color.White else p.ink, modifier = Modifier.size(26.dp)) }
-        }
-        Spacer(Modifier.width(14.dp))
-        Column(Modifier.weight(1f)) {
-            Text(if (listening) "Listening…" else if (caption.isBlank()) "Tap the microphone to answer by voice" else "You said",
-                fontSize = sc.small, color = if (listening) p.brand else p.inkSoft, fontWeight = FontWeight.SemiBold)
-            if (caption.isNotBlank()) Text("“$caption”", fontSize = sc.headline, color = p.ink, fontWeight = FontWeight.Medium, lineHeight = sc.headline * 1.3f,
-                modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-        }
     }
 }
 
@@ -537,8 +397,8 @@ private fun YesNoBig(onYes: () -> Unit, onNo: () -> Unit) {
     val sc = LocalScale.current
     val lang = LocalSettings.current.languages.firstOrNull() ?: "en-IN"
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        BigButton(Localize.of("Yes", lang)?.let { "Yes · $it" } ?: "Yes", Modifier.weight(1f), Tone.PRIMARY, height = sc.target * 1.5f, onClick = onYes)
-        BigButton(Localize.of("No", lang)?.let { "No · $it" } ?: "No", Modifier.weight(1f), Tone.SECONDARY, height = sc.target * 1.5f, onClick = onNo)
+        BigButton(Localize.of("Yes", lang)?.let { "Yes · $it" } ?: "Yes", Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = onYes)
+        BigButton(Localize.of("No", lang)?.let { "No · $it" } ?: "No", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.5f, onClick = onNo)
     }
 }
 
@@ -567,9 +427,8 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
                 (0..10).chunked(6).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { n ->
-                            val col = listOf(0xFF22B573, 0xFF34C77B, 0xFF6CC24A, 0xFFA3CF3A, 0xFFD6C53A, 0xFFF5B83D, 0xFFF59E3D, 0xFFF97316, 0xFFF45B2A, 0xFFEF4444, 0xFFD62828)[n]
-                            Box(Modifier.weight(1f).height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(col)).steady("$n out of 10") { onAnswer(n, "$n out of 10") },
-                                contentAlignment = Alignment.Center) { Text("$n", fontSize = sc.body, fontWeight = FontWeight.Bold, color = Color.White) }
+                            Box(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(14.dp)).background(p.paper).border(1.5.dp, p.line, RoundedCornerShape(14.dp)).steady("$n out of 10") { onAnswer(n, "$n out of 10") },
+                                contentAlignment = Alignment.Center) { Text("$n", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink) }
                         }
                         repeat(6 - row.size) { Spacer(Modifier.weight(1f)) }
                     }
@@ -613,7 +472,12 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
                 onClick = { pin?.let { onAnswer(it.part.label, it.part.label) } })
             BigButton("It's all over my body", tone = Tone.SECONDARY, onClick = onAll)
         }
-        Kind.FREE -> Hint("Just speak. Tap Skip if there's nothing to add.", center = true, modifier = Modifier.fillMaxWidth())
+        Kind.FREE -> {
+            var text by remember(a.id) { mutableStateOf("") }
+            com.suryaprakash.medlog.ui.SearchBox(text, { text = it }, "Type or tap Speak")
+            BigButton("Save this", tone = Tone.PRIMARY, enabled = text.isNotBlank(), icon = Icons.Rounded.Check, onClick = { onAnswer(text.trim(), text.trim()) })
+            Hint("Nothing to add? Tap Skip.")
+        }
     }
 }
 
@@ -683,7 +547,7 @@ fun NumberPad(unit: String, allowDecimal: Boolean, range: ClosedFloatingPointRan
     val v = text.toDoubleOrNull()
     val ok = v != null && v in range
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.fillMaxWidth().heightIn(min = sc.target * 1.2f).clip(RoundedCornerShape(sc.radius)).background(p.card).border(2.dp, p.brand, RoundedCornerShape(sc.radius)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().heightIn(min = sc.target * 1.2f).clip(RoundedCornerShape(sc.radius)).background(p.paper).border(2.dp, p.line, RoundedCornerShape(sc.radius)), contentAlignment = Alignment.Center) {
             Text(if (text.isEmpty()) "–" else "$text $unit".trim(), fontSize = sc.huge, fontWeight = FontWeight.Bold, color = p.ink)
         }
         val keys = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(if (allowDecimal) "." else "", "0", "⌫"))
@@ -698,6 +562,6 @@ fun NumberPad(unit: String, allowDecimal: Boolean, range: ClosedFloatingPointRan
             }
         }
         if (text.isNotEmpty() && !ok) Hint("That number looks wrong. Please check.")
-        BigButton("Done", tone = Tone.OK, enabled = ok, onClick = { v?.let(onDone) })
+        BigButton("Done", tone = Tone.PRIMARY, enabled = ok, icon = Icons.Rounded.Check, onClick = { v?.let(onDone) })
     }
 }

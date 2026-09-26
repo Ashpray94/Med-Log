@@ -30,6 +30,8 @@ data class Profile(
     val doctorPhone: String = "",
     val onBloodThinner: Boolean = false,
     val notes: String = "",
+    /** The care plan from setup, as JSON ([CarePlan]): doctors, current symptoms, treatments, risks, emergencies. */
+    @androidx.room.ColumnInfo(defaultValue = "") val plan: String = "",
 )
 
 /** Family, neighbours, carers. */
@@ -255,7 +257,7 @@ interface InboxDao {
 
 @Database(
     entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -275,7 +277,15 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, "medlog.db")
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
+                .addMigrations(M1_2)
                 .build()
+        }
+
+        /** 2.8: the care plan column. */
+        private val M1_2 = object : androidx.room.migration.Migration(1, 2) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE profile ADD COLUMN plan TEXT NOT NULL DEFAULT ''")
+            }
         }
     }
 }

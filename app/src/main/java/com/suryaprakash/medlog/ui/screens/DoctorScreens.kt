@@ -87,14 +87,11 @@ fun VisitScreen(nav: Nav) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var f by remember { mutableStateOf(VisitForm()) }
-    var listening by remember { mutableStateOf(false) }
-    val partial by app.listener.partial.collectAsState()
     LaunchedEffect(Unit) { app.repo.profile().doctorName.takeIf { it.isNotBlank() }?.let { f = f.copy(doctor = it) } }
-    Screen("After the visit", "What did the doctor say? Tap Say it and tell me: who you saw, what they did, any new medicine, and when to go back.", onHome = { nav.home() }, onBack = { nav.back() }) {
-        BigButton(if (listening) "Listening… tap to stop" else "Say it", icon = Icons.Rounded.Mic, enabled = Perms.has(ctx, *Perms.MIC), onClick = {
-            if (listening) app.listener.finish() else { listening = true; app.listener.start(maxMs = 90_000, silenceMs = 3000) { h -> listening = false; if (h.text.isNotBlank()) f = VisitParser.fill(f, h.text) } }
-        })
-        if (listening) Hint(partial)
+    Screen("After the visit", "What did the doctor say? Fill in what you remember, or tap Speak and tell me: who you saw, what they did, any new medicine, and when to go back.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        com.suryaprakash.medlog.ui.rememberDictation("What did the doctor say?") { f = VisitParser.fill(f, it) }?.let { speak ->
+            BigButton("Speak", tone = Tone.QUIET, icon = Icons.Rounded.Mic, sub = "Say who you saw, any new medicine, when to go back", onClick = speak)
+        }
         BigField("Doctor", f.doctor, { f = f.copy(doctor = it) })
         BigField("Did anyone come with you?", f.accompanied, { f = f.copy(accompanied = it) })
         BigField("Reason for visit", f.reason, { f = f.copy(reason = it) })

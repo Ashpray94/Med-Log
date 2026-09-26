@@ -13,7 +13,6 @@ import com.suryaprakash.medlog.data.MedDb
 import com.suryaprakash.medlog.data.Repo
 import com.suryaprakash.medlog.data.SettingsStore
 import com.suryaprakash.medlog.nlu.Parser
-import com.suryaprakash.medlog.speech.Listener
 import com.suryaprakash.medlog.speech.Speaker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,22 +31,6 @@ class MedLogApp : Application() {
     val db by lazy { MedDb.open(this) }
     val repo by lazy { Repo(db, catalogue, describe) }
     val speaker by lazy { Speaker(this) { settings.value.speechRate } }
-    val listener by lazy {
-        Listener(this).apply {
-            // the phone's recogniser is much better than the bundled model, in English too
-            usePhone = { settings.value.voiceEngine != "medlog" }
-            languages = { settings.value.languages }
-            phone.allowOnline = { settings.value.voiceOnline }
-            phone.biasing = { voiceWords }
-        }
-    }
-
-    /** Words the recogniser should expect: every problem name and its everyday names. */
-    private val voiceWords by lazy {
-        (catalogue.problems.flatMap { listOf(it.label) + it.synonyms } + listOf("vomiting", "dizzy", "headache", "fever", "loose motion", "chest pain", "breathless", "tablet", "BP", "sugar"))
-            .map { it.lowercase() }.distinct()
-    }
-
     override fun onCreate() {
         super.onCreate()
         app = this
@@ -56,7 +39,6 @@ class MedLogApp : Application() {
         channels()
         speaker.init()
         scope.launch {
-            listener.prepare()
             runCatching { com.suryaprakash.medlog.help.Nearby.startListening(this@MedLogApp) }
             runCatching { Updater.dailyCheck(this@MedLogApp) }
             catalogue
@@ -71,7 +53,6 @@ class MedLogApp : Application() {
     fun refreshWidgets() {
         scope.launch {
             runCatching { com.suryaprakash.medlog.widget.MedLogWidget().updateAll(this@MedLogApp) }
-            runCatching { com.suryaprakash.medlog.widget.FamilyWidget().updateAll(this@MedLogApp) }
         }
     }
 

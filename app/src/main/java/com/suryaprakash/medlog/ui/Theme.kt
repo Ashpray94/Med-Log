@@ -43,16 +43,21 @@ data class Palette(
     val tintBlue: Color, val tintGreen: Color, val tintOrange: Color, val tintPurple: Color, val tintPink: Color, val tintTeal: Color,
 )
 
+/**
+ * 60 / 30 / 10 (docs/DESIGN.md): white screens (60), greys for surfaces, borders and secondary text (30), one
+ * accent for the main action and for "selected" (10). Red means danger or SOS only, green means Yes / OK only.
+ * The old icon tints are all grey now, so colour never decorates.
+ */
 val Warm = Palette(
-    paper = Color(0xFFF4F2EE), card = Color(0xFFFFFFFF), ink = Color(0xFF1C1C1E), inkSoft = Color(0xFF55555B),
-    line = Color(0xFFE6E3DE), fill = Color(0xFFEBE8E3), brand = Color(0xFF0B6E66), onBrand = Color.White, brandSoft = Color(0xFFE0F0EE),
-    ok = Color(0xFF1E6B2A), okSoft = Color(0xFFE3F2E5), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF1D9),
-    red = Color(0xFFC0271F), redSoft = Color(0xFFFCE9E7), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFEDEAF6),
-    tintBlue = Color(0xFF2F6FD6), tintGreen = Color(0xFF2E8B57), tintOrange = Color(0xFFE07A1F), tintPurple = Color(0xFF7C5CD6), tintPink = Color(0xFFD64F7A), tintTeal = Color(0xFF0B6E66),
+    paper = Color(0xFFFFFFFF), card = Color(0xFFF4F4F5), ink = Color(0xFF18181B), inkSoft = Color(0xFF52525B),
+    line = Color(0xFFD4D4D8), fill = Color(0xFFE4E4E7), brand = Color(0xFF0B6E66), onBrand = Color.White, brandSoft = Color(0xFFE6F2F1),
+    ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE5F3E8), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF3DC),
+    red = Color(0xFFC0271F), redSoft = Color(0xFFFCEBE9), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFF4F4F5),
+    tintBlue = Color(0xFF3F3F46), tintGreen = Color(0xFF3F3F46), tintOrange = Color(0xFF3F3F46), tintPurple = Color(0xFF3F3F46), tintPink = Color(0xFF3F3F46), tintTeal = Color(0xFF3F3F46),
 )
 
 val HighContrast = Warm.copy(
-    paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, fill = Color(0xFFE0E0E0),
+    paper = Color.White, card = Color(0xFFF0F0F0), ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, fill = Color(0xFFE0E0E0),
     brand = Color(0xFF00332F), brandSoft = Color(0xFFD6ECE9), ok = Color(0xFF004D12), amber = Color(0xFF5C3100), red = Color(0xFF8C0000),
 )
 
@@ -63,6 +68,7 @@ val HighContrast = Warm.copy(
 @Immutable
 data class Scale(
     val huge: TextUnit,      // numbers, countdowns
+    val question: TextUnit,  // the question on a question page: always the largest words
     val title: TextUnit,     // screen title
     val headline: TextUnit,  // card and section titles
     val body: TextUnit,
@@ -75,8 +81,8 @@ data class Scale(
     val big: Boolean,
 )
 
-val Standard = Scale(huge = 44.sp, title = 32.sp, headline = 21.sp, body = 18.sp, button = 19.sp, small = 15.sp, target = 60.dp, gap = 16.dp, margin = 20.dp, radius = 20.dp, big = false)
-val Big = Scale(huge = 54.sp, title = 38.sp, headline = 25.sp, body = 22.sp, button = 23.sp, small = 18.sp, target = 74.dp, gap = 18.dp, margin = 18.dp, radius = 22.dp, big = true)
+val Standard = Scale(huge = 44.sp, question = 30.sp, title = 26.sp, headline = 20.sp, body = 18.sp, button = 19.sp, small = 15.sp, target = 60.dp, gap = 16.dp, margin = 20.dp, radius = 20.dp, big = false)
+val Big = Scale(huge = 54.sp, question = 36.sp, title = 31.sp, headline = 24.sp, body = 22.sp, button = 23.sp, small = 18.sp, target = 74.dp, gap = 18.dp, margin = 18.dp, radius = 22.dp, big = true)
 
 /** The phone's own UI font: familiar, sharp at every size. */
 val AppFont: FontFamily = FontFamily.Default

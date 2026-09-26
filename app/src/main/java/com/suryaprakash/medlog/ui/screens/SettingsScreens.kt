@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Backup
 import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.saveCarePlan
 import com.suryaprakash.medlog.help.FallService
 import com.suryaprakash.medlog.help.WhatsAppCallService
 import com.suryaprakash.medlog.integration.CalendarSync
@@ -102,9 +103,7 @@ fun SettingsScreen(nav: Nav) {
             BigField("Illnesses", profile.conditions, { profile = profile.copy(conditions = it) }, lines = 2)
             BigField("Allergies", profile.allergies, { profile = profile.copy(allergies = it) }, lines = 2)
             Toggle("I take a blood thinner", profile.onBloodThinner) { profile = profile.copy(onBloodThinner = it) }
-            BigField("Doctor's name", profile.doctorName, { profile = profile.copy(doctorName = it) })
-            BigField("Doctor's phone", profile.doctorPhone, { profile = profile.copy(doctorPhone = it) }, keyboard = KeyboardType.Phone)
-            BigButton("Save", tone = Tone.OK, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
+            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
         }
         "reminders" -> Screen("Medicine reminders", "How reminders work.", onHome = { nav.home() }, onBack = { section = null }) {
             Body("Remind again after", bold = true)
@@ -130,8 +129,6 @@ fun SettingsScreen(nav: Nav) {
             Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.settings.update { it.copy(diabetic = on) } }
             Body("Glasses of water a day", bold = true)
             run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it glasses" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
-            Body("Keep voice recordings for", bold = true)
-            run { val o = listOf(0 to "Never", 30 to "30 days", 90 to "90 days"); com.suryaprakash.medlog.ui.Segmented(o.map { it.second }, o.indexOfFirst { it.first == s.keepAudioDays }) { i -> app.settings.update { it.copy(keepAudioDays = o[i].first) } } }
         }
         "sos" -> Screen("SOS", "What happens when you press SOS.", onHome = { nav.home() }, onBack = { section = null }) {
             Card { Body("When you press SOS: a message with where you are goes to your helpers, their MedLog phones ring (nearby or far away), then MedLog calls each helper in turn, then ${s.emergencyNumber}.") }
@@ -169,26 +166,104 @@ fun SettingsScreen(nav: Nav) {
                 BigButton("Remove PIN", Modifier.weight(1f), Tone.SECONDARY, enabled = s.helperPin.isNotBlank(), onClick = { app.settings.update { it.copy(helperPin = "") } })
             }
         }
+        "doctors" -> DoctorsSection(onBack = { section = null })
         else -> Screen("Settings", "Choose what to change.", onHome = { nav.home() }, onBack = { nav.back() }) {
-            val p = LocalPalette.current
+            val helpers by app.db.helpers().flow().collectAsState(emptyList())
+            val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
+            fun langs() = s.languages.joinToString(", ") { t -> com.suryaprakash.medlog.clinical.Lang.ALL.firstOrNull { it.tag == t }?.name ?: t }
+            com.suryaprakash.medlog.ui.Section("You")
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("My details", profile.name.ifBlank { null }) { section = "me" }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("My doctors", plan.doctors.size.takeIf { it > 0 }?.toString()) { section = "doctors" }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("My helpers", helpers.size.takeIf { it > 0 }?.toString()) { nav.go(Route.Helpers) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("My messages", s.messages.size.takeIf { it > 0 }?.toString()) { nav.go(Route.Messages) }
+            }
+            com.suryaprakash.medlog.ui.Section("Seeing and hearing")
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Text size", if (s.bigMode) "Large" else "Regular") { nav.go(Route.EasySettings) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Read aloud", when { !s.readAloud -> "Off"; s.autoRead -> "Every page"; else -> "When I tap" }) { nav.go(Route.EasySettings) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Languages", langs()) { section = "lang" }
+            }
+            com.suryaprakash.medlog.ui.Section("Care")
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Medicine reminders", "Again in ${s.snoozeMinutes} min") { section = "reminders" }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Daily check-in", if (s.checkInEnabled) s.checkInTime else "Off") { section = "care" }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("SOS", "Calls ${s.emergencyNumber} last") { section = "sos" }
+            }
+            com.suryaprakash.medlog.ui.Section("This phone")
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Home-screen widget", "Add") { pinWidget(ctx) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Permissions", null) { nav.go(Route.Permissions) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Backup and new phone", null) { nav.go(Route.Backup) }
+                if (com.suryaprakash.medlog.Updater.allowed(ctx)) {
+                    com.suryaprakash.medlog.ui.GroupLine()
+                    com.suryaprakash.medlog.ui.ValueRow("Updates", com.suryaprakash.medlog.BuildConfig.VERSION_NAME) { section = "update" }
+                }
+            }
+            com.suryaprakash.medlog.ui.Section("More")
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Add my old reports", null, sub = "Photos or PDFs") { nav.go(Route.Import) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Bluetooth machines", null, sub = "BP, oxygen, thermometer, scale") { nav.go(Route.Devices) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Helper controls", if (s.helperPin.isNotBlank()) "PIN set" else null, sub = "Hide features, lock settings") { section = "helperlock" }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
+            }
             RoleSwitch(nav)
-            ListRow("Easy mode and reading aloud", "Text size, voice, touch", Icons.Rounded.TextFields, p.tintTeal) { nav.go(Route.EasySettings) }
-            ListRow("Languages and voice", s.languages.joinToString(", ") { t -> com.suryaprakash.medlog.clinical.Lang.ALL.firstOrNull { it.tag == t }?.name ?: t }, Icons.Rounded.Translate, p.tintPurple) { section = "lang" }
-            ListRow("Add MedLog to home screen", "The quick buttons widget", Icons.Rounded.Widgets, p.tintGreen) { pinWidget(ctx) }
-            ListRow("My details", "For the doctor page", Icons.Rounded.Person, p.tintBlue) { section = "me" }
-            ListRow("My helpers", "Who to call and message", Icons.Rounded.Group, p.tintGreen) { nav.go(Route.Helpers) }
-            ListRow("My messages", "What you can send to family", Icons.Rounded.Group, p.tintTeal) { nav.go(Route.Messages) }
-            ListRow("Medicine reminders", "Google Calendar, Meeting Timer", Icons.Rounded.Tune, p.tintOrange) { section = "reminders" }
-            ListRow("Looking after you", "Check-in, falls, summary", Icons.Rounded.Tune, p.tintPurple) { section = "care" }
-            ListRow("SOS", "Emergency number, WhatsApp", Icons.Rounded.Tune, p.red) { section = "sos" }
-            ListRow("Permissions", "Make reminders reliable", Icons.Rounded.Security, p.tintBlue) { nav.go(Route.Permissions) }
-            ListRow("Add my old reports", "Photos or PDFs", Icons.Rounded.Description, p.tintTeal) { nav.go(Route.Import) }
-            ListRow("Bluetooth machines", "BP, oxygen, thermometer, scale", Icons.Rounded.Bluetooth, p.tintBlue) { nav.go(Route.Devices) }
-            ListRow("Backup and new phone", "Setup file, full backup", Icons.Rounded.Backup, p.tintGreen) { nav.go(Route.Backup) }
-            ListRow("Helper controls", "Hide features, PIN", Icons.Rounded.Lock, p.tintPurple) { section = "helperlock" }
-            if (com.suryaprakash.medlog.Updater.allowed(ctx)) ListRow("Check for updates", "Version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}", Icons.Rounded.Backup, p.tintBlue) { section = "update" }
-            ListRow("Privacy", "Your notes stay on this phone", Icons.Rounded.Security, p.tintTeal) { nav.go(Route.Privacy) }
             Hint("MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
+        }
+    }
+}
+
+/** The person's doctors, each with what they treat, so the right one is offered to call. */
+@Composable
+private fun DoctorsSection(onBack: () -> Unit) {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val scope = rememberCoroutineScope()
+    var plan by remember { mutableStateOf(com.suryaprakash.medlog.data.CarePlan()) }
+    LaunchedEffect(Unit) { plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan) }
+    fun save(list: List<com.suryaprakash.medlog.data.CarePlan.Doctor>) { plan = plan.copy(doctors = list); scope.launch { app.repo.saveCarePlan { it.copy(doctors = list) } } }
+    var editing by remember { mutableStateOf<Int?>(null) }
+    var name by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
+    var spec by remember { mutableStateOf("Family doctor") }
+    val pick = com.suryaprakash.medlog.ui.rememberContactPicker { n, ph -> if (name.isBlank()) name = n; phone = ph }
+    val e = editing
+    if (e != null) {
+        com.suryaprakash.medlog.ui.FlowScreen("Doctor", if (e < 0) "Add a doctor" else "Change ${name.ifBlank { "doctor" }}", onBack = { editing = null },
+            primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
+                val d = com.suryaprakash.medlog.data.CarePlan.Doctor(name.trim(), spec, phone.trim())
+                save(if (e < 0) plan.doctors + d else plan.doctors.mapIndexed { i, x -> if (i == e) d else x }); editing = null
+            }, secondary = if (e >= 0) "Remove this doctor" else null, onSecondary = { save(plan.doctors.filterIndexed { i, _ -> i != e }); editing = null }) {
+            BigField("Doctor's name", name, { name = it }, hint = "For example: Dr. Rao")
+            com.suryaprakash.medlog.ui.Section("What do they treat?")
+            com.suryaprakash.medlog.ui.FlowRowOf { com.suryaprakash.medlog.data.CarePlan.SPECIALITIES.forEach { sp -> com.suryaprakash.medlog.ui.Chip(sp, spec == sp) { spec = sp } } }
+            com.suryaprakash.medlog.ui.Section("Phone number")
+            BigButton("Choose from contacts", tone = Tone.SECONDARY, onClick = pick)
+            BigField("Or type it", phone, { phone = it }, keyboard = KeyboardType.Phone)
+        }
+        return
+    }
+    Screen("My doctors", "Your doctors and what they treat.", onHome = null, onBack = onBack, actions = {
+        BigButton("Add a doctor", onClick = { name = ""; phone = ""; spec = "Family doctor"; editing = -1 })
+    }) {
+        if (plan.doctors.isEmpty()) Hint("No doctors yet. Add each doctor with what they treat, so MedLog offers the right one to call.")
+        else com.suryaprakash.medlog.ui.Group {
+            plan.doctors.forEachIndexed { i, d ->
+                if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow(d.name, d.speciality, sub = d.phone.ifBlank { null }) { name = d.name; phone = d.phone; spec = d.speciality; editing = i }
+            }
         }
     }
 }
@@ -222,9 +297,15 @@ fun EasySettingsScreen(nav: Nav) {
     val s = LocalSettings.current
     val speakerOk by app.speaker.available.collectAsState()
     fun set(f: (com.suryaprakash.medlog.data.Settings) -> com.suryaprakash.medlog.data.Settings) = app.settings.update(f)
-    Screen("Easy mode", "Change how MedLog looks and sounds.", onHome = { nav.home() }, onBack = { nav.back() }) {
-        Toggle("Big text and buttons", s.bigMode) { v -> set { it.copy(bigMode = v) } }
-        Toggle("Read screens aloud when they open", s.autoRead) { v -> set { it.copy(autoRead = v, easyMode = true) } }
+    Screen("Seeing and hearing", "Change how MedLog looks and sounds.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        com.suryaprakash.medlog.ui.Section("Text size")
+        com.suryaprakash.medlog.ui.Choice("Regular", !s.bigMode) { set { it.copy(bigMode = false) } }
+        com.suryaprakash.medlog.ui.Choice("Large", s.bigMode) { set { it.copy(bigMode = true) } }
+        com.suryaprakash.medlog.ui.Section("Read aloud")
+        com.suryaprakash.medlog.ui.Choice("Read every page", s.readAloud && s.autoRead) { set { it.copy(readAloud = true, autoRead = true) } }
+        com.suryaprakash.medlog.ui.Choice("Only when I tap Read aloud", s.readAloud && !s.autoRead) { set { it.copy(readAloud = true, autoRead = false) } }
+        com.suryaprakash.medlog.ui.Choice("Never", !s.readAloud) { app.speaker.stop(); set { it.copy(readAloud = false, autoRead = false) } }
+        com.suryaprakash.medlog.ui.Section("More")
         Body("Reading speed", bold = true)
         run { val o = listOf(0.55f to "Very slow", 0.7f to "Slow", 0.85f to "Normal"); com.suryaprakash.medlog.ui.Segmented(o.map { it.second }, o.indexOfFirst { it.first == s.speechRate }) { i -> set { it.copy(speechRate = o[i].first) }; app.speaker.say("This is how I will sound.") } }
         if (!speakerOk) Card { Body("This phone has no reading voice. Tap to add one."); BigButton("Add a voice", tone = Tone.QUIET, onClick = { Perms.open(ctx, Intent("com.android.settings.TTS_SETTINGS")) }) }
@@ -232,7 +313,7 @@ fun EasySettingsScreen(nav: Nav) {
         Toggle("Bold text", s.boldText) { v -> set { it.copy(boldText = v) } }
         Toggle("Steady touch", s.steadyTouch, "For shaky hands: ignores double taps") { v -> set { it.copy(steadyTouch = v) } }
         Toggle("Touch to hear", s.touchToHear, "First tap reads the button, second tap presses it") { v -> set { it.copy(touchToHear = v) } }
-        Toggle("Left-hand mode", s.leftHand, "Moves the Home and Read aloud buttons") { v -> set { it.copy(leftHand = v) } }
+        Toggle("Left-hand mode", s.leftHand, "Puts the bottom buttons in the opposite order") { v -> set { it.copy(leftHand = v) } }
         Toggle("Less movement", s.lessMotion) { v -> set { it.copy(lessMotion = v) } }
         Toggle("Flash the screen for alerts", s.flashAlerts, "For hard of hearing") { v -> set { it.copy(flashAlerts = v) } }
     }
@@ -273,7 +354,7 @@ fun PermissionList(role: String) {
             if (!bat) BigButton("Allow", tone = Tone.QUIET, onClick = { Perms.openBattery(ctx) })
         }
         Perms.makerGuide()?.let { (text, intents) ->
-            Card(color = p.amberSoft, border = p.amber) {
+            Card(border = p.amber) {
                 Body(text)
                 if (intents.isNotEmpty()) BigButton("Open phone settings", tone = Tone.QUIET, onClick = {
                     val ok = intents.any { i -> runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess }
@@ -323,7 +404,7 @@ fun BackupScreen(nav: Nav) {
         BigField("Backup password", password, { password = it }, keyboard = KeyboardType.Password, hint = "At least 6 letters or numbers")
         BigButton("Save a backup", enabled = password.length >= 6, onClick = { save.launch("MedLog-backup-${java.time.LocalDate.now()}.medlog") })
         BigButton("Restore a backup", tone = Tone.SECONDARY, enabled = password.length >= 6, onClick = { open.launch(arrayOf("*/*")) })
-        status?.let { Card(color = p.brandSoft) { Body(it, bold = true) } }
+        status?.let { Card() { Body(it, bold = true) } }
         Hint("You choose where the file goes: this phone, an SD card, a computer, or your own Drive.")
     }
 }
@@ -339,7 +420,7 @@ fun UpdateCard(auto: Boolean = false) {
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { canInstall = com.suryaprakash.medlog.Updater.canInstall(ctx); onPauseOrDispose {} }
     androidx.compose.runtime.LaunchedEffect(Unit) { if (auto && st is com.suryaprakash.medlog.Updater.State.Idle) com.suryaprakash.medlog.Updater.check(ctx) }
     when (val s = st) {
-        is com.suryaprakash.medlog.Updater.State.Available -> Card(color = p.okSoft) {
+        is com.suryaprakash.medlog.Updater.State.Available -> Card(border = p.ok) {
             Body("A new MedLog is ready: ${s.release.name}", bold = true)
             if (s.release.notes.isNotBlank()) Body(s.release.notes)
             if (!canInstall) {
@@ -348,11 +429,11 @@ fun UpdateCard(auto: Boolean = false) {
             } else BigButton("Update now", tone = Tone.OK, onClick = { scope.launch { com.suryaprakash.medlog.Updater.install(ctx, s.release) } })
             Hint("Your notes and settings stay. Android will ask you to confirm.")
         }
-        is com.suryaprakash.medlog.Updater.State.Downloading -> Card(color = p.brandSoft) { Body("Downloading… ${s.percent}%", bold = true) }
-        com.suryaprakash.medlog.Updater.State.Installing -> Card(color = p.brandSoft) { Body("Installing… Tap Update when Android asks.", bold = true) }
+        is com.suryaprakash.medlog.Updater.State.Downloading -> Card() { Body("Downloading… ${s.percent}%", bold = true) }
+        com.suryaprakash.medlog.Updater.State.Installing -> Card() { Body("Installing… Tap Update when Android asks.", bold = true) }
         com.suryaprakash.medlog.Updater.State.Checking -> Card { Body("Checking…") }
-        com.suryaprakash.medlog.Updater.State.UpToDate -> Card(color = p.okSoft) { Body("MedLog is up to date.", bold = true) }
-        is com.suryaprakash.medlog.Updater.State.Failed -> Card(color = p.amberSoft) {
+        com.suryaprakash.medlog.Updater.State.UpToDate -> Card(border = p.ok) { Body("MedLog is up to date.", bold = true) }
+        is com.suryaprakash.medlog.Updater.State.Failed -> Card(border = p.amber) {
             Body(s.why, bold = true)
             BigButton("Try again", tone = Tone.QUIET, onClick = { scope.launch { com.suryaprakash.medlog.Updater.check(ctx) } })
         }
@@ -368,7 +449,7 @@ fun PrivacyScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     var confirm by remember { mutableStateOf(false) }
     Screen("Privacy", "Your notes stay on this phone. MedLog uses the internet only to pass locked alerts to your helpers' phones.", onHome = { nav.home() }, onBack = { nav.back() }) {
-        Card(color = p.brandSoft) {
+        Card() {
             Body("Your notes stay on this phone.", bold = true)
             Body("MedLog uses the internet for one thing only: passing help alerts to your helpers' phones when they are far away. Each alert is locked with a key only their phone has. You can turn this off in Settings → SOS.")
         }
@@ -377,7 +458,7 @@ fun PrivacyScreen(nav: Nav) {
         Body("Your notes are locked (encrypted) on the phone. No ads. No tracking.")
         BigButton("Open App info", tone = Tone.SECONDARY, onClick = { Perms.openAppSettings(ctx) })
         if (!confirm) BigButton("Delete everything", tone = Tone.SECONDARY, onClick = { confirm = true })
-        else Card(color = p.redSoft, border = p.red) {
+        else Card(border = p.red) {
             Body("This deletes all notes, medicines and helpers from this phone. It cannot be undone.", bold = true)
             BigButton("Yes, delete everything", tone = Tone.DANGER, onClick = {
                 scope.launch {
@@ -405,7 +486,7 @@ fun pinWidget(ctx: android.content.Context) {
     if (!ok) android.widget.Toast.makeText(ctx, hint, android.widget.Toast.LENGTH_LONG).show()
 }
 
-/** Which languages the person speaks. Speech in Indian languages uses the phone's own offline recogniser. */
+/** Which languages the person speaks and reads, and the voices for reading aloud. */
 @Composable
 private fun LanguagesSection(onBack: () -> Unit, onHome: () -> Unit) {
     val ctx = LocalContext.current
@@ -413,14 +494,9 @@ private fun LanguagesSection(onBack: () -> Unit, onHome: () -> Unit) {
     val s = LocalSettings.current
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val phone = app.listener.phone
-    val phoneOk = phone.available()
-    var support by remember { mutableStateOf<com.suryaprakash.medlog.speech.PhoneRecognizer.Support?>(null) }
-    var tick by remember { mutableStateOf(0) }
-    androidx.compose.runtime.LaunchedEffect(tick) { if (phoneOk && android.os.Build.VERSION.SDK_INT >= 33) phone.checkSupport { support = it } }
     fun name(t: String) = com.suryaprakash.medlog.clinical.Lang.ALL.firstOrNull { it.tag == t }?.name ?: t
     Screen("Languages and voice", "Tap the languages you speak. The first one is your main language.", onHome = onHome, onBack = onBack) {
-        Hint("Tap every language you speak. MedLog listens for all of them.")
+        Hint("Tap every language you speak.")
         com.suryaprakash.medlog.clinical.Lang.ALL.forEach { l ->
             val on = l.tag in s.languages
             val main = s.languages.firstOrNull() == l.tag
@@ -434,28 +510,6 @@ private fun LanguagesSection(onBack: () -> Unit, onHome: () -> Unit) {
         if (s.languages.size > 1) {
             Body("Main language", bold = true)
             FlowRowOf { s.languages.forEach { t -> Chip(name(t), s.languages.first() == t) { app.settings.update { st -> st.copy(languages = listOf(t) + (st.languages - t)) } } } }
-        }
-        Title("Understanding your voice")
-        if (!phoneOk) Card(color = p.amberSoft) {
-            Body("This phone has no speech service, so MedLog uses its own small English model. Please speak clearly in English, or tap the answers.", bold = true)
-        } else {
-            Card {
-                Body("MedLog uses your phone's own speech, the same as the keyboard microphone.")
-                Hint(if (android.os.Build.VERSION.SDK_INT >= 34 && s.languages.size > 1) "It will notice which of your languages you are speaking." else "It listens in your main language.")
-            }
-            Toggle("Use the internet if needed", s.voiceOnline, "Only when your phone can't understand a language offline. Your words then go to your phone's speech service (Google or Samsung) to be written down.") { on -> app.settings.update { it.copy(voiceOnline = on) } }
-            if (phone.onDevice()) s.languages.forEach { t ->
-                val sp = support
-                val installed = sp?.installed?.any { it.equals(t, true) } == true
-                val pending = sp?.pending?.any { it.equals(t, true) } == true
-                Card {
-                    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                        Text(name(t), fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = androidx.compose.ui.Modifier.weight(1f))
-                        Text(when { installed -> "Works offline"; pending -> "Downloading"; sp == null -> ""; else -> "Needs internet" }, color = if (installed) p.ok else p.inkSoft, fontSize = sc.small)
-                    }
-                    if (!installed && sp != null && android.os.Build.VERSION.SDK_INT >= 33) BigButton("Download ${name(t)} for offline", tone = Tone.QUIET, onClick = { phone.download(t); tick++ })
-                }
-            }
         }
         Title("Reading aloud")
         s.languages.forEach { t ->

@@ -44,7 +44,7 @@ fun DevicesScreen(nav: Nav) {
         Hint("Works with machines that use the standard Bluetooth health profiles. Readings come over Bluetooth only.")
         if (!allowed) { BigButton("Allow Bluetooth", onClick = { ask(Perms.BLE) }); return@Screen }
         BigButton("Find my machine", icon = Icons.Rounded.Bluetooth, onClick = { Ble.scan(ctx) })
-        if (status.isNotBlank()) Card(color = p.brandSoft) { Body(status, bold = true) }
+        if (status.isNotBlank()) Card() { Body(status, bold = true) }
         found.forEach { f ->
             BigButton("${f.kind}: ${f.name}", tone = Tone.SECONDARY, onClick = {
                 Ble.connect(ctx, f.address) { r ->

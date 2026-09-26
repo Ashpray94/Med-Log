@@ -124,7 +124,7 @@ fun ReportsScreen(nav: Nav) {
     Screen("How am I doing", summary.ifBlank { "Your trends." }, onHome = { nav.home() }, onBack = { nav.back() }) {
         val periods = listOf(7 to "Week", 30 to "Month", 90 to "3 months", 365 to "Year")
         com.suryaprakash.medlog.ui.Segmented(periods.map { it.second }, periods.indexOfFirst { it.first == days }) { days = periods[it].first }
-        if (summary.isNotBlank()) Card(color = p.brandSoft) { Body(summary); BigButton("Read it to me", tone = Tone.QUIET, icon = Icons.Rounded.VolumeUp, onClick = { app.speaker.say(summary) }) }
+        if (summary.isNotBlank()) Card() { Body(summary); BigButton("Read it to me", tone = Tone.QUIET, icon = Icons.Rounded.VolumeUp, onClick = { app.speaker.say(summary) }) }
         if (stats.isEmpty()) Hint("No problems noted in this time.")
         stats.forEach { s ->
             Card {

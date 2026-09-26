@@ -14,7 +14,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Sos
-import androidx.compose.material.icons.rounded.Mic
 import com.suryaprakash.medlog.ui.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -68,7 +67,7 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
     LaunchedEffect(Unit) { helpers = app.db.helpers().all().filter { it.sos } }
     if (t.mentalHealth) {
         Screen("You are not alone", "Thank you for telling me. You matter. Please talk to someone now. You can call the free helpline, $MENTAL_HEALTH_LINE, any time, day or night.", onHome = { nav.home() }) {
-            Card(color = p.brandSoft) {
+            Card() {
                 Body("Thank you for telling me. You matter.", bold = true)
                 Body("Talking to someone helps. You can call the free helpline any time, day or night.")
             }
@@ -106,42 +105,78 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
     }
 }
 
-/** One tap to call the doctor (from the profile), shown with amber advice. */
+/** One tap to call the right doctor: the one whose speciality fits [dept], else the family doctor. */
 @Composable
-fun DoctorCallButton() {
+fun DoctorCallButton(dept: String? = null) {
     val ctx = LocalContext.current
     var profile by remember { mutableStateOf<Profile?>(null) }
     LaunchedEffect(Unit) { profile = ctx.medlog.repo.profile() }
     val pr = profile ?: return
-    if (pr.doctorPhone.isNotBlank()) BigButton("Call ${pr.doctorName.ifBlank { "my doctor" }}", icon = Icons.Rounded.Call, onClick = { Calls.call(ctx, pr.doctorPhone) })
-    else Hint("Add your doctor's number in Settings to call with one tap.")
+    val d = com.suryaprakash.medlog.data.CarePlan.parse(pr.plan).doctorFor(dept)
+    val (name, phone) = if (d != null && d.phone.isNotBlank()) d.name to d.phone else pr.doctorName.ifBlank { "my doctor" } to pr.doctorPhone
+    if (phone.isNotBlank()) BigButton("Call $name", icon = Icons.Rounded.Call, sub = d?.speciality, onClick = { Calls.call(ctx, phone) })
+    else Hint("Add your doctors in Settings to call them with one tap.")
 }
 
 /**
- * Choosing a problem by picture (plan 5, screen 5). One list, no "where is it?" step:
- * recent problems first, then the 70 common ones under three plain headings, each a big icon and a word.
- * Anything not here can simply be said.
+ * "How are you feeling?": tap first. Search is always at the top (type, or tap Speak for the phone's own speech
+ * typing). Below it, the person's own problems (only what they really logged), then suggestions that fit them
+ * (setup, conditions, age, time of day), then everything by body area.
  */
 @Composable
-fun PickProblem(nav: Nav, onPicked: (String) -> Unit, onBack: () -> Unit, onSay: (() -> Unit)? = null, title: String = "What's wrong?") {
+fun PickProblem(nav: Nav, onPicked: (String) -> Unit, onBack: () -> Unit, title: String = "How are you feeling?") {
     val ctx = LocalContext.current
     val app = ctx.medlog
-    val sc = LocalScale.current
-    var recent by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(Unit) { recent = app.repo.recentProblems(6).map { it.problemId }.filter { app.catalogue.problem(it) != null } }
+    val cat = app.catalogue
+    var query by remember { mutableStateOf("") }
+    var yours by remember { mutableStateOf<List<String>>(emptyList()) }
+    var suggested by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(Unit) {
+        val profile = app.repo.profile()
+        val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
+        val history = app.db.notes().symptomsSince(System.currentTimeMillis() - 180 * com.suryaprakash.medlog.data.DAY)
+            .mapNotNull { n -> n.problemId?.let { com.suryaprakash.medlog.clinical.Suggest.Logged(it, n.occurredAt) } }
+        val r = com.suryaprakash.medlog.clinical.Suggest.rank(history, app.repo.ageYears(profile.dob),
+            profile.conditions.split(",").map { it.trim() }.filter { it.isNotEmpty() }, plan.symptoms, java.time.LocalTime.now().hour,
+            known = { cat.problem(it) != null })
+        yours = r.yours; suggested = r.suggested
+    }
     com.suryaprakash.medlog.pictogram.Sprites.init(ctx)
-    Screen(title, "Tap the picture that matches.", onHome = { nav.home() }, onBack = onBack) {
-        if (onSay != null) BigButton("Say it instead", tone = Tone.QUIET, icon = androidx.compose.material.icons.Icons.Rounded.Mic, onClick = onSay)
-        if (recent.isNotEmpty()) {
-            com.suryaprakash.medlog.ui.Title("Recent")
-            ProblemGrid(recent, onPicked)
+    Screen(title, "Tap the one that matches, or search.", onHome = { nav.home() }, onBack = onBack) {
+        com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search, for example: headache")
+        if (query.isNotBlank()) {
+            val found = remember(query) { searchProblems(app, query) }
+            if (found.isEmpty()) Hint("Nothing found for \"$query\". Try a simpler word, like pain, fever or cough.")
+            else ProblemGrid(found, onPicked)
+            return@Screen
+        }
+        if (yours.isNotEmpty()) {
+            com.suryaprakash.medlog.ui.Title("You told me before")
+            ProblemGrid(yours, onPicked)
+        }
+        if (suggested.isNotEmpty()) {
+            com.suryaprakash.medlog.ui.Title(if (yours.isEmpty()) "Common for you" else "Others you may have")
+            ProblemGrid(suggested, onPicked)
         }
         com.suryaprakash.medlog.pictogram.Sprites.SECTIONS.forEach { (title, ids) ->
             com.suryaprakash.medlog.ui.Title(title)
-            ProblemGrid(ids.filter { app.catalogue.problem(it) != null }, onPicked)
+            ProblemGrid(ids.filter { cat.problem(it) != null }, onPicked)
         }
-        Hint("Not here? Tap Say it instead and tell me in your own words.")
     }
+}
+
+/** Problems whose name or everyday words match what was typed or spoken (in English or the person's language). */
+fun searchProblems(app: com.suryaprakash.medlog.MedLogApp, q: String): List<String> {
+    val words = com.suryaprakash.medlog.nlu.Normalize.text(q)
+    if (words.isBlank()) return emptyList()
+    // what the sentence parser understands first ("my head hurts since morning"), then plain name matches
+    val parsed = runCatching { app.parser.parse(q).let { listOfNotNull(it.main?.problemId) + it.others.map { m -> m.problemId } } }.getOrDefault(emptyList())
+    val low = q.trim().lowercase()
+    val byName = app.catalogue.problems.filter { p ->
+        p.label.lowercase().contains(words) || p.synonyms.any { it.lowercase().contains(words) || words.contains(it.lowercase()) } ||
+            com.suryaprakash.medlog.ui.tr(p.label).lowercase().contains(low)
+    }.map { it.id }
+    return (parsed + byName).distinct().take(12)
 }
 
 @Composable

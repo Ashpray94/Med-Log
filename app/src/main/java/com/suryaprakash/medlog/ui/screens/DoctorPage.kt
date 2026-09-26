@@ -101,17 +101,24 @@ fun DoctorScreen(nav: Nav) {
     var days by remember { mutableStateOf(14) }
     var note by remember { mutableStateOf<DoctorNote?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var picking by remember { mutableStateOf(false) }
-    var sharing by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
     LaunchedEffect(days) { note = withContext(Dispatchers.IO) { buildNote(ctx, days) } }
     val n = note
-    val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share with the doctor."
+    val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share to send it, or Print."
     fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!) }; busy = false; then(f) } }
 
-    Screen("For the doctor", speak, onHome = { nav.home() }, onBack = { nav.back() }) {
-        PeriodCard(days, n?.period) { picking = true }
-        BigButton("Share with the doctor", icon = Icons.Rounded.Share, enabled = n != null && !busy, onClick = { sharing = true })
+    var doctors by remember { mutableStateOf<List<com.suryaprakash.medlog.data.CarePlan.Doctor>>(emptyList()) }
+    LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.repo.profile().plan).doctors }
+    // the page's job is to be shown or sent: those two actions stay pinned at the bottom, side by side
+    Screen("For the doctor", speak, onHome = { nav.home() }, onBack = { nav.back() }, actions = {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BigButton("Print", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Print, enabled = n != null && !busy, onClick = { pdf { Pdf.print(ctx, it) } })
+            BigButton("Share", Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Share, enabled = n != null && !busy, onClick = { pdf { Pdf.share(ctx, it) } })
+        }
+    }) {
+        // how far back: four choices, one tap, no window
+        com.suryaprakash.medlog.ui.Segmented(listOf("1 week", "2 weeks", "1 month", "3 months"), PERIODS.indexOfFirst { it.first == days }) { days = PERIODS[it].first }
+        n?.period?.let { com.suryaprakash.medlog.ui.Hint(it) }
         if (n == null) return@Screen
 
         Stats(n)
@@ -160,6 +167,17 @@ fun DoctorScreen(nav: Nav) {
         }
         BigButton("Add a question", tone = Tone.QUIET, icon = Icons.Rounded.Add, onClick = { asking = true })
 
+        if (doctors.isNotEmpty()) {
+            Section("My doctors")
+            Group {
+                doctors.forEachIndexed { i, d ->
+                    if (i > 0) Line()
+                    com.suryaprakash.medlog.ui.ValueRow(d.name, if (d.phone.isNotBlank()) "Call" else null, sub = d.speciality,
+                        onClick = if (d.phone.isNotBlank()) ({ com.suryaprakash.medlog.help.Calls.call(ctx, d.phone) }) else null)
+                }
+            }
+        }
+
         Section("Visits")
         Group {
             NavRow(Icons.Rounded.StickyNote2, "Write what the doctor said") { nav.go(Route.Visit) }
@@ -169,11 +187,6 @@ fun DoctorScreen(nav: Nav) {
         Spacer(Modifier.height(8.dp))
     }
 
-    if (picking) ChoiceDialog("How far back?", PERIODS.map { it.second to null }, PERIODS.indexOfFirst { it.first == days }, { picking = false }) { days = PERIODS[it].first; picking = false }
-    if (sharing) ChoiceDialog("Share with the doctor", listOf<Pair<String, ImageVector?>>("Send it (WhatsApp, email…)" to Icons.Rounded.Send, "Print it" to Icons.Rounded.Print), -1, { sharing = false }) { i ->
-        sharing = false
-        if (i == 0) pdf { Pdf.share(ctx, it) } else pdf { Pdf.print(ctx, it) }
-    }
     if (asking) AddQuestionDialog(onDismiss = { asking = false }) { q ->
         asking = false
         scope.launch { ctx.medlog.repo.addQuestion(q); note = buildNote(ctx, days) }
@@ -182,7 +195,7 @@ fun DoctorScreen(nav: Nav) {
 
 // ───────────────────────── building blocks ─────────────────────────
 
-/** A white group of rows. */
+/** A grey group of rows. */
 @Composable
 private fun Group(content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(LocalPalette.current.card), content = content)
@@ -223,30 +236,10 @@ private fun Tag(text: String, fg: Color, bg: Color) {
         modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(bg).padding(horizontal = 10.dp, vertical = 4.dp))
 }
 
-private fun levelColor(level: String, p: Palette) = when (level) { "RED" -> p.red; "AMBER" -> p.amber; else -> p.brand }
+private fun levelColor(level: String, p: Palette) = when (level) { "RED" -> p.red; "AMBER" -> p.amber; else -> p.inkSoft }
 private fun levelWord(level: String) = when (level) { "RED" -> "Urgent"; "AMBER" -> "Watch"; else -> null }
 
 // ───────────────────────── top of the page ─────────────────────────
-
-/** How far back the summary goes: one quiet card, tap to change. */
-@Composable
-private fun PeriodCard(days: Int, period: String?, onClick: () -> Unit) {
-    val p = LocalPalette.current
-    val sc = LocalScale.current
-    val name = PERIODS.first { it.first == days }.second
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(p.card).steady("Covers $name. Tap to change", onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
-            if (period != null) Text(period, fontSize = sc.small, color = p.inkSoft)
-        }
-        Spacer(Modifier.width(12.dp))
-        Text("Change", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand)
-    }
-}
 
 /** Three numbers as three cards, side by side. */
 @Composable
@@ -259,7 +252,7 @@ private fun Stats(n: DoctorNote) {
     val pct = if (due == 0) null else done * 100 / due
     Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("${n.symptoms.size}", "Symptoms", p.ink, p.card)
-        StatCard("${urgent + watch}", "Need care", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, if (urgent > 0) p.redSoft else if (watch > 0) p.amberSoft else p.card)
+        StatCard("${urgent + watch}", "Need care", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
         if (pct != null) StatCard("$pct%", "Doses taken", if (pct < 80) p.amber else p.ink, p.card)
     }
 }
@@ -458,7 +451,7 @@ private fun plainDose(d: String) = d.replace(" OD", ", once a day").replace(" BD
 private fun ReadingCard(r: DoctorNote.Reading, modifier: Modifier) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(if (r.off) p.redSoft else p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(r.name, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (r.off) p.red else p.inkSoft)
         Text(r.latest, fontSize = sc.title, fontWeight = FontWeight.Bold, color = if (r.off) p.red else p.ink, maxLines = 1)
         Text(r.unit, fontSize = sc.small, color = p.inkSoft)
@@ -475,36 +468,10 @@ private fun NavRow(icon: ImageVector, title: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).steady(title, onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(p.brandSoft), contentAlignment = Alignment.Center) { Icon(icon, null, tint = p.brand, modifier = Modifier.size(20.dp)) }
+        Icon(icon, null, tint = p.ink, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(12.dp))
         Text(title, fontSize = sc.body, color = p.ink, modifier = Modifier.weight(1f))
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
-    }
-}
-
-/** A calm window with a few big choices. */
-@Composable
-private fun ChoiceDialog(title: String, options: List<Pair<String, ImageVector?>>, selected: Int, onDismiss: () -> Unit, onPick: (Int) -> Unit) {
-    val p = LocalPalette.current
-    val sc = LocalScale.current
-    Dialog(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(bottom = 6.dp))
-            options.forEachIndexed { i, (label, icon) ->
-                val on = i == selected
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = sc.target).clip(RoundedCornerShape(16.dp)).background(if (on) p.brandSoft else p.paper)
-                        .then(if (on) Modifier.border(2.dp, p.brand, RoundedCornerShape(16.dp)) else Modifier)
-                        .steady(label) { onPick(i) }.padding(horizontal = 18.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    icon?.let { Icon(it, null, tint = p.brand, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(14.dp)) }
-                    Text(label, fontSize = sc.body, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = p.ink, modifier = Modifier.weight(1f))
-                    if (on) Icon(Icons.Rounded.Check, null, tint = p.brand, modifier = Modifier.size(24.dp))
-                }
-            }
-            BigButton("Cancel", tone = Tone.SECONDARY, onClick = onDismiss)
-        }
     }
 }
 
@@ -516,16 +483,16 @@ private fun AddQuestionDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     var q by remember { mutableStateOf("") }
-    Dialog(onDismissRequest = { app.listener.stop(); onDismiss() }) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val speak = com.suryaprakash.medlog.ui.rememberDictation("Your question") { q = it }
+    Dialog(onDismissRequest = { onDismiss() }) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(p.paper).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Your question", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Text("Something you want to ask the doctor.", fontSize = sc.small, color = p.inkSoft)
             BigField("Type it here", q, { q = it })
-            if (Perms.has(ctx, *Perms.MIC)) BigButton("Say it instead", tone = Tone.QUIET, icon = Icons.Rounded.Mic,
-                onClick = { app.listener.start(keepAudio = false, maxMs = 20_000) { h -> if (h.text.isNotBlank()) q = h.original } })
+            if (speak != null) BigButton("Speak instead", tone = Tone.QUIET, icon = Icons.Rounded.Mic, onClick = speak)
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BigButton("Cancel", Modifier.weight(1f), Tone.SECONDARY, onClick = { app.listener.stop(); onDismiss() })
-                BigButton("Add", Modifier.weight(1f), enabled = q.isNotBlank(), onClick = { app.listener.stop(); onAdd(q.trim()) })
+                BigButton("Cancel", Modifier.weight(1f), Tone.SECONDARY, onClick = { onDismiss() })
+                BigButton("Add", Modifier.weight(1f), enabled = q.isNotBlank(), onClick = { onAdd(q.trim()) })
             }
         }
     }

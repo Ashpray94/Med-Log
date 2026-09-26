@@ -16,7 +16,10 @@ data class Settings(
     val highContrast: Boolean = false,
     val steadyTouch: Boolean = true,
     val touchToHear: Boolean = false,
-    val autoRead: Boolean = true,
+    /** read each screen out loud when it opens (asked in setup; off unless the person wants it) */
+    val autoRead: Boolean = false,
+    /** show the Read aloud button at all */
+    val readAloud: Boolean = true,
     val speechRate: Float = 0.7f,
     val leftHand: Boolean = false,
     val lessMotion: Boolean = false,
@@ -104,7 +107,8 @@ class SettingsStore(ctx: Context) {
             highContrast = p.getBoolean("highContrast", d.highContrast),
             steadyTouch = p.getBoolean("steadyTouch", d.steadyTouch),
             touchToHear = p.getBoolean("touchToHear", d.touchToHear),
-            autoRead = p.getBoolean("autoRead", d.autoRead),
+            autoRead = p.getBoolean("autoRead2", d.autoRead),
+            readAloud = p.getBoolean("readAloud", d.readAloud),
             speechRate = p.getFloat("speechRate2", d.speechRate),
             leftHand = p.getBoolean("leftHand", d.leftHand),
             lessMotion = p.getBoolean("lessMotion", d.lessMotion),
@@ -152,7 +156,7 @@ class SettingsStore(ctx: Context) {
         p.edit().apply {
             putBoolean("onboarded", s.onboarded); putString("role", s.role)
             putBoolean("easyMode", s.easyMode); putBoolean("bigMode", s.bigMode); putBoolean("highContrast", s.highContrast)
-            putBoolean("steadyTouch", s.steadyTouch); putBoolean("touchToHear", s.touchToHear); putBoolean("autoRead", s.autoRead)
+            putBoolean("steadyTouch", s.steadyTouch); putBoolean("touchToHear", s.touchToHear); putBoolean("autoRead2", s.autoRead); putBoolean("readAloud", s.readAloud)
             putFloat("speechRate2", s.speechRate); putBoolean("leftHand", s.leftHand); putBoolean("lessMotion", s.lessMotion)
             putBoolean("flashAlerts", s.flashAlerts); putBoolean("boldText", s.boldText); putString("bilingual", s.bilingual)
             putStringSet("hidden", s.hidden); putInt("figure", s.figure); putInt("skin", s.skin)

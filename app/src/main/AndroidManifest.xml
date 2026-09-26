@@ -12,7 +12,6 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <!-- voice notes -->
-    <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <!-- medicine reminders, check-in, alerts -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- exact medicine times: asked for, not assumed (USE_EXACT_ALARM is only for alarm-clock and calendar apps on Play) -->
@@ -221,17 +220,6 @@
             tools:node="remove" />
 
         <!-- home-screen widget: messages to family, call, SOS -->
-        <receiver
-            android:name=".widget.FamilyWidgetReceiver"
-            android:exported="true"
-            android:label="@string/family_widget_label">
-            <intent-filter>
-                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-            </intent-filter>
-            <meta-data
-                android:name="android.appwidget.provider"
-                android:resource="@xml/family_widget_info" />
-        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

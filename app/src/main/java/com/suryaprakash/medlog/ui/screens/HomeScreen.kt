@@ -21,7 +21,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.Medication
-import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Settings
@@ -107,7 +107,7 @@ fun HomeScreen(nav: Nav) {
     val hello = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" } + if (name.isNotBlank()) ",\n${name.split(" ").first()}" else ""
     val today = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date())
     val due = next?.let { it.first.scheduledAt <= System.currentTimeMillis() + 10 * 60_000 } == true
-    val speak = "Tap How are you feeling to tell me. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
+    val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
     Screen(hello, speak, onHome = null, subtitle = today, trailing = { RoundIcon(Icons.Rounded.Settings, "Settings") { nav.go(Route.Settings) } }) {
         // ── the one main action ──
@@ -117,10 +117,7 @@ fun HomeScreen(nav: Nav) {
         val update by com.suryaprakash.medlog.Updater.state.collectAsState()
         if (update !is com.suryaprakash.medlog.Updater.State.Idle && update !is com.suryaprakash.medlog.Updater.State.UpToDate && update !is com.suryaprakash.medlog.Updater.State.Checking) UpdateCard()
 
-        // ── family: one tap away, like the widget ──
-        if ("help" !in s.hidden) FamilyCard(nav)
-
-        if (remindersBlocked) Card(color = p.amberSoft, onClick = { nav.go(Route.Permissions) }, label = "Reminders are off. Tap to fix.") {
+        if (remindersBlocked) Card(border = p.amber, onClick = { nav.go(Route.Permissions) }, label = "Reminders are off. Tap to fix.") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Warning, null, tint = p.amber, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(12.dp))
                 Column { Text("Reminders are off", color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body); Text("Tap to turn them on", color = p.amber, fontSize = sc.small) }
@@ -190,38 +187,6 @@ fun HomeScreen(nav: Nav) {
     }
 }
 
-/** Up to three of the person's own messages, one tap to send, and a call to the first helper. */
-@Composable
-fun FamilyCard(nav: Nav) {
-    val ctx = LocalContext.current
-    val app = ctx.medlog
-    val p = LocalPalette.current
-    val sc = LocalScale.current
-    val s = LocalSettings.current
-    val helpers by app.db.helpers().flow().collectAsState(emptyList())
-    val status by HelpMessages.status.collectAsState()
-    val acks by com.suryaprakash.medlog.help.Nearby.acks.collectAsState()
-    Card {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Family", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
-            Text("More", color = p.brand, fontSize = sc.body, fontWeight = FontWeight.SemiBold, modifier = Modifier.steady("More ways to ask family") { nav.go(Route.Help) }.padding(8.dp))
-        }
-        // the last message and its answer, so nobody has to go looking
-        status?.takeIf { System.currentTimeMillis() - it.at < 30 * 60_000L }?.let { st ->
-            Hint("You sent \"${st.text}\" at ${timeLabel(st.at)}")
-            acks.lastOrNull()?.let { a: com.suryaprakash.medlog.help.Nearby.Ack -> com.suryaprakash.medlog.ui.Body("✓ ${a.name}: ${com.suryaprakash.medlog.help.Nearby.replyWords(a.reply)}", bold = true) }
-        }
-        val msgs = s.messages.take(3)
-        if (helpers.isEmpty()) BigButton("Add a helper", tone = Tone.QUIET, onClick = { nav.go(Route.HelperEdit(null)) })
-        else if (msgs.isEmpty()) BigButton("Choose messages to send", tone = Tone.QUIET, onClick = { nav.go(Route.Messages) })
-        else msgs.forEach { m ->
-            val text = m.substringAfter('|')
-            BigButton(text, tone = Tone.SECONDARY, icon = HelpMessages.icon(m.substringBefore('|')), onClick = { HelpMessages.send(ctx, text); app.speaker.say("Sending: $text"); nav.go(Route.Help) })
-        }
-        helpers.firstOrNull()?.let { h -> BigButton("Call ${h.name}", tone = Tone.QUIET, icon = Icons.Rounded.Call, onClick = { com.suryaprakash.medlog.help.Calls.call(ctx, h.phone) }) }
-    }
-}
-
 data class HomeTile(val label: String, val icon: ImageVector, val tint: Color, val onClick: () -> Unit)
 
 /** The main action: big, calm, unmistakable. */
@@ -232,17 +197,17 @@ fun HeroTell(onClick: () -> Unit) {
     val sh = RoundedCornerShape(sc.radius + 4.dp)
     Row(
         Modifier.fillMaxWidth().heightIn(min = sc.target * 2.1f).shadow(6.dp, sh, spotColor = p.brand.copy(alpha = 0.4f)).clip(sh)
-            .background(Brush.linearGradient(listOf(Color(0xFF0E8A7F), p.brand)))
-            .steady("How are you feeling? Tap and tell me.", onClick = onClick).padding(horizontal = 22.dp, vertical = 18.dp),
+            .background(p.brand)
+            .steady("How are you feeling? Tap to choose.", onClick = onClick).padding(horizontal = 22.dp, vertical = 18.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text("How are you feeling?", color = Color.White, fontSize = sc.headline * 1.15f, fontWeight = FontWeight.Bold, lineHeight = sc.headline * 1.3f)
             Spacer(Modifier.height(4.dp))
-            Text("Tap and tell me", color = Color.White.copy(alpha = 0.88f), fontSize = sc.body)
+            Text("Tap to choose", color = Color.White.copy(alpha = 0.88f), fontSize = sc.body)
         }
         Box(Modifier.size(sc.target * 1.15f).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Mic, null, tint = p.brand, modifier = Modifier.size(sc.target * 0.6f))
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = p.brand, modifier = Modifier.size(sc.target * 0.6f))
         }
     }
 }

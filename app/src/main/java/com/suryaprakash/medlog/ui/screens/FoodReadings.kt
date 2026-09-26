@@ -38,7 +38,6 @@ import com.suryaprakash.medlog.data.Kind
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.nlu.Reading
-import com.suryaprakash.medlog.speech.Listener
 import com.suryaprakash.medlog.ui.BigButton
 import com.suryaprakash.medlog.ui.BigField
 import com.suryaprakash.medlog.ui.Body
@@ -79,7 +78,7 @@ fun FoodScreen(nav: Nav) {
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photo = pending }
 
     Screen("Food & water", "Tap plus one glass each time you drink water. You have had $water of ${s.waterGoal} glasses today.", onHome = { nav.home() }, onBack = { nav.back() }) {
-        Card(color = p.brandSoft) {
+        Card {
             Text("💧 $water of ${s.waterGoal} glasses today", fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink)
             BigButton("+ 1 glass of water", icon = Icons.Rounded.Add, height = sc.target * 1.5f, onClick = {
                 scope.launch {
@@ -91,10 +90,8 @@ fun FoodScreen(nav: Nav) {
         Title("What did you eat?")
         BigField("Food", food, { food = it }, hint = "For example: two idlis and coffee")
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigButton(if (listening) "Listening…" else "Say it", Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.Mic, enabled = Perms.has(ctx, *Perms.MIC) && !listening, onClick = {
-                listening = true
-                app.listener.start(keepAudio = false, maxMs = 20_000) { h -> listening = false; if (h.text.isNotBlank()) food = h.text }
-            })
+            val speak = com.suryaprakash.medlog.ui.rememberDictation("What did you eat?") { food = it }
+            if (speak != null) BigButton("Speak", Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.Mic, onClick = speak)
             BigButton("Photo", Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.CameraAlt, onClick = {
                 val f = File(File(ctx.filesDir, "photos").apply { mkdirs() }, "food_${System.currentTimeMillis()}.jpg"); pending = f
                 camera.launch(FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f))
@@ -140,16 +137,13 @@ fun ReadingsScreen(nav: Nav) {
         }
     }
 
-    Screen("BP, sugar & more", "Choose what you measured, then say or type the number.", onHome = { nav.home() }, onBack = { if (type != null) type = null else nav.back() }) {
-        result?.takeIf { it.level == Level.AMBER }?.let { t -> Card(color = p.amberSoft, border = p.amber) { Text("▲ " + t.say, color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body); t.reasons.forEach { Body("• $it") }; t.firstAid?.let { Body(it, bold = true) } }; DoctorCallButton() }
-        BigButton(if (listening) "Listening…" else "Say it", tone = Tone.QUIET, icon = Icons.Rounded.Mic, enabled = Perms.has(ctx, *Perms.MIC) && !listening, sub = "For example: BP 140 by 90", onClick = {
-            listening = true
-            app.listener.start(keepAudio = false, maxMs = 15_000) { h ->
-                listening = false
-                val rs = app.parser.readings(com.suryaprakash.medlog.nlu.Normalize.text(h.text))
-                if (rs.isEmpty()) app.speaker.say("I didn't catch a number. Please try again or type it.") else rs.forEach { save(it) }
-            }
-        })
+    Screen("BP, sugar & more", "Choose what you measured, then type the number, or speak it.", onHome = { nav.home() }, onBack = { if (type != null) type = null else nav.back() }) {
+        result?.takeIf { it.level == Level.AMBER }?.let { t -> Card(border = p.amber) { Text("▲ " + t.say, color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body); t.reasons.forEach { Body("• $it") }; t.firstAid?.let { Body(it, bold = true) } }; DoctorCallButton() }
+        val speak = com.suryaprakash.medlog.ui.rememberDictation("For example: BP 140 by 90") { t ->
+            val rs = app.parser.readings(com.suryaprakash.medlog.nlu.Normalize.text(t))
+            if (rs.isEmpty()) app.speaker.say("I didn't catch a number. Please try again or type it.") else rs.forEach { save(it) }
+        }
+        if (speak != null) BigButton("Speak the reading", tone = Tone.QUIET, icon = Icons.Rounded.Mic, sub = "For example: BP 140 by 90", onClick = speak)
         val types = listOf("bp" to "Blood pressure", "sugar" to "Sugar", "spo2" to "Oxygen", "temp" to "Temperature", "pulse" to "Pulse", "weight" to "Weight")
         FlowRowOf { types.forEach { (k, l) -> Chip(l, type == k) { type = k; result = null } } }
         when (type) {

@@ -1,4 +1,4 @@
-# Google Play policy review — MedLog 2.6.0
+# Google Play policy review — MedLog 2.8.0
 
 Reviewed 26 Sep 2026 against the Play Developer Policy Center (permissions, health apps, foreground services,
 accessibility, data safety, target API). **Status:** fixed in code / needs a Play Console form / must change before
@@ -25,10 +25,11 @@ Play / fine.
 | 9 | **Location** | Only in the foreground, only during an SOS, only sent to the person's helpers. There is no background location permission. Needs the prominent disclosure (already on the permissions screen) and a Data safety entry. |
 | 10 | **Phone** (`CALL_PHONE`, `READ_PHONE_STATE`) | Not restricted, but sensitive: calling helpers in turn during SOS, and noticing when a call ends. Explain in the Data safety form. |
 | 11 | **Calendar** (`READ/WRITE_CALENDAR`) | Optional, only if the person turns on Google Calendar reminders. Explain in Data safety. |
-| 12 | **Data safety form** | Declare: health info, name, phone numbers of helpers, approximate/precise location (SOS only), audio (voice notes, kept on the phone), messages (help alerts, **encrypted end to end**, sent through a relay: ntfy.sh or the family's own server). Voice may go to Google or Samsung speech services when "Use the internet if needed" is on. No ads, no analytics, no selling. Data can be deleted in the app. |
+| 12 | **Data safety form** | Declare: health info, name, phone numbers of helpers, approximate/precise location (SOS only), messages (help alerts, **encrypted end to end**, sent through a relay: ntfy.sh or the family's own server). Speech typing is the phone's own (MedLog receives text only). No ads, no analytics, no selling. Data can be deleted in the app. |
 | 13 | **Privacy policy URL** | Required for health apps and for these permissions. A draft is in [`privacy-policy.md`](privacy-policy.md). It must be published at a public web address before submitting. |
 
 ## Fixed in this version
+- **Microphone** (`RECORD_AUDIO`) removed. Voice input now goes through the system speech-typing screen (`RecognizerIntent`), which needs no permission, so there is no audio in the Data safety form.
 
 - **Exact alarms:** swapped `USE_EXACT_ALARM` (only allowed for alarm-clock and calendar apps) for `SCHEDULE_EXACT_ALARM`, which the person grants. Setup, the home screen ("Reminders are off") and Settings → Permissions already ask for it.
 - **Foreground service type** for the helper link: `remoteMessaging` (see 7).

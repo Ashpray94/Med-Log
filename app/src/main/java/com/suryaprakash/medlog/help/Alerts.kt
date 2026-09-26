@@ -33,6 +33,12 @@ object Alerts {
         }
     }
 
+    /**
+     * One of the person's own emergencies (chosen in setup) was logged: no questions first. The SOS run calls
+     * their helpers in turn and alerts every paired helper phone, which rings until someone answers.
+     */
+    fun emergency(ctx: Context, problem: String) = Sos.start(ctx, "Emergency: $problem", countdown = false)
+
     fun amberToHelpers(ctx: Context, problem: String, t: Triage) {
         ctx.medlog.scope.launch {
             val n = name(ctx)

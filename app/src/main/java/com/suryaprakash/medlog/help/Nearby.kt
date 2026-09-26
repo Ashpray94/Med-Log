@@ -496,24 +496,3 @@ class NearbyService : Service() {
     override fun onDestroy() { runCatching { Nearby.client(this).stopAdvertising() }; Relay.stop(); super.onDestroy() }
 }
 
-/** Loud alert on the helper's phone, even on silent (alarm stream). */
-object AlertSound {
-    private var player: android.media.MediaPlayer? = null
-    fun start(ctx: Context, urgent: Boolean) {
-        stop()
-        runCatching {
-            val uri = android.media.RingtoneManager.getDefaultUri(if (urgent) android.media.RingtoneManager.TYPE_ALARM else android.media.RingtoneManager.TYPE_NOTIFICATION)
-            player = android.media.MediaPlayer().apply {
-                setAudioAttributes(android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_ALARM).build())
-                setDataSource(ctx, uri); isLooping = urgent; prepare(); start()
-            }
-            if (urgent) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ stop() }, 60_000)
-        }
-        runCatching {
-            val v = ctx.getSystemService(android.os.Vibrator::class.java)
-            val pattern = longArrayOf(0, 800, 300, 800, 300, 800)
-            if (Build.VERSION.SDK_INT >= 26) v?.vibrate(android.os.VibrationEffect.createWaveform(pattern, -1)) else @Suppress("DEPRECATION") v?.vibrate(pattern, -1)
-        }
-    }
-    fun stop() { runCatching { player?.stop(); player?.release() }; player = null }
-}

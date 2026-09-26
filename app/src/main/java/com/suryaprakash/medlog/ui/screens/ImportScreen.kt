@@ -78,7 +78,7 @@ fun ImportScreen(nav: Nav) {
             })
             BigButton("Choose a PDF or picture", tone = Tone.SECONDARY, icon = Icons.Rounded.Description, enabled = !busy, onClick = { pick.launch(arrayOf("application/pdf", "image/*")) })
             if (busy) Hint("Reading… this can take a minute for long reports.")
-            error?.let { Card(color = p.amberSoft) { Body(it) } }
+            error?.let { Card(border = p.amber) { Body(it) } }
             Hint("Nothing is uploaded. The reading happens on this phone.")
             return@Screen
         }

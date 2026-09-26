@@ -9,12 +9,14 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import com.suryaprakash.medlog.ui.steady
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.Mic
 import com.suryaprakash.medlog.ui.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -223,29 +225,84 @@ class AlertActivity : ComponentActivity() {
             BigButton("😊  Good", tone = Tone.OK, height = sc.target * 1.5f, onClick = { answer("good", null) })
             BigButton("😐  OK", tone = Tone.QUIET, height = sc.target * 1.5f, onClick = { answer("ok", null) })
             BigButton("😟  Not well", tone = Tone.AMBER, height = sc.target * 1.5f, onClick = { answer("not well", "tell") })
-            BigButton("Tell by voice", icon = Icons.Rounded.Mic, tone = Tone.SECONDARY, onClick = { answer("told", "tell") })
+            BigButton("Tell how I feel", tone = Tone.SECONDARY, onClick = { answer("told", "tell") })
         }
     }
 
-    /** On a helper's phone: someone needs you. */
+    /**
+     * On a helper's phone: someone needs you. Built like Meeting Timer's alert: a dark card at the bottom with a
+     * status dot and "Answer within", the message as the title, who and when, a big 0:30 countdown with a bar,
+     * one big "I'm coming", and smaller replies under it. The card turns red in the last ten seconds and stays
+     * red while the alarm rings. Answering anything stops it and tells the other helpers.
+     */
     @Composable
     private fun HelperAlertPanel(from: String, text: String, kind: String, id: Long, onClose: () -> Unit) {
-        val p = LocalPalette.current
         val sc = LocalScale.current
         val urgent = kind in setOf("SOS", "DANGER", "FALL")
-        LaunchedEffect(Unit) { medlog.speaker.say("$from: $text") }
-        Screen(Wording.alertTitle(from, urgent), "$from says: $text", onHome = null, background = if (urgent) p.redSoft else p.paper) {
-            Card(color = p.card, border = if (urgent) p.red else p.brand) { Text(text, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.2f) }
-            fun reply(r: String) {
-                AlertSound.stop()
-                medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
-                onClose()
-            }
-            BigButton("I'm coming", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = { reply("coming") })
-            Row { BigButton("In 5 minutes", Modifier.weight(1f), Tone.QUIET, onClick = { reply("5min") }); Spacer(Modifier.width(12.dp)); BigButton("I'll call you", Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.Call, onClick = { reply("call") }) }
-            BigButton("Can't come now", tone = Tone.SECONDARY, onClick = { reply("cant") })
-            BigButton("Open MedLog", tone = Tone.SECONDARY, onClick = { AlertSound.stop(); openApp("helper") })
+        val deadline by AlertSound.deadline.collectAsState()
+        val screaming by AlertSound.screaming.collectAsState()
+        var now by remember { mutableStateOf(System.currentTimeMillis()) }
+        LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(200) } }
+        val left = deadline?.let { ((it - now + 999) / 1000).toInt().coerceAtLeast(0) } ?: 0
+        val red = urgent || screaming || (deadline != null && left <= 10)
+        val card = if (red) Color(0xFFB3261E) else Color(0xFF1F2023)
+        val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
+        fun reply(r: String) {
+            AlertSound.stop()
+            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
+            onClose()
         }
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000)).padding(12.dp), contentAlignment = Alignment.BottomCenter) {
+            androidx.compose.foundation.layout.Column(
+                Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(card).padding(22.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+            ) {
+                // status line
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.foundation.layout.Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (red) Color.White else Color(0xFF4ADE80)))
+                    Spacer(Modifier.width(10.dp))
+                    Text(when { screaming -> "Nobody has answered"; deadline == null -> "Message"; else -> "Answer within" }, color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold)
+                }
+                // the message, then who and when
+                Text(text, color = Color.White, fontSize = sc.question, fontWeight = FontWeight.Bold, lineHeight = sc.question * 1.15f)
+                Text("$from · $at", color = Color.White.copy(alpha = 0.75f), fontSize = sc.body)
+                // flip-clock countdown and bar
+                if (deadline != null || screaming) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
+                        listOf("0", ":", "%02d".format(left).take(1), "%02d".format(left).drop(1)).forEach { d ->
+                            if (d == ":") Text(":", color = Color.White, fontSize = sc.huge * 1.2f, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+                            else androidx.compose.foundation.layout.Box(
+                                Modifier.padding(horizontal = 3.dp).size(width = 64.dp, height = 84.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(d, color = Color.White, fontSize = sc.huge * 1.2f, fontWeight = FontWeight.Bold)
+                                androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.35f)))
+                            }
+                        }
+                    }
+                    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(6.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.2f))) {
+                        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth(left / AlertSound.WINDOW.toFloat()).height(6.dp).background(Color.White))
+                    }
+                }
+                // one big answer, smaller ones under it
+                AlertButton("I'm coming", Color.White, card, sc.target * 1.3f, Modifier.fillMaxWidth()) { reply("coming") }
+                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                    AlertButton("In 5 min", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("5min") }
+                    AlertButton("I'll call", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
+                    AlertButton("Can't now", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
+                }
+                Text("Open MedLog", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { AlertSound.stop(); openApp("helper") }.padding(vertical = 12.dp))
+            }
+        }
+    }
+
+    @Composable
+    private fun AlertButton(label: String, bg: Color, fg: Color, height: androidx.compose.ui.unit.Dp, modifier: Modifier, onClick: () -> Unit) {
+        androidx.compose.foundation.layout.Box(
+            modifier.height(height).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(bg).steady(label, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { Text(label, color = fg, fontSize = LocalScale.current.button, fontWeight = FontWeight.Bold, maxLines = 1) }
     }
 
     /** On the person's phone: a helper asked "How are you?". One tap answers them. */

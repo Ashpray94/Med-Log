@@ -31,8 +31,8 @@ android {
         applicationId = "com.suryaprakash.medlog"
         minSdk = 23
         targetSdk = 35
-        versionCode = 270
-        versionName = "2.7.0"
+        versionCode = 280
+        versionName = "2.8.0"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -120,8 +120,6 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     // offline speech recognition
-    implementation("com.alphacephei:vosk-android:0.3.47@aar")
-    implementation("net.java.dev.jna:jna:5.13.0@aar")
 
     // offline text recognition (medicine strips, old reports) — bundled model, no download
     implementation("com.google.mlkit:text-recognition:16.0.1")

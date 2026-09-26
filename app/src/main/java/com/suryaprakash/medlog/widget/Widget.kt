@@ -59,107 +59,137 @@ import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.meds.DoseActivity
 import com.suryaprakash.medlog.meds.Scheduler
 import com.suryaprakash.medlog.pictogram.Pictogram
+import kotlinx.coroutines.launch
 
 /**
- * Home-screen widget (plan section 6). Shows the problems the person has been logging most (with
- * "3rd time today"), a microphone, the next medicine with "I took it", and Help.
- * Tapping a problem opens MedLog straight to listening for that problem.
+ * The one home-screen widget. Its job: note how you feel and reach family, without opening MedLog.
+ *
+ * - A status line on top: what just happened ("✓ Headache noted, 9:41", "Sent · Ravi: I'm coming").
+ * - Symptom tiles: the person's own (or, on day one, the ones that fit them). One tap saves it with the time.
+ * - The person's messages: one tap sends to family straight away; the status line shows who got it and answers.
+ * - SOS, always. On a tall widget, the next medicine with "I took it".
+ * Light and plain: white, grey tiles, dark words. Red only for SOS.
  */
 class MedLogWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
 
-    data class Tile(val id: String, val label: String, val badge: String?, val picture: android.graphics.Bitmap)
+    data class Tile(val id: String, val label: String, val picture: android.graphics.Bitmap, val emergency: Boolean)
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val app = context.medlog
         val s = app.settings.value
-        val recent = if (s.onboarded && s.role == "self") runCatching { app.repo.recentProblems(6) }.getOrDefault(emptyList()) else emptyList()
-        val tiles = recent.mapNotNull { r ->
-            val p = app.catalogue.problem(r.problemId) ?: return@mapNotNull null
-            Tile(p.id, p.label, when { r.todayCount >= 2 -> ordinal(r.todayCount) + " today"; r.todayCount == 1 -> "Today"; else -> null },
-                com.suryaprakash.medlog.pictogram.Sprites.bitmap(context, p.id, 240) ?: return@mapNotNull null)
+        val self = s.onboarded && s.role == "self"
+        val profile = runCatching { app.repo.profile() }.getOrNull()
+        val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile?.plan)
+        val ids = if (!self) emptyList() else runCatching {
+            val history = app.db.notes().symptomsSince(System.currentTimeMillis() - 180 * com.suryaprakash.medlog.data.DAY)
+                .mapNotNull { n -> n.problemId?.let { com.suryaprakash.medlog.clinical.Suggest.Logged(it, n.occurredAt) } }
+            val r = com.suryaprakash.medlog.clinical.Suggest.rank(history, profile?.let { app.repo.ageYears(it.dob) }, profile?.conditions.orEmpty().split(",").map { it.trim() },
+                plan.symptoms, java.time.LocalTime.now().hour, known = { app.catalogue.problem(it) != null }, limit = 4)
+            (r.yours + r.suggested).distinct().take(4)
+        }.getOrDefault(emptyList())
+        val tiles = ids.mapNotNull { pid ->
+            val p = app.catalogue.problem(pid) ?: return@mapNotNull null
+            Tile(p.id, p.label, com.suryaprakash.medlog.pictogram.Sprites.bitmap(context, p.id, 200) ?: return@mapNotNull null, pid in plan.emergencies)
         }
+        val msgs = if (self) s.messages.take(3).map { it.substringAfter('|') } else emptyList()
         val next = runCatching { Scheduler.nextDose(context) }.getOrNull()
         val nextText = next?.let { (d, m) -> "${DoseActivity.time(d.scheduledAt)} · ${m.name}" }
         val nextDue = next?.let { it.first.scheduledAt <= System.currentTimeMillis() + 15 * 60_000 } == true
-        provideContent { Content(context, tiles, nextText, if (nextDue) next?.first?.id else null) }
+        provideContent { Content(context, self, status(context), tiles, msgs, nextText, if (nextDue) next?.first?.id else null) }
+    }
+
+    /** The latest thing done from the widget, and what came of it. Fresh for 30 minutes. */
+    private fun status(ctx: Context): Pair<String, Boolean>? {
+        val st = com.suryaprakash.medlog.ui.screens.HelpMessages.status.value
+        if (st != null && System.currentTimeMillis() - st.at < 30 * 60_000L) {
+            val ack = com.suryaprakash.medlog.help.Nearby.acks.value.lastOrNull()
+            return when {
+                ack != null -> "✓ ${ack.name}: ${com.suryaprakash.medlog.help.Nearby.replyWords(ack.reply)}" to true
+                st.stage == "sending" -> "Sending: ${st.text}…" to false
+                st.stage == "failed" -> "Couldn't send. Please call." to false
+                st.stage == "noanswer" -> "No answer yet. Try calling." to false
+                else -> "✓ Sent: ${st.text}" to true
+            }
+        }
+        val s = ctx.medlog.settings
+        val at = s.getLong("widget_noted_at")
+        if (System.currentTimeMillis() - at < 30 * 60_000L) return (s.getString("widget_noted") ?: return null) to true
+        return null
     }
 
     @Composable
-    private fun Content(ctx: Context, tiles: List<Tile>, nextText: String?, dueDose: Long?) {
+    private fun Content(ctx: Context, self: Boolean, status: Pair<String, Boolean>?, tiles: List<Tile>, msgs: List<String>, nextText: String?, dueDose: Long?) {
         val size = LocalSize.current
-        val ink = ColorProvider(Color(0xFF1C1C1E))
+        val ink = ColorProvider(Color(0xFF18181B))
+        val soft = ColorProvider(Color(0xFF52525B))
+        val accent = ColorProvider(Color(0xFF0B6E66))
         val white = ColorProvider(Color.White)
-        val wide = size.width >= MEDIUM.width
-        val tall = size.height >= LARGE.height
-        // Square tiles only. Work out the biggest square that fits, for the most tiles we have (up to 6),
-        // after the action row (52) and, on tall widgets, the medicine row (54).
-        val gap = 8f
-        val availW = size.width.value - 16f
-        val availH = size.height.value - 16f - 60f - (if (tall && nextText != null) 54f else 0f)
-        var cols = 0; var rows = 0; var side = 0f
-        if (tiles.isNotEmpty() && availH >= 64f) {
-            for (r in 1..2) for (c in 2..4) {
-                if (r * c > 6 || (r - 1) * c >= tiles.size) continue
-                val sq = minOf((availW - gap * (c - 1)) / c, (availH - gap * (r - 1)) / r, 132f)
-                if (sq < 64f) continue
-                val n = minOf(tiles.size, r * c)
-                val better = n > minOf(tiles.size, rows * cols) || (n == minOf(tiles.size, rows * cols) && sq > side)
-                if (better) { cols = c; rows = r; side = sq }
-            }
-        }
-        val show = tiles.take(rows * cols)
-        val icon = (side * 0.56f).coerceIn(32f, 76f).dp
+        val w = size.width.value - 16f
+        var h = size.height.value - 16f
+        // what fits, most important first: SOS row, status, symptom row, messages, medicine
+        val sosH = 52f; h -= sosH
+        val showStatus = status != null && h >= 30f; if (showStatus) h -= 32f
+        val cols = if (w >= 300f) 4 else if (w >= 200f) 3 else 2
+        val side = minOf((w - 8f * (cols - 1)) / cols, 110f)
+        val showTiles = self && tiles.isNotEmpty() && h >= side + 8f; if (showTiles) h -= side + 8f
+        val rowH = 46f
+        val nMsgs = if (!self) 0 else minOf(msgs.size, ((h + 6f) / (rowH + 6f)).toInt().coerceAtLeast(0)); h -= nMsgs * (rowH + 6f)
+        val showMed = nextText != null && h >= 50f
         Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(8.dp)) {
-            // recent problems: a grid of equal squares, centred
-            show.chunked(cols.coerceAtLeast(1)).forEachIndexed { ri, row ->
-                if (ri > 0) Spacer(GlanceModifier.height(gap.dp))
-                Row(GlanceModifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    row.forEachIndexed { i, t ->
-                        if (i > 0) Spacer(GlanceModifier.width(gap.dp))
-                        Column(
-                            GlanceModifier.size(side.dp).background(ImageProvider(R.drawable.widget_tile)).padding(4.dp)
-                                .clickable(actionStartActivity(link(ctx, "tell?problem=${t.id}"))),
-                            horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Image(ImageProvider(t.picture), t.label, GlanceModifier.size(icon))
-                            Text(com.suryaprakash.medlog.ui.tr(t.label), style = TextStyle(color = ink, fontSize = if (side >= 96f) 13.sp else 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 1)
-                        }
-                    }
-                    // keep a short last row aligned to the grid, not re-centred
-                    repeat(cols - row.size) { Spacer(GlanceModifier.width(gap.dp)); Spacer(GlanceModifier.size(side.dp)) }
+            if (!self) {
+                Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(actionStartActivity(link(ctx, ""))), contentAlignment = Alignment.Center) {
+                    Text(com.suryaprakash.medlog.ui.tr("Open MedLog to finish setting up"), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
                 }
             }
-            if (show.isNotEmpty()) Spacer(GlanceModifier.defaultWeight())
-            // next medicine (large only)
-            if (tall && nextText != null) {
-                Row(GlanceModifier.fillMaxWidth().height(48.dp).background(ImageProvider(R.drawable.widget_soft)).padding(horizontal = 12.dp).clickable(actionStartActivity(link(ctx, "meds"))),
-                    verticalAlignment = Alignment.CenterVertically) {
-                    Text(com.suryaprakash.medlog.ui.tr(nextText), GlanceModifier.defaultWeight(), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                    if (dueDose != null) Box(GlanceModifier.height(34.dp).background(ImageProvider(R.drawable.widget_ok)).padding(horizontal = 12.dp)
+            if (showStatus && status != null) {
+                Box(GlanceModifier.fillMaxWidth().height(28.dp).background(ImageProvider(if (status.second) R.drawable.widget_done else R.drawable.widget_tile)).padding(horizontal = 10.dp)
+                    .clickable(actionStartActivity(link(ctx, "help"))), contentAlignment = Alignment.CenterStart) {
+                    Text(com.suryaprakash.medlog.ui.tr(status.first), style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                }
+                Spacer(GlanceModifier.height(4.dp))
+            }
+            if (showTiles) {
+                Row(GlanceModifier.fillMaxWidth()) {
+                    tiles.take(cols).forEachIndexed { i, t ->
+                        if (i > 0) Spacer(GlanceModifier.width(8.dp))
+                        // one tap saves it; an emergency of theirs opens MedLog so helpers are called
+                        val act = if (t.emergency) actionStartActivity(link(ctx, "tell?problem=${t.id}")) else actionRunCallback<NoteProblem>(actionParametersOf(PROBLEM to t.id))
+                        Column(GlanceModifier.size(side.dp).background(ImageProvider(R.drawable.widget_tile)).padding(4.dp).clickable(act),
+                            horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+                            Image(ImageProvider(t.picture), t.label, GlanceModifier.size((side * 0.5f).coerceIn(28f, 64f).dp))
+                            Text(com.suryaprakash.medlog.ui.tr(t.label), style = TextStyle(color = ink, fontSize = if (side >= 90f) 14.sp else 12.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 1)
+                        }
+                    }
+                }
+                Spacer(GlanceModifier.height(8.dp))
+            }
+            msgs.take(nMsgs).forEach { m ->
+                Row(GlanceModifier.fillMaxWidth().height(rowH.dp).background(ImageProvider(R.drawable.widget_soft)).padding(horizontal = 12.dp)
+                    .clickable(actionRunCallback<SendMessage>(actionParametersOf(TEXT to m))), verticalAlignment = Alignment.CenterVertically) {
+                    Text(com.suryaprakash.medlog.ui.tr(m), GlanceModifier.defaultWeight(), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(com.suryaprakash.medlog.ui.tr("Send"), style = TextStyle(color = accent, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                }
+                Spacer(GlanceModifier.height(6.dp))
+            }
+            if (showMed && nextText != null) {
+                Row(GlanceModifier.fillMaxWidth().height(44.dp).padding(horizontal = 6.dp).clickable(actionStartActivity(link(ctx, "meds"))), verticalAlignment = Alignment.CenterVertically) {
+                    Text(com.suryaprakash.medlog.ui.tr(nextText), GlanceModifier.defaultWeight(), style = TextStyle(color = soft, fontSize = 14.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                    if (dueDose != null) Box(GlanceModifier.height(36.dp).background(ImageProvider(R.drawable.widget_ok)).padding(horizontal = 12.dp)
                         .clickable(actionRunCallback<TakeDose>(actionParametersOf(DOSE to dueDose))), contentAlignment = Alignment.Center) {
                         Text(com.suryaprakash.medlog.ui.tr("I took it"), style = TextStyle(color = white, fontSize = 14.sp, fontWeight = FontWeight.Bold))
                     }
                 }
-                Spacer(GlanceModifier.height(6.dp))
             }
-            // the two actions, always the same
-            Row(GlanceModifier.fillMaxWidth().then(if (show.isEmpty()) GlanceModifier.defaultWeight() else GlanceModifier.height(52.dp))) {
-                Row(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_brand)).padding(horizontal = 10.dp)
-                    .clickable(actionStartActivity(link(ctx, "tell"))), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(ImageProvider(R.drawable.ic_w_mic), "Tell how I feel", GlanceModifier.size(if (show.isEmpty()) 34.dp else 24.dp))
-                    Spacer(GlanceModifier.width(6.dp))
-                    Text(com.suryaprakash.medlog.ui.tr(if (wide) "How are you?" else "Tell"), style = TextStyle(color = white, fontSize = if (wide) 15.sp else 17.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+            Spacer(GlanceModifier.defaultWeight())
+            // always: more symptoms, and SOS
+            Row(GlanceModifier.fillMaxWidth().height(sosH.dp)) {
+                Box(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_soft)).clickable(actionStartActivity(link(ctx, "tell"))),
+                    contentAlignment = Alignment.Center) {
+                    Text(com.suryaprakash.medlog.ui.tr(if (w >= 200f) "Something else…" else "More"), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
                 }
                 Spacer(GlanceModifier.width(6.dp))
-                // family: the Ask family page, one tap away
-                Column(GlanceModifier.width(if (wide) 88.dp else 58.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_brand))
-                    .clickable(actionStartActivity(link(ctx, "help"))), horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
-                    Image(ImageProvider(R.drawable.ic_w_family), "Ask family", GlanceModifier.size(22.dp))
-                    if (wide) Text(com.suryaprakash.medlog.ui.tr("Family"), style = TextStyle(color = white, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                }
-                Spacer(GlanceModifier.width(6.dp))
-                Box(GlanceModifier.width(if (wide) 88.dp else 64.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_red))
+                Box(GlanceModifier.width(if (w >= 200f) 96.dp else 64.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_red))
                     .clickable(actionStartActivity(link(ctx, "emergency"))), contentAlignment = Alignment.Center) {
                     Text(com.suryaprakash.medlog.ui.tr("SOS"), style = TextStyle(color = white, fontSize = 17.sp, fontWeight = FontWeight.Bold))
                 }
@@ -168,72 +198,50 @@ class MedLogWidget : GlanceAppWidget() {
     }
 
     companion object {
-        val SMALL = DpSize(110.dp, 110.dp)
-        val MEDIUM = DpSize(250.dp, 110.dp)
-        val LARGE = DpSize(250.dp, 250.dp)
         val DOSE = ActionParameters.Key<Long>("dose")
+        val PROBLEM = ActionParameters.Key<String>("problem")
+        val TEXT = ActionParameters.Key<String>("text")
         fun link(ctx: Context, path: String) = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse("medlog://$path")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
         fun ordinal(n: Int) = "$n" + when { n % 100 in 11..13 -> "th"; n % 10 == 1 -> "st"; n % 10 == 2 -> "nd"; n % 10 == 3 -> "rd"; else -> "th" }
     }
 }
 
-/**
- * The family widget: the person's own first three messages (one tap sends, and MedLog opens to show who got
- * it and who answered), a call to the first helper, and SOS.
- */
-class FamilyWidget : GlanceAppWidget() {
-    override val sizeMode = SizeMode.Exact
-
-    override suspend fun provideGlance(context: Context, id: GlanceId) {
+/** A symptom tile: saved at once, with the time. Details can be added in MedLog later. */
+class NoteProblem : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val pid = parameters[MedLogWidget.PROBLEM] ?: return
         val app = context.medlog
-        val s = app.settings.value
-        val self = s.onboarded && s.role == "self"
-        val msgs = if (self) s.messages.take(3) else emptyList()
-        val helper = if (self) runCatching { app.db.helpers().all().firstOrNull() }.getOrNull() else null
-        provideContent { Content(context, msgs, helper?.name) }
-    }
-
-    @Composable
-    private fun Content(ctx: Context, msgs: List<String>, helper: String?) {
-        val ink = ColorProvider(Color(0xFF1C1C1E))
-        val white = ColorProvider(Color.White)
-        val size = LocalSize.current
-        val rowH = ((size.height.value - 16f - 6f * (msgs.size + 1)) / (msgs.size + 1).coerceAtLeast(2)).coerceIn(40f, 64f).dp
-        Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(8.dp)) {
-            if (msgs.isEmpty()) {
-                Box(GlanceModifier.fillMaxWidth().defaultWeight().background(ImageProvider(R.drawable.widget_soft)).padding(10.dp)
-                    .clickable(actionStartActivity(MedLogWidget.link(ctx, "messages"))), contentAlignment = Alignment.Center) {
-                    Text(com.suryaprakash.medlog.ui.tr("Tap to choose your messages"), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
-                }
-            }
-            msgs.forEachIndexed { i, m ->
-                Row(GlanceModifier.fillMaxWidth().height(rowH).background(ImageProvider(R.drawable.widget_tile)).padding(horizontal = 12.dp)
-                    .clickable(actionStartActivity(MedLogWidget.link(ctx, "help?send=${Uri.encode(m.substringBefore('|'))}"))), verticalAlignment = Alignment.CenterVertically) {
-                    Text(com.suryaprakash.medlog.ui.tr(m.substringAfter('|')), GlanceModifier.defaultWeight(), style = TextStyle(color = ink, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    Text(com.suryaprakash.medlog.ui.tr("Send"), style = TextStyle(color = ColorProvider(Color(0xFF0B6E66)), fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                }
-                Spacer(GlanceModifier.height(6.dp))
-            }
-            if (msgs.isNotEmpty()) Spacer(GlanceModifier.defaultWeight())
-            Row(GlanceModifier.fillMaxWidth().height(rowH)) {
-                Row(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_brand)).padding(horizontal = 10.dp)
-                    .clickable(actionStartActivity(MedLogWidget.link(ctx, if (helper != null) "call" else "help"))), verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
-                    Image(ImageProvider(R.drawable.ic_w_call), "Call", GlanceModifier.size(22.dp))
-                    Spacer(GlanceModifier.width(6.dp))
-                    Text(com.suryaprakash.medlog.ui.tr(helper?.let { "Call $it" } ?: "Ask family"), style = TextStyle(color = white, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                }
-                Spacer(GlanceModifier.width(6.dp))
-                Box(GlanceModifier.width(72.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_red))
-                    .clickable(actionStartActivity(MedLogWidget.link(ctx, "emergency"))), contentAlignment = Alignment.Center) {
-                    Text(com.suryaprakash.medlog.ui.tr("SOS"), style = TextStyle(color = white, fontSize = 17.sp, fontWeight = FontWeight.Bold))
-                }
-            }
-        }
+        val label = app.catalogue.problem(pid)?.label ?: return
+        val now = System.currentTimeMillis()
+        app.repo.saveTold(listOf(com.suryaprakash.medlog.nlu.Mention(pid)), null, now, com.suryaprakash.medlog.clinical.Triage.OK, emptyList(), emptyList(), null)
+        val today = app.repo.recentProblems(12).firstOrNull { it.problemId == pid }?.todayCount ?: 1
+        val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(now))
+        app.settings.putString("widget_noted", "✓ ${com.suryaprakash.medlog.ui.tr(label)} " + (if (today > 1) "(${MedLogWidget.ordinal(today)} today) " else "") + time)
+        app.settings.putLong("widget_noted_at", now)
+        com.suryaprakash.medlog.ui.savedFeedback(context)
+        MedLogWidget().updateAll(context)
     }
 }
 
-class FamilyWidgetReceiver : GlanceAppWidgetReceiver() {
-    override val glanceAppWidget: GlanceAppWidget = FamilyWidget()
+/** A message tile: sent to family at once. The widget follows the answer for a few minutes. */
+class SendMessage : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        val text = parameters[MedLogWidget.TEXT] ?: return
+        val app = context.medlog
+        com.suryaprakash.medlog.ui.screens.HelpMessages.send(context, text)
+        com.suryaprakash.medlog.ui.savedFeedback(context)
+        MedLogWidget().updateAll(context)
+        app.scope.launch {
+            var last: Any? = null
+            val end = System.currentTimeMillis() + 4 * 60_000L
+            while (System.currentTimeMillis() < end) {
+                val now = com.suryaprakash.medlog.ui.screens.HelpMessages.status.value to com.suryaprakash.medlog.help.Nearby.acks.value.size
+                if (now != last) { last = now; MedLogWidget().updateAll(context) }
+                if (now.second > 0) break
+                kotlinx.coroutines.delay(1500)
+            }
+        }
+    }
 }
 
 class TakeDose : ActionCallback {
