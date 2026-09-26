@@ -14,13 +14,13 @@ data class Settings(
     val easyMode: Boolean = true,
     val bigMode: Boolean = false,
     val highContrast: Boolean = false,
-    val steadyTouch: Boolean = true,
+    val steadyTouch: Boolean = false,
     val touchToHear: Boolean = false,
     /** read each screen out loud when it opens (asked in setup; off unless the person wants it) */
     val autoRead: Boolean = false,
     /** show the Read aloud button at all */
     val readAloud: Boolean = true,
-    val speechRate: Float = 0.7f,
+    val speechRate: Float = 1.0f,
     val leftHand: Boolean = false,
     val lessMotion: Boolean = false,
     val flashAlerts: Boolean = false,

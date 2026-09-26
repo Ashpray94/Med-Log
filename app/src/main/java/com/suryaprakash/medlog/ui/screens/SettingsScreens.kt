@@ -2,6 +2,13 @@ package com.suryaprakash.medlog.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import android.provider.Settings as AndroidSettings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -18,7 +25,6 @@ import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.Translate
-import androidx.compose.material.icons.rounded.Widgets
 import com.suryaprakash.medlog.ui.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -128,7 +134,7 @@ fun SettingsScreen(nav: Nav) {
             Toggle("Always-there buttons", s.persistentNotification, "Tell and Help buttons in your notifications, even on the lock screen.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
             Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.settings.update { it.copy(diabetic = on) } }
             Body("Glasses of water a day", bold = true)
-            run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it glasses" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
+            run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
         }
         "sos" -> Screen("SOS", "What happens when you press SOS.", onHome = { nav.home() }, onBack = { section = null }) {
             Card { Body("When you press SOS: a message with where you are goes to your helpers, their MedLog phones ring (nearby or far away), then MedLog calls each helper in turn, then ${s.emergencyNumber}.") }
@@ -219,7 +225,6 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
             }
-            RoleSwitch(nav)
             Hint("MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
         }
     }

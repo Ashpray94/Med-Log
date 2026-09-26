@@ -1,6 +1,13 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.ui.cardTitle
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +22,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Call
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.History
@@ -91,6 +101,7 @@ fun HomeScreen(nav: Nav) {
     var name by remember { mutableStateOf("") }
     var recent by remember { mutableStateOf<List<Repo.Recent>>(emptyList()) }
     var next by remember { mutableStateOf<Pair<Dose, Medicine>?>(null) }
+    var todays by remember { mutableStateOf<List<Pair<Dose, Medicine>>>(emptyList()) }
     var askBetter by remember { mutableStateOf<String?>(null) }
     var remindersBlocked by remember { mutableStateOf(false) }
     var version by remember { mutableStateOf(0) }
@@ -99,17 +110,23 @@ fun HomeScreen(nav: Nav) {
         name = app.repo.profile().name
         recent = app.repo.recentProblems(3)
         next = Scheduler.nextDose(ctx)
+        val (from, to) = Scheduler.today()
+        val meds = app.db.medicines().all().associateBy { it.id }
+        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
         val now = System.currentTimeMillis()
         askBetter = recent.firstOrNull { it.ongoing && now - it.lastAt > 20 * 3600_000L && app.settings.getString("asked_better_${it.problemId}") != java.time.LocalDate.now().toString() }?.problemId
         remindersBlocked = !Perms.exactAlarmsOk(ctx) || !Perms.has(ctx, *Perms.NOTIFY)
     }
     val hour = LocalTime.now().hour
-    val hello = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" } + if (name.isNotBlank()) ",\n${name.split(" ").first()}" else ""
+    val greeting = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" }
+    val first = name.split(" ").first()
+    val hello = if (first.isNotBlank()) "$greeting, $first" else greeting
     val today = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date())
     val due = next?.let { it.first.scheduledAt <= System.currentTimeMillis() + 10 * 60_000 } == true
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
-    Screen(hello, speak, onHome = null, subtitle = today, trailing = { RoundIcon(Icons.Rounded.Settings, "Settings") { nav.go(Route.Settings) } }) {
+    Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
+        PersonaSwitch(nav)
         // ── the one main action ──
         HeroTell { nav.go(Route.Tell()) }
 
@@ -139,17 +156,17 @@ fun HomeScreen(nav: Nav) {
         }
 
         // ── next medicine ──
-        if ("meds" !in s.hidden) Card(onClick = { nav.go(Route.Meds) }, label = next?.let { "Next medicine: ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}" } ?: "Medicines") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconTile(Icons.Rounded.Medication, p.tintOrange, 48.dp); Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(if (next == null) "Medicines" else if (due) "Medicine due now" else "Next medicine", fontSize = sc.small, color = if (due) p.red else p.inkSoft, fontWeight = FontWeight.SemiBold)
-                    Text(next?.let { "${DoseActivity.time(it.first.scheduledAt)} · ${it.second.name}" } ?: "No more today",
-                        fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+        if ("meds" !in s.hidden) {
+            val takenCount = todays.count { it.first.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }
+            com.suryaprakash.medlog.ui.SectionHeader("Today's medicines",
+                if (todays.isEmpty()) "Nothing to take today" else if (takenCount == todays.size) "All ${todays.size} taken" else "$takenCount of ${todays.size} taken",
+                if (todays.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
+            if (todays.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
+            todays.forEach { (d, m) ->
+                DoseCard(d, m, onOpen = { nav.go(Route.Meds) },
+                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); version++ } },
+                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id); version++ } })
             }
-            if (due) BigButton("I took it", tone = Tone.OK, onClick = { scope.launch { next?.first?.id?.let { Scheduler.take(ctx, it) }; savedFeedback(ctx); version++ } })
-            else BigButton("Did I take my medicines?", tone = Tone.QUIET, icon = Icons.Rounded.Checklist, onClick = { nav.go(Route.DidITake) })
         }
 
         // ── recent problems: one tap to tell more ──
@@ -172,9 +189,29 @@ fun HomeScreen(nav: Nav) {
             if ("readings" !in s.hidden) HomeTile("BP & sugar", Icons.Rounded.MonitorHeart, p.tintPink) { nav.go(Route.Readings) } else null,
             if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, p.tintBlue) { nav.go(Route.Doctor) } else null,
             if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, p.tintPurple) { nav.go(Route.Reports) } else null,
-            HomeTile("History", Icons.Rounded.History, p.tintTeal) { nav.go(Route.Notes) },
             if ("meds" !in s.hidden) HomeTile("Medicines", Icons.Rounded.Medication, p.tintOrange) { nav.go(Route.Meds) } else null,
+            HomeTile("Settings", Icons.Rounded.Settings, Color(0xFF5F6368)) { nav.go(Route.Settings) },
         )
+        // ── history: what you've noted, one tap away ──
+        run {
+            val last = recent.maxByOrNull { it.lastAt }
+            val lastWords = last?.let { r ->
+                val label = app.catalogue.problem(r.problemId)?.label ?: return@let null
+                "Last: $label, " + SimpleDateFormat("d MMMM", Locale.getDefault()).format(Date(r.lastAt))
+            } ?: "Everything you have noted"
+            val hsh = RoundedCornerShape(sc.radius)
+            Row(Modifier.fillMaxWidth().clip(hsh).background(p.card).border(1.dp, p.line, hsh).steady("History. $lastWords") { nav.go(Route.Notes) }
+                .padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconTile(Icons.Rounded.History, p.tintTeal, 56.dp)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("History", fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text(lastWords, fontSize = sc.body, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(28.dp))
+            }
+        }
+
         Title("More")
         TileGrid(tiles, if (sc.big) 2 else 3, aspect = if (sc.big) 1.25f else 1f) { t, m ->
             Tile(t.label, m, onClick = t.onClick) {
@@ -195,20 +232,77 @@ fun HeroTell(onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius + 4.dp)
+    // one row: the question and what to do on the left, the arrow on the right, all centred
     Row(
-        Modifier.fillMaxWidth().heightIn(min = sc.target * 2.1f).shadow(6.dp, sh, spotColor = p.brand.copy(alpha = 0.4f)).clip(sh)
-            .background(p.brand)
-            .steady("How are you feeling? Tap to choose.", onClick = onClick).padding(horizontal = 22.dp, vertical = 18.dp),
+        Modifier.fillMaxWidth().heightIn(min = if (sc.big) 168.dp else 152.dp).clip(sh).background(p.brand)
+            .steady("How are you feeling? Tap to choose.", onClick = onClick).padding(horizontal = 24.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("How are you feeling?", color = Color.White, fontSize = sc.headline * 1.15f, fontWeight = FontWeight.Bold, lineHeight = sc.headline * 1.3f)
-            Spacer(Modifier.height(4.dp))
-            Text("Tap to choose", color = Color.White.copy(alpha = 0.88f), fontSize = sc.body)
+            Text("How are you feeling?", color = Color.White, fontSize = sc.title, fontWeight = FontWeight.Bold, lineHeight = sc.title * 1.2f)
+            Spacer(Modifier.height(8.dp))
+            Text("Tap to choose", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body)
         }
-        Box(Modifier.size(sc.target * 1.15f).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = p.brand, modifier = Modifier.size(sc.target * 0.6f))
+        Spacer(Modifier.width(16.dp))
+        Box(Modifier.size(sc.target + 8.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = p.brand, modifier = Modifier.size(28.dp))
         }
+    }
+}
+
+/**
+ * One of today's doses, read top to bottom: when (the part of the day and the time), what (picture, name, how much, what for),
+ * then where it stands. Later today: white, "Log taken". Due now: amber, "I took it". Taken: green, the time and Undo.
+ * Missed: red, "I took it late".
+ */
+@Composable
+fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUndo: () -> Unit, onNotGiven: (() -> Unit)? = null) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val now = System.currentTimeMillis()
+    val taken = d.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN
+    val missed = d.status == com.suryaprakash.medlog.data.DoseStatus.MISSED || d.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED
+    val dueNow = !taken && !missed && d.scheduledAt <= now + 10 * 60_000
+    val time = DoseActivity.time(d.scheduledAt)
+    val part = com.suryaprakash.medlog.ui.dayPart(java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).hour)
+    val border = when { taken -> p.ok; missed -> p.red; dueNow -> p.amber; else -> p.line }
+    val whenWords = when {
+        dueNow -> "Due now · $time"
+        missed -> "${if (d.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) (if (m.form == "feed") "Not given" else "Skipped") else "Missed"} · $time"
+        else -> "${part.name} · $time"
+    }
+    val sh = RoundedCornerShape(sc.radius)
+    Column(Modifier.fillMaxWidth().clip(sh).background(if (taken) p.okSoft else p.card).border(if (border == p.line) 1.dp else 2.dp, border, sh)
+        .padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // when
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(part.icon, null, tint = part.tint, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(whenWords, fontSize = sc.body, fontWeight = FontWeight.SemiBold,
+                color = when { dueNow -> p.amber; missed -> p.red; else -> p.inkSoft })
+        }
+        // what
+        Row(Modifier.fillMaxWidth().steady("$time, ${m.name}", onClick = onOpen), verticalAlignment = Alignment.CenterVertically) {
+            MedicinePicture(m, 64.dp)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink,
+                    maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = sc.cardTitle * 1.2f)
+                Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
+                    fontSize = sc.body, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        // where it stands
+        if (taken) Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(26.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("${if (m.form == "feed") "Given" else "Taken"} at ${DoseActivity.time(d.actedAt ?: now)}", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ok, modifier = Modifier.weight(1f))
+            Text("Undo", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft,
+                modifier = Modifier.clip(RoundedCornerShape(12.dp)).steady("Undo taken", onClick = onUndo).padding(horizontal = 12.dp, vertical = 10.dp))
+        } else if (m.form == "feed" && !missed && onNotGiven != null) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BigButton("Given", Modifier.weight(1f), if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
+            BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = onNotGiven)
+        } else BigButton(if (m.form == "feed") (if (missed) "Given late" else "Given") else if (missed) "I took it late" else if (dueNow) "I took it" else "Log taken", tone = if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
     }
 }
 

@@ -182,6 +182,19 @@ object Scheduler {
         return Taken.OK
     }
 
+    /** Takes back a "taken" tapped by mistake: the dose is open again and the pill count goes back up. */
+    suspend fun untake(ctx: Context, doseId: Long) {
+        val app = ctx.medlog
+        val d = app.db.doses().get(doseId) ?: return
+        if (d.status != DoseStatus.TAKEN) return
+        app.db.doses().update(d.copy(status = DoseStatus.DUE, actedAt = null))
+        app.db.medicines().get(d.medicineId)?.let { m ->
+            m.pillsLeft?.let { left -> app.db.medicines().update(m.copy(pillsLeft = left + (m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0))) }
+        }
+        app.refreshWidgets()
+        reschedule(ctx)
+    }
+
     suspend fun snooze(ctx: Context, doseId: Long) {
         val app = ctx.medlog
         val d = app.db.doses().get(doseId) ?: return

@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -102,10 +103,12 @@ fun DoctorScreen(nav: Nav) {
     var note by remember { mutableStateOf<DoctorNote?>(null) }
     var busy by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
-    LaunchedEffect(days) { note = withContext(Dispatchers.IO) { buildNote(ctx, days) } }
+    var nut by remember { mutableStateOf<com.suryaprakash.medlog.nutrition.Nutrition.Report?>(null) }
+    LaunchedEffect(days) { note = withContext(Dispatchers.IO) { buildNote(ctx, days) }; nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)) } }
+    val nutShown = nut?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }
     val n = note
     val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share to send it, or Print."
-    fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!) }; busy = false; then(f) } }
+    fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!, nutShown) }; busy = false; then(f) } }
 
     var doctors by remember { mutableStateOf<List<com.suryaprakash.medlog.data.CarePlan.Doctor>>(emptyList()) }
     LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.repo.profile().plan).doctors }
@@ -117,7 +120,7 @@ fun DoctorScreen(nav: Nav) {
         }
     }) {
         // how far back: four choices, one tap, no window
-        com.suryaprakash.medlog.ui.Segmented(listOf("1 week", "2 weeks", "1 month", "3 months"), PERIODS.indexOfFirst { it.first == days }) { days = PERIODS[it].first }
+        com.suryaprakash.medlog.ui.Segmented(listOf("1W", "2W", "1M", "3M"), PERIODS.indexOfFirst { it.first == days }) { days = PERIODS[it].first }
         n?.period?.let { com.suryaprakash.medlog.ui.Hint(it) }
         if (n == null) return@Screen
 
@@ -150,6 +153,11 @@ fun DoctorScreen(nav: Nav) {
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
+        }
+
+        nutShown?.let { r ->
+            Section("Nutrition")
+            Group { NavRow(Icons.Rounded.Restaurant, r.headline.text) { nav.go(Route.Nutrition) } }
         }
 
         if (n.links.isNotEmpty()) {

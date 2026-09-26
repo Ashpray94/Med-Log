@@ -823,7 +823,7 @@ Each phase ends with the Section 17 gates passed. **No phase ships to real users
 
 ---
 
-## 21. What we keep from MedLog v1 (github.com/surya-prakash-design/medlog)
+## 21. What we keep from MedLog v1 (github.com/Ashpray94/Med-Log)
 
 v1 was an Expo / React Native app (about 7,000 lines, 6 commits, April 2026) built around **typed free-text
 observations**, **keyword highlighting**, **search**, **weekly reports**, **importing hospital reports**, and a

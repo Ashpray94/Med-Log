@@ -1,5 +1,17 @@
 package com.suryaprakash.medlog.ui
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.ScrollState
 import android.media.AudioManager
 import android.media.ToneGenerator
 import androidx.compose.animation.AnimatedVisibility
@@ -71,6 +83,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -112,6 +126,10 @@ fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -
     val s = LocalSettings.current
     val haptic = LocalHapticFeedback.current
     val ctx = LocalContext.current
+    // always run the latest action: the tap handler below lives across recompositions, so it must not keep an
+    // old copy of onClick (that made a second tap undo the first on multi-choice pages)
+    val latest = androidx.compose.runtime.rememberUpdatedState(onClick)
+    val latestPress = androidx.compose.runtime.rememberUpdatedState(onPress)
     val act = {
         val now = System.currentTimeMillis()
         val debounce = if (s.steadyTouch) 600 else 250
@@ -123,7 +141,7 @@ fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -
             } else {
                 ReadAloud.heardLabel = null
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                onClick()
+                latest.value()
             }
         }
     }
@@ -132,9 +150,9 @@ fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -
         .pointerInput(label, enabled) {
             awaitEachGesture {
                 awaitFirstDown(requireUnconsumed = false)
-                onPress(true)
+                latestPress.value(true)
                 val up = waitForUpOrCancellation()
-                onPress(false)
+                latestPress.value(false)
                 if (up != null) act()
             }
         }
@@ -214,6 +232,7 @@ fun Screen(
     subtitle: String? = null,
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable ColumnScope.() -> Unit)? = null,
+    eyebrow: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
@@ -227,29 +246,38 @@ fun Screen(
     LaunchedEffect(title) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
     Box(Modifier.fillMaxSize().background(background ?: p.paper)) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            val body: @Composable ColumnScope.() -> Unit = {
-                Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp)) {
-                    if (onBack != null) BackLink(onBack) else Spacer(Modifier.height(12.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f,
-                            modifier = Modifier.weight(1f).semantics { heading() })
-                        trailing?.invoke()
-                    }
-                    if (subtitle != null) Text(subtitle, fontSize = sc.body, color = p.inkSoft, modifier = Modifier.padding(top = 4.dp))
+            // the title, the Read switch and Back stay put; only what's under them scrolls
+            // one header for every page, the same size everywhere so nothing jumps between pages:
+            // a fixed row (Back or a greeting on the left, Read on the right), a one-line title, and a line for the subtitle
+            val header: @Composable ColumnScope.() -> Unit = {
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (onBack != null) BackLink(onBack)
+                    else if (!eyebrow.isNullOrBlank()) Text(eyebrow.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp)
+                    Spacer(Modifier.weight(1f))
+                    ReadToggle()
                 }
-                content()
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).semantics { heading() })
+                    trailing?.invoke()
+                }
+                Text(subtitle ?: " ", fontSize = sc.body, color = if (eyebrow != null) p.ink else p.inkSoft, fontWeight = if (eyebrow != null) FontWeight.Medium else null,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             }
-            val inner = Modifier.weight(1f).fillMaxWidth().padding(horizontal = sc.margin)
-            Column(if (scroll) inner.verticalScroll(rememberScrollState()) else inner, verticalArrangement = Arrangement.spacedBy(sc.gap)) {
-                body()
-                // room so the corner Read aloud button never covers the last row
-                if (scroll) Spacer(Modifier.height(if (!hasNav && actions == null && s.readAloud) 96.dp else 24.dp))
+            Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = sc.gap), content = header)
+            val state = rememberScrollState()
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                val inner = Modifier.fillMaxSize().padding(horizontal = sc.margin)
+                Column(if (scroll) inner.verticalScroll(state) else inner, verticalArrangement = Arrangement.spacedBy(sc.gap)) {
+                    content()
+                    // room so the Read aloud button never covers the last row
+                    if (scroll) Spacer(Modifier.height(24.dp))
+                }
+                if (scroll) MoreBelow(state, Modifier.align(Alignment.BottomCenter))
             }
             if (actions != null) ActionArea(actions)
             if (hasNav) BottomBar(onHome)
         }
-        if (!hasNav && s.readAloud) ReadAloudFab(Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
-            .padding(end = sc.margin, bottom = if (actions != null) sc.target * 2 + 24.dp else 20.dp))
         UndoBar(Modifier.align(Alignment.BottomCenter).padding(bottom = sc.target + 28.dp).navigationBarsPadding())
     }
 }
@@ -265,21 +293,42 @@ fun ActionArea(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-/** Read aloud where there is no bottom navigation: one round button in the corner, with its word under the icon. */
+/** True when a task page is shown inside a sheet: then its top has only Close. */
+val LocalInSheet = androidx.compose.runtime.compositionLocalOf { false }
+
+/** Set by first-time setup: "Skip" on any page without its own second button (opens the skip panel). */
+val LocalFlowSkip = androidx.compose.runtime.compositionLocalOf<(() -> Unit)?> { null }
+
+/** True inside a chosen (accent-filled) option, so pictures and words switch to their light versions. */
+val LocalOnAccent = androidx.compose.runtime.compositionLocalOf { false }
+
+/**
+ * Read aloud, as a toggle in the same top-right place on every screen. On: every page is read out by itself,
+ * and stays on until turned off. Off: silent. Tapping it on also reads the page you are on.
+ */
 @Composable
-fun ReadAloudFab(modifier: Modifier = Modifier) {
+fun ReadToggle(modifier: Modifier = Modifier) {
     val p = LocalPalette.current
     val sc = LocalScale.current
+    val s = LocalSettings.current
     val ctx = LocalContext.current
-    val speaking by ctx.medlog.speaker.speaking.collectAsState()
-    val label = if (speaking) "Stop" else "Read aloud"
-    Column(
-        modifier.size(if (sc.big) 84.dp else 74.dp).shadow(6.dp, CircleShape).clip(CircleShape).background(p.paper).border(1.dp, p.line, CircleShape)
-            .steady(label) { if (speaking) ctx.medlog.speaker.stop() else ctx.medlog.speaker.say(ReadAloud.text) },
-        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    if (!s.readAloud) return
+    val on = s.autoRead
+    val sh = RoundedCornerShape(24.dp)
+    Row(
+        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card).border(1.5.dp, if (on) p.ok else p.line, sh)
+            .semantics { role = Role.Switch; stateDescription = if (on) "On" else "Off" }
+            .steady("Read aloud") {
+                val now = !on
+                ctx.medlog.settings.update { it.copy(autoRead = now) }
+                if (now) ctx.medlog.speaker.say(ReadAloud.text) else ctx.medlog.speaker.stop()
+            }
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(if (speaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp, null, tint = p.ink, modifier = Modifier.size(28.dp))
-        Text(if (speaking) "Stop" else "Read", fontSize = sc.small * 0.85f, color = p.ink, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Icon(if (on) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff, null, tint = if (on) Color.White else p.ink, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(6.dp))
+        Text("Read", fontSize = sc.small, fontWeight = FontWeight.Bold, color = if (on) Color.White else p.ink, maxLines = 1)
     }
 }
 
@@ -287,13 +336,10 @@ fun ReadAloudFab(modifier: Modifier = Modifier) {
 private fun BackLink(onBack: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(
-        Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("Back", onClick = onBack).padding(end = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(26.dp))
-        Spacer(Modifier.width(6.dp))
-        Text("Back", color = p.ink, fontSize = sc.button, fontWeight = FontWeight.SemiBold)
+    @Suppress("UNUSED_VARIABLE") val unused = sc
+    val sh = RoundedCornerShape(24.dp)
+    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.5.dp, p.line, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -312,10 +358,8 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
         val here = nav.current
         val tabs = listOfNotNull(
             Triple("Home", Icons.Rounded.Home, here == Route.Home) to { nav.home() },
-            Triple("History", Icons.Rounded.History, here == Route.Notes || here is Route.NoteDetail || here is Route.ProblemHistory) to { nav.home(); nav.go(Route.Notes) },
             Triple("SOS", Icons.Rounded.Sos, here == Route.Emergency) to { if (here != Route.Emergency) nav.go(Route.Emergency) },
             Triple("Family", Icons.Rounded.Groups, here == Route.Help) to { nav.home(); nav.go(Route.Help) },
-            if (s.readAloud) Triple(if (speaking) "Stop" else "Read aloud", if (speaking) Icons.Rounded.Stop else Icons.Rounded.VolumeUp, speaking) to read else null,
         )
         val ordered = if (s.leftHand) tabs.reversed() else tabs
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
@@ -327,23 +371,22 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
                         Modifier.weight(1f).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp)).steady("SOS, emergency help", onClick = go),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                     ) {
-                        Box(Modifier.size(if (sc.big) 60.dp else 54.dp).clip(CircleShape).background(p.red), contentAlignment = Alignment.Center) {
-                            Text("SOS", color = Color.White, fontSize = sc.small, fontWeight = FontWeight.ExtraBold)
+                        Box(Modifier.size(if (sc.big) 62.dp else 58.dp).clip(RoundedCornerShape(18.dp)).background(p.red), contentAlignment = Alignment.Center) {
+                            Text("SOS", color = Color.White, fontSize = sc.body, fontWeight = FontWeight.ExtraBold)
                         }
                     }
                     return@forEach
                 }
                 val tint = if (on) p.brand else p.inkSoft
+                // the current place sits on a soft teal square, in teal
                 Column(
-                    Modifier.weight(1f).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp)).steady(label, onClick = go).padding(vertical = 6.dp),
+                    Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp))
+                        .background(if (on) p.brandSoft else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
-                    // the current place: accent icon on a pill, bold word
-                    Box(Modifier.clip(RoundedCornerShape(14.dp)).background(if (on) p.brandSoft else Color.Transparent).padding(horizontal = 14.dp, vertical = 3.dp)) {
-                        Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
-                    }
+                    Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
                     Spacer(Modifier.height(3.dp))
-                    Text(label, fontSize = sc.small, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.ink else p.inkSoft, maxLines = 1)
+                    Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.brand else p.inkSoft, maxLines = 1)
                 }
             }
         }
@@ -376,7 +419,7 @@ fun RoundIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
 
 // ───────────────────────── buttons ─────────────────────────
 
-enum class Tone { PRIMARY, SECONDARY, DANGER, OK, QUIET, AMBER }
+enum class Tone { PRIMARY, SECONDARY, OUTLINE, TINT, DANGER, OK, QUIET, AMBER }
 
 @Composable
 fun BigButton(
@@ -392,11 +435,13 @@ fun BigButton(
 ) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    // PRIMARY is the one main action on a screen. SECONDARY is white with a grey outline, QUIET is a grey fill:
+    // PRIMARY is the one main action on a screen. SECONDARY is white with a grey outline, OUTLINE a grey outline with teal words, TINT a light teal fill with teal words, QUIET is a grey fill:
     // both clearly less important, never competing with the accent.
     val (bg, fg) = when (tone) {
         Tone.PRIMARY -> p.brand to p.onBrand
         Tone.SECONDARY -> p.paper to p.ink
+        Tone.OUTLINE -> Color.Transparent to p.brand
+        Tone.TINT -> p.brandSoft to p.brand
         Tone.DANGER -> p.red to Color.White
         Tone.OK -> p.ok to Color.White
         Tone.AMBER -> p.amberSoft to p.amber
@@ -407,7 +452,7 @@ fun BigButton(
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
             .background(if (enabled) bg else p.fill.copy(alpha = 0.6f))
-            .then(if (tone == Tone.SECONDARY && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else Modifier)
+            .then(if (tone == Tone.SECONDARY && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else if (tone == Tone.OUTLINE && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else Modifier)
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -453,24 +498,69 @@ fun Question(text: String, hint: String? = null, modifier: Modifier = Modifier) 
  * grey outline, empty mark. [multi] shows square marks (pick any), otherwise round (pick one).
  */
 @Composable
-fun Choice(text: String, selected: Boolean, multi: Boolean = false, sub: String? = null, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun Choice(text: String, selected: Boolean, multi: Boolean = false, sub: String? = null, modifier: Modifier = Modifier, icon: ImageVector? = null, tint: Color? = null, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(14.dp)
     var pressed by remember { mutableStateOf(false) }
     Row(
-        modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target).clip(sh)
-            .background(if (selected) p.brandSoft else p.paper).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.line, sh)
+        modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
+            .clip(sh)
+            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.line, sh)
             .steady(text + if (selected) ", chosen" else ", not chosen", onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Mark(selected, multi)
-        Spacer(Modifier.width(14.dp))
+        if (icon != null) {
+            val t = tint ?: p.brand
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(13.dp)).background(if (selected) Color.White else t.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = t, modifier = Modifier.size(22.dp))
+            }
+            Spacer(Modifier.width(14.dp))
+        }
         Column(Modifier.weight(1f)) {
-            Text(text, fontSize = sc.body, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, color = p.ink, lineHeight = sc.body * 1.25f)
+            Text(text, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, lineHeight = sc.body * 1.25f)
             if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft, lineHeight = sc.small * 1.3f)
         }
+    }
+}
+
+/**
+ * The one text scale for cards, so every page reads the same:
+ * page title (sc.title) > section title (sc.headline) > card title ([cardTitle]) > body > caption (sc.small, grey).
+ */
+val Scale.cardTitle get() = headline * 0.9f
+
+/** A section title with a short caption under it (how many, when last used) and one small action on its right. */
+@Composable
+fun SectionHeader(title: String, caption: String, action: String?, actionIcon: ImageVector? = null, onAction: () -> Unit = {}) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().padding(top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.semantics { heading() })
+            Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        if (action != null) Row(Modifier.clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("$action: $title", onClick = onAction)
+            .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (actionIcon != null) { Icon(actionIcon, null, tint = p.brand, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)) }
+            Text(action, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.brand)
+        }
+    }
+}
+
+/** "Add …" as a dashed card: the empty place where the first item will go. */
+@Composable
+fun DashedAddCard(text: String, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).clip(RoundedCornerShape(sc.radius))
+        .drawBehind { drawRoundRect(p.brand.copy(alpha = 0.7f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(sc.radius.toPx()),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx(), pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(14f, 10f)))) }
+        .steady(text, onClick = onClick), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        Icon(Icons.Rounded.Add, null, tint = p.brand, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, fontSize = sc.button, fontWeight = FontWeight.SemiBold, color = p.brand)
     }
 }
 
@@ -524,7 +614,7 @@ fun HoldButton(text: String, holdText: String, modifier: Modifier = Modifier, ho
 /** Section heading inside a screen. */
 @Composable
 fun Title(text: String, modifier: Modifier = Modifier) {
-    Text(text, modifier.padding(top = 8.dp).semantics { heading() }, fontSize = LocalScale.current.headline, fontWeight = FontWeight.Bold, color = LocalPalette.current.ink)
+    Text(text, modifier.padding(top = 20.dp).semantics { heading() }, fontSize = LocalScale.current.headline, fontWeight = FontWeight.Bold, color = LocalPalette.current.ink)
 }
 
 @Composable
@@ -539,7 +629,7 @@ fun Hint(text: String, modifier: Modifier = Modifier, center: Boolean = false) {
         textAlign = if (center) TextAlign.Center else TextAlign.Start)
 }
 
-/** A flat grey surface (the 30%). A coloured [border] marks warnings. */
+/** A white card that lifts off the warm page with a soft shadow. A coloured [border] marks warnings. */
 @Composable
 fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = null, shape: Shape? = null, padding: PaddingValues = PaddingValues(18.dp), onClick: (() -> Unit)? = null, label: String = "", content: @Composable ColumnScope.() -> Unit) {
     val p = LocalPalette.current
@@ -547,6 +637,7 @@ fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = n
     var pressed by remember { mutableStateOf(false) }
     Column(
         modifier.fillMaxWidth().scale(pressScale(pressed))
+            
             .clip(sh).background(color ?: p.card)
             .then(if (border != null) Modifier.border(2.dp, border, sh) else Modifier)
             .then(if (onClick != null) Modifier.steady(label, onPress = { pressed = it }, onClick = onClick) else Modifier)
@@ -564,6 +655,7 @@ fun ListRow(title: String, sub: String? = null, icon: ImageVector? = null, tint:
     var pressed by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
+            
             .clip(RoundedCornerShape(sc.radius)).background(p.card)
             .steady(title + (sub?.let { ". $it" } ?: ""), onPress = { pressed = it }, onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -578,12 +670,21 @@ fun ListRow(title: String, sub: String? = null, icon: ImageVector? = null, tint:
     }
 }
 
-/** A glyph on a white rounded square. [tint] colours the glyph only (red for danger, grey otherwise). */
+/**
+ * A feature's icon: a solid square in the feature's own colour with a white glyph, so it is found by colour and
+ * shape at a glance. An ink tint (no feature colour) gets a soft cream square instead.
+ */
 @Composable
 fun IconTile(icon: ImageVector, tint: Color, size: Dp) {
     val p = LocalPalette.current
-    Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)).background(p.paper).border(1.dp, p.line, RoundedCornerShape(size * 0.28f)), contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.56f))
+    val plain = tint == p.ink || tint == p.inkSoft
+    val sh = RoundedCornerShape(size * 0.3f)
+    Box(
+        Modifier.size(size)
+            .clip(sh).background(if (plain) p.fill else tint),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, null, tint = if (plain) p.ink else Color.White, modifier = Modifier.size(size * 0.5f))
     }
 }
 
@@ -612,11 +713,10 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
     val sh = RoundedCornerShape(sc.radius)
     Box(
         modifier.scale(pressScale(pressed)).clip(sh)
-            .background(if (selected) p.brandSoft else color ?: p.paper).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.line, sh)
+            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.line, sh)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
         Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
-        if (selected) Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) { Mark(true, multi = false, size = 26.dp) }
     }
 }
 
@@ -716,6 +816,8 @@ fun FlowScreen(
     primary: String? = null, primaryEnabled: Boolean = true, onPrimary: () -> Unit = {},
     secondary: String? = null, onSecondary: () -> Unit = {},
     center: Boolean = false,
+    /** Put the answers in the middle of the free space (for a few big choices) instead of under the question. */
+    middle: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
@@ -725,39 +827,243 @@ fun FlowScreen(
     val full = listOfNotNull(question, hint, speak.ifBlank { null }).joinToString(". ")
     LaunchedEffect(full) { ReadAloud.text = full }
     LaunchedEffect(question) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
+    val scroll = rememberScrollState()
+    val inSheet = LocalInSheet.current
     Box(Modifier.fillMaxSize().background(p.paper)) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxSize().then(if (inSheet) Modifier else Modifier.statusBarsPadding()).navigationBarsPadding().imePadding()) {
+            if (inSheet) {
+                // a sheet: a small handle, the task's name, and Close; nothing else up here
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(width = 40.dp, height = 5.dp).clip(RoundedCornerShape(3.dp)).background(p.line))
+                }
+                Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (onClose != null) RoundButton(Icons.Rounded.Close, "Close", onClose) else Spacer(Modifier.size(56.dp))
+                    Text(task, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                    Spacer(Modifier.size(56.dp))
+                }
+            } else
+            // the top bar keeps its height on every page (empty on a first page), so the title never moves between pages
+            Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (onBack != null) RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack) else Spacer(Modifier.size(56.dp))
-                Text(task, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 1,
+                Text(if (onBack != null || onClose != null) task else "", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, maxLines = 1,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
-                if (onClose != null) RoundButton(Icons.Rounded.Close, "Close", onClose) else Spacer(Modifier.size(56.dp))
+                ReadToggle()
+                if (onClose != null) { Spacer(Modifier.width(8.dp)); RoundButton(Icons.Rounded.Close, "Close", onClose) }
+                else if (!s.readAloud) Spacer(Modifier.size(56.dp))
             }
-            if (step != null && steps != null) Row(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                repeat(steps) { i -> Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(if (i < step) p.brand else p.fill)) }
+            Row(Modifier.fillMaxWidth().height(13.dp).padding(horizontal = sc.margin, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (step != null && steps != null) repeat(steps) { i -> Box(Modifier.weight(1f).height(5.dp).clip(RoundedCornerShape(3.dp)).background(if (i < step) p.brand else p.fill)) }
             }
-            Column(
-                Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = sc.margin),
-                verticalArrangement = Arrangement.spacedBy(sc.gap),
-                horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start,
-            ) {
-                Spacer(Modifier.height(12.dp))
-                Text(question, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.18f,
-                    textAlign = if (center) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth().semantics { heading() })
-                if (hint != null) Text(hint, fontSize = sc.body, color = p.inkSoft, lineHeight = sc.body * 1.35f,
-                    textAlign = if (center) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(4.dp))
-                content()
-                Spacer(Modifier.height(if (s.readAloud) 96.dp else 24.dp))
+            // The question stays at the top; the answers settle at the bottom, near the thumb and the main button.
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                val viewport = maxHeight
+                Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = sc.margin)) {
+                    Column(Modifier.fillMaxWidth().heightIn(min = viewport), horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(question, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.18f,
+                            textAlign = if (center) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth().semantics { heading() })
+                        if (hint != null) Text(hint, fontSize = sc.body, color = p.inkSoft, lineHeight = sc.body * 1.35f,
+                            textAlign = if (center) TextAlign.Center else TextAlign.Start, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                        Spacer(Modifier.height(36.dp))
+                        if (middle) Spacer(Modifier.weight(1f))
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(sc.gap / 1.4f),
+                            horizontalAlignment = if (center) Alignment.CenterHorizontally else Alignment.Start, content = content)
+                        if (middle) Spacer(Modifier.weight(1f))
+                        Spacer(Modifier.height(16.dp))
+                    }
+                }
+                MoreBelow(scroll, Modifier.align(Alignment.BottomCenter))
             }
-            if (primary != null || secondary != null) Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (primary != null) BigButton(primary, enabled = primaryEnabled, onClick = onPrimary)
-                if (secondary != null) Text(secondary, fontSize = sc.button, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = sc.target).clip(RoundedCornerShape(16.dp)).steady(secondary, onClick = onSecondary).wrapContentHeight(Alignment.CenterVertically))
+            val skip = LocalFlowSkip.current
+            if (inSheet) FlowActions(primary, primaryEnabled, onPrimary, if (onBack != null) "Previous" else null, onBack ?: {})
+            else if (secondary == null && skip != null) FlowActions(primary, primaryEnabled, onPrimary, "Skip", skip)
+            else FlowActions(primary, primaryEnabled, onPrimary, secondary, onSecondary)
+        }
+    }
+}
+
+/** The bottom of a task page: the main action, then at most one quiet second choice. */
+@Composable
+fun FlowActions(primary: String?, primaryEnabled: Boolean, onPrimary: () -> Unit, secondary: String?, onSecondary: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    if (primary == null && secondary == null) return
+    // at most two: a small quiet choice on the left (only as wide as its words), the main action filling the rest
+    Row(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (secondary != null) {
+            Text(secondary, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, maxLines = 1,
+                modifier = Modifier.heightIn(min = sc.target).clip(RoundedCornerShape(16.dp))
+                    .border(1.5.dp, p.inkSoft.copy(alpha = 0.45f), RoundedCornerShape(16.dp)).steady(secondary, onClick = onSecondary)
+                    .padding(horizontal = 20.dp).wrapContentHeight(Alignment.CenterVertically))
+            if (primary != null) Spacer(Modifier.width(20.dp))
+        }
+        if (primary != null) BigButton(primary, Modifier.weight(1f), enabled = primaryEnabled, onClick = onPrimary)
+        else Spacer(Modifier.weight(1f))
+    }
+}
+
+/** When a page continues below the edge: a soft fade and a "More below" button, so it never looks finished. */
+@Composable
+fun MoreBelow(scroll: ScrollState, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val scope = rememberCoroutineScope()
+    if (!scroll.canScrollForward) return
+    Box(modifier.fillMaxWidth().height(88.dp).background(Brush.verticalGradient(listOf(p.paper.copy(alpha = 0f), p.paper.copy(alpha = 0.95f), p.paper))), contentAlignment = Alignment.BottomCenter) {
+        Row(
+            Modifier.padding(bottom = 8.dp).height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.card).border(2.dp, p.brand, RoundedCornerShape(23.dp))
+                .steady("More below") { scope.launch { scroll.animateScrollTo(scroll.value + (scroll.viewportSize * 0.8f).toInt()) } }.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("More below", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand)
+            Spacer(Modifier.width(6.dp))
+            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = p.brand, modifier = Modifier.size(24.dp))
+        }
+    }
+}
+
+/** One big option, for questions with only two answers. */
+data class BigOption(val title: String, val sub: String?, val selected: Boolean, val visual: @Composable () -> Unit, val onClick: () -> Unit)
+
+/**
+ * Two answers as two large cards side by side: big targets low on the screen, a picture on each, and a clear
+ * chosen state (accent outline, soft accent fill, a tick). Uses the room that two small rows would waste.
+ */
+@Composable
+fun ChoicePair(a: BigOption, b: BigOption, vertical: Boolean = false) {
+    if (vertical) {
+        // stacked: each option gets a full-width card with room to breathe, its picture and words centred
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            BigOptionCard(a, Modifier.fillMaxWidth().heightIn(min = if (LocalScale.current.big) 210.dp else 190.dp))
+            BigOptionCard(b, Modifier.fillMaxWidth().heightIn(min = if (LocalScale.current.big) 210.dp else 190.dp))
+        }
+        return
+    }
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        BigOptionCard(a, Modifier.weight(1f).fillMaxHeight())
+        BigOptionCard(b, Modifier.weight(1f).fillMaxHeight())
+    }
+}
+
+@Composable
+private fun BigOptionCard(o: BigOption, modifier: Modifier) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(24.dp)
+    var pressed by remember { mutableStateOf(false) }
+    Box(
+        modifier.heightIn(min = if (sc.big) 230.dp else 200.dp).scale(pressScale(pressed))
+            
+            .clip(sh).background(if (o.selected) Color(0xFFBFE0DA) else p.card)
+            .border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.line, sh)
+            .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick),
+        contentAlignment = Alignment.Center,          // the picture and words sit in the middle of the card
+    ) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            androidx.compose.runtime.CompositionLocalProvider(LocalOnAccent provides o.selected) { o.visual() }
+            Spacer(Modifier.height(14.dp))
+            Text(o.title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, textAlign = TextAlign.Center)
+            if (o.sub != null) Text(o.sub, fontSize = sc.small, color = p.inkSoft, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 4.dp))
+        }
+    }
+}
+
+/**
+ * Many short answers, pick any: two columns of equal tiles (same height in a row), the words only.
+ * Chosen: deeper teal tint and a teal outline. More of the list fits on one screen.
+ */
+@Composable
+fun ChoiceGrid(items: List<String>, isOn: (String) -> Boolean, onToggle: (String) -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        items.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                row.forEach { item ->
+                    val on = isOn(item)
+                    val sh = RoundedCornerShape(18.dp)
+                    Box(
+                        Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(sh)
+                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, sh)
+                            .steady(item + if (on) ", chosen" else ", not chosen") { onToggle(item) }.padding(horizontal = 16.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.CenterStart,
+                    ) { Text(item, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink) }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
-        if (s.readAloud) ReadAloudFab(Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
-            .padding(end = sc.margin, bottom = if (primary != null || secondary != null) sc.target * (if (secondary != null && primary != null) 2 else 1) + 40.dp else 20.dp))
+    }
+}
+
+/** One answer to a yes / no / maybe question, saying what it confirms. */
+data class Answer(val title: String, val sub: String?, val icon: ImageVector, val accent: Color, val selected: Boolean, val onClick: () -> Unit)
+
+/**
+ * Yes / no / maybe answers as stacked cards. Not chosen: white, a thin border, icon and words in the answer's colour.
+ * Chosen: filled with a soft tint of that colour and a thicker border, so the choice never depends on colour alone.
+ */
+@Composable
+fun AnswerCards(answers: List<Answer>) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        answers.forEach { a ->
+            val sh = RoundedCornerShape(24.dp)
+            var pressed by remember { mutableStateOf(false) }
+            Column(
+                Modifier.fillMaxWidth().heightIn(min = if (sc.big) 190.dp else 172.dp).scale(pressScale(pressed)).clip(sh)
+                    .background(if (a.selected) a.accent.copy(alpha = 0.14f) else p.card)
+                    .border(if (a.selected) 3.dp else 1.5.dp, a.accent.copy(alpha = if (a.selected) 1f else 0.55f), sh)
+                    .steady(a.title + (a.sub?.let { ". $it" } ?: "") + if (a.selected) ", chosen" else "", onPress = { pressed = it }, onClick = a.onClick)
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(a.icon, null, tint = a.accent, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.height(10.dp))
+                Text(a.title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = a.accent, textAlign = TextAlign.Center)
+                if (a.sub != null) Text(a.sub, fontSize = sc.body, color = p.inkSoft, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 2.dp))
+            }
+        }
+    }
+}
+
+/** Three or more big options: stacked wide cards (picture left, words beside it, tick right), each centred top to bottom. */
+@Composable
+fun ChoiceCards(options: List<BigOption>) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) { options.forEach { BigOptionRow(it) } }
+}
+
+/** A big option as a wide card: picture on the left, words beside it, the tick on the right. */
+@Composable
+private fun BigOptionRow(o: BigOption) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(24.dp)
+    var pressed by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = if (sc.big) 132.dp else 116.dp).scale(pressScale(pressed)).clip(sh)
+            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.line, sh)
+            .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick)
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalOnAccent provides o.selected) { o.visual() }
+        Spacer(Modifier.width(16.dp))
+        Column(Modifier.weight(1f)) {
+            Text(o.title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+            if (o.sub != null) Text(o.sub, fontSize = sc.small, color = p.inkSoft, modifier = Modifier.padding(top = 2.dp))
+        }
+    }
+}
+
+/** The picture on a big option: the feature colour as a soft disc, the glyph in full colour. */
+@Composable
+fun OptionIcon(icon: ImageVector, tint: Color, size: Dp = 84.dp) {
+    val onAccent = LocalOnAccent.current
+    // one shape for every icon background in the app: a rounded square
+    Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)).background(if (onAccent) Color.White else tint.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.5f))
     }
 }
 
@@ -782,10 +1088,11 @@ fun Section(title: String, action: String? = null, onAction: () -> Unit = {}) {
     }
 }
 
-/** Rows that belong together, on one grey surface, separated by thin lines. */
+/** Rows that belong together, on one white card, separated by thin lines. */
 @Composable
 fun Group(content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(LocalScale.current.radius)).background(LocalPalette.current.card), content = content)
+    val sh = RoundedCornerShape(LocalScale.current.radius)
+    Column(Modifier.fillMaxWidth().clip(sh).background(LocalPalette.current.card), content = content)
 }
 
 @Composable
@@ -812,7 +1119,7 @@ fun ValueRow(label: String, value: String?, sub: String? = null, valueColor: Col
         Spacer(Modifier.width(12.dp))
         Text(value?.ifBlank { null } ?: if (onClick != null) "Add" else "–", fontSize = sc.body, fontWeight = FontWeight.SemiBold,
             color = when { value.isNullOrBlank() && onClick != null -> p.brand; else -> valueColor ?: p.inkSoft },
-            textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 170.dp))
         if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
     }
 }
@@ -849,4 +1156,38 @@ fun Point(icon: ImageVector, title: String, sub: String) {
             Text(sub, fontSize = sc.body, color = p.inkSoft, lineHeight = sc.body * 1.3f)
         }
     }
+}
+
+/** The part of the day for a time, as a picture with its own colour: sunrise orange, sun yellow, sunset red, moon blue. */
+data class DayPart(val icon: ImageVector, val tint: Color, val name: String)
+
+fun dayPart(hour: Int): DayPart = when (hour) {
+    in 4..9 -> DayPart(DayIcons.Sunrise, Color(0xFFEA7310), "Morning")
+    in 10..15 -> DayPart(Icons.Rounded.WbSunny, Color(0xFFD99A00), if (hour < 12) "Morning" else "Afternoon")
+    in 16..19 -> DayPart(DayIcons.Sunset, Color(0xFFD63B2F), "Evening")
+    else -> DayPart(Icons.Rounded.NightsStay, Color(0xFF2266DD), "Night")
+}
+
+/** Sunrise and sunset: half a sun on the horizon, with an arrow going up or down. */
+object DayIcons {
+    val Sunrise: ImageVector by lazy { horizonSun(up = true) }
+    val Sunset: ImageVector by lazy { horizonSun(up = false) }
+}
+
+private fun horizonSun(up: Boolean): ImageVector {
+    val ink = androidx.compose.ui.graphics.SolidColor(Color.Black)
+    val round = androidx.compose.ui.graphics.StrokeCap.Round
+    return ImageVector.Builder(if (up) "Sunrise" else "Sunset", 24.dp, 24.dp, 24f, 24f).apply {
+        // horizon
+        addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString("M2.5,18.5 L21.5,18.5").toNodes(), stroke = ink, strokeLineWidth = 2f, strokeLineCap = round)
+        // half sun
+        addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString("M6.5,17 A5.5,5.5 0 0 1 17.5,17 Z").toNodes(), fill = ink)
+        // rays
+        addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(
+            "M2.5,15 L4,15 M20,15 L21.5,15 M5.3,9.8 L6.4,10.9 M18.7,9.8 L17.6,10.9").toNodes(), stroke = ink, strokeLineWidth = 2f, strokeLineCap = round)
+        // arrow
+        val arrow = if (up) "M12,2.5 L12,8.5 M9.5,5 L12,2.5 L14.5,5" else "M12,2.5 L12,8.5 M9.5,6 L12,8.5 L14.5,6"
+        addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(arrow).toNodes(), stroke = ink, strokeLineWidth = 2f, strokeLineCap = round,
+            strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round)
+    }.build()
 }

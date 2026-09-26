@@ -94,7 +94,8 @@ class DoseActivity : ComponentActivity() {
             Screen("No medicine due", "Nothing is due right now.", onHome = null) { BigButton("Close", onClick = onClose) }
             return
         }
-        val say = "Time for your medicine. " + due.joinToString(". ") { (_, m) -> describe(m) }
+        val feeding = due.all { it.second.form == "feed" }
+        val say = if (feeding) "Time to give the feed. " + due.joinToString(". ") { (_, m) -> "${m.name}, ${m.amount}" } else "Time for your medicine. " + due.joinToString(". ") { (_, m) -> describe(m) }
         LaunchedEffect(say) { AlarmTone.stop(); medlog.speaker.say(say) }
 
         confirmDouble?.let { d ->
@@ -116,7 +117,7 @@ class DoseActivity : ComponentActivity() {
             return
         }
 
-        Screen(if (due.size == 1) "Medicine time" else "Medicine time (${due.size})", say, onHome = null) {
+        Screen(if (feeding) "Feed time" else if (due.size == 1) "Medicine time" else "Medicine time (${due.size})", say, onHome = null) {
             due.forEach { (d, m) ->
                 Card(border = if (m.critical) p.red else p.brand) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -131,13 +132,16 @@ class DoseActivity : ComponentActivity() {
                             if (m.critical) Text("Important medicine", color = p.red, fontSize = sc.small, fontWeight = FontWeight.Bold)
                         }
                     }
-                    BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = {
+                    if (m.form == "feed") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BigButton("Given", Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.take(this@DoseActivity, d.id); savedFeedback(this@DoseActivity); version++ } })
+                        BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.skip(this@DoseActivity, d.id, "Not given"); version++ } })
+                    } else BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = {
                         scope.launch {
                             val r = Scheduler.take(this@DoseActivity, d.id)
                             if (r == Scheduler.Taken.ALREADY) confirmDouble = medlog.db.doses().get(d.id) else { savedFeedback(this@DoseActivity); medlog.speaker.say("Well done."); version++ }
                         }
                     })
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    if (m.form != "feed") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         BigButton("In ${medlog.settings.value.snoozeMinutes} min", Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.Snooze, onClick = { scope.launch { Scheduler.snooze(this@DoseActivity, d.id); version++ } })
                         BigButton("Skip", Modifier.weight(1f), Tone.SECONDARY, onClick = { skipping = d })
                     }

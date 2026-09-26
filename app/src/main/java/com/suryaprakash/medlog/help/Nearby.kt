@@ -26,7 +26,9 @@ import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
 import com.suryaprakash.medlog.MedLogApp
 import com.suryaprakash.medlog.R
+import com.suryaprakash.medlog.data.CaredFor
 import com.suryaprakash.medlog.data.Helper
+import com.suryaprakash.medlog.data.People
 import com.suryaprakash.medlog.data.InboxItem
 import com.suryaprakash.medlog.data.Keys
 import com.suryaprakash.medlog.medlog
@@ -147,8 +149,9 @@ object Nearby {
         }
         c.startDiscovery(SERVICE, object : EndpointDiscoveryCallback() {
             override fun onEndpointFound(id: String, info: DiscoveredEndpointInfo) {
-                val pairId = info.endpointName.removePrefix("H|")
-                val h = helpers.firstOrNull { it.pairId == pairId } ?: return
+                val ids = info.endpointName.removePrefix("H|").split(",")
+                val h = helpers.firstOrNull { it.pairId in ids } ?: return
+                val pairId = h.pairId!!
                 connected[id] = h
                 c.requestConnection("U|$pairId", id, lifecycle).addOnFailureListener { Log.w(TAG, "connect", it) }
             }
@@ -208,31 +211,35 @@ object Nearby {
     // ───────────────────── helper's phone ─────────────────────
 
     private var replyTo: Pair<String, ByteArray>? = null
-    /** The last message received, so a reply says which one it answers. */
+    /** The last message received (and whose), so a reply says which one it answers and goes to the right person. */
     @Volatile private var lastMid: String = ""
     @Volatile private var lastText: String = ""
+    @Volatile private var lastPerson: String = ""
 
-    private fun myKey(ctx: Context) = ctx.medlog.settings.getString("pair_key")?.let { Base64.decode(it, Base64.NO_WRAP) }
+    /** The person a message or reply belongs to: the one named, else the one who wrote last, else the first. */
+    private fun person(ctx: Context, pairId: String? = null) =
+        People.all(ctx).let { all -> all.firstOrNull { it.pairId == (pairId ?: lastPerson) } ?: all.firstOrNull() }
 
     /** From the helper's alert screen: "I'm coming". Goes back both ways; the person's phone counts it once. */
-    fun reply(ctx: Context, r: String, re: String = lastMid) {
+    fun reply(ctx: Context, r: String, re: String = lastMid, pairId: String? = null) {
         val msg = JSONObject().put("reply", r).put("re", re).put("at", System.currentTimeMillis())
         replyTo?.let { (id, key) -> runCatching { client(ctx).sendPayload(id, Payload.fromBytes(Keys.seal(key, msg.toString().toByteArray()))) } }
-        val key = myKey(ctx) ?: return
-        ctx.medlog.scope.launch { Relay.post(ctx, key, Relay.UP, msg) }
+        val p = person(ctx, pairId) ?: return
+        ctx.medlog.scope.launch { Relay.post(ctx, p.keyBytes, Relay.UP, msg) }
         // the other helpers see who answered, so nobody is left wondering who went
-        if (r != "got") FamilyChat.announceReply(ctx, r, lastText)
+        if (r != "got") FamilyChat.announceReply(ctx, r, lastText, p)
     }
 
     /** The helper's "How are you?" and what came of it, shown on the helper's home screen. */
-    data class AskState(val mid: String, val at: Long, val sent: Boolean? = null, val got: Boolean = false, val answer: String? = null, val answerAt: Long = 0)
+    data class AskState(val mid: String, val at: Long, val sent: Boolean? = null, val got: Boolean = false, val answer: String? = null, val answerAt: Long = 0, val pairId: String = "")
     val asking = MutableStateFlow<AskState?>(null)
 
     /** Helper's phone: ask the person "How are you?". Their phone shows big answer buttons. */
-    fun ask(ctx: Context) {
-        val key = myKey(ctx) ?: return
+    fun ask(ctx: Context, pairId: String? = null) {
+        val p = person(ctx, pairId) ?: return
+        val key = p.keyBytes
         val mid = Keys.randomB64(9)
-        asking.value = AskState(mid, System.currentTimeMillis())
+        asking.value = AskState(mid, System.currentTimeMillis(), pairId = p.pairId)
         ctx.medlog.scope.launch {
             val ok = Relay.post(ctx, key, Relay.UP, JSONObject().put("ask", "how").put("mid", mid).put("at", System.currentTimeMillis()))
             asking.value = asking.value?.takeIf { it.mid == mid }?.copy(sent = ok) ?: asking.value
@@ -255,7 +262,7 @@ object Nearby {
         val i = Intent(ctx, NearbyService::class.java)
         fun start() = runCatching { if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i) else ctx.startService(i) }
         when {
-            st.role == "helper" -> if (app.settings.getString("pair_id") != null) start()
+            People.any(ctx) -> start()
             st.onboarded && st.internetLink -> app.scope.launch {
                 if (app.db.helpers().all().any { it.pairKey != null }) { start(); FamilyChat.shareKey(ctx) } else stopListening(ctx)
             }
@@ -268,38 +275,41 @@ object Nearby {
     /** Mailboxes this phone listens to: its person's (helper) or every paired helper's reply mailbox (person). */
     internal suspend fun listenTopics(ctx: Context): Map<String, ByteArray> {
         val app = ctx.medlog
-        return if (app.settings.value.role == "helper") buildMap {
-            myKey(ctx)?.let { put(Relay.topic(it, Relay.DOWN), it) }
-            FamilyChat.key(ctx)?.let { put(Relay.topic(it, "family"), it) }
+        return buildMap {
+            for (p in People.all(ctx)) {
+                put(Relay.topic(p.keyBytes, Relay.DOWN), p.keyBytes)
+                p.familyBytes?.let { put(Relay.topic(it, "family"), it) }
+            }
+            if (app.settings.value.role != "helper" && app.settings.value.onboarded)
+                app.db.helpers().all().forEach { h -> h.pairKey?.let { key(h) }?.let { put(Relay.topic(it, Relay.UP), it) } }
         }
-        else app.db.helpers().all().mapNotNull { h -> h.pairKey?.let { key(h) }?.let { Relay.topic(it, Relay.UP) to it } }.toMap()
     }
 
     internal suspend fun onRelayNote(ctx: Context, topic: String, o: JSONObject) {
         val app = ctx.medlog
-        if (app.settings.value.role == "helper") {
-            if (topic == FamilyChat.topic(ctx)) FamilyChat.received(ctx, o) else received(ctx, o, viaNearby = false)
-            return
+        for (p in People.all(ctx)) {
+            if (topic == Relay.topic(p.keyBytes, Relay.DOWN)) { received(ctx, o, viaNearby = false, pairId = p.pairId); return }
+            if (p.familyBytes?.let { Relay.topic(it, "family") } == topic) { FamilyChat.received(ctx, o); return }
         }
         val h = app.db.helpers().all().firstOrNull { it.pairKey != null && Relay.topic(key(it), Relay.UP) == topic } ?: return
         fromHelper(ctx, h, o)
     }
 
     internal fun advertise(ctx: Context) {
-        val app = ctx.medlog
-        val pairId = app.settings.getString("pair_id") ?: return
-        val key = myKey(ctx) ?: return
+        val people = People.all(ctx)
+        if (people.isEmpty()) return
         val c = client(ctx)
         c.stopAdvertising()
-        c.startAdvertising("H|$pairId", SERVICE, object : ConnectionLifecycleCallback() {
+        c.startAdvertising("H|" + people.joinToString(",") { it.pairId }, SERVICE, object : ConnectionLifecycleCallback() {
             override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
-                if (info.endpointName != "U|$pairId") { c.rejectConnection(id); return }
+                val who = people.firstOrNull { info.endpointName == "U|${it.pairId}" } ?: run { c.rejectConnection(id); return }
+                val key = who.keyBytes
                 c.acceptConnection(id, object : PayloadCallback() {
                     override fun onPayloadReceived(eid: String, p: Payload) {
                         val bytes = p.asBytes() ?: return
                         val o = runCatching { JSONObject(String(Keys.open(key, bytes))) }.getOrNull() ?: return
                         replyTo = eid to key
-                        received(ctx, o, viaNearby = true)
+                        received(ctx, o, viaNearby = true, pairId = who.pairId)
                     }
                     override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
                 })
@@ -310,9 +320,9 @@ object Nearby {
     }
 
     /** Helper's phone: something arrived from the person's phone. */
-    internal fun received(ctx: Context, o: JSONObject, viaNearby: Boolean) {
+    internal fun received(ctx: Context, o: JSONObject, viaNearby: Boolean, pairId: String = "") {
         val app = ctx.medlog
-        if (o.optString("kind") == "FAMILY_KEY") { FamilyChat.gotKey(ctx, o); return }
+        if (o.optString("kind") == "FAMILY_KEY") { FamilyChat.gotKey(ctx, o, pairId); return }
         // a receipt for the helper's own "How are you?"
         if (o.has("reply")) {
             val re = o.optString("re")
@@ -341,8 +351,9 @@ object Nearby {
         }
         if (mid.isNotEmpty()) lastMid = mid
         lastText = o.optString("text")
+        if (pairId.isNotEmpty()) lastPerson = pairId
         if (!viaNearby) replyTo = null
-        reply(ctx, "got", mid)
+        reply(ctx, "got", mid, pairId.ifEmpty { null })
         app.scope.launch {
             val audio = o.optString("audio").takeIf { it.isNotEmpty() }?.let { b ->
                 File(ctx.filesDir, "audio").apply { mkdirs() }.let { File(it, "msg_${System.currentTimeMillis()}.amr") }.also { it.writeBytes(Base64.decode(b, Base64.NO_WRAP)) }
@@ -393,12 +404,11 @@ object Nearby {
                     override fun onPayloadReceived(eid: String, p: Payload) {
                         val o = JSONObject(String(p.asBytes() ?: return))
                         val s = ctx.medlog.settings
-                        s.putString("pair_id", o.getString("pairId"))
-                        s.putString("pair_key", o.getString("key"))
+                        People.put(ctx, CaredFor(o.getString("pairId"), o.getString("key"), o.optString("name"), o.optString("family")))
                         s.putString("my_name", myName)
-                        o.optString("family").takeIf { it.isNotBlank() }?.let { s.putString("family_key", it) }
                         // use the same relay as the person's phone, so internet alerts meet in the same mailbox
-                        s.update { it.copy(pairedWith = o.optString("name"), role = "helper", relayUrl = o.optString("relay"), internetLink = o.optBoolean("internet", true)) }
+                        s.update { it.copy(pairedWith = People.names(ctx), role = it.role, onboarded = if (it.role == "helper") true else it.onboarded,
+                            relayUrl = o.optString("relay"), internetLink = o.optBoolean("internet", true)) }
                         pair.value = pair.value.copy(done = o.optString("name"))
                         c.stopAdvertising(); c.disconnectFromEndpoint(eid)
                         Relay.stop()
@@ -476,9 +486,9 @@ class NearbyService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val st = medlog.settings.value
-        val helper = st.role == "helper"
+        val helper = People.any(this)
         val n: Notification = NotificationCompat.Builder(this, MedLogApp.CH_SERVICE).setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle(com.suryaprakash.medlog.ui.tr(if (helper) "Listening for ${st.pairedWith.ifBlank { "your person" }}" else "Connected to your family"))
+            .setContentTitle(com.suryaprakash.medlog.ui.tr(if (helper) "Listening for ${People.names(this)}" else "Connected to your family"))
             .setContentText(com.suryaprakash.medlog.ui.tr(if (helper) "You'll be alerted when they need you, near or far." else "So your helpers' answers reach you straight away."))
             .setOngoing(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
         // passing messages between the family's phones is "remote messaging"; Bluetooth to a nearby phone is "connected device"

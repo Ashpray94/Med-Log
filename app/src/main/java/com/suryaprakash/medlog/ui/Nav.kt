@@ -18,6 +18,8 @@ sealed interface Route {
     data class MedEdit(val id: Long? = null) : Route
     data object DidITake : Route
     data object Food : Route
+    data class FoodPick(val noteId: Long? = null) : Route
+    data object FeedNew : Route
     data object Readings : Route
     data object Help : Route
     data object Messages : Route
@@ -29,6 +31,7 @@ sealed interface Route {
     data object Visit : Route
     data object Appointments : Route
     data object Reports : Route
+    data object Nutrition : Route
     data object Settings : Route
     data object EasySettings : Route
     data object Permissions : Route

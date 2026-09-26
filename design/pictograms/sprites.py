@@ -466,6 +466,11 @@ ANSWERS_MID.update({"burn_1": burn(1), "burn_2": burn(2), "burn_3": burn(3), "si
 MID.update(ANSWERS_MID)
 TOP.update(ANSWERS_TOP)
 
+def _extra():
+    # imported late: extra_sprites uses the helpers above
+    from extra_sprites import EXTRA
+    return EXTRA
+
 SHEETS = [("top", TOP), ("mid", MID), ("low", LOW)]
 COLS = 5
 
@@ -496,4 +501,5 @@ def build():
 
 
 if __name__ == "__main__":
+    SHEETS.append(("extra", _extra()))
     build()

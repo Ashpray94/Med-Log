@@ -143,7 +143,7 @@ fun PickProblem(nav: Nav, onPicked: (String) -> Unit, onBack: () -> Unit, title:
     }
     com.suryaprakash.medlog.pictogram.Sprites.init(ctx)
     Screen(title, "Tap the one that matches, or search.", onHome = { nav.home() }, onBack = onBack) {
-        com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search, for example: headache")
+        com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search problems")
         if (query.isNotBlank()) {
             val found = remember(query) { searchProblems(app, query) }
             if (found.isEmpty()) Hint("Nothing found for \"$query\". Try a simpler word, like pain, fever or cough.")

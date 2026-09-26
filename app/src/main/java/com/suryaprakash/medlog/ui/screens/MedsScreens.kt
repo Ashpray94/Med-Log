@@ -1,6 +1,9 @@
 package com.suryaprakash.medlog.ui.screens
 
 import android.graphics.BitmapFactory
+import com.suryaprakash.medlog.ui.steady
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -97,7 +100,7 @@ fun MedsScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     val (start, end) = remember { Scheduler.today() }
     val doses by app.db.doses().betweenFlow(start, end).collectAsState(emptyList())
-    val meds by app.db.medicines().activeFlow().collectAsState(emptyList())
+    val meds by app.db.medicines().activeFlow().collectAsState(emptyList()).let { st -> androidx.compose.runtime.derivedStateOf { st.value.filter { it.form != "feed" } } }
     var confirmDouble by remember { mutableStateOf<Triple<Medicine, Long?, Long?>?>(null) }
     val byId = meds.associateBy { it.id }
     val now = System.currentTimeMillis()
@@ -127,62 +130,55 @@ fun MedsScreen(nav: Nav) {
 
     val due = doses.filter { it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED }
     val speak = if (doses.isEmpty()) "No medicines today." else "Today: " + doses.joinToString(". ") { d -> "${DoseActivity.time(d.scheduledAt)}, ${byId[d.medicineId]?.name ?: ""}, ${statusWord(d, now)}" }
-    Screen("Medicines", speak, onHome = { nav.home() }, onBack = { nav.back() }) {
-        if (doses.isEmpty() && meds.none { it.asNeeded }) Card() {
-            Text("No medicines yet", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
-            Body("Add each medicine once. MedLog will ring at the right time, even on silent, and tell your family if one is missed.")
-        }
-        doses.forEach { d ->
-            val m = byId[d.medicineId] ?: return@forEach
-            val done = d.status == DoseStatus.TAKEN
-            Card(color = if (done) p.okSoft else if (d.scheduledAt <= now && !done) p.amberSoft else p.card) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    MedPhoto(m.photoPath)
-                    Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("${DoseActivity.time(d.scheduledAt)} · ${m.name}", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
-                        Hint("${m.amount} ${m.form} ${m.strength} · ${DoseActivity.foodWords(m.food)}")
-                        Text(statusWord(d, now), fontSize = sc.small, color = if (done) p.ok else p.amber, fontWeight = FontWeight.Bold)
-                    }
-                }
-                if (!done && d.status != DoseStatus.SKIPPED) BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, onClick = {
-                    scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") }
-                })
-                else if (done) BigButton("Took it again?", tone = Tone.QUIET, onClick = {
-                    confirmDouble = Triple(m, d.actedAt, d.id)
-                })
+    Screen("Medicines", speak, onHome = { nav.home() }, onBack = { nav.back() }, subtitle = "What to take, and when") {
+        // today, dose by dose, the same cards as Home
+        if (doses.isNotEmpty()) {
+            val taken = doses.count { it.status == DoseStatus.TAKEN }
+            com.suryaprakash.medlog.ui.SectionHeader("Today", if (taken == doses.size) "All ${doses.size} taken" else "$taken of ${doses.size} taken", null)
+            doses.forEach { d ->
+                val m = byId[d.medicineId] ?: return@forEach
+                DoseCard(d, m, onOpen = { nav.go(Route.MedEdit(m.id)) },
+                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") } },
+                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id) } })
             }
         }
+        // taken only when needed
         val asNeeded = meds.filter { it.asNeeded }
         if (asNeeded.isNotEmpty()) {
-            Title("When needed")
-            asNeeded.forEach { m ->
-                Card {
-                    Row(verticalAlignment = Alignment.CenterVertically) { MedPhoto(m.photoPath, 1f); Spacer(Modifier.width(12.dp)); Column { Text(m.name, fontWeight = FontWeight.Bold, fontSize = sc.body, color = p.ink); Hint(m.purpose.ifBlank { "When needed" }) } }
-                    BigButton("I took one now", tone = Tone.QUIET, onClick = { takeAsNeeded(m, false) })
-                }
-            }
-        }
-        Title("My medicines")
-        meds.forEach { m ->
-            Card(onClick = { nav.go(Route.MedEdit(m.id)) }, label = "${m.name}. Tap to change.") {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    MedPhoto(m.photoPath, 1f); Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("${m.name} ${m.strength}".trim(), fontWeight = FontWeight.Bold, fontSize = sc.body, color = p.ink)
-                        Hint(if (m.asNeeded) "When needed" else m.times.split(",").joinToString(", ") { t -> runCatching { DoseActivity.time(java.time.LocalTime.parse(t.trim()).atDate(java.time.LocalDate.now()).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()) }.getOrDefault(t) })
-                        m.pillsLeft?.let { Hint("About ${it.toInt()} left") }
+            com.suryaprakash.medlog.ui.SectionHeader("When needed", "Only when you need one", null)
+            com.suryaprakash.medlog.ui.Group {
+                asNeeded.forEachIndexed { i, m ->
+                    if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        MedicinePicture(m, 52.dp); Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(m.name, fontWeight = FontWeight.SemiBold, fontSize = sc.body, color = p.ink)
+                            Text(m.purpose.ifBlank { "When needed" }, fontSize = sc.small, color = p.inkSoft)
+                        }
+                        Text("I took one", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.brand,
+                            modifier = Modifier.clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("I took ${m.name} now") { takeAsNeeded(m, false) }
+                                .padding(horizontal = 14.dp, vertical = 10.dp))
                     }
                 }
             }
         }
-        BigButton("Add a medicine", icon = Icons.Rounded.Add, onClick = { nav.go(Route.MedEdit(null)) })
-        if (due.isNotEmpty()) Hint("${due.size} still to take today.")
+        // every medicine, to change or add
+        com.suryaprakash.medlog.ui.SectionHeader("My medicines",
+            if (meds.isEmpty()) "None added yet" else "${meds.size} medicine${if (meds.size == 1) "" else "s"} · tap one to change",
+            if (meds.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
+        if (meds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
+        meds.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
     }
 }
 
 @Composable
 fun MedEditScreen(nav: Nav, id: Long?) {
+    MedicineFlow(nav, id)
+}
+
+@Suppress("unused")
+@Composable
+private fun OldMedEditScreen(nav: Nav, id: Long?) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val p = LocalPalette.current

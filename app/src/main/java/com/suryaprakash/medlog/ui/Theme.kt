@@ -3,6 +3,7 @@ package com.suryaprakash.medlog.ui
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -44,20 +45,22 @@ data class Palette(
 )
 
 /**
- * 60 / 30 / 10 (docs/DESIGN.md): white screens (60), greys for surfaces, borders and secondary text (30), one
- * accent for the main action and for "selected" (10). Red means danger or SOS only, green means Yes / OK only.
- * The old icon tints are all grey now, so colour never decorates.
+ * 60 / 30 / 10 (docs/DESIGN.md).
+ * 60 — white and greys: a light grey page, white cards lifted by a soft shadow, near-black text.
+ * 30 — the primary teal: the one main action on a page, the hero card, chosen things and the current tab.
+ * 10 — accents: each feature's own icon colour (Medicines orange, Food green, Readings pink, Doctor blue,
+ *      My health purple, History teal) and the status colours (red urgent/SOS, amber watch, green OK).
  */
 val Warm = Palette(
-    paper = Color(0xFFFFFFFF), card = Color(0xFFF4F4F5), ink = Color(0xFF18181B), inkSoft = Color(0xFF52525B),
-    line = Color(0xFFD4D4D8), fill = Color(0xFFE4E4E7), brand = Color(0xFF0B6E66), onBrand = Color.White, brandSoft = Color(0xFFE6F2F1),
-    ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE5F3E8), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF3DC),
-    red = Color(0xFFC0271F), redSoft = Color(0xFFFCEBE9), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFF4F4F5),
-    tintBlue = Color(0xFF3F3F46), tintGreen = Color(0xFF3F3F46), tintOrange = Color(0xFF3F3F46), tintPurple = Color(0xFF3F3F46), tintPink = Color(0xFF3F3F46), tintTeal = Color(0xFF3F3F46),
+    paper = Color(0xFFF2F2F0), card = Color(0xFFFFFFFF), ink = Color(0xFF141414), inkSoft = Color(0xFF45454A),
+    line = Color(0xFFDDDDD8), fill = Color(0xFFE9E9E5), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
+    ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE2F2E6), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF0D6),
+    red = Color(0xFFC0271F), redSoft = Color(0xFFFCE8E5), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFFFFFFF),
+    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFEA7310), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
 )
 
 val HighContrast = Warm.copy(
-    paper = Color.White, card = Color(0xFFF0F0F0), ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, fill = Color(0xFFE0E0E0),
+    paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, fill = Color(0xFFE0E0E0),
     brand = Color(0xFF00332F), brandSoft = Color(0xFFD6ECE9), ok = Color(0xFF004D12), amber = Color(0xFF5C3100), red = Color(0xFF8C0000),
 )
 
@@ -81,8 +84,8 @@ data class Scale(
     val big: Boolean,
 )
 
-val Standard = Scale(huge = 44.sp, question = 30.sp, title = 26.sp, headline = 20.sp, body = 18.sp, button = 19.sp, small = 15.sp, target = 60.dp, gap = 16.dp, margin = 20.dp, radius = 20.dp, big = false)
-val Big = Scale(huge = 54.sp, question = 36.sp, title = 31.sp, headline = 24.sp, body = 22.sp, button = 23.sp, small = 18.sp, target = 74.dp, gap = 18.dp, margin = 18.dp, radius = 22.dp, big = true)
+val Standard = Scale(huge = 44.sp, question = 30.sp, title = 28.sp, headline = 21.sp, body = 18.sp, button = 19.sp, small = 16.sp, target = 60.dp, gap = 16.dp, margin = 20.dp, radius = 20.dp, big = false)
+val Big = Scale(huge = 54.sp, question = 36.sp, title = 33.sp, headline = 25.sp, body = 22.sp, button = 23.sp, small = 19.sp, target = 74.dp, gap = 18.dp, margin = 18.dp, radius = 22.dp, big = true)
 
 /** The phone's own UI font: familiar, sharp at every size. */
 val AppFont: FontFamily = FontFamily.Default
@@ -95,7 +98,12 @@ val LocalSettings = staticCompositionLocalOf { Settings() }
 @Composable
 fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
     val palette = if (settings.highContrast) HighContrast else Warm
-    val scale = if (settings.bigMode) Big else Standard
+    // Large words: the whole layout (words, spacing, buttons) grows together by about 1.2x, so it stays in proportion
+    // and never gets crowded; the choice shows first, then after a short pause the change eases in over 0.6 s
+    val scale = Standard
+    val zoom by androidx.compose.animation.core.animateFloatAsState(if (settings.bigMode) 1.2f else 1f,
+        androidx.compose.animation.core.tween(if (settings.lessMotion) 0 else 600, delayMillis = if (settings.lessMotion) 0 else 250), label = "zoom")
+    val density = androidx.compose.ui.platform.LocalDensity.current
     val weight = if (settings.boldText) FontWeight.Medium else FontWeight.Normal
     val base = TextStyle(fontFamily = AppFont, fontWeight = weight, color = palette.ink, fontSize = scale.body, lineHeight = scale.body * 1.4f)
     MaterialTheme(
@@ -109,7 +117,8 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
             labelLarge = base.copy(fontSize = scale.button, fontWeight = FontWeight.SemiBold),
         ),
     ) {
-        CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings) {
+        CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings,
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * zoom, density.fontScale)) {
             androidx.compose.material3.ProvideTextStyle(base, content)
         }
     }

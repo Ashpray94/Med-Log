@@ -22,7 +22,7 @@ object DoseAlert {
         val app = ctx.medlog
         val meds = doses.mapNotNull { d -> app.db.medicines().get(d.medicineId)?.let { d to it } }
         if (meds.isEmpty()) return
-        val title = if (meds.size == 1) "Time for ${meds[0].second.name}" else "Time for your medicines"
+        val title = if (meds.all { it.second.form == "feed" }) "Time to give the feed" else if (meds.size == 1) "Time for ${meds[0].second.name}" else "Time for your medicines"
         val text = meds.joinToString(", ") { (_, m) -> "${m.name} ${m.strength}".trim() }
         val open = Intent(ctx, DoseActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra("louder", louder)
         val full = PendingIntent.getActivity(ctx, 70, open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)

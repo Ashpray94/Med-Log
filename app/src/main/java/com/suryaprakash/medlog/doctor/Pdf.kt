@@ -37,7 +37,7 @@ object Pdf {
     private const val RED = 0xFFB3261E.toInt()
     private const val AMBER = 0xFF8A4B00.toInt()
 
-    fun write(ctx: Context, n: DoctorNote): File {
+    fun write(ctx: Context, n: DoctorNote, nut: com.suryaprakash.medlog.nutrition.Nutrition.Report? = null): File {
         val doc = PdfDocument()
         val w = Writer(doc)
         w.page()
@@ -79,6 +79,30 @@ object Pdf {
         if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text(it, 10f, color = SOFT) } }
         if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
         w.footer(n.footer)
+        // ── nutrition: its own page, verdict first, detail after ──
+        nut?.let { r ->
+            w.page()
+            w.pair("Nutrition and weight", n.period, 15f)
+            w.text(r.headline.text, 12.5f, bold = true, color = if (r.headline.level == "RED") RED else if (r.headline.level == "AMBER") AMBER else INK)
+            r.findings.drop(1).forEach { f -> w.text("•  ${f.text}", 10.5f, color = if (f.level == "RED") RED else if (f.level == "AMBER") AMBER else INK) }
+            w.gap(4f)
+            w.kv("Calories", r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
+            w.kv("Protein", r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
+            w.kv("Weight", r.weightChange?.let { "${"%.1f".format(r.weights.first().second)} → ${"%.1f".format(r.weights.last().second)} kg in ${r.weightDays} days" } ?: "Not enough readings")
+            w.kv("Targets", if (r.targetsFromDoctor) "Set by the doctor" else "30 kcal and 1 g protein per kg (to be confirmed)")
+            if (r.feeds.isNotEmpty()) w.kv("Feeds", r.feeds.joinToString("; "))
+            w.rule()
+            w.section("Day by day")
+            w.table(listOf("Day", "kcal", "Protein", "Water", "What went in"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
+                r.days.reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), if (d.logged) "${d.kcal.toInt()}" else "–",
+                    if (d.logged) "${d.protein.toInt()} g" else "–", "${d.water}", if (d.logged) d.items.joinToString(", ") else "Nothing logged") to
+                    (r.kcalTarget?.let { t -> if (d.logged && d.kcal < t * 0.6) RED else if (d.logged && d.kcal < t * 0.85) AMBER else INK } ?: INK) })
+            if (r.missed.isNotEmpty()) { w.section("Missed feeds"); r.missed.sortedBy { it.at }.forEach { m -> w.text("${java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.ENGLISH).format(java.util.Date(m.at))}  ·  ${m.feed} ${m.ml.toInt()} ml", 10f) } }
+            if (r.changes.isNotEmpty()) { w.section("What changed"); r.changes.forEach { w.text("•  $it", 10f) } }
+            if (r.observed.isNotEmpty()) { w.section("Also noticed"); r.observed.forEach { w.text("•  $it", 10f) } }
+            w.text("Food values are estimates for home cooking.", 9f, color = SOFT)
+            w.footer(n.footer)
+        }
         w.finish()
 
         val f = File(File(ctx.cacheDir, "share").apply { mkdirs() }, "Symptom-summary.pdf")

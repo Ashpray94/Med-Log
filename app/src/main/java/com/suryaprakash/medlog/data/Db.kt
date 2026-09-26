@@ -116,6 +116,9 @@ data class Medicine(
     val changedAt: Long = System.currentTimeMillis(),
     val changeNote: String = "",      // "increased from 5 mg", for the doctor page
     val calendarEventId: Long? = null,
+    /** what it looks like, so it can be told apart from the others: "round", "oval", "capsule", "oblong" … and a colour name */
+    val shape: String = "",
+    val color: String = "",
 )
 
 object DoseStatus { const val DUE = "DUE"; const val TAKEN = "TAKEN"; const val SKIPPED = "SKIPPED"; const val MISSED = "MISSED"; const val SNOOZED = "SNOOZED" }
@@ -257,7 +260,7 @@ interface InboxDao {
 
 @Database(
     entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -277,8 +280,16 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, "medlog.db")
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2)
+                .addMigrations(M1_2, M2_3)
                 .build()
+        }
+
+        /** 2.9: what a medicine looks like. */
+        private val M2_3 = object : androidx.room.migration.Migration(2, 3) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE medicines ADD COLUMN shape TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE medicines ADD COLUMN color TEXT NOT NULL DEFAULT ''")
+            }
         }
 
         /** 2.8: the care plan column. */

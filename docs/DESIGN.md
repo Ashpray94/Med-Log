@@ -71,6 +71,12 @@ notes. There is one question per screen at most. Body text is 18 sp or more, and
 - Read aloud is optional. It is asked about in setup, lives in the bottom navigation, or is a round corner
   button where there is no navigation.
 
+## 6b. Icon boxes
+
+Anything drawn inside an icon box (a glyph, a picture, an "Aa" sample) takes at most half of the box, centred, with
+at least a quarter of the box as clear space on every side. Every icon background is the same shape: a rounded
+square (corner radius about 28% of its size). People's initials are the only circles.
+
 ## 7. Navigation
 
 The bottom navigation is always there on the person's phone, in the same places: Home, History, SOS, Family, and

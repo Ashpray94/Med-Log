@@ -32,7 +32,10 @@ object FamilyChat {
     /** The family key, made once on the person's phone. */
     fun familyKey(ctx: Context): String {
         val s = ctx.medlog.settings
-        return s.getString("family_key") ?: Keys.randomB64(32).also { s.putString("family_key", it) }
+        // this phone's own family mailbox (for its own helpers); kept apart from those of people it helps
+        s.getString("own_family_key")?.let { return it }
+        val old = if (s.getString("people") == null && s.value.role == "self") s.getString("family_key") else null
+        return (old ?: Keys.randomB64(32)).also { s.putString("own_family_key", it) }
     }
 
     /** Gives the family key to every paired helper phone that doesn't have it yet. */
@@ -51,7 +54,9 @@ object FamilyChat {
 
     // ───────────── helper phones ─────────────
 
-    fun key(ctx: Context) = ctx.medlog.settings.getString("family_key")?.let { Base64.decode(it, Base64.NO_WRAP) }
+    /** The family mailbox for one person this phone helps (the first, if not said). */
+    fun key(ctx: Context, p: com.suryaprakash.medlog.data.CaredFor? = null) =
+        (p ?: com.suryaprakash.medlog.data.People.all(ctx).firstOrNull { it.familyKey.isNotBlank() })?.familyBytes
     fun topic(ctx: Context) = key(ctx)?.let { Relay.topic(it, DIR) }
     fun myName(ctx: Context) = ctx.medlog.settings.getString("my_name").orEmpty()
 
@@ -62,17 +67,18 @@ object FamilyChat {
     }
 
     /** A helper phone received the family key from the person's phone. */
-    fun gotKey(ctx: Context, o: JSONObject) {
+    fun gotKey(ctx: Context, o: JSONObject, pairId: String) {
         val k = o.optString("family").takeIf { it.isNotBlank() } ?: return
-        if (ctx.medlog.settings.getString("family_key") == k) return
-        ctx.medlog.settings.putString("family_key", k)
+        val p = com.suryaprakash.medlog.data.People.byPairId(ctx, pairId) ?: return
+        if (p.familyKey == k) return
+        com.suryaprakash.medlog.data.People.put(ctx, p.copy(familyKey = k))
         Relay.reconnect()
     }
 
     /** Sends [text] to the other helpers, and keeps it in this phone's chat. */
-    fun send(ctx: Context, text: String) {
+    fun send(ctx: Context, text: String, p: com.suryaprakash.medlog.data.CaredFor? = null) {
         val app = ctx.medlog
-        val key = key(ctx) ?: return
+        val key = key(ctx, p) ?: return
         val me = myName(ctx).ifBlank { "Helper" }
         app.scope.launch {
             app.db.inbox().insert(InboxItem(fromName = "You", text = text, kind = KIND, acked = true))
@@ -99,10 +105,10 @@ object FamilyChat {
     }
 
     /** After a helper answers the person, the other helpers see who is going. */
-    fun announceReply(ctx: Context, reply: String, about: String?) {
-        if (key(ctx) == null) return
-        val who = ctx.medlog.settings.value.pairedWith.ifBlank { "them" }
+    fun announceReply(ctx: Context, reply: String, about: String?, p: com.suryaprakash.medlog.data.CaredFor) {
+        if (key(ctx, p) == null) return
+        val who = p.name.ifBlank { "them" }
         val words = Nearby.replyWords(reply)
-        send(ctx, if (about.isNullOrBlank()) "$words (answering $who)" else "$words (answering $who: \"$about\")")
+        send(ctx, if (about.isNullOrBlank()) "$words (answering $who)" else "$words (answering $who: \"$about\")", p)
     }
 }

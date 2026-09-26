@@ -7,6 +7,7 @@ import android.graphics.BitmapRegionDecoder
 import android.graphics.Rect
 import android.os.Build
 import android.util.LruCache
+import com.suryaprakash.medlog.medlog
 import org.json.JSONObject
 
 /**
@@ -36,11 +37,12 @@ object Sprites {
         val c = HashMap<String, Cell>()
         val ord = ArrayList<Pair<String, List<String>>>()
         val m = HashMap<String, Pair<Int, Int>>()
-        for (sheet in listOf("top", "mid", "low")) {
-            val s = o.getJSONObject(sheet)
+        // "extra" holds a picture of its own for every less common problem; only the first three make the main list
+        for (sheet in listOf("top", "mid", "low", "extra")) {
+            val s = o.optJSONObject(sheet) ?: continue
             val ids = s.getJSONArray("ids").let { a -> (0 until a.length()).map { a.getString(it) } }
             ids.forEachIndexed { i, id -> c[id] = Cell(sheet, i) }
-            ord += sheet to ids.filter { id -> listOf("depth_", "feel_", "face_", "burn_", "size_").none { id.startsWith(it) } }
+            if (sheet != "extra") ord += sheet to ids.filter { id -> listOf("depth_", "feel_", "face_", "burn_", "size_").none { id.startsWith(it) } }
             m[sheet] = s.getInt("cols") to s.getInt("cell")
         }
         cells = c; order = ord; meta = m
@@ -74,6 +76,29 @@ object Sprites {
         val bmp = synchronized(dec) { dec.decodeRegion(Rect(x, y, x + size, y + size), BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return null
         cache.put(ck, bmp)
         return bmp
+    }
+
+    /** The soft background colour for a problem's picture, by body area (null for things that aren't problems). */
+    fun areaColor(ctx: Context, problemId: String?): Int? {
+        val group = problemId?.let { ctx.medlog.catalogue.problem(it)?.group } ?: return null
+        return when (group) {
+            "head" -> 0xFFDCEBFF; "mind" -> 0xFFEDE4FF; "chest" -> 0xFFFFE1E1; "tummy" -> 0xFFFFE9D6
+            "toilet" -> 0xFFFFF4CC; "pain" -> 0xFFFFE3DA; "injury" -> 0xFFFFEFD5; "skin" -> 0xFFFDE7F0
+            "women" -> 0xFFFCE4EC; "daily" -> 0xFFE2F5E7; else -> 0xFFD9F2EF
+        }.toInt()
+    }
+
+    /** The picture already on its coloured square (for the widget, which can't layer views). */
+    fun onSquare(ctx: Context, problemId: String?, px: Int): Bitmap? {
+        val color = areaColor(ctx, problemId) ?: return bitmap(ctx, problemId, px)
+        val inner = (px * 0.7f).toInt()
+        val pic = bitmap(ctx, problemId, inner) ?: return null
+        val out = Bitmap.createBitmap(px, px, Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(out)
+        val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+        c.drawRoundRect(android.graphics.RectF(0f, 0f, px.toFloat(), px.toFloat()), px * 0.28f, px * 0.28f, paint)
+        c.drawBitmap(pic, null, android.graphics.RectF((px - inner) / 2f, (px - inner) / 2f, (px + inner) / 2f, (px + inner) / 2f), android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+        return out
     }
 
     /** Closest common icon for the other 75 problems. */
