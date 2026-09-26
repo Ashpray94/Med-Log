@@ -1,6 +1,6 @@
 # MedLog
 
-App downloads only. Latest: **2.7.0**.
+App downloads only. Latest: **2.8.0**.
 
 - [MedLog-arm64.apk](MedLog-arm64.apk): almost every phone from 2017 on
 - [MedLog-armv7.apk](MedLog-armv7.apk): older or low-cost phones

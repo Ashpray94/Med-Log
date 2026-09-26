@@ -1,17 +1,17 @@
 {
-  "versionName": "2.7.0",
-  "versionCode": 270,
-  "notes": "- Updates from inside the app: Settings \u2192 Check for updates. MedLog also checks once a day, and shows \"A new MedLog is ready\" on the home screen. It only installs files signed by MedLog.\n- Quick messages between helpers: \"I'm going there now\", \"Can someone check on Amma?\", \"I'll call her\", \"I can't go today\". When one helper answers, the others see it.\n- Understands your voice much better, in English and other languages. MedLog now uses your phone's own speech (the same as the keyboard microphone).\n- The whole app in Hindi or Tamil, every screen and everything read aloud. Tamil uses everyday spoken words.\n- Reads aloud slower, and doesn't say the same thing twice. Choose Very slow, Slow or Normal in Settings.\n- Family, one tap away: your three favourite messages and \"Call\" on the home screen, a new Family widget, and a Family button on the main widget.\n- Choose your own messages: pick from the list or write your own, and keep them for next time.\n- Answers arrive in a second or two. You see \"Ravi's phone got it\" and then their answer. A text message goes after 15 seconds to anyone whose phone didn't get it.\n- Helpers can ask \"How are you?\" Big buttons to answer: I'm good, I'm OK, Not so well, Please call me.\n- Clear \"Whose phone is this?\" switch between your own phone and a helper's phone.\n- Save your setup to a file and load it on a new phone, or skip setup.\n- Recent problems only show what you actually noted.\n- Calmer messages to family. The \"Undo\" bar goes away after 3 seconds.",
+  "versionName": "2.8.0",
+  "versionCode": 280,
+  "notes": "- A calmer, clearer look. White screens, grey surfaces and one accent colour. On every screen, the most important thing is the biggest.\n- Tap, don't talk. Voice input is gone. \"How are you feeling\" shows the problems you've had before, then the ones common for your age and illnesses, with a search box. Tap Speak in the search box to use your phone's own speech typing.\n- Yes and No look different. Yes is green with a tick. No is white with a cross.\n- Clear choices. Chosen answers have a tick and a coloured outline.\n- A new, detailed setup, one question per page. It covers your doctors and what each one treats, illnesses, what you feel these days, medicines, treatments, risks, your own emergencies, a daily check-in, and whether to read pages aloud.\n- Your own emergencies. Mark falls, chest pain and others as emergencies. When you note one, your helpers are called straight away.\n- Helper alarms like Meeting Timer. When you send a message, the helper's phone shows it with a 30-second countdown. If nobody answers, it rings non-stop until someone does.\n- A simpler helper screen. Your latest message and their reply come first.\n- One widget that does the job. Tap a symptom and it's saved. Tap a message and it's sent. The widget shows who answered. It's light and easy to read.\n- Connecting a helper's phone no longer asks for their number again. Just pick them from your helpers.\n- Doctor page: Share and Print stay at the bottom. Choose how far back in one tap. Call the right doctor.\n- Read aloud is now a button in the corner where there's no bottom bar. It only reads pages by itself if you choose that.\n- Smaller app: about 50 MB less, and no microphone permission.",
   "apk": {
     "arm64-v8a": {
       "url": "https://raw.githubusercontent.com/Ashpray94/Med-Log/downloads/MedLog-arm64.apk",
-      "sha256": "fee76fdb8177448a59f1318acc39caeffb9aa28f8269c73c273ae43c5e3f62a2",
-      "size": 89050806
+      "sha256": "a891e3b8d65c37b12b1ce9ac2825348b9ff70dcdd4370b0bde1a6ab97815eae1",
+      "size": 23228830
     },
     "armeabi-v7a": {
       "url": "https://raw.githubusercontent.com/Ashpray94/Med-Log/downloads/MedLog-armv7.apk",
-      "sha256": "408cacc975258c4e470561ceac49f37cb7abe907eb7f8b806e6eeedbf2537377",
-      "size": 82372852
+      "sha256": "da695d8a483804f56fbc05fdfd44dc2bd4a7d2c80ea40b6a40932f0bd9d272eb",
+      "size": 17174345
     }
   }
 }
