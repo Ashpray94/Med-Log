@@ -1,6 +1,7 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
+- **Updates install on more phones.** Some phones couldn't read the new file's signature and refused the update ("This file isn't from MedLog"). Now Android's own check decides. If a phone really has a copy made with a different key, it says what to do.
 - **Speak or choose, in one place.** "How are you feeling?" has two equal buttons, Choose and Speak. Speak starts listening at once, and what it heard shows on the same page, so you can fix it by tapping.
 - **Warmer words.** "Still troubling you?" and "Do you notice anything else?"; "Toilet and tummy" lists what you note most often first.
 - **Calmer pages.** Lighter outlines, a thin "More below" line, History marks on the right, and the bottom bar only on the main pages (other pages have SOS next to Read). Disabled buttons are now visible.
