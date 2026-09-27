@@ -61,7 +61,7 @@ note is the precise record (colour, blood); the ailment is how it feels. The doc
 ### Widgets
 - **Done**: every widget tap asks first (Yes / Cancel).
 - **Done**: after noting a problem the widget offers "Add details" or "Done", and Done sets a reminder in 30 minutes.
-- **Next**: separate small widgets for "How I feel" and "What comes out", so each is one tap from the home screen.
+- **Done**: two small widgets besides the main one: "How I feel" (your usual problems; asked first, then Add details / Done) and "Toilet & vomit" (Stool, Urine, Vomit, each opening its picture page).
 
 ### SOS
 - **Done**: Call 108 as before; "What's happening?" pictures under it: one tap alerts the family with the kind of emergency.
@@ -71,9 +71,7 @@ note is the precise record (colour, blood); the ailment is how it feels. The doc
 - **Done**: WCAG AA: text 4.5:1 or better everywhere; every button, field and option has a 3:1 edge.
 - **Done**: plain words: Done, Remove, Note (no Save / Delete / Log / Sync).
 - **Done**: one design for repeating things (tiles, cards, groups, sheets), the same on every page.
-- **Partly done**: Hindi and Tamil: new wording is translated; about 900 older on-screen lines still need translating.
+- **Done**: Hindi and Tamil for every on-screen line, with dates in the chosen language.
 
-### Next, in this order
-1. **Speak it all, for emergencies**: one long spoken sentence is split into symptoms, medicines, food and toilet, each put in its place; urgent words (chest pain, fall, can't breathe) go straight to helpers with no questions.
-2. Hindi and Tamil for the remaining lines.
-3. The two extra widgets above.
+### Speak it all
+- **Done**: one long spoken sentence is split into symptoms, toilet, food, water, medicines and readings, each put in its place; urgent things (chest pain with breathlessness, blood in vomit, the person's own emergencies) go straight to helpers with no questions. Covered by tests.

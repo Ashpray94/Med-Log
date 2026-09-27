@@ -246,47 +246,19 @@ class MedLogWidget : GlanceAppWidget() {
         @Suppress("UNUSED_VARIABLE") val c = ctx
     }
 
-    /** The whole widget becomes one question (Yes / Cancel), or, once a problem is noted, "Add details / Done". Big targets, nothing else to hit by mistake. */
     @Composable
-    private fun Pending(ctx: Context, ask: String?, noted: String?) {
-        val ink = ColorProvider(Color(0xFF18181B))
-        val soft = ColorProvider(Color(0xFF52525B))
-        val white = ColorProvider(Color.White)
-        val (title, sub, yes, no) = if (ask != null) {
-            val (kind, _, label) = ask.split("|", limit = 3).let { Triple(it[0], it.getOrElse(1) { "" }, it.getOrElse(2) { "" }) }
-            when (kind) {
-                "message" -> listOf("Send \"$label\"?", "To your family", "Yes, send", "Cancel")
-                "water" -> listOf("Add $label?", "Saved with the time", "Yes, add it", "Cancel")
-                "dose" -> listOf("Took $label?", "Marks it taken now", "Yes, taken", "Cancel")
-                else -> listOf("Note $label?", "Saved with the time", "Yes, note it", "Cancel")
-            }
-        } else {
-            val parts = noted!!.split("|", limit = 3)
-            listOf("✓ ${parts.getOrElse(1) { "" }} noted", parts.getOrElse(2) { "" }, "Add details", "Done")
-        }
-        Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(com.suryaprakash.medlog.ui.tr(title), style = TextStyle(color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 2)
-            Text(com.suryaprakash.medlog.ui.tr(sub), style = TextStyle(color = soft, fontSize = 14.sp), maxLines = 1)
-            Spacer(GlanceModifier.height(10.dp))
-            Row(GlanceModifier.fillMaxWidth().height(52.dp)) {
-                val noAct = if (ask != null) actionRunCallback<AnswerAsk>(actionParametersOf(YES to false)) else actionRunCallback<LaterDetails>()
-                Box(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_soft)).clickable(noAct), contentAlignment = Alignment.Center) {
-                    Text(com.suryaprakash.medlog.ui.tr(no), style = TextStyle(color = ink, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                }
-                Spacer(GlanceModifier.width(8.dp))
-                val yesAct = if (ask != null) actionRunCallback<AnswerAsk>(actionParametersOf(YES to true))
-                    else actionStartActivity(link(ctx, "tell?note=${noted!!.substringBefore("|")}&problem=${noted.split("|").getOrElse(3) { "" }}"))
-                Box(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_brand)).clickable(yesAct), contentAlignment = Alignment.Center) {
-                    Text(com.suryaprakash.medlog.ui.tr(yes), style = TextStyle(color = white, fontSize = 16.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                }
-            }
-        }
-    }
+    private fun Pending(ctx: Context, ask: String?, noted: String?) = WidgetQuestion(ctx, MAIN, ask, noted)
 
     companion object {
         val tick = kotlinx.coroutines.flow.MutableStateFlow(0L)
         /** Redraw the widget with fresh data. */
-        suspend fun refresh(ctx: Context) { tick.value = tick.value + 1; MedLogWidget().updateAll(ctx) }
+        suspend fun refresh(ctx: Context) {
+            tick.value = tick.value + 1
+            MedLogWidget().updateAll(ctx); FeelWidget().updateAll(ctx); OutWidget().updateAll(ctx)
+        }
+        /** Which widget a question belongs to, so a question on one never shows on another. */
+        val SRC = ActionParameters.Key<String>("src")
+        const val MAIN = "widget"
         val ASK = ActionParameters.Key<String>("ask")
         val YES = ActionParameters.Key<Boolean>("yes")
         val DOSE = ActionParameters.Key<Long>("dose")
@@ -301,8 +273,9 @@ class MedLogWidget : GlanceAppWidget() {
 class AskFirst : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val s = context.medlog.settings
-        s.putString("widget_ask", parameters[MedLogWidget.ASK] ?: return)
-        s.putLong("widget_ask_at", System.currentTimeMillis())
+        val src = parameters[MedLogWidget.SRC] ?: MedLogWidget.MAIN
+        s.putString("${src}_ask", parameters[MedLogWidget.ASK] ?: return)
+        s.putLong("${src}_ask_at", System.currentTimeMillis())
         MedLogWidget.refresh(context)
     }
 }
@@ -311,12 +284,13 @@ class AskFirst : ActionCallback {
 class AnswerAsk : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val s = context.medlog.settings
-        val ask = s.getString("widget_ask")
-        s.putString("widget_ask", null)
+        val src = parameters[MedLogWidget.SRC] ?: MedLogWidget.MAIN
+        val ask = s.getString("${src}_ask")
+        s.putString("${src}_ask", null)
         if (parameters[MedLogWidget.YES] == true && ask != null) {
             val (kind, value) = ask.split("|", limit = 3).let { it[0] to it.getOrElse(1) { "" } }
             when (kind) {
-                "problem" -> NoteProblem.note(context, value)
+                "problem" -> NoteProblem.note(context, value, src)
                 "message" -> SendMessage.send(context, value)
                 "dose" -> value.toLongOrNull()?.let { Scheduler.take(context, it) }
                 "water" -> { context.medlog.repo.addWater(1); com.suryaprakash.medlog.ui.savedFeedback(context) }
@@ -330,8 +304,9 @@ class AnswerAsk : ActionCallback {
 class LaterDetails : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val s = context.medlog.settings
-        s.getString("widget_done")?.substringBefore("|")?.toLongOrNull()?.let { com.suryaprakash.medlog.care.FollowUp.schedule(context, it) }
-        s.putString("widget_done", null)
+        val src = parameters[MedLogWidget.SRC] ?: MedLogWidget.MAIN
+        s.getString("${src}_done")?.substringBefore("|")?.toLongOrNull()?.let { com.suryaprakash.medlog.care.FollowUp.schedule(context, it) }
+        s.putString("${src}_done", null)
         MedLogWidget.refresh(context)
     }
 }
@@ -341,7 +316,7 @@ class NoteProblem : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         note(context, parameters[MedLogWidget.PROBLEM] ?: return)
     }
-    companion object { suspend fun note(context: Context, pid: String) {
+    companion object { suspend fun note(context: Context, pid: String, src: String = MedLogWidget.MAIN) {
         val app = context.medlog
         val label = app.catalogue.problem(pid)?.label ?: return
         val now = System.currentTimeMillis()
@@ -351,8 +326,8 @@ class NoteProblem : ActionCallback {
         app.settings.putString("widget_noted", "✓ ${com.suryaprakash.medlog.ui.tr(label)} " + (if (today > 1) "(${MedLogWidget.ordinal(today)} today) " else "") + time)
         app.settings.putLong("widget_noted_at", now)
         ids.firstOrNull()?.let { id ->
-            app.settings.putString("widget_done", "$id|${com.suryaprakash.medlog.ui.tr(label)}|$time|$pid")
-            app.settings.putLong("widget_done_at", now)
+            app.settings.putString("${src}_done", "$id|${com.suryaprakash.medlog.ui.tr(label)}|$time|$pid")
+            app.settings.putLong("${src}_done_at", now)
         }
         com.suryaprakash.medlog.ui.savedFeedback(context)
         MedLogWidget.refresh(context)

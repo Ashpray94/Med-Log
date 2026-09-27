@@ -124,6 +124,7 @@ class MainActivity : ComponentActivity() {
                 }
                 null
             }
+            "output" -> Route.Output(uri.getQueryParameter("tab")?.toIntOrNull()?.coerceIn(0, 2) ?: 0)
             "helper" -> Route.HelperHome
             "history" -> Route.Notes
             "checkin" -> Route.Home
