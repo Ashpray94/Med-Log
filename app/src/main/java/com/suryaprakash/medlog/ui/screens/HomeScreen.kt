@@ -323,7 +323,7 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
  */
 @Composable
 fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)? = null,
-            onTakenAt: ((Dose, Long) -> Unit)? = null) {
+            onTakenAt: ((Dose, Long) -> Unit)? = null, who: String? = null) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val now = System.currentTimeMillis()
@@ -356,7 +356,7 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
         }
         TimeStrip(sorted, ::taken, ::missed, ::due) { sheet = true }
         // the next dose to answer
-        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), answer, onNotGiven) } ?: Row(verticalAlignment = Alignment.CenterVertically) {
+        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), answer, onNotGiven, who) } ?: Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(8.dp))
             Text(if (feed) "All given today" else "All taken today", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ok)
@@ -364,7 +364,7 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
     }
     if (sheet) DaySheet(m, name, sorted, ::taken, ::missed, ::due, onOpen = { sheet = false; onOpen() }, onTaken = answer, onUndo = onUndo, onNotGiven = onNotGiven,
         onChangeTime = onTakenAt, onDismiss = { sheet = false })
-    asking?.let { d -> TakenWhenSheet(d, feed, onPick = { at -> asking = null; if (at == null) onTaken(d) else onTakenAt?.invoke(d, at) }, onDismiss = { asking = null }) }
+    asking?.let { d -> TakenWhenSheet(d, feed, who = who, onPick = { at -> asking = null; if (at == null) onTaken(d) else onTakenAt?.invoke(d, at) }, onDismiss = { asking = null }) }
 }
 
 /**
@@ -374,7 +374,7 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun TakenWhenSheet(d: Dose, feed: Boolean, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
+fun TakenWhenSheet(d: Dose, feed: Boolean, who: String? = null, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     var other by remember { mutableStateOf(false) }
@@ -384,7 +384,7 @@ fun TakenWhenSheet(d: Dose, feed: Boolean, onPick: (Long?) -> Unit, onDismiss: (
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            com.suryaprakash.medlog.ui.SectionHeader(if (feed) "When was it given?" else "When did you take it?", "The ${chipTime(d.scheduledAt)} ${if (feed) "feed" else "dose"}$day", null)
+            com.suryaprakash.medlog.ui.SectionHeader(if (feed) "When was it given?" else if (who != null) "When did they take it?" else "When did you take it?", "The ${chipTime(d.scheduledAt)} ${if (feed) "feed" else "dose"}$day", null)
             BigButton("On time · ${chipTime(d.scheduledAt)}$day", tone = Tone.OK, icon = Icons.Rounded.CheckCircle, onClick = { onPick(d.scheduledAt) })
             if (onDay == java.time.LocalDate.now()) BigButton("Just now", tone = Tone.TINT, onClick = { onPick(null) })
             BigButton("Another time", tone = Tone.SECONDARY, onClick = { other = true })
@@ -393,14 +393,15 @@ fun TakenWhenSheet(d: Dose, feed: Boolean, onPick: (Long?) -> Unit, onDismiss: (
 }
 
 @Composable
-private fun NextDoseButton(d: Dose, feed: Boolean, due: Boolean, missed: Boolean, onTaken: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?) {
+private fun NextDoseButton(d: Dose, feed: Boolean, due: Boolean, missed: Boolean, onTaken: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?, who: String? = null) {
     val t = chipTime(d.scheduledAt)
     if (feed && onNotGiven != null && !missed) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         BigButton("Given · $t", Modifier.weight(1f), if (due) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
         BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { onNotGiven(d) })
     } else BigButton(when {
-            missed -> if (feed) "I gave the $t feed late" else "I took the $t dose late"
-            else -> if (feed) "I gave the $t feed" else "I took the $t dose"
+            // on a helper's phone the button speaks about the person: "Lakshmi took the 8 AM dose"
+            missed -> if (feed) "${who ?: "I"} gave the $t feed late" else "${who ?: "I"} took the $t dose late"
+            else -> if (feed) "${who ?: "I"} gave the $t feed" else "${who ?: "I"} took the $t dose"
         },
         tone = if (due) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
 }

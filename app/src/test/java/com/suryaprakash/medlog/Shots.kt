@@ -102,18 +102,29 @@ class Shots {
 
     private fun seed(app: MedLogApp, role: String) = runBlocking {
         app.settings.update { it.copy(onboarded = true, role = role) }
-        app.db.profile().put(Profile(name = "Lakshmi Narayanan", dob = "1948-01-01", sex = "F", conditions = "Diabetes, high BP"))
+        if (role == "helper") {
+            // a helper's phone: one person looked after, their records in its copy, and a message waiting
+            com.suryaprakash.medlog.data.People.put(app, com.suryaprakash.medlog.data.CaredFor("amma", com.suryaprakash.medlog.data.Keys.randomB64(32), "Lakshmi"))
+            app.db.inbox().insert(com.suryaprakash.medlog.data.InboxItem(fromName = "Lakshmi", text = "Please come", kind = "MESSAGE", at = System.currentTimeMillis() - 120_000))
+            fill(com.suryaprakash.medlog.data.Mirror.db(app, "amma"))
+            return@runBlocking
+        }
+        fill(app.db)
+    }
+
+    private suspend fun fill(db: com.suryaprakash.medlog.data.MedDb) {
+        db.profile().put(Profile(name = "Lakshmi Narayanan", dob = "1948-01-01", sex = "F", conditions = "Diabetes, high BP"))
         val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
         val h = 3600_000L
-        val met = app.db.medicines().insert(Medicine(name = "Metformin", strength = "500 mg", times = "08:00,14:00,20:00", purpose = "Diabetes", food = "after", uid = "m1"))
-        val aml = app.db.medicines().insert(Medicine(name = "Amlodipine", strength = "5 mg", times = "08:00", purpose = "Blood pressure", uid = "m2"))
-        val para = app.db.medicines().insert(Medicine(name = "Paracetamol", strength = "650 mg", times = "06:00,12:00,18:00,22:00", purpose = "Pain", uid = "m4"))
-        listOf(6, 12, 18, 22).forEach { hr -> app.db.doses().insert(Dose(medicineId = para, scheduledAt = today + hr * h, status = if (hr == 6) DoseStatus.TAKEN else DoseStatus.DUE, actedAt = if (hr == 6) today + 6 * h else null, uid = "p$hr")) }
-        app.db.medicines().insert(Medicine(name = "Ensure", form = "feed", amount = "200 ml", times = "10:00,16:00,21:00", uid = "m3"))
-        app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 8 * h, status = DoseStatus.TAKEN, actedAt = today + 8 * h + 300_000, uid = "d1"))
-        app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 14 * h, uid = "d2"))
-        app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 20 * h, uid = "d3"))
-        app.db.doses().insert(Dose(medicineId = aml, scheduledAt = today + 1 * h, status = DoseStatus.MISSED, uid = "d4"))
+        val met = db.medicines().insert(Medicine(name = "Metformin", strength = "500 mg", times = "08:00,14:00,20:00", purpose = "Diabetes", food = "after", uid = "m1"))
+        val aml = db.medicines().insert(Medicine(name = "Amlodipine", strength = "5 mg", times = "08:00", purpose = "Blood pressure", uid = "m2"))
+        val para = db.medicines().insert(Medicine(name = "Paracetamol", strength = "650 mg", times = "06:00,12:00,18:00,22:00", purpose = "Pain", uid = "m4"))
+        listOf(6, 12, 18, 22).forEach { hr -> db.doses().insert(Dose(medicineId = para, scheduledAt = today + hr * h, status = if (hr == 6) DoseStatus.TAKEN else DoseStatus.DUE, actedAt = if (hr == 6) today + 6 * h else null, uid = "p$hr")) }
+        db.medicines().insert(Medicine(name = "Ensure", form = "feed", amount = "200 ml", times = "10:00,16:00,21:00", uid = "m3"))
+        db.doses().insert(Dose(medicineId = met, scheduledAt = today + 8 * h, status = DoseStatus.TAKEN, actedAt = today + 8 * h + 300_000, uid = "d1"))
+        db.doses().insert(Dose(medicineId = met, scheduledAt = today + 14 * h, uid = "d2"))
+        db.doses().insert(Dose(medicineId = met, scheduledAt = today + 20 * h, uid = "d3"))
+        db.doses().insert(Dose(medicineId = aml, scheduledAt = today + 1 * h, status = DoseStatus.MISSED, uid = "d4"))
         fun note(kind: String, pid: String?, at: Long, text: String) = Note(kind = kind, problemId = pid, occurredAt = at, text = text, uid = "n$at$kind")
         listOf(
             note(Kind.SYMPTOM, "cough", today + 9 * h, "Cough, dry, for 3 days"),
@@ -124,6 +135,6 @@ class Shots {
             note(Kind.WATER, null, today + 10 * h, "1 glass of water"),
             note(Kind.WATER, null, today + 12 * h, "1 glass of water"),
             note(Kind.OUTPUT, "urine", today + 7 * h, "Urine, normal"),
-        ).forEach { app.db.notes().insert(it) }
+        ).forEach { db.notes().insert(it) }
     }
 }

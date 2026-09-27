@@ -461,14 +461,14 @@ fun BigButton(
         Tone.DANGER -> p.red to Color.White
         Tone.OK -> p.ok to Color.White
         Tone.AMBER -> p.amberSoft to p.amber
-        Tone.QUIET -> p.card to p.ink
+        Tone.QUIET -> p.fill to p.ink
     }
     var pressed by remember { mutableStateOf(false) }
     val left = leading != null || sub != null
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
             .background(if (enabled) bg else p.fill.copy(alpha = 0.6f))
-            .then(if (tone == Tone.SECONDARY && enabled) Modifier.border(2.dp, p.outline, RoundedCornerShape(16.dp)) else if (tone == Tone.OUTLINE && enabled) Modifier.border(2.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
+            .then(if ((tone == Tone.SECONDARY || tone == Tone.OUTLINE || tone == Tone.QUIET) && enabled) Modifier.border(if (tone == Tone.QUIET) 1.5.dp else 2.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
