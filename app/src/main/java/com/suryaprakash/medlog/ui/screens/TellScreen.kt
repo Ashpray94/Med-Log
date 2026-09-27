@@ -306,10 +306,10 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
                 }
                 run {
                     // what often comes with it: one tap notes that too
-                    val related = com.suryaprakash.medlog.clinical.Related.to(pr.id, 3).filter { cat.problem(it) != null }
+                    val related = com.suryaprakash.medlog.clinical.Related.to(pr.id, 4).filter { cat.problem(it) != null }
                     if (related.isNotEmpty()) {
                         com.suryaprakash.medlog.ui.SectionHeader("Often comes with it", "Tap if you have this too", null)
-                        com.suryaprakash.medlog.ui.TileGrid(related, 3, aspect = 0.9f) { rid, mod ->
+                        com.suryaprakash.medlog.ui.TileGrid(related, if (related.size == 4) 2 else 3, aspect = if (related.size == 4) 1.3f else 0.9f) { rid, mod ->
                             val label = cat.problem(rid)?.label ?: rid
                             com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 64.dp, onClick = {
                                 scope.launch {

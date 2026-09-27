@@ -6,7 +6,8 @@ package com.suryaprakash.medlog.clinical
  */
 object Related {
     private val GROUPS = listOf(
-        listOf("cough", "breathless", "fever", "sore_throat", "wheeze", "chest_tight", "runny_nose", "tired", "vomiting"),
+        // coughing often brings on vomiting (and both are common during cancer treatment), so vomiting sits near the top
+        listOf("cough", "breathless", "fever", "vomiting", "sore_throat", "wheeze", "chest_tight", "runny_nose", "tired"),
         listOf("fever", "chills", "body_ache", "headache", "tired", "no_appetite", "night_sweats", "sore_throat"),
         listOf("nausea", "vomiting", "no_appetite", "stomach_pain", "dizzy", "loose_motions", "dehydrated", "acidity"),
         listOf("loose_motions", "stomach_pain", "dehydrated", "vomiting", "tired", "fever", "cramps"),
