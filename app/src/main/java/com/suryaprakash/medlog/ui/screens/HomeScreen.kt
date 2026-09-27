@@ -356,10 +356,20 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
         }
         TimeStrip(sorted, ::taken, ::missed, ::due) { sheet = true }
         // the next dose to answer
-        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), answer, onNotGiven, who) } ?: Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(24.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(if (feed) "All given today" else "All taken today", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ok)
+        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), answer, onNotGiven, who) } ?: run {
+            // nothing left to answer today: say exactly how it went, never "All taken" when one was skipped
+            val skipped = sorted.count { it.status == S.SKIPPED }
+            val allTaken = taken == sorted.size
+            val words = when {
+                allTaken -> if (feed) "All given today" else "All taken today"
+                taken == 0 -> if (feed) "Not given today" else "Skipped today"
+                else -> "$taken ${if (feed) "given" else "taken"} · $skipped ${if (feed) "not given" else "skipped"}"
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(if (allTaken) Icons.Rounded.CheckCircle else Icons.Rounded.Warning, null, tint = if (allTaken) p.ok else p.amber, modifier = Modifier.size(24.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(words, fontSize = sc.body, fontWeight = FontWeight.Bold, color = if (allTaken) p.ok else p.amber)
+            }
         }
     }
     if (sheet) DaySheet(m, name, sorted, ::taken, ::missed, ::due, onOpen = { sheet = false; onOpen() }, onTaken = answer, onUndo = onUndo, onNotGiven = onNotGiven,

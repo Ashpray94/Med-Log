@@ -28,8 +28,8 @@ data class Palette(
     val ink: Color,         // primary text
     val inkSoft: Color,     // secondary text
     val line: Color,        // separators (decorative only)
-    /** The edge of anything you can tap or type in: 3:1 against the page and cards (WCAG 1.4.11). */
-    val outline: Color = Color(0xFF858580),
+    /** The edge of anything you can tap or type in: a thin line, just 3:1 against white (WCAG 1.4.11), so it reads without looking heavy. */
+    val outline: Color = Color(0xFF949490),
     val fill: Color,        // quiet button fill
     val brand: Color,
     val onBrand: Color,

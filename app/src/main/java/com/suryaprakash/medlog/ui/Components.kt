@@ -305,7 +305,8 @@ fun imeShowing(): Boolean = androidx.compose.foundation.layout.WindowInsets.isIm
 fun ActionArea(content: @Composable ColumnScope.() -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Column(Modifier.fillMaxWidth().background(p.paper)) {
+    // the page's main action on its own white band, so it stands apart from the page and the bar under it
+    Column(Modifier.fillMaxWidth().background(p.card)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
     }
@@ -356,7 +357,7 @@ private fun BackLink(onBack: () -> Unit) {
     val sc = LocalScale.current
     @Suppress("UNUSED_VARIABLE") val unused = sc
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.5.dp, p.outline, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.dp, p.outline, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
         Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
     }
 }
@@ -430,7 +431,7 @@ fun PillButton(text: String, icon: ImageVector?, bg: Color, fg: Color, border: C
 fun RoundIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
-        Modifier.size(48.dp).clip(CircleShape).background(p.card).border(1.5.dp, p.outline, CircleShape).steady(label, onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).background(p.card).border(1.dp, p.outline, CircleShape).steady(label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = p.inkSoft, modifier = Modifier.size(28.dp)) }
 }
@@ -469,8 +470,9 @@ fun BigButton(
     val left = leading != null || sub != null
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
-            .background(if (enabled) bg else p.fill.copy(alpha = 0.6f))
-            .then(if ((tone == Tone.SECONDARY || tone == Tone.OUTLINE || tone == Tone.QUIET) && enabled) Modifier.border(if (tone == Tone.QUIET) 1.5.dp else 2.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
+            .background(if (enabled) bg else p.card)
+            .then(if (!enabled) Modifier.border(1.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
+            .then(if ((tone == Tone.SECONDARY || tone == Tone.OUTLINE || tone == Tone.QUIET) && enabled) Modifier.border(if (tone == Tone.QUIET) 1.5.dp else 1.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -524,7 +526,7 @@ fun Choice(text: String, selected: Boolean, multi: Boolean = false, sub: String?
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
             .clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.outline, sh)
+            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.outline, sh)
             .steady(text + if (selected) ", chosen" else ", not chosen", onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -836,7 +838,7 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
     val sh = RoundedCornerShape(sc.radius)
     Box(
         modifier.scale(pressScale(pressed)).clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.outline, sh)
+            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.outline, sh)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
         Column(Modifier.fillMaxSize().padding(TILE_PAD), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
@@ -874,7 +876,7 @@ fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick
     Row(
         modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(26.dp))
             .background(if (selected) p.brand else p.paper)
-            .then(if (!selected) Modifier.border(1.5.dp, p.outline, RoundedCornerShape(26.dp)) else Modifier)
+            .then(if (!selected) Modifier.border(1.dp, p.outline, RoundedCornerShape(26.dp)) else Modifier)
             .steady(text + if (selected) ", chosen" else "", onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -910,7 +912,7 @@ fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     // every choice as tall as the tallest: a long label (in Hindi or Tamil, or large words) wraps instead of being cut
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.card).border(1.5.dp, p.outline, RoundedCornerShape(16.dp)).padding(4.dp)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.card).border(1.dp, p.outline, RoundedCornerShape(16.dp)).padding(4.dp)) {
         options.forEachIndexed { i, o ->
             Box(
                 Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent)
@@ -1033,15 +1035,13 @@ fun MoreBelow(scroll: ScrollState, modifier: Modifier = Modifier) {
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
     if (!scroll.canScrollForward) return
-    Box(modifier.fillMaxWidth().height(88.dp).background(Brush.verticalGradient(listOf(p.paper.copy(alpha = 0f), p.paper.copy(alpha = 0.95f), p.paper))), contentAlignment = Alignment.BottomCenter) {
-        Row(
-            Modifier.padding(bottom = 8.dp).height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.card).border(2.dp, p.brand, RoundedCornerShape(23.dp))
-                .steady("More below") { scope.launch { scroll.animateScrollTo(scroll.value + (scroll.viewportSize * 0.8f).toInt()) } }.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("More below", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand)
-            Spacer(Modifier.width(6.dp))
-            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = p.brand, modifier = Modifier.size(24.dp))
+    // a thin strip along the bottom edge, not a button: a soft fade and a small "More below", tap to scroll
+    Box(modifier.fillMaxWidth().height(48.dp).background(Brush.verticalGradient(listOf(p.paper.copy(alpha = 0f), p.paper.copy(alpha = 0.92f), p.paper)))
+        .steady("More below") { scope.launch { scroll.animateScrollTo(scroll.value + (scroll.viewportSize * 0.8f).toInt()) } },
+        contentAlignment = Alignment.BottomCenter) {
+        Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("More below", fontSize = sc.small * 0.9f, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = p.inkSoft, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -1079,7 +1079,7 @@ private fun BigOptionCard(o: BigOption, modifier: Modifier) {
         modifier.heightIn(min = if (sc.big) 230.dp else 200.dp).scale(pressScale(pressed))
             
             .clip(sh).background(if (o.selected) Color(0xFFBFE0DA) else p.card)
-            .border(if (o.selected) 3.dp else 1.5.dp, if (o.selected) p.brand else p.outline, sh)
+            .border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.outline, sh)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick),
         contentAlignment = Alignment.Center,          // the picture and words sit in the middle of the card
     ) {
@@ -1108,7 +1108,7 @@ fun ChoiceGrid(items: List<String>, isOn: (String) -> Boolean, onToggle: (String
                     val sh = RoundedCornerShape(18.dp)
                     Box(
                         Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(sh)
-                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.5.dp, if (on) p.brand else p.outline, sh)
+                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.outline, sh)
                             .steady(item + if (on) ", chosen" else ", not chosen") { onToggle(item) }.padding(horizontal = 16.dp, vertical = 12.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) { Text(item, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink) }
@@ -1166,7 +1166,7 @@ private fun BigOptionRow(o: BigOption) {
     var pressed by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().heightIn(min = if (sc.big) 132.dp else 116.dp).scale(pressScale(pressed)).clip(sh)
-            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.5.dp, if (o.selected) p.brand else p.outline, sh)
+            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.outline, sh)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -149,7 +149,7 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
                 TileGrid((1..7).toList(), 2, aspect = 1.25f) { n, mod ->
                     val on = form == n
                     val sh = RoundedCornerShape(sc.radius)
-                    Column(mod.clip(sh).background(if (on) p.brandSoft else p.card).border(if (on) 3.dp else 1.5.dp, if (on) p.brand else p.outline, sh)
+                    Column(mod.clip(sh).background(if (on) p.brandSoft else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.outline, sh)
                         .steady("Type $n, ${Output.STOOL[n - 1]}" + if (on) ", chosen" else "") { form = n }.padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         StoolPicture(n, Modifier.fillMaxWidth().height(48.dp))
