@@ -727,8 +727,8 @@ private fun FieldSheet(title: String, label: String, start: String, number: Bool
 fun MedicinePicture(m: Medicine, size: Dp) {
     val p = LocalPalette.current
     Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)).background(p.fill), contentAlignment = Alignment.Center) {
-        if (m.form == "tablet" || m.form == "capsule") PillPicture(m.shape.ifBlank { if (m.form == "capsule") "capsule" else "round" }, m.color.ifBlank { "white" }, size * 0.62f)
-        else FormPicture(if (m.form == "feed") "syrup" else m.form, size * 0.75f)
+        if (m.form == "tablet" || m.form == "capsule") PillPicture(m.shape.ifBlank { if (m.form == "capsule") "capsule" else "round" }, m.color.ifBlank { "white" }, size * 0.78f)
+        else FormPicture(if (m.form == "feed") "syrup" else m.form, size * 0.88f)
     }
 }
 

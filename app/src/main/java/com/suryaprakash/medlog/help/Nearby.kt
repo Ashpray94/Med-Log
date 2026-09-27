@@ -253,7 +253,7 @@ object Nearby {
     fun reply(ctx: Context, r: String, re: String = lastMid, pairId: String? = null) {
         val msg = JSONObject().put("reply", r).put("re", re).put("at", System.currentTimeMillis())
         // remembered, so the helper's page can say what was answered ("Can't come now"), not just that it was
-        if (r != "got") ctx.medlog.settings.putString("my_last_reply", "$r|${System.currentTimeMillis()}")
+        ctx.medlog.settings.putString("my_last_reply", "$r|${System.currentTimeMillis()}")
         replyTo?.let { (id, key) -> runCatching { client(ctx).sendPayload(id, Payload.fromBytes(Keys.seal(key, msg.toString().toByteArray()))) } }
         val p = person(ctx, pairId) ?: return
         ctx.medlog.scope.launch { Relay.post(ctx, p.keyBytes, Relay.UP, msg) }

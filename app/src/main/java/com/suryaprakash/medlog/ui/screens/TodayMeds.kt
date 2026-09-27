@@ -121,7 +121,7 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
                         onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
                         onNotGiven = if (m.form == "feed") { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given") } } else null,
                         onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } }, who = who,
-                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead") }; nav.go(Route.FoodPick()) })
+                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, com.suryaprakash.medlog.data.FOOD_INSTEAD) }; nav.go(Route.FoodPick()) })
                 }
             }
             item(key = "add") {

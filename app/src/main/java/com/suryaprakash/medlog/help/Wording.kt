@@ -24,8 +24,9 @@ object Wording {
     fun seeDoctorToday(name: String, problem: String) =
         "MedLog: ${n(name)} noted \"$problem\". MedLog suggested calling their doctor today. You may want to check in with them."
 
-    fun missedDose(name: String, time: String, medicine: String) =
-        "MedLog: ${n(name)} hasn't marked the $time medicine ($medicine) as taken yet. A quick call may help."
+    fun missedDose(name: String, time: String, medicine: String, feed: Boolean = false) =
+        if (feed) "MedLog: The $time feed ($medicine) for ${n(name)} hasn't been marked as given yet. A quick call may help."
+        else "MedLog: ${n(name)} hasn't marked the $time medicine ($medicine) as taken yet. A quick call may help."
 
     fun takenTwice(name: String, medicine: String) =
         "MedLog: ${n(name)} marked $medicine as taken twice today. You may want to check with them."

@@ -68,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Dose
+import com.suryaprakash.medlog.data.outcome
 import com.suryaprakash.medlog.data.Medicine
 import com.suryaprakash.medlog.data.Repo
 import com.suryaprakash.medlog.medlog
@@ -333,13 +334,13 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
     val p = LocalPalette.current
     val sc = LocalScale.current
     val now = System.currentTimeMillis()
-    val S = com.suryaprakash.medlog.data.DoseStatus
-    fun taken(d: Dose) = d.status == S.TAKEN
-    fun missed(d: Dose) = d.status == S.MISSED || d.status == S.SKIPPED
-    fun due(d: Dose) = !taken(d) && !missed(d) && d.scheduledAt <= now + 10 * 60_000
+    // one meaning for every dose (data/DoseOutcome.kt): food in place of a feed is done, never missed
+    fun taken(d: Dose) = d.outcome(now).covered
+    fun missed(d: Dose) = d.outcome(now) == com.suryaprakash.medlog.data.Outcome.MISSED
+    fun due(d: Dose) = d.outcome(now) == com.suryaprakash.medlog.data.Outcome.DUE
     val sorted = doses.sortedBy { it.scheduledAt }
     // the dose that needs an answer on the card: one due now, else the latest missed one (to note it late)
-    val next = sorted.firstOrNull(::due) ?: sorted.lastOrNull { it.status == S.MISSED }
+    val next = sorted.firstOrNull(::due) ?: sorted.lastOrNull(::missed)
     val feed = m.form == "feed"
     var sheet by remember { mutableStateOf(false) }
     // a dose whose time has passed: ask when it was taken (on time, just now, another time, or food instead of a feed)
@@ -357,15 +358,16 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 // the picture sits level with the first line of the name, however many lines the name takes
                 Row(Modifier.fillMaxWidth().heightIn(min = headMin), verticalAlignment = Alignment.Top) {
-                    MedicinePicture(m, 48.dp)
+                    MedicinePicture(m, 60.dp)
                     Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(name, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.cardTitle * 1.2f)
                         Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.takeIf { !feed }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
                             fontSize = sc.small, color = p.inkSoft)
                         // when: under the name, so the eye reads name, dose, time in one column
-                        Text((if (sorted.size > 1) "${sorted.size} times a day · " else "Once a day · ") + sorted.joinToString(", ") { chipTime(it.scheduledAt) },
-                            fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        // one line only: the first three times, then how many more (Details has them all)
+                        Text((if (sorted.size > 1) "${sorted.size} times a day · " else "Once a day · ") + sorted.take(3).joinToString(", ") { chipTime(it.scheduledAt) } +
+                            (if (sorted.size > 3) " +${sorted.size - 3}" else ""), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1)
                     }
                 }
                 // Details always on the left; the answer, when one is needed, on the right
@@ -399,20 +401,27 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
 private fun StatusBanner(sorted: List<Dose>, feed: Boolean, taken: (Dose) -> Boolean, due: (Dose) -> Boolean) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val S = com.suryaprakash.medlog.data.DoseStatus
-    val missed = sorted.filter { it.status == S.MISSED }
-    val skipped = sorted.count { it.status == S.SKIPPED }
-    val done = sorted.count(taken)
-    val nowDue = sorted.firstOrNull(due)
-    val upcoming = sorted.firstOrNull { !taken(it) && it.status != S.MISSED && it.status != S.SKIPPED && !due(it) }
+    val out = sorted.map { it to it.outcome() }
+    val missed = out.filter { it.second == com.suryaprakash.medlog.data.Outcome.MISSED }.map { it.first }
+    val food = out.count { it.second == com.suryaprakash.medlog.data.Outcome.FOOD_INSTEAD }
+    val notGiven = out.count { it.second == com.suryaprakash.medlog.data.Outcome.NOT_GIVEN }
+    val done = out.count { it.second.covered }
+    val nowDue = out.firstOrNull { it.second == com.suryaprakash.medlog.data.Outcome.DUE }?.first
+    val upcoming = out.firstOrNull { it.second == com.suryaprakash.medlog.data.Outcome.LATER }?.first
     val gave = if (feed) "given" else "taken"
+    @Suppress("UNUSED_VARIABLE") val unusedArgs = taken to due
     data class B(val icon: androidx.compose.ui.graphics.vector.ImageVector, val words: String, val fg: Color, val bg: Color)
     val b = when {
         missed.isNotEmpty() -> B(Icons.Rounded.Cancel, "Missed · " + chipTime(missed.last().scheduledAt) + if (missed.size > 1) " and ${missed.size - 1} more" else "", p.red, p.redSoft)
         nowDue != null -> B(Icons.Rounded.Schedule, "Due now · ${chipTime(nowDue.scheduledAt)}", p.amber, p.amberSoft)
-        done == sorted.size -> B(Icons.Rounded.CheckCircle, if (sorted.size == 1) "${gave.replaceFirstChar(Char::uppercase)} at ${chipTime(sorted[0].actedAt ?: sorted[0].scheduledAt)}" else "All ${sorted.size} $gave", p.ok, p.okSoft)
+        done == sorted.size -> B(Icons.Rounded.CheckCircle, when {
+            food > 0 && food == sorted.size -> "Food instead, all ${sorted.size} times"
+            food > 0 -> "Done for today · $food with food instead"
+            sorted.size == 1 -> "${gave.replaceFirstChar(Char::uppercase)} at ${chipTime(sorted[0].actedAt ?: sorted[0].scheduledAt)}"
+            else -> "All ${sorted.size} $gave"
+        }, p.ok, p.okSoft)
         upcoming != null -> B(Icons.Rounded.Schedule, "Next · ${chipTime(upcoming.scheduledAt)}", p.inkSoft, p.fill)
-        else -> B(Icons.Rounded.RemoveCircleOutline, "$done $gave · $skipped ${if (feed) "not given" else "skipped"}", p.inkSoft, p.fill)
+        else -> B(Icons.Rounded.RemoveCircleOutline, "$done $gave · $notGiven ${if (feed) "not given" else "skipped"}", p.inkSoft, p.fill)
     }
     Row(Modifier.fillMaxWidth().background(b.bg).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(b.icon, null, tint = b.fg, modifier = Modifier.size(18.dp))
@@ -443,7 +452,7 @@ fun TakenWhenSheet(d: Dose, feed: Boolean, who: String? = null, onPick: (Long?) 
             if (onDay == java.time.LocalDate.now()) BigButton("Just now", tone = Tone.TINT, onClick = { onPick(null) })
             BigButton("Another time", tone = Tone.SECONDARY, onClick = { other = true })
             // a feed can be replaced by ordinary food: note that instead, then what was eaten
-            if (feed && onAteInstead != null) BigButton("Ate food instead", tone = Tone.SECONDARY, icon = Icons.Rounded.Restaurant, onClick = onAteInstead)
+            if (feed && onAteInstead != null) BigButton(com.suryaprakash.medlog.data.FOOD_INSTEAD, tone = Tone.SECONDARY, icon = Icons.Rounded.Restaurant, onClick = onAteInstead)
             if (feed && onNotGiven != null) BigButton("Not given", tone = Tone.SECONDARY, onClick = onNotGiven)
         }
     }
@@ -496,17 +505,24 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
                     val part = com.suryaprakash.medlog.ui.dayPart(java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).hour)
                     val t = DoseActivity.time(d.scheduledAt)
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (taken(d)) Icons.Rounded.CheckCircle else part.icon, null, tint = if (taken(d)) p.ok else part.tint, modifier = Modifier.size(26.dp))
+                        val oi = d.outcome()
+                        Icon(when (oi) { com.suryaprakash.medlog.data.Outcome.GIVEN -> Icons.Rounded.CheckCircle; com.suryaprakash.medlog.data.Outcome.FOOD_INSTEAD -> Icons.Rounded.Restaurant
+                            com.suryaprakash.medlog.data.Outcome.MISSED -> Icons.Rounded.Cancel; else -> part.icon }, null,
+                            tint = when (oi) { com.suryaprakash.medlog.data.Outcome.GIVEN -> p.ok; com.suryaprakash.medlog.data.Outcome.MISSED -> p.red; com.suryaprakash.medlog.data.Outcome.FOOD_INSTEAD -> p.inkSoft; else -> part.tint },
+                            modifier = Modifier.size(26.dp))
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(t, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
-                            Text(when {
-                                taken(d) -> "${if (feed) "Given" else "Taken"} at ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}"
-                                d.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED -> if (feed) "Not given" else "Skipped"
-                                missed(d) -> "Missed"
-                                due(d) -> "Due now"
-                                else -> part.name
-                            }, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when { taken(d) -> p.ok; missed(d) -> p.red; due(d) -> p.amber; else -> p.inkSoft })
+                            val o = d.outcome()
+                            Text(when (o) {
+                                com.suryaprakash.medlog.data.Outcome.GIVEN -> "${if (feed) "Given" else "Taken"} at ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}"
+                                com.suryaprakash.medlog.data.Outcome.FOOD_INSTEAD -> "Food instead"
+                                com.suryaprakash.medlog.data.Outcome.NOT_GIVEN -> if (feed) "Not given" else "Skipped"
+                                com.suryaprakash.medlog.data.Outcome.MISSED -> "Missed"
+                                com.suryaprakash.medlog.data.Outcome.DUE -> "Due now"
+                                com.suryaprakash.medlog.data.Outcome.LATER -> part.name
+                            }, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when (o) {
+                                com.suryaprakash.medlog.data.Outcome.GIVEN -> p.ok; com.suryaprakash.medlog.data.Outcome.MISSED -> p.red; com.suryaprakash.medlog.data.Outcome.DUE -> p.amber; else -> p.inkSoft })
                             // the time it was taken can be put right
                             if (taken(d) && onChangeTime != null) Text("Change the time", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand,
                                 modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp)).steady("Change the time it was taken") { changing = d }.padding(vertical = 8.dp))

@@ -80,9 +80,10 @@ object Updater {
         }
     }
 
-    /** At most once a day, when MedLog opens. */
+    /** Each time the app comes to the front (at most every 30 minutes); a new version then shows on Home. */
     suspend fun dailyCheck(ctx: Context) {
-        if (System.currentTimeMillis() - ctx.medlog.settings.getLong("update_checked") > 20 * 3600_000L) check(ctx, quiet = true)
+        val busy = state.value is State.Downloading || state.value is State.Installing
+        if (!busy && System.currentTimeMillis() - ctx.medlog.settings.getLong("update_checked") > 30 * 60_000L) check(ctx, quiet = true)
     }
 
     fun canInstall(ctx: Context) = Build.VERSION.SDK_INT < 26 || ctx.packageManager.canRequestPackageInstalls()

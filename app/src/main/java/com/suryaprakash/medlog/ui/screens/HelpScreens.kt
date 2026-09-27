@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Bluetooth
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.DirectionsWalk
 import androidx.compose.material.icons.rounded.LocalDrink
 import androidx.compose.material.icons.rounded.Wc
@@ -495,6 +496,9 @@ fun HelperHomeScreen(nav: Nav) {
         side = { PersonaSwitch(nav) }) {
         // ── the latest from them, before anything else: the one thing a helper must see ──
         if (paired) LatestMessage(fromPerson.firstOrNull(), who, person, scope)
+        // a new version, found when the app came to the front
+        val update by com.suryaprakash.medlog.Updater.state.collectAsState()
+        if (update is com.suryaprakash.medlog.Updater.State.Available || update is com.suryaprakash.medlog.Updater.State.Downloading || update is com.suryaprakash.medlog.Updater.State.Installing) UpdateCard()
         PermissionListCompact()
         if (!paired) {
             com.suryaprakash.medlog.ui.Question("Connect to their phone", "Hold both phones close. It takes a minute, once.")
@@ -527,7 +531,7 @@ fun HelperHomeScreen(nav: Nav) {
                         onNotGiven = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given"); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },
                         onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },
                         who = pp.name.substringBefore(' ').ifBlank { "They" }, modifier = mod,
-                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead"); view(Route.FoodPick()) } })
+                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, com.suryaprakash.medlog.data.FOOD_INSTEAD); view(Route.FoodPick()) } })
                 }
             }
             com.suryaprakash.medlog.ui.SectionHeader("Their records", "See and add, the same as on their phone", null)
@@ -587,65 +591,92 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
     val open = !latest.acked
     val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
     fun reply(r: String) { com.suryaprakash.medlog.help.Loud.done(ctx, com.suryaprakash.medlog.help.Loud.alertId(latest.id)); scope.launch { app.db.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
-    // one white card, before and after answering: a round icon with who and when, the message in large words,
-    // then (open) the answers, or (answered) a thin line and what was said
+    // put away without telling anyone
+    fun dismiss() {
+        com.suryaprakash.medlog.help.Loud.done(ctx, com.suryaprakash.medlog.help.Loud.alertId(latest.id))
+        app.settings.putString("my_last_reply", "dismiss|${System.currentTimeMillis()}")
+        scope.launch { app.db.inbox().ack(latest.id) }
+    }
+    // a person's own words need a person; the app's own notices (a missed dose, no check-in) need a look
+    val personal = latest.kind in setOf("MESSAGE", "SOS", "DANGER", "FALL")
+    val title = when (latest.kind) {
+        "SOS" -> "SOS from $who"
+        "DANGER" -> "$who may need urgent help"
+        "FALL" -> "$who may have fallen"
+        "AMBER" -> "$who noted something to watch"
+        "MISSED_DOSE" -> if ("feed" in latest.text) "A feed isn't marked as given" else "A medicine isn't marked as taken"
+        "CHECKIN" -> "No answer to the check-in"
+        "LOW_BATTERY" -> "$who's phone battery is low"
+        "REFILL" -> "A medicine is running low"
+        else -> "Message from $who"
+    }
+    var more by remember { mutableStateOf(false) }
+    // one white card: a round icon with a real title and when; the message; the answers, or what was answered
     Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)) {
         androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalOnCard provides true) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (urgent) p.redSoft else p.brandSoft), contentAlignment = Alignment.Center) {
-                        Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = if (urgent) p.red else p.brand, modifier = Modifier.size(22.dp))
+                    Box(Modifier.size(48.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (urgent) p.redSoft else p.brandSoft), contentAlignment = Alignment.Center) {
+                        Icon(when { urgent -> Icons.Rounded.Sos; latest.kind == "MISSED_DOSE" || latest.kind == "REFILL" -> Icons.Rounded.Medication; else -> Icons.Rounded.ChatBubble },
+                            null, tint = if (urgent) p.red else p.brand, modifier = Modifier.size(24.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(if (open) "$who needs you" else who, fontSize = sc.body, fontWeight = FontWeight.Bold, color = if (open && urgent) p.red else p.ink)
+                        Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = if (open && urgent) p.red else p.ink, lineHeight = sc.headline * 1.2f)
                         Text("${dayLabel(latest.at)} ${timeLabel(latest.at)}".trim(), fontSize = sc.small, color = p.inkSoft)
                     }
                 }
-                Text(shown(latest.text), fontSize = sc.headline * (if (open) 1.15f else 1f), fontWeight = if (open) FontWeight.Bold else FontWeight.SemiBold,
-                    color = p.ink, lineHeight = sc.headline * (if (open) 1.15f else 1f) * 1.25f)
+                // a person's message is the point, so it's large; a notice from the app is read as a sentence
+                Text(shown(latest.text), fontSize = if (latest.kind == "MESSAGE") sc.headline else sc.body, fontWeight = if (latest.kind == "MESSAGE") FontWeight.SemiBold else FontWeight.Normal,
+                    color = p.ink, lineHeight = (if (latest.kind == "MESSAGE") sc.headline else sc.body) * 1.35f)
                 if (open) {
-                    BigButton("I'm coming", tone = if (urgent) Tone.DANGER else Tone.PRIMARY, icon = Icons.Rounded.DirectionsWalk, onClick = { reply("coming") })
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        BigButton("In 5 min", Modifier.weight(1f), Tone.SECONDARY, onClick = { reply("5min") })
-                        BigButton("I'll call", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { reply("call") })
-                    }
-                    // someone else is nearer: pass it on
-                    val others = remember(person?.pairId) {
-                        runCatching { org.json.JSONArray(app.settings.getString("helpers_of_${person?.pairId}") ?: "[]") }.getOrDefault(org.json.JSONArray()).let { arr ->
-                            (0 until arr.length()).map { arr.getJSONObject(it) }.filter { it.optString("pairId").isNotBlank() && it.optString("name") != app.settings.getString("my_name") }
-                                .map { it.optString("name") to it.optString("pairId") }
+                    if (personal) {
+                        BigButton("I'm coming", tone = if (urgent) Tone.DANGER else Tone.PRIMARY, icon = Icons.Rounded.DirectionsWalk, onClick = { reply("coming") })
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            BigButton("I'll call", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { reply("call") })
+                            BigButton("More", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.MoreHoriz, onClick = { more = true })
                         }
-                    }
-                    var passing by remember { mutableStateOf(false) }
-                    if (others.isNotEmpty()) Text("Ask someone else to go", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.brand, textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Ask someone else to go") { passing = true }.padding(vertical = 12.dp))
-                    if (passing) androidx.compose.ui.window.Dialog(onDismissRequest = { passing = false }) {
-                        com.suryaprakash.medlog.ui.Card(color = p.paper) {
-                            com.suryaprakash.medlog.ui.Title("Who should go?")
-                            others.forEach { (n, pid) ->
-                                BigButton("Ask $n", tone = Tone.TINT, onClick = {
-                                    passing = false
-                                    person?.let { Nearby.askOther(ctx, it.pairId, pid, latest.text) }
-                                    reply("call")
-                                })
-                            }
-                            BigButton("Cancel", tone = Tone.SECONDARY, onClick = { passing = false })
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            BigButton("I'll call", Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Call, onClick = { reply("call") })
+                            BigButton("Already handled", Modifier.weight(1f), Tone.SECONDARY, onClick = { reply("got") })
                         }
+                        Text("Dismiss", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Dismiss") { dismiss() }.padding(vertical = 12.dp))
                     }
                 }
             }
         }
         if (!open) {
-            // what was answered, in the words sent; green only for "I'm coming"
+            // what was answered, in plain words; green only for "I'm coming"
             val said = app.settings.getString("my_last_reply")?.split("|")?.takeIf { it.size == 2 && (it[1].toLongOrNull() ?: 0) >= latest.at }?.get(0)
             val coming = said == "coming"
             Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(p.line))
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(if (coming) Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.Reply, null, tint = if (coming) p.ok else p.inkSoft, modifier = Modifier.size(18.dp))
+                Icon(if (coming || said == "got") Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.Reply, null, tint = if (coming) p.ok else p.inkSoft, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (said != null) "You answered: ${Nearby.replyWords(said)}" else "You answered", fontSize = sc.small, fontWeight = FontWeight.Bold,
-                    color = if (coming) p.ok else p.ink)
+                Text(when (said) { null -> "Answered"; "got" -> "Marked as handled"; "dismiss" -> "Dismissed"; else -> "You answered: ${Nearby.replyWords(said)}" },
+                    fontSize = sc.small, fontWeight = FontWeight.Bold, color = if (coming) p.ok else p.ink)
+            }
+        }
+    }
+    // the rarer answers, in a sheet
+    if (more) {
+        val others = remember(person?.pairId) {
+            runCatching { org.json.JSONArray(app.settings.getString("helpers_of_${person?.pairId}") ?: "[]") }.getOrDefault(org.json.JSONArray()).let { arr ->
+                (0 until arr.length()).map { arr.getJSONObject(it) }.filter { it.optString("pairId").isNotBlank() && it.optString("name") != app.settings.getString("my_name") }
+                    .map { it.optString("name") to it.optString("pairId") }
+            }
+        }
+        com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = { more = false }) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                com.suryaprakash.medlog.ui.SectionHeader("Other answers", shown(latest.text).take(60), null)
+                BigButton("In 5 minutes", tone = Tone.SECONDARY, onClick = { more = false; reply("5min") })
+                others.forEach { (n, pid) ->
+                    BigButton("Ask $n to go", tone = Tone.SECONDARY, onClick = { more = false; person?.let { Nearby.askOther(ctx, it.pairId, pid, latest.text) }; reply("call") })
+                }
+                BigButton("Already handled", tone = Tone.SECONDARY, onClick = { more = false; reply("got") })
+                BigButton("Dismiss", tone = Tone.SECONDARY, onClick = { more = false; dismiss() })
             }
         }
     }

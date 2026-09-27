@@ -55,6 +55,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // back in front: look for a new version (at most every 30 minutes)
+    override fun onResume() {
+        super.onResume()
+        medlog.scope.launch { runCatching { com.suryaprakash.medlog.Updater.dailyCheck(this@MainActivity) } }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)

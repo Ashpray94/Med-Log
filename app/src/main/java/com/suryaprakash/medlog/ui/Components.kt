@@ -1478,8 +1478,8 @@ private fun horizonSun(up: Boolean): ImageVector {
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun AppSheet(onDismissRequest: () -> Unit, containerColor: Color = LocalPalette.current.paper, scroll: Boolean = true,
-             sheetState: androidx.compose.material3.SheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
              content: @Composable ColumnScope.() -> Unit) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val density = androidx.compose.ui.platform.LocalDensity.current
     val screen = with(density) { androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp.toPx() }
     var limit by remember { androidx.compose.runtime.mutableFloatStateOf(screen * 0.75f) }

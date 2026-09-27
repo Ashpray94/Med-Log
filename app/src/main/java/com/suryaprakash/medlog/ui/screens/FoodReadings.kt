@@ -187,7 +187,7 @@ fun FoodScreen(nav: Nav) {
                         onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
                         onNotGiven = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given") } },
                         onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } },
-                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead") }; nav.go(Route.FoodPick()) })
+                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, com.suryaprakash.medlog.data.FOOD_INSTEAD) }; nav.go(Route.FoodPick()) })
                 }
                 // the days before today, right here: each day once, each feed's name once, its times under it
                 if (feeds.isNotEmpty()) FeedHistory(feeds)
@@ -682,7 +682,7 @@ private fun FeedHistory(feeds: List<com.suryaprakash.medlog.data.Medicine>) {
         com.suryaprakash.medlog.ui.Timeline(ds.sortedByDescending { it.scheduledAt }.map { d ->
             val (what, mark) = when {
                 d.status == S.TAKEN -> "Given" to p.ok
-                d.status == S.SKIPPED && d.reason == "Ate food instead" -> "Food instead" to p.inkSoft
+                d.status == S.SKIPPED && d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD -> "Food instead" to p.inkSoft
                 d.status == S.SKIPPED -> "Not given" to p.inkSoft
                 else -> "Missed" to p.red
             }

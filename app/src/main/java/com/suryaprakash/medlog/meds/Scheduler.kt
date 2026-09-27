@@ -136,7 +136,7 @@ object Scheduler {
                 dose = dose.copy(helperAlerted = true)
                 val name = app.repo.profile().name.ifBlank { "Your family member" }
                 val t = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
-                Alerts.send(ctx, Alerts.Type.MISSED_DOSE, com.suryaprakash.medlog.help.Wording.missedDose(name, t, m.name))
+                Alerts.send(ctx, Alerts.Type.MISSED_DOSE, com.suryaprakash.medlog.help.Wording.missedDose(name, t, m.name, feed = m.form == "feed"))
             }
             // first reminder (or after snooze), then repeats
             val base = d.snoozeUntil ?: d.scheduledAt

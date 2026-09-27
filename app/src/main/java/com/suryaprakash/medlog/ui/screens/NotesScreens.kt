@@ -318,7 +318,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
             val status = when (d.status) {
                 DoseStatus.TAKEN -> "Taken" + (d.actedAt?.let { " at ${timeLabel(it)}" } ?: "")
                 DoseStatus.MISSED -> "Missed"
-                DoseStatus.SKIPPED -> "Skipped"
+                DoseStatus.SKIPPED -> if (d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) "Food instead" else "Skipped"
                 else -> if (d.scheduledAt > System.currentTimeMillis()) "Later today" else "Not taken yet"
             }
             com.suryaprakash.medlog.ui.TimelineRow(com.suryaprakash.medlog.ui.TimelineItem(timeLabel(d.scheduledAt), name, status,
