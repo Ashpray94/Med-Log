@@ -3,6 +3,7 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.Wc
 
 import com.suryaprakash.medlog.ui.cardTitle
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -315,11 +316,11 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
 }
 
 /**
- * One medicine (or feed) for the whole day, however many times it's due: its picture and name, then a chip for
- * each time that shows where that dose stands (✓ taken, due now, missed, later), then one button for the next dose.
- * Tap a taken time to undo it. Keeps the list short however many doses there are.
+ * One medicine (or feed) for the whole day, however many times it's due, at the same height every time:
+ * its picture and name, one strip of times (the first two, then "+2 more", never wrapping onto a second line),
+ * then one button for the next dose. Tapping the card or "+ more" opens a sheet with every time today, each with
+ * its own answer, so a medicine taken four times a day never makes the list longer.
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)? = null) {
     val p = LocalPalette.current
@@ -333,51 +334,156 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
     val next = sorted.firstOrNull { !taken(it) && !missed(it) } ?: sorted.lastOrNull { missed(it) && it.status == S.MISSED }
     val feed = m.form == "feed"
     val border = when { sorted.any(::due) -> p.amber; sorted.any { it.status == S.MISSED } -> p.red; sorted.all(::taken) -> p.ok; else -> p.line }
+    var sheet by remember { mutableStateOf(false) }
     val sh = RoundedCornerShape(sc.radius)
+    val name = listOf(m.name, m.strength.takeIf { !feed }.orEmpty()).filter { it.isNotBlank() }.joinToString(" ")
+    val taken = sorted.count(::taken)
     Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (border == p.line) 1.dp else 2.dp, border, sh)
+        .steady("$name. $taken of ${sorted.size} ${if (feed) "given" else "taken"} today. Tap to see each time.") { sheet = true }
         .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(Modifier.fillMaxWidth().steady(m.name, onClick = onOpen), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             MedicinePicture(m, 52.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.cardTitle * 1.2f)
                 Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.takeIf { !feed }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
-                    fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    fontSize = sc.small, color = p.inkSoft)
             }
         }
-        // one chip per time today
-        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            sorted.forEach { d ->
-                val part = com.suryaprakash.medlog.ui.dayPart(java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).hour)
-                val (bg, fg) = when {
-                    taken(d) -> p.ok to Color.White
-                    missed(d) -> p.red.copy(alpha = 0.1f) to p.red
-                    due(d) -> p.amber.copy(alpha = 0.14f) to p.amber
-                    else -> p.fill to p.inkSoft
-                }
-                val csh = RoundedCornerShape(12.dp)
-                Row(Modifier.heightIn(min = 48.dp).clip(csh).background(bg)
-                    .then(if (taken(d)) Modifier.steady("Undo ${DoseActivity.time(d.scheduledAt)}") { onUndo(d) } else Modifier)
-                    .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(if (taken(d)) Icons.Rounded.CheckCircle else part.icon, null, tint = if (taken(d)) Color.White else part.tint, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(DoseActivity.time(d.scheduledAt), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1)
-                }
-            }
-        }
+        TimeStrip(sorted, ::taken, ::missed, ::due) { sheet = true }
         // the next dose to answer
-        next?.let { d ->
-            val t = DoseActivity.time(d.scheduledAt)
-            if (feed && onNotGiven != null) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BigButton("Given $t", Modifier.weight(1f), if (due(d)) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
-                BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { onNotGiven(d) })
-            } else BigButton(when { missed(d) -> "Took $t late"; due(d) -> if (feed) "Given $t" else "I took $t"; else -> if (feed) "Given $t" else "Log $t taken" },
-                tone = if (due(d)) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
-        } ?: Row(verticalAlignment = Alignment.CenterVertically) {
+        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), onTaken, onNotGiven) } ?: Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(8.dp))
             Text(if (feed) "All given today" else "All taken today", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ok)
+        }
+    }
+    if (sheet) DaySheet(m, name, sorted, ::taken, ::missed, ::due, onOpen = { sheet = false; onOpen() }, onTaken = onTaken, onUndo = onUndo, onNotGiven = onNotGiven, onDismiss = { sheet = false })
+}
+
+@Composable
+private fun NextDoseButton(d: Dose, feed: Boolean, due: Boolean, missed: Boolean, onTaken: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?) {
+    val t = chipTime(d.scheduledAt)
+    if (feed && onNotGiven != null && !missed) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        BigButton("Given · $t", Modifier.weight(1f), if (due) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
+        BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { onNotGiven(d) })
+    } else BigButton(when {
+            missed -> if (feed) "I gave the $t feed late" else "I took the $t dose late"
+            else -> if (feed) "I gave the $t feed" else "I took the $t dose"
+        },
+        tone = if (due) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
+}
+
+/** One time as a chip: a tick when done, the part of the day otherwise; red when missed, amber when due. */
+@Composable
+private fun TimeChip(d: Dose, taken: Boolean, missed: Boolean, due: Boolean, modifier: Modifier = Modifier) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val part = com.suryaprakash.medlog.ui.dayPart(java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).hour)
+    val (bg, fg) = when {
+        taken -> p.ok to Color.White
+        missed -> p.redSoft to p.red
+        due -> p.amber.copy(alpha = 0.14f) to p.amber
+        else -> p.fill to p.ink
+    }
+    Row(modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).background(bg).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+        Icon(if (taken) Icons.Rounded.CheckCircle else part.icon, null, tint = if (taken) Color.White else part.tint, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(chipTime(d.scheduledAt), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1, softWrap = false)
+    }
+}
+
+/** "8 AM" for whole hours, "8:30 AM" otherwise: short enough for two chips side by side, and easy to read. */
+fun chipTime(at: Long): String {
+    val t = java.time.Instant.ofEpochMilli(at).atZone(java.time.ZoneId.systemDefault())
+    return SimpleDateFormat(if (t.minute == 0) "h a" else "h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(Date(at))
+}
+
+/**
+ * The times on one line: as many as fit (at most two), then "+N more". The chips are measured for the widest
+ * time in this text size, so large text shows fewer chips instead of wrapping or cutting a time off.
+ */
+@Composable
+private fun TimeStrip(sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dose) -> Boolean, due: (Dose) -> Boolean, onMore: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val style = androidx.compose.ui.text.TextStyle(fontSize = sc.small, fontWeight = FontWeight.SemiBold)
+    fun textW(t: String) = with(density) { measurer.measure(t, style).size.width.toDp() }
+    val chrome = 18.dp + 5.dp + 16.dp + 2.dp
+    val moreW = remember(sc.small, sorted.size) { textW("+${sorted.size} more") + 22.dp }
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val gap = 8.dp
+        // start from the first time not yet answered, so what's coming is what shows
+        val first = sorted.indexOfFirst { !taken(it) && !missed(it) }.let { if (it < 0) 0 else it }
+        val widths = sorted.map { textW(chipTime(it.scheduledAt)) + chrome }
+        val allW = widths.fold(0.dp) { a, w -> a + w } + gap * (sorted.size - 1)
+        var shown = 0; var used = 0.dp
+        if (allW <= maxWidth && sorted.size <= 3) shown = sorted.size
+        else for (k in 0 until minOf(2, sorted.size)) {
+            val w = widths[(first + k).coerceAtMost(sorted.size - 1)]
+            if (used + w + gap + moreW <= maxWidth || k == 0) { used += w + gap; shown++ } else break
+        }
+        val start = first.coerceAtMost((sorted.size - shown).coerceAtLeast(0))
+        Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.CenterVertically) {
+            sorted.subList(start, start + shown).forEach { d -> TimeChip(d, taken(d), missed(d), due(d)) }
+            val rest = sorted.size - shown
+            if (rest > 0) Text("+$rest more", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand, maxLines = 1, softWrap = false,
+                modifier = Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.5.dp, p.brand.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                    .steady("$rest more times today. Tap to see them all.", onClick = onMore).padding(horizontal = 10.dp, vertical = 11.dp))
+        }
+    }
+}
+
+/** Every time today for one medicine, each on its own line with its own answer. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dose) -> Boolean, due: (Dose) -> Boolean,
+                     onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val feed = m.form == "feed"
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MedicinePicture(m, 52.dp)
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("${sorted.size} time${if (sorted.size == 1) "" else "s"} today · ${sorted.count(taken)} ${if (feed) "given" else "taken"}", fontSize = sc.small, color = p.inkSoft)
+                }
+            }
+            com.suryaprakash.medlog.ui.Group {
+                sorted.forEachIndexed { i, d ->
+                    if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
+                    val part = com.suryaprakash.medlog.ui.dayPart(java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).hour)
+                    val t = DoseActivity.time(d.scheduledAt)
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (taken(d)) Icons.Rounded.CheckCircle else part.icon, null, tint = if (taken(d)) p.ok else part.tint, modifier = Modifier.size(26.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(t, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
+                            Text(when {
+                                taken(d) -> "${if (feed) "Given" else "Taken"} at ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}"
+                                d.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED -> if (feed) "Not given" else "Skipped"
+                                missed(d) -> "Missed"
+                                due(d) -> "Due now"
+                                else -> part.name
+                            }, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when { taken(d) -> p.ok; missed(d) -> p.red; due(d) -> p.amber; else -> p.inkSoft })
+                        }
+                        when {
+                            taken(d) -> BigButton("Undo", Modifier.width(IntrinsicSize.Max), tone = Tone.SECONDARY, height = 48.dp, onClick = { onUndo(d) })
+                            d.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED -> BigButton(if (feed) "Given" else "Took it", Modifier.width(IntrinsicSize.Max), tone = Tone.TINT, height = 48.dp, onClick = { onTaken(d) })
+                            else -> BigButton(if (feed) "Given" else if (missed(d)) "Took it late" else "Took it", Modifier.width(IntrinsicSize.Max), tone = if (due(d)) Tone.OK else Tone.TINT, height = 48.dp, onClick = { onTaken(d) })
+                        }
+                    }
+                }
+            }
+            BigButton(if (feed) "See all feeds" else "See all medicines", tone = Tone.OUTLINE, height = 52.dp, onClick = onOpen)
         }
     }
 }

@@ -73,16 +73,31 @@ class Shots {
             rule.mainClock.advanceTimeBy(3000)
             rule.waitForIdle()
             full.split('@').drop(1).forEach { tap ->
-                runCatching { rule.onAllNodesWithText(tap, substring = true).onFirst().performScrollTo() }
-                runCatching { rule.onAllNodesWithText(tap, substring = true).onFirst().performClick() }
+                val exact = runCatching { rule.onAllNodesWithText(tap).onFirst().assertExists() }.isSuccess
+                runCatching { rule.onAllNodesWithText(tap, substring = !exact).onFirst().performScrollTo() }
+                runCatching { rule.onAllNodesWithText(tap, substring = !exact).onFirst().performClick() }
                 rule.mainClock.advanceTimeBy(1500); rule.waitForIdle()
             }
             // draw the window straight into a picture (the test library's capture waits for a real screen)
+            // every window, bottom to top, so sheets and dialogs show over the page
             val v = rule.activity.window.decorView
             val bmp = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888)
-            rule.runOnUiThread { v.draw(android.graphics.Canvas(bmp)) }
+            rule.runOnUiThread {
+                val c = android.graphics.Canvas(bmp)
+                windows().forEach { w ->
+                    val at = IntArray(2); w.getLocationOnScreen(at)
+                    c.save(); c.translate(at[0].toFloat(), at[1].toFloat()); w.draw(c); c.restore()
+                }
+            }
             File(out, full.replace('@', '_').replace(' ', '-') + "$suffix.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun windows(): List<android.view.View> {
+        val g = Class.forName("android.view.WindowManagerGlobal").getMethod("getInstance").invoke(null)
+        val f = g.javaClass.getDeclaredField("mViews").apply { isAccessible = true }
+        return (f.get(g) as List<android.view.View>).filter { it.isShown && it.width > 0 }
     }
 
     private fun seed(app: MedLogApp, role: String) = runBlocking {
@@ -92,6 +107,8 @@ class Shots {
         val h = 3600_000L
         val met = app.db.medicines().insert(Medicine(name = "Metformin", strength = "500 mg", times = "08:00,14:00,20:00", purpose = "Diabetes", food = "after", uid = "m1"))
         val aml = app.db.medicines().insert(Medicine(name = "Amlodipine", strength = "5 mg", times = "08:00", purpose = "Blood pressure", uid = "m2"))
+        val para = app.db.medicines().insert(Medicine(name = "Paracetamol", strength = "650 mg", times = "06:00,12:00,18:00,22:00", purpose = "Pain", uid = "m4"))
+        listOf(6, 12, 18, 22).forEach { hr -> app.db.doses().insert(Dose(medicineId = para, scheduledAt = today + hr * h, status = if (hr == 6) DoseStatus.TAKEN else DoseStatus.DUE, actedAt = if (hr == 6) today + 6 * h else null, uid = "p$hr")) }
         app.db.medicines().insert(Medicine(name = "Ensure", form = "feed", amount = "200 ml", times = "10:00,16:00,21:00", uid = "m3"))
         app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 8 * h, status = DoseStatus.TAKEN, actedAt = today + 8 * h + 300_000, uid = "d1"))
         app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 14 * h, uid = "d2"))
@@ -102,8 +119,8 @@ class Shots {
             note(Kind.SYMPTOM, "cough", today + 9 * h, "Cough, dry, for 3 days"),
             note(Kind.SYMPTOM, "vomiting", today + 11 * h, "Vomiting, 2 times"),
             note(Kind.SYMPTOM, "tiredness", today - 20 * h, "Tired"),
-            note(Kind.FOOD, null, today + 8 * h + 1_800_000, "Idli, 2 · Sambar"),
-            note(Kind.FOOD, null, today + 13 * h, "Rice · Dal · Curd"),
+            note(Kind.FOOD, null, today + 8 * h + 1_800_000, "Idli, 2 · Sambar").copy(details = """{"items":[{"name":"idli","amount":"2"},{"name":"sambar","amount":"1 katori"},{"name":"coconut chutney","amount":"2 tbsp"}],"kcal":310}"""),
+            note(Kind.FOOD, null, today + 13 * h, "Rice · Dal · Curd").copy(details = """{"items":[{"name":"rice","amount":"1 plate"},{"name":"dal","amount":"1 katori"},{"name":"curd","amount":"1 katori"}],"kcal":520}"""),
             note(Kind.WATER, null, today + 10 * h, "1 glass of water"),
             note(Kind.WATER, null, today + 12 * h, "1 glass of water"),
             note(Kind.OUTPUT, "urine", today + 7 * h, "Urine, normal"),

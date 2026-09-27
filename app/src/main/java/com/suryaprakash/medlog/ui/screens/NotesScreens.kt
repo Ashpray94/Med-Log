@@ -162,7 +162,14 @@ fun NotesScreen(nav: Nav) {
     val zone = ZoneId.systemDefault()
     val from = day.atStartOfDay(zone).toInstant().toEpochMilli()
     val notes by app.viewDb.notes().betweenFlow(from, from + DAY).collectAsState(emptyList())
-    val doses by app.viewDb.doses().betweenFlow(from, from + DAY).collectAsState(emptyList())
+    val allDoses by app.viewDb.doses().betweenFlow(from, from + DAY).collectAsState(emptyList())
+    val medForms by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
+    // feeds are food, not medicine: counted in their own group
+    val feedIds = medForms.filter { it.form == "feed" }.map { it.id }.toSet()
+    val doses = allDoses.filter { it.medicineId !in feedIds }
+    val feedDoses = allDoses.filter { it.medicineId in feedIds }
+    // "Watch" only for something overdue, never for doses still to come later today
+    fun late(list: List<com.suryaprakash.medlog.data.Dose>) = list.any { it.status == DoseStatus.MISSED || (it.status != DoseStatus.TAKEN && it.status != DoseStatus.SKIPPED && it.scheduledAt < System.currentTimeMillis() - 30 * 60_000) }
     val since = remember { System.currentTimeMillis() - 90 * DAY }
     val allSymptoms by app.viewDb.notes().symptomsSinceFlow(since).collectAsState(emptyList())
     // which days in the strip have something
@@ -181,7 +188,8 @@ fun NotesScreen(nav: Nav) {
         if (!byProblem) {
             DayNavigator(day, onPrev = { day = day.minusDays(1) }, onNext = { if (day.isBefore(LocalDate.now())) day = day.plusDays(1) })
             WeekStrip(day, daysWith) { day = it }
-            DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, onNote = { nav.go(Route.NoteDetail(it)) })
+            DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, feedDoses.count { it.status == DoseStatus.TAKEN }, feedDoses.size, onNote = { nav.go(Route.NoteDetail(it)) },
+                medsLate = late(doses), feedsLate = late(feedDoses), medDoses = doses.mapNotNull { d -> medForms.firstOrNull { it.id == d.medicineId }?.let { it.name to d } })
         } else {
             val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
             if (grouped.isEmpty()) Empty("Nothing noted in the last 3 months.")
@@ -249,7 +257,7 @@ private fun WeekStrip(day: LocalDate, daysWith: Set<LocalDate>, onPick: (LocalDa
 
 /** One day: what was felt, then a single line each for medicines, water and food. */
 @Composable
-private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, onNote: (Long) -> Unit) {
+private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, fed: Int, feeds: Int, onNote: (Long) -> Unit, medsLate: Boolean = false, feedsLate: Boolean = false, medDoses: List<Pair<String, com.suryaprakash.medlog.data.Dose>> = emptyList()) {
     val p = LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val symptoms = notes.filter { it.kind == Kind.SYMPTOM }.sortedBy { it.occurredAt }
@@ -258,7 +266,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     val readings = notes.filter { it.kind == Kind.READING }.sortedBy { it.occurredAt }
     val output = notes.filter { it.kind == Kind.OUTPUT }.sortedBy { it.occurredAt }
     val other = notes.filter { it.kind in setOf(Kind.SOS, Kind.VISIT, Kind.MED_TAKEN, Kind.QUESTION, Kind.IMPORTED) }
-    if (symptoms.isEmpty() && water.isEmpty() && food.isEmpty() && due == 0 && readings.isEmpty() && other.isEmpty() && output.isEmpty()) { Empty("Nothing noted on this day."); return }
+    if (symptoms.isEmpty() && water.isEmpty() && food.isEmpty() && due == 0 && feeds == 0 && readings.isEmpty() && other.isEmpty() && output.isEmpty()) { Empty("Nothing noted on this day."); return }
     // one group per kind of thing; open a group to see each entry
     var open by remember { mutableStateOf<String?>(null) }
     fun toggle(k: String) { open = if (open == k) null else k }
@@ -301,7 +309,25 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     }
 
     com.suryaprakash.medlog.ui.SectionHeader("Medicines, food and more", "Tap a group to see each one", null)
-    if (due > 0) HistoryGroup("Medicines", "$taken of $due taken", { IconTile(Icons.Rounded.Medication, p.tintOrange, 44.dp) }, if (taken < due) "AMBER" else "GREEN", false, {}, expandable = false) {}
+    if (feeds > 0) HistoryGroup("Feeds", "$fed of $feeds given", { IconTile(Icons.Rounded.LocalDrink, p.tintPurple, 44.dp) }, if (feedsLate) "AMBER" else "GREEN", false, {}, expandable = false) {}
+    if (due > 0) HistoryGroup("Medicines", "$taken of $due taken", { IconTile(Icons.Rounded.Medication, p.tintOrange, 44.dp) }, if (medsLate) "AMBER" else "GREEN", open == "m", { toggle("m") }) {
+        // one line per dose, in time order: when, which medicine, and what happened
+        medDoses.sortedBy { it.second.scheduledAt }.forEach { (name, d) ->
+            val status = when (d.status) {
+                DoseStatus.TAKEN -> "Taken" + (d.actedAt?.let { " at ${timeLabel(it)}" } ?: "")
+                DoseStatus.MISSED -> "Missed"
+                DoseStatus.SKIPPED -> "Skipped"
+                else -> if (d.scheduledAt > System.currentTimeMillis()) "Later today" else "Not taken yet"
+            }
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(vertical = 10.dp)) {
+                Text(timeLabel(d.scheduledAt), style = timeStyle, color = p.inkSoft, softWrap = false, modifier = Modifier.width(timeWidth).alignByBaseline())
+                Column(Modifier.weight(1f).alignByBaseline()) {
+                    Text(name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                    Text(status, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when (d.status) { DoseStatus.TAKEN -> p.ok; DoseStatus.MISSED -> p.red; else -> p.inkSoft })
+                }
+            }
+        }
+    }
     if (water.isNotEmpty()) {
         val glasses = water.sumOf { it.count ?: 1 }
         HistoryGroup("Water", "$glasses glass${if (glasses == 1) "" else "es"} · ${times(water)}", { IconTile(Icons.Rounded.LocalDrink, p.tintBlue, 44.dp) }, "GREEN", open == "w", { toggle("w") }) {
