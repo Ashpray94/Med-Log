@@ -1,6 +1,7 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
+- **Updates are found straight away.** Opening Settings → Updates always checks again, and "Check again" is there too.
 - **"Medicines taken" is right.** Feeds no longer count as medicines, on My health and the doctor page.
 - **Sheets never cover the top of the screen.** They open at most three quarters high and grow as you scroll.
 - **Feed history** includes today.

@@ -427,7 +427,10 @@ fun UpdateCard(auto: Boolean = false) {
     val st by com.suryaprakash.medlog.Updater.state.collectAsState()
     var canInstall by remember { mutableStateOf(com.suryaprakash.medlog.Updater.canInstall(ctx)) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { canInstall = com.suryaprakash.medlog.Updater.canInstall(ctx); onPauseOrDispose {} }
-    androidx.compose.runtime.LaunchedEffect(Unit) { if (auto && st is com.suryaprakash.medlog.Updater.State.Idle) com.suryaprakash.medlog.Updater.check(ctx) }
+    // opening Updates always asks again (an earlier "up to date" may be old), unless a download is under way
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (auto && st !is com.suryaprakash.medlog.Updater.State.Downloading && st !is com.suryaprakash.medlog.Updater.State.Installing) com.suryaprakash.medlog.Updater.check(ctx)
+    }
     when (val s = st) {
         is com.suryaprakash.medlog.Updater.State.Available -> Card(border = p.ok) {
             Body("A new version is ready: ${s.release.name}", bold = true)
@@ -441,7 +444,10 @@ fun UpdateCard(auto: Boolean = false) {
         is com.suryaprakash.medlog.Updater.State.Downloading -> Card() { Body("Downloading… ${s.percent}%", bold = true) }
         com.suryaprakash.medlog.Updater.State.Installing -> Card() { Body("Installing… Tap Update when Android asks.", bold = true) }
         com.suryaprakash.medlog.Updater.State.Checking -> Card { Body("Checking…") }
-        com.suryaprakash.medlog.Updater.State.UpToDate -> Card(border = p.ok) { Body("MedLog is up to date.", bold = true) }
+        com.suryaprakash.medlog.Updater.State.UpToDate -> Card(border = p.ok) {
+            Body("You have the newest version.", bold = true)
+            BigButton("Check again", tone = Tone.SECONDARY, onClick = { scope.launch { com.suryaprakash.medlog.Updater.check(ctx) } })
+        }
         is com.suryaprakash.medlog.Updater.State.Failed -> Card(border = p.amber) {
             Body(s.why, bold = true)
             BigButton("Try again", tone = Tone.QUIET, onClick = { scope.launch { com.suryaprakash.medlog.Updater.check(ctx) } })
