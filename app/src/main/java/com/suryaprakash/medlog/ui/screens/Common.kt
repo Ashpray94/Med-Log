@@ -67,7 +67,7 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
     var helpers by remember { mutableStateOf<List<Helper>>(emptyList()) }
     LaunchedEffect(Unit) { helpers = app.db.helpers().all().filter { it.sos } }
     if (t.mentalHealth) {
-        Screen("You are not alone", "Thank you for telling me. You matter. Please talk to someone now. You can call the free helpline, $MENTAL_HEALTH_LINE, any time, day or night.", onHome = { nav.home() }) {
+        Screen("You are not alone", "Thank you for telling me. You matter. Please talk to someone now. You can call the free helpline, $MENTAL_HEALTH_LINE, any time, day or night.", onHome = { nav.home() }, onBack = { nav.back() }) {
             Card() {
                 Body("Thank you for telling me. You matter.", bold = true)
                 Body("Talking to someone helps. You can call the free helpline any time, day or night.")
@@ -80,7 +80,7 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
     }
     val say = (t.firstAid?.let { "$it " } ?: "") + t.say + " " + t.reasons.joinToString(". ") + ". Call ${s.emergencyNumber} now." +
         if (helpers.isNotEmpty()) " Your helpers have been sent a message." else ""
-    Screen("Get help now", say, onHome = { nav.home() }) {
+    Screen("Get help now", say, onHome = { nav.home() }, onBack = { nav.back() }) {
         Text(t.say, color = p.red, fontSize = sc.headline, fontWeight = FontWeight.Bold, lineHeight = sc.headline * 1.25f)
         CallAmbulanceCard(s.emergencyNumber)
         t.firstAid?.let {

@@ -977,8 +977,7 @@ private fun YearSheet(current: Int?, onDone: (Int) -> Unit, onDismiss: () -> Uni
     val now = java.time.LocalDate.now().year
     val years = remember { (1920..now).toList() }
     var pick by remember { mutableStateOf(current ?: 1955) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Year you were born", fontSize = sc.headline, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink)
             com.suryaprakash.medlog.ui.NumberWheel(years, pick, { pick = it })
@@ -1024,8 +1023,7 @@ private fun SkipSheet(section: String, onSection: () -> Unit, onAll: () -> Unit,
 private fun OptionsSheet(title: String, help: String, options: List<Pair<String, () -> Unit>>, onDismiss: () -> Unit) {
     val p = com.suryaprakash.medlog.ui.LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, fontSize = sc.headline, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink)
             Body(help)

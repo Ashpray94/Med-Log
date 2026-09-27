@@ -87,6 +87,7 @@ import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.UndoHost
 import com.suryaprakash.medlog.ui.steady
+import com.suryaprakash.medlog.ui.lift
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -179,7 +180,7 @@ fun NotesScreen(nav: Nav) {
     val speak = if (byProblem) "Your problems from the last 3 months. Tap one to see every time you noted it."
         else "${dateLabel(day)}. " + if (symptomNotes.isEmpty()) "Nothing noted." else symptomNotes.joinToString(". ") { app.catalogue.problem(it.problemId)?.label ?: it.text }
 
-    Screen("History", speak, onHome = { nav.home() }, trailing = {
+    Screen("History", speak, onHome = { nav.home() }, onBack = { nav.back() }, trailing = {
         Box(Modifier.size(52.dp).clip(CircleShape).background(p.card).steady("Find a note") { nav.go(Route.Search) }, contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Search, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
         }
@@ -189,7 +190,8 @@ fun NotesScreen(nav: Nav) {
             DayNavigator(day, onPrev = { day = day.minusDays(1) }, onNext = { if (day.isBefore(LocalDate.now())) day = day.plusDays(1) })
             WeekStrip(day, daysWith) { day = it }
             DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, feedDoses.count { it.status == DoseStatus.TAKEN }, feedDoses.size, onNote = { nav.go(Route.NoteDetail(it)) },
-                medsLate = late(doses), feedsLate = late(feedDoses), medDoses = doses.mapNotNull { d -> medForms.firstOrNull { it.id == d.medicineId }?.let { it.name to d } })
+                medsLate = late(doses), feedsLate = late(feedDoses), medDoses = doses.mapNotNull { d -> medForms.firstOrNull { it.id == d.medicineId }?.let { it.name to d } },
+                onGo = { nav.go(it) })
         } else {
             val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
             if (grouped.isEmpty()) Empty("Nothing noted in the last 3 months.")
@@ -257,7 +259,8 @@ private fun WeekStrip(day: LocalDate, daysWith: Set<LocalDate>, onPick: (LocalDa
 
 /** One day: what was felt, then a single line each for medicines, water and food. */
 @Composable
-private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, fed: Int, feeds: Int, onNote: (Long) -> Unit, medsLate: Boolean = false, feedsLate: Boolean = false, medDoses: List<Pair<String, com.suryaprakash.medlog.data.Dose>> = emptyList()) {
+private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, fed: Int, feeds: Int, onNote: (Long) -> Unit, medsLate: Boolean = false, feedsLate: Boolean = false,
+                       medDoses: List<Pair<String, com.suryaprakash.medlog.data.Dose>> = emptyList(), onGo: (Route) -> Unit = {}) {
     val p = LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val symptoms = notes.filter { it.kind == Kind.SYMPTOM }.sortedBy { it.occurredAt }
@@ -311,7 +314,8 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     }
 
     com.suryaprakash.medlog.ui.SectionHeader("Medicines, food and more", "Tap a group to see each one", null)
-    if (feeds > 0) HistoryGroup("Feeds", "$fed of $feeds given", { IconTile(Icons.Rounded.LocalDrink, p.tintPurple, 44.dp) }, if (feedsLate) "AMBER" else "GREEN", false, {}, expandable = false) {}
+    // every group can take you to its own page: Feeds straight away, the others from a line at the foot of the group
+    if (feeds > 0) HistoryGroup("Feeds", "$fed of $feeds given", { IconTile(Icons.Rounded.LocalDrink, p.tintPurple, 44.dp) }, if (feedsLate) "AMBER" else "GREEN", false, { onGo(Route.Food) }, expandable = false) {}
     if (due > 0) HistoryGroup("Medicines", "$taken of $due taken", { IconTile(Icons.Rounded.Medication, p.tintOrange, 44.dp) }, if (medsLate) "AMBER" else "GREEN", open == "m", { toggle("m") }) {
         // one line per dose, in time order: when, which medicine, and what happened. Tap one to note it afterwards.
         medDoses.sortedBy { it.second.scheduledAt }.forEach { (name, d) ->
@@ -330,11 +334,13 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.align(Alignment.CenterVertically).size(22.dp))
             }
         }
+        GoLine("Open Medicines") { onGo(Route.Meds) }
     }
     if (water.isNotEmpty()) {
         val glasses = water.sumOf { it.count ?: 1 }
         HistoryGroup("Water", "$glasses glass${if (glasses == 1) "" else "es"} · ${times(water)}", { IconTile(Icons.Rounded.LocalDrink, p.tintBlue, 44.dp) }, "GREEN", open == "w", { toggle("w") }) {
             water.forEach { n -> Entry(n, "${n.count ?: 1} glass", "") }
+            GoLine("Open Food & water") { onGo(Route.Food) }
         }
     }
     if (food.isNotEmpty()) {
@@ -353,6 +359,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
                     listOfNotNull(main.optString("amount").ifBlank { null }?.takeIf { a -> a.any(Char::isDigit) && listOf("katori", "plate", "cup").none { a.contains(it) } },
                         sides.ifBlank { null }?.let { "with $it" }, if (k >= 0) "$k kcal" else null).joinToString(" · "))
             }
+            GoLine("Open Food & water") { onGo(Route.Food) }
         }
     }
     if (output.isNotEmpty()) {
@@ -360,6 +367,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         HistoryGroup("Toilet and tummy", "${output.size} · ${times(output)}", { IconTile(Icons.Rounded.Wc, p.tintTeal, 44.dp) }, if (flagged) "AMBER" else "GREEN",
             open == "t", { toggle("t") }) {
             output.forEach { n -> Entry(n, n.text.substringBefore(":"), n.text.substringAfter(": ", ""), n.triage) }
+            GoLine("Open Toilet and tummy") { onGo(Route.Output()) }
         }
     }
     readings.groupBy { r -> runCatching { org.json.JSONObject(r.details).optString("type") }.getOrDefault("") }.forEach { (type, list) ->
@@ -367,6 +375,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         HistoryGroup(name, "${list.size} reading${if (list.size == 1) "" else "s"} · last ${list.last().text?.substringAfter(" ")}", { IconTile(Icons.Rounded.MonitorHeart, p.tintPink, 44.dp) },
             "GREEN", open == "r$type", { toggle("r$type") }) {
             list.forEach { n -> Entry(n, n.text ?: "", "") }
+            GoLine("Open BP & sugar") { onGo(Route.Readings) }
         }
     }
     other.groupBy { it.kind }.forEach { (kind, list) ->
@@ -378,13 +387,25 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     }
 }
 
+/** The last line of an opened group: to that kind's own page. */
+@Composable
+private fun GoLine(text: String, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.fill).steady(text, onClick = onClick).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(text, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(22.dp))
+    }
+}
+
 /** A group in the day: an icon, a name and a one-line count; opens to show each entry. Groups with nothing to open don't open. */
 @Composable
 private fun HistoryGroup(title: String, sub: String, icon: @Composable () -> Unit, level: String, open: Boolean, onToggle: () -> Unit, expandable: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
     val p = LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).then(if (open) Modifier.border(2.dp, p.brand, sh) else Modifier)) {
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title. $sub", onClick = onToggle).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             icon()
             Spacer(Modifier.width(14.dp))
@@ -399,6 +420,7 @@ private fun HistoryGroup(title: String, sub: String, icon: @Composable () -> Uni
             }
             val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(260), label = "chevron")
             if (expandable) Icon(Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.size(26.dp).graphicsLayer { rotationZ = turn })
+            else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
         }
         androidx.compose.animation.AnimatedVisibility(open && expandable,
             enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(260), expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, delayMillis = 60)),
@@ -658,8 +680,7 @@ private fun DoseAfterSheet(name: String, d: com.suryaprakash.medlog.data.Dose, o
     fun done(block: suspend () -> Unit) { scope.launch { block(); com.suryaprakash.medlog.ui.savedFeedback(ctx) }; onDismiss() }
     if (other) { com.suryaprakash.medlog.ui.WhenSheet(d.actedAt ?: d.scheduledAt, onDone = { t -> done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, t ?: System.currentTimeMillis()) } }, onDismiss = onDismiss); return }
     val t = com.suryaprakash.medlog.ui.screens.chipTime(d.scheduledAt)
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(name, "The $t dose, ${dayLabel(d.scheduledAt).lowercase()}", null)
             BigButton("Taken on time · $t", tone = com.suryaprakash.medlog.ui.Tone.OK, onClick = { done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, d.scheduledAt) } })

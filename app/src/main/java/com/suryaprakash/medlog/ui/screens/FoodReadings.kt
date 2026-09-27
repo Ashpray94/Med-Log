@@ -218,8 +218,7 @@ private fun CustomFoodSheet(name: String, onDone: (com.suryaprakash.medlog.nutri
     var protein by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf(0) }
     val units = listOf("katori", "piece", "glass", "plate")
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Add ${name.replaceFirstChar(Char::uppercase)}", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Hint("For one serving. The packet, or a dietitian, can tell you.")
@@ -287,8 +286,7 @@ private fun MealCard(n: com.suryaprakash.medlog.data.Note, onChange: () -> Unit,
 private fun MealMenu(title: String, onChange: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(title, "Change it, or delete it", null)
             BigButton("Change meal", icon = Icons.Rounded.Edit, onClick = onChange)
@@ -303,8 +301,7 @@ private fun MealMenu(title: String, onChange: () -> Unit, onDelete: () -> Unit, 
 private fun FeedMenu(name: String, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(name, "Past feeds stay in the record", null)
             BigButton("Stop this feed", tone = Tone.OUTLINE, icon = Icons.Rounded.Delete, onClick = onDelete)
@@ -407,8 +404,7 @@ private fun FeedPartSheet(onDone: (com.suryaprakash.medlog.nutrition.Feeds.Part)
     var amount by remember { mutableStateOf("") }
     var kcal by remember { mutableStateOf("") }
     var protein by remember { mutableStateOf("") }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper, scroll = false) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(18.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader("Add an item", "Per feed", null)
@@ -467,8 +463,7 @@ private fun GlassSheet(at: Long, onTime: (Long?) -> Unit, onRemove: () -> Unit, 
     if (time) { com.suryaprakash.medlog.ui.WhenSheet(at, onDone = onTime, onDismiss = onDismiss); return }
     val p = LocalPalette.current
     val sc = LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader("A glass at ${timeLabel(at)}", "Change the time, or remove it", null)
             BigButton("Change the time", icon = Icons.Rounded.Schedule, onClick = { time = true })
@@ -484,8 +479,7 @@ private fun WaterGoalSheet(start: Int, onDone: (Int) -> Unit, onDismiss: () -> U
     val p = LocalPalette.current
     val sc = LocalScale.current
     var g by remember { mutableStateOf(start) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
             Text("Glasses of water a day", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             com.suryaprakash.medlog.ui.CounterLine("Daily goal", "Ask your doctor if you should drink less", "$g", g > 1, g < 16, { g-- }, { g++ })
@@ -569,8 +563,7 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
     var v2 by remember { mutableStateOf("") }
     var at by remember { mutableStateOf<Long?>(null) }
     @Suppress("NAME_SHADOWING") val onSave: (Reading) -> Unit = { r -> onSave(r, at) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             last?.let { n ->
                 // the last one noted, with a plain way to remove it (a button, not a row that looks like a setting)
@@ -658,7 +651,7 @@ private fun ScaleCard(onSave: (Double) -> Unit) {
 }
 
 /**
- * Feed history on the Feeds page: the last 7 days before today, newest first. Each day is named once; under it each
+ * Feed history on the Feeds page: today and the 6 days before, newest first (what hasn't come round yet today is left out). Each day is named once; under it each
  * feed is named once, with its times sorted into plain lines: given, food instead, not given, missed.
  */
 @Composable
@@ -668,16 +661,17 @@ private fun FeedHistory(feeds: List<com.suryaprakash.medlog.data.Medicine>) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val start = remember { com.suryaprakash.medlog.meds.Scheduler.today().first }
-    val from = remember { start - 7 * com.suryaprakash.medlog.data.DAY }
-    val doses by app.viewDb.doses().betweenFlow(from, start).collectAsState(emptyList())
+    val from = remember { start - 6 * com.suryaprakash.medlog.data.DAY }
+    val now = System.currentTimeMillis()
+    val doses by app.viewDb.doses().betweenFlow(from, start + com.suryaprakash.medlog.data.DAY).collectAsState(emptyList())
     val byId = feeds.associateBy { it.id }
     val zone = java.time.ZoneId.systemDefault()
-    val days = doses.filter { it.medicineId in byId }.groupBy { java.time.Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalDate() }.toSortedMap(compareByDescending { it })
+    val days = doses.filter { it.medicineId in byId && (it.scheduledAt <= now || it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) }.groupBy { java.time.Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalDate() }.toSortedMap(compareByDescending { it })
     com.suryaprakash.medlog.ui.SectionHeader("Feed history", "The last 7 days", null)
     if (days.isEmpty()) { com.suryaprakash.medlog.ui.Hint("Nothing yet. Each feed you note shows here, day by day."); return }
     val S = com.suryaprakash.medlog.data.DoseStatus
     days.forEach { (date, ds) ->
-        val words = if (date == java.time.LocalDate.now().minusDays(1)) "Yesterday"
+        val words = if (date == java.time.LocalDate.now()) "Today" else if (date == java.time.LocalDate.now().minusDays(1)) "Yesterday"
             else date.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", com.suryaprakash.medlog.speech.I18n.locale))
         Text(words, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(top = 4.dp))
         com.suryaprakash.medlog.ui.Group {

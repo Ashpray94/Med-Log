@@ -363,8 +363,7 @@ fun WhenSheet(start: Long?, onDone: (Long?) -> Unit, onDismiss: () -> Unit) {
         val t = today.minusDays(back.toLong()).atTime(hour24, mi).atZone(z).toInstant().toEpochMilli()
         return minOf(t, System.currentTimeMillis())
     }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("When was it?", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

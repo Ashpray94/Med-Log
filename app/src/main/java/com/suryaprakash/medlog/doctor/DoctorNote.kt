@@ -155,7 +155,8 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         }
 
         // ── medicines ──
-        val medRows = meds.filter { it.active || it.changedAt >= from }.map { m ->
+        // medicines only (feeds are reported with food), so doses taken counts what the doctor prescribed
+        val medRows = meds.filter { (it.active || it.changedAt >= from) && it.form != "feed" }.map { m ->
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val taken = md.count { it.status == DoseStatus.TAKEN }
             val prn = notes.count { it.kind == Kind.MED_TAKEN && runCatching { JSONObject(it.details).optString("name") }.getOrNull() == m.name }

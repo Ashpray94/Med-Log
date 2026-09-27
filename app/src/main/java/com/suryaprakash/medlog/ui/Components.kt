@@ -84,6 +84,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -244,6 +246,8 @@ fun Screen(
     eyebrow: String? = null,
     /** Beside the title and subtitle, centred on both (Home's Me | Helping switch). */
     side: (@Composable () -> Unit)? = null,
+    /** A thin strip across the whole width, right under the status bar: how up to date the records are. */
+    banner: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
@@ -262,6 +266,7 @@ fun Screen(
     LaunchedEffect(title) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
     Box(Modifier.fillMaxSize().background(background ?: p.paper)) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+            banner?.invoke()
             // the title, the Read switch and Back stay put; only what's under them scrolls
             // one header for every page, the same size everywhere so nothing jumps between pages:
             // a fixed row (Back or a greeting on the left, Read on the right), a one-line title, and a line for the subtitle
@@ -308,6 +313,22 @@ fun Screen(
             if (hasNav && !typing) BottomBar(onHome)
         }
         UndoBar(Modifier.align(Alignment.BottomCenter).padding(bottom = sc.target + 28.dp).navigationBarsPadding())
+    }
+}
+
+/**
+ * The thin strip under the status bar: one line, edge to edge. Grey when all is well, amber when something is
+ * waiting, red when it failed.
+ */
+@Composable
+fun TopBanner(text: String, tone: Color? = null, icon: ImageVector = Icons.Rounded.Sync) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val (bg, fg) = when (tone) { p.amber -> p.amberSoft to p.amber; p.red -> p.redSoft to p.red; else -> p.fill to p.inkSoft }
+    Row(Modifier.fillMaxWidth().background(bg).padding(horizontal = sc.margin, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, fontSize = sc.small * 0.9f, fontWeight = FontWeight.SemiBold, color = fg)
     }
 }
 
@@ -417,8 +438,8 @@ private fun BackLink(onBack: () -> Unit) {
     val sc = LocalScale.current
     @Suppress("UNUSED_VARIABLE") val unused = sc
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.offset(x = (-12).dp).size(48.dp).clip(sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
-        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(28.dp))
+    Box(Modifier.size(48.dp).lift(sh).clip(sh).background(p.card).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -769,7 +790,7 @@ fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = n
             .then(when {
                 border == null -> Modifier
                 border == p.line || border == p.outline -> Modifier
-                else -> Modifier.drawBehind { drawRect(border, size = androidx.compose.ui.geometry.Size(5.dp.toPx(), size.height)) }
+                else -> Modifier
             })
             .then(if (onClick != null) Modifier.steady(label, onPress = { pressed = it }, onClick = onClick) else Modifier)
             .padding(padding),
@@ -1439,4 +1460,35 @@ private fun horizonSun(up: Boolean): ImageVector {
         addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(arrow).toNodes(), stroke = ink, strokeLineWidth = 2f, strokeLineCap = round,
             strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round)
     }.build()
+}
+
+/**
+ * Every bottom sheet in the app: it opens at most three quarters of the screen high, grows to nine tenths as its
+ * content is scrolled up, and never reaches under the status bar. [scroll] = false for content that scrolls itself.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AppSheet(onDismissRequest: () -> Unit, containerColor: Color = LocalPalette.current.paper, scroll: Boolean = true,
+             sheetState: androidx.compose.material3.SheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true),
+             content: @Composable ColumnScope.() -> Unit) {
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screen = with(density) { androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp.toPx() }
+    var limit by remember { androidx.compose.runtime.mutableFloatStateOf(screen * 0.75f) }
+    val grow = remember(screen) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (available.y < 0 && limit < screen * 0.9f) {
+                    val d = minOf(-available.y, screen * 0.9f - limit)
+                    limit += d
+                    return androidx.compose.ui.geometry.Offset(0f, -d)
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState, containerColor = containerColor) {
+        Box(Modifier.fillMaxWidth().heightIn(max = with(density) { limit.toDp() }).nestedScroll(grow)) {
+            Column(Modifier.fillMaxWidth().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier), content = content)
+        }
+    }
 }

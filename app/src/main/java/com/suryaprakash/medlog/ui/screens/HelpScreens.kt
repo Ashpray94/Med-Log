@@ -485,7 +485,12 @@ fun HelperHomeScreen(nav: Nav) {
     val updated = person?.let { heard[it.pairId] ?: com.suryaprakash.medlog.data.Sync.heardAt(ctx, it.pairId) } ?: 0L
     Screen(when { !paired -> "Helping someone"; people.size == 1 -> who; else -> "People you help" },
         if (paired) "The latest from $who, and your reply." else "Connect to the phone of the person you help.", onHome = null,
-        subtitle = if (!paired) null else if (updated > 0) "Updated ${com.suryaprakash.medlog.ui.whenWords(updated).removePrefix("Today, ").lowercase().let { if (it.first().isDigit()) "at $it" else it }}" else "Waiting for their first update",
+        subtitle = if (!paired) null else person?.name?.let { "Their records and messages" },
+        banner = if (!paired) null else { {
+            val stale = updated > 0 && System.currentTimeMillis() - updated > 2 * 3600_000L
+            com.suryaprakash.medlog.ui.TopBanner(if (updated > 0) "Updated ${com.suryaprakash.medlog.ui.whenWords(updated).removePrefix("Today, ").lowercase().let { if (it.first().isDigit()) "at $it" else it }}" else "Waiting for their first update",
+                tone = if (stale || updated == 0L) p.amber else null)
+        } },
         eyebrow = "You're helping",
         side = { PersonaSwitch(nav) }) {
         // ── the latest from them, before anything else: the one thing a helper must see ──
@@ -585,10 +590,12 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
     // one card, both before and after answering: a tinted strip on top (who and when), the message in large dark
     // words, the answers; once answered, the answers make way for a thin banner along the bottom saying what was said
     Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)) {
-        Row(Modifier.fillMaxWidth().background(if (urgent) p.redSoft else p.brandSoft).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = if (urgent) p.red else p.brand, modifier = Modifier.size(20.dp))
+        // two colours at most: the tinted strip only while it needs an answer; once answered, white with a banner under it
+        Row(Modifier.fillMaxWidth().then(if (open) Modifier.background(if (urgent) p.redSoft else p.brandSoft) else Modifier)
+            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = if (open) 12.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = if (!open) p.inkSoft else if (urgent) p.red else p.brand, modifier = Modifier.size(20.dp))
             Spacer(Modifier.width(8.dp))
-            Text(if (open) "$who needs you" else "Last message from $who", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
+            Text(if (open) "$who needs you" else "Last message from $who", fontSize = sc.small, fontWeight = FontWeight.Bold, color = if (open) p.ink else p.inkSoft, modifier = Modifier.weight(1f))
             Text("${dayLabel(latest.at)} ${timeLabel(latest.at)}".trim(), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
         }
         androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalOnCard provides true) {
@@ -631,7 +638,7 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
             // what was answered, in the words sent; green only for "I'm coming"
             val said = app.settings.getString("my_last_reply")?.split("|")?.takeIf { it.size == 2 && (it[1].toLongOrNull() ?: 0) >= latest.at }?.get(0)
             val coming = said == "coming"
-            Row(Modifier.fillMaxWidth().background(if (coming) p.okSoft else p.fill).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().background(if (coming) p.okSoft else p.fill).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (coming) Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.Reply, null, tint = if (coming) p.ok else p.inkSoft, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(if (said != null) "You answered: ${Nearby.replyWords(said)}" else "You answered", fontSize = sc.small, fontWeight = FontWeight.Bold,

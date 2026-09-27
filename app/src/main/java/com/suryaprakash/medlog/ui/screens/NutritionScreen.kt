@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import com.suryaprakash.medlog.ui.lift
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -168,7 +169,8 @@ fun NutritionSummary(rep: Nutrition.Report, onOpen: (() -> Unit)? = null) {
     val sc = LocalScale.current
     val edge = levelColor(p, rep.headline.level)
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).drawBehind { drawRect(edge, size = androidx.compose.ui.geometry.Size(5.dp.toPx(), size.height)) }
+    @Suppress("UNUSED_VARIABLE") val unusedEdge = edge
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)
         .then(if (onOpen != null) Modifier.padding(0.dp) else Modifier).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(rep.headline.text, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.headline * 1.25f)
         rep.findings.drop(1).take(4).forEach { f ->
@@ -249,8 +251,7 @@ private fun TargetsSheet(kcal: Double?, protein: Double?, onDone: (Double?, Doub
     val sc = LocalScale.current
     var k by remember { mutableStateOf(kcal?.roundToInt()?.toString() ?: "") }
     var pr by remember { mutableStateOf(protein?.roundToInt()?.toString() ?: "") }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Daily targets", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Hint("As advised by the doctor or dietitian. Leave empty to work them out from weight.")

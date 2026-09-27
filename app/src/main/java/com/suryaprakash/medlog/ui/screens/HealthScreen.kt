@@ -131,7 +131,9 @@ fun ReportsScreen(nav: Nav) {
         fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
         val water = app.viewDb.notes().kindSince(Kind.WATER, since).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
         val symptoms = app.viewDb.notes().symptomsSince(since).groupBy { day(it.occurredAt) }.mapValues { it.value.size.toDouble() }
-        val meds = app.viewDb.doses().between(since, now).filter { it.scheduledAt <= now }.groupBy { day(it.scheduledAt) }
+        // medicines only: feeds are counted on their own, so a missed feed never lowers "medicines taken"
+        val feedIds = app.viewDb.medicines().all().filter { it.form == "feed" }.map { it.id }.toSet()
+        val meds = app.viewDb.doses().between(since, now).filter { it.scheduledAt <= now && it.medicineId !in feedIds }.groupBy { day(it.scheduledAt) }
             .mapValues { e -> 100.0 * e.value.count { it.status == DoseStatus.TAKEN } / e.value.size }
         daily = mapOf("water" to water, "symptoms" to symptoms, "meds" to meds)
         // open on the first measure that has something to show
@@ -271,8 +273,8 @@ private fun MetricRow(m: Metric, pts: List<Point>, daily: Map<LocalDate, Double>
 private fun dateLabel(t: Long, days: Int) = SimpleDateFormat(if (days > 182) "MMM" else "d MMM", Locale.getDefault()).format(Date(t))
 
 /**
- * A chart area that fits the card when it can, and scrolls sideways when it can't: it opens on the newest end,
- * and the value labels stay put on the right. [content] draws the chart and its dates at the given width.
+ * A chart area that always fits the card, whatever the span (a year is twelve month bars, never a sideways scroll
+ * that hides part of it); the value labels sit on the right. [content] draws the chart and its dates at the given width.
  */
 @Composable
 private fun ScrollingChart(minWidth: Dp, hi: String, mid: String, lo: String, content: @Composable (Dp) -> Unit) {
@@ -280,11 +282,9 @@ private fun ScrollingChart(minWidth: Dp, hi: String, mid: String, lo: String, co
     val sc = LocalScale.current
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
         val avail = maxWidth - 44.dp
-        val w = if (minWidth > avail) minWidth else avail
-        val state = androidx.compose.foundation.rememberScrollState()
-        LaunchedEffect(w) { state.scrollTo(state.maxValue) }
+        @Suppress("UNUSED_VARIABLE") val unused = minWidth
         Row {
-            Box(Modifier.width(avail).horizontalScroll(state)) { Box(Modifier.width(w)) { content(w) } }
+            Box(Modifier.width(avail)) { content(avail) }
             Column(Modifier.width(44.dp).height(200.dp).padding(start = 8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 listOf(hi, mid, lo).forEach { Text(it, fontSize = sc.small * 0.8f, color = p.inkSoft) }
             }

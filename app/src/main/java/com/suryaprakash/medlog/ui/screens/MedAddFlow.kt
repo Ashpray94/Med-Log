@@ -483,8 +483,7 @@ private fun CounterSheet(title: String, label: String, start: Int, zero: String,
     val p = LocalPalette.current
     val sc = LocalScale.current
     var v by remember { mutableStateOf(start) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Group {
@@ -522,8 +521,7 @@ private fun PurposeSheet(start: String, onDone: (String) -> Unit, onDismiss: () 
     val illnesses = remember(mine) { (mine + com.suryaprakash.medlog.data.CarePlan.CONDITIONS).distinct().map { it to (ILLNESS_PICTURE[it] ?: "confusion") } }
     val problems = remember { com.suryaprakash.medlog.pictogram.Sprites.SECTIONS.flatMap { it.second }.mapNotNull { id -> cat.problem(id)?.let { it.label to id } } }
     fun toggle(x: String) { if (x in chosen) chosen.remove(x) else chosen.add(x) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper, scroll = false) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("What is it for?", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search problems")
@@ -564,8 +562,7 @@ private fun TimeSheet(start: String, onDone: (String) -> Unit, onDismiss: () -> 
     var mi by remember { mutableStateOf(lt.minute - lt.minute % 5) }
     var pm by remember { mutableStateOf(if (lt.hour >= 12) 1 else 0) }
     fun result(): String { val hour24 = (h % 12) + if (pm == 1) 12 else 0; return "%02d:%02d".format(hour24, mi) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Time", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -715,8 +712,7 @@ private fun FieldSheet(title: String, label: String, start: String, number: Bool
     val p = LocalPalette.current
     val sc = LocalScale.current
     var v by remember { mutableStateOf(start) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             BigField(label, v, { v = it }, keyboard = if (number) KeyboardType.Number else KeyboardType.Text)

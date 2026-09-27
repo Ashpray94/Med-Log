@@ -69,10 +69,11 @@ internal fun Confirm(ctx: Context, src: String, ask: String) {
         Box(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(bg)).clickable(a), contentAlignment = Alignment.Center) {
             Text(tr(text), style = TextStyle(color = fg, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 2)
         }
-    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    // the question at the top, the answers at the bottom, whatever the widget's height
+    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.Top) {
         Text(tr(title), style = TextStyle(color = INK, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 3)
         if (tall) Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 14.sp), maxLines = 2)
-        Spacer(GlanceModifier.height(10.dp))
+        Spacer(GlanceModifier.defaultWeight())
         if (kind == "problem") {
             // nothing is noted until Done; Add details opens the questions for it in the app
             Row(GlanceModifier.fillMaxWidth().height(48.dp)) { Btn(done, R.drawable.widget_brand, WHITE, act(true)) }
@@ -99,10 +100,10 @@ internal fun WidgetQuestion(ctx: Context, src: String, ask: String?, noted: Stri
         listOf("✓ ${parts.getOrElse(1) { "" }} noted", parts.getOrElse(2) { "" }, "Add details", "Done")
     }
     val p = actionParametersOf(MedLogWidget.SRC to src)
-    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.Top) {
         Text(tr(title), style = TextStyle(color = INK, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 3)
         Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 14.sp), maxLines = 2)
-        Spacer(GlanceModifier.height(10.dp))
+        Spacer(GlanceModifier.defaultWeight())
         Row(GlanceModifier.fillMaxWidth().height(52.dp)) {
             val noAct = if (ask != null) actionRunCallback<AnswerAsk>(actionParametersOf(MedLogWidget.YES to false, MedLogWidget.SRC to src)) else actionRunCallback<LaterDetails>(p)
             Box(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_soft)).clickable(noAct), contentAlignment = Alignment.Center) {

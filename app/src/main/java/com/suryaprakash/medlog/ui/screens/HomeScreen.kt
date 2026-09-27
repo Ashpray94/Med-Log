@@ -142,9 +142,8 @@ fun HomeScreen(nav: Nav) {
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
     Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "",
-        side = { PersonaSwitch(nav) }) {
-        unshared?.let { t -> Text("Not shared with your helpers yet" + if (t > 0) " · last shared ${com.suryaprakash.medlog.ui.whenWords(t).lowercase()}" else "",
-            fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold) }
+        side = { PersonaSwitch(nav) },
+        banner = unshared?.let { t -> { com.suryaprakash.medlog.ui.TopBanner("Not shared with your helpers yet" + if (t > 0) " · last shared ${com.suryaprakash.medlog.ui.whenWords(t).lowercase()}" else "", tone = p.amber) } }) {
         // ── the one main action ──
         HeroTell(onChoose = { nav.go(Route.Tell()) }, onSpeak = { nav.go(Route.Tell(speak = true)) })
 
@@ -355,19 +354,34 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
     Column(modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)
         .steady("$name. $taken of ${sorted.size} ${if (feed) "given" else "taken"} today. Tap for details.") { sheet = true }) {
         androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalOnCard provides true) {
-            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(Modifier.fillMaxWidth().heightIn(min = headMin), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // the picture sits level with the first line of the name, however many lines the name takes
+                Row(Modifier.fillMaxWidth().heightIn(min = headMin), verticalAlignment = Alignment.Top) {
                     MedicinePicture(m, 48.dp)
-                    Spacer(Modifier.width(12.dp))
+                    Spacer(Modifier.width(14.dp))
                     Column(Modifier.weight(1f)) {
                         Text(name, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.cardTitle * 1.2f)
                         Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.takeIf { !feed }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
                             fontSize = sc.small, color = p.inkSoft)
                     }
                 }
-                // Details always on the left, the answer (when one is needed) on the right
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
+                // always a time on the card; Details (on the left) only when there's more than one time to see;
+                // the answer, when one is needed, on the right
+                Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    val many = sorted.size > 1
+                    if (next == null) {
+                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Schedule, null, tint = p.inkSoft, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(if (many) "${sorted.size} times a day" else "Once a day", fontSize = sc.small, color = p.inkSoft)
+                                // the schedule (the banner below says how it stands, so it isn't repeated here)
+                                Text(if (many) sorted.joinToString(", ") { chipTime(it.scheduledAt) } else "At ${chipTime(sorted[0].scheduledAt)}",
+                                    fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                            }
+                        }
+                    }
+                    if (many) BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
                     next?.let { d ->
                         val t = chipTime(d.scheduledAt)
                         val words = when {
@@ -433,8 +447,7 @@ fun TakenWhenSheet(d: Dose, feed: Boolean, who: String? = null, onPick: (Long?) 
     if (other) { com.suryaprakash.medlog.ui.WhenSheet(d.scheduledAt, onDone = { t -> onPick(t) }, onDismiss = onDismiss); return }
     val onDay = java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
     val day = if (onDay == java.time.LocalDate.now()) "" else ", " + dayLabel(d.scheduledAt).lowercase()
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(if (feed) "When was it given?" else if (who != null) "When did they take it?" else "When did you take it?", "The ${chipTime(d.scheduledAt)} ${if (feed) "feed" else "dose"}$day", null)
             BigButton("On time · ${chipTime(d.scheduledAt)}$day", tone = Tone.OK, icon = Icons.Rounded.CheckCircle, onClick = { onPick(d.scheduledAt) })
@@ -477,8 +490,7 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
     val p = LocalPalette.current
     val sc = LocalScale.current
     val feed = m.form == "feed"
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper, scroll = false) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {

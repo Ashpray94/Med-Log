@@ -123,11 +123,13 @@ class MedLogWidget : GlanceAppWidget() {
         return Face(self, status(context), tiles, msgs, nextText, if (nextDue) next?.first?.id else null, ask, noted)
     }
 
-    /** The latest thing done from the widget, and what came of it. Fresh for 30 minutes. */
+    /** The latest thing done from the widget, and what came of it: shown for 10 seconds, then the widget is itself again. */
     private fun status(ctx: Context): Pair<String, Boolean>? {
+        val now = System.currentTimeMillis()
         val st = com.suryaprakash.medlog.ui.screens.HelpMessages.status.value
-        if (st != null && System.currentTimeMillis() - st.at < 30 * 60_000L) {
-            val ack = com.suryaprakash.medlog.help.Nearby.acks.value.lastOrNull()
+        val ackNow = com.suryaprakash.medlog.help.Nearby.acks.value.lastOrNull()?.takeIf { now - it.at < SHOW_MS }
+        if (st != null && (now - st.at < SHOW_MS || st.stage == "sending" && now - st.at < 60_000L || ackNow != null)) {
+            val ack = ackNow
             return when {
                 ack != null -> "✓ ${ack.name}: ${com.suryaprakash.medlog.help.Nearby.replyWords(ack.reply)}" to true
                 st.stage == "sending" -> "Sending: ${st.text}…" to false
@@ -138,7 +140,7 @@ class MedLogWidget : GlanceAppWidget() {
         }
         val s = ctx.medlog.settings
         val at = s.getLong("widget_noted_at")
-        if (System.currentTimeMillis() - at < 30 * 60_000L) return (s.getString("widget_noted") ?: return null) to true
+        if (now - at < SHOW_MS) return (s.getString("widget_noted") ?: return null) to true
         return null
     }
 
@@ -223,6 +225,12 @@ class MedLogWidget : GlanceAppWidget() {
             // Speak (everything at once) and SOS, always at the bottom
             Row(GlanceModifier.fillMaxWidth().height(bottomH.dp)) {
                 if (self) {
+                    // messages to family: a square button, left of Speak
+                    Box(GlanceModifier.width(bottomH.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_tile)).clickable(actionStartActivity(link(ctx, "help"))),
+                        contentAlignment = Alignment.Center) {
+                        Image(ImageProvider(R.drawable.ic_w_chat), com.suryaprakash.medlog.ui.tr("Messages"), GlanceModifier.size(26.dp))
+                    }
+                    Spacer(GlanceModifier.width(8.dp))
                     Row(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_brand)).clickable(actionStartActivity(link(ctx, "speak"))),
                         verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
                         Image(ImageProvider(R.drawable.ic_w_mic), null, GlanceModifier.size(24.dp))
@@ -257,6 +265,13 @@ class MedLogWidget : GlanceAppWidget() {
 
     companion object {
         val tick = kotlinx.coroutines.flow.MutableStateFlow(0L)
+        /** How long a status line stays on the widget. */
+        const val SHOW_MS = 10_000L
+        /** Redraw now, and again once the status line has had its 10 seconds, so it goes away by itself. */
+        fun showStatus(ctx: Context) {
+            val app = ctx.medlog
+            app.scope.launch { refresh(ctx); kotlinx.coroutines.delay(SHOW_MS + 500); refresh(ctx) }
+        }
         /** Redraw the widget with fresh data. */
         suspend fun refresh(ctx: Context) {
             tick.value = tick.value + 1
@@ -299,7 +314,12 @@ class AnswerAsk : ActionCallback {
                 "problem" -> NoteProblem.note(context, value, src, followUp = true)
                 "message" -> SendMessage.send(context, value)
                 "dose" -> value.toLongOrNull()?.let { Scheduler.take(context, it) }
-                "water" -> { context.medlog.repo.addWater(1); com.suryaprakash.medlog.ui.savedFeedback(context) }
+                "water" -> {
+                    context.medlog.repo.addWater(1); com.suryaprakash.medlog.ui.savedFeedback(context)
+                    context.medlog.settings.putString("widget_noted", "✓ ${com.suryaprakash.medlog.ui.tr("A glass of water")} " + java.text.SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(java.util.Date()))
+                    context.medlog.settings.putLong("widget_noted_at", System.currentTimeMillis())
+                    MedLogWidget.showStatus(context)
+                }
             }
         }
         MedLogWidget.refresh(context)
@@ -337,7 +357,7 @@ class NoteProblem : ActionCallback {
             app.settings.putLong("${src}_done_at", now)
         }
         com.suryaprakash.medlog.ui.savedFeedback(context)
-        MedLogWidget.refresh(context)
+        MedLogWidget.showStatus(context)
     } }
 }
 
@@ -358,6 +378,8 @@ class SendMessage : ActionCallback {
                 if (now.second > 0) break
                 kotlinx.coroutines.delay(1500)
             }
+            // the answer (or the last word on sending) has its 10 seconds, then goes
+            kotlinx.coroutines.delay(MedLogWidget.SHOW_MS + 500); MedLogWidget.refresh(context)
         }
     } }
 }

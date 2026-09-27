@@ -292,7 +292,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             val rows = summaryRows(app, facts)
             val more = !toldMore && Interview.extended(cat, pr, facts).isNotEmpty()
             val say = "Here's what I noted. " + rows.joinToString(". ") { "${it.first}: ${it.second}" } + if (triage.level == Level.AMBER) ". " + triage.say else ""
-            Screen("Here's what I noted", say, onHome = { nav.home() }) {
+            Screen("Here's what I noted", say, onHome = { nav.home() }, onBack = { nav.back() }) {
                 Card {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SpriteIcon(pr.id, 64.dp); Spacer(Modifier.width(14.dp))

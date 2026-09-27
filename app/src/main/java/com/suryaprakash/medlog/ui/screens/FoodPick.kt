@@ -296,8 +296,7 @@ private fun AddButton(qty: Double, f: Foods.Food, onAdd: () -> Unit, onRemove: (
 private fun SidesSheet(f: Foods.Food, basket: Map<String, Double>, sizes: MutableMap<String, String>, onAdd: (Foods.Food) -> Unit, onRemove: (Foods.Food) -> Unit, onDone: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDone, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDone, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             SectionHeader("With your ${f.name}?", "Add what you had with it", null)
             Foods.sidesFor(f).forEach { s -> DishRow(s, basket[s.name] ?: 0.0, sizes[s.name] ?: "medium", { sizes[s.name] = it }, { onAdd(s) }, { onRemove(s) }) }
@@ -311,8 +310,7 @@ private fun SidesSheet(f: Foods.Food, basket: Map<String, Double>, sizes: Mutabl
 private fun CuisineSheet(current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SectionHeader("Cuisine", "Pick one", null)
             com.suryaprakash.medlog.ui.Choice("All cuisines", current == null) { onPick(null) }
@@ -332,8 +330,7 @@ private fun NewFoodSheet(start: String, meal: String, onDone: (Foods.Food) -> Un
     var protein by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf(0) }
     val units = listOf("katori", "piece", "glass")
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             SectionHeader("Something else", "One serving", null)
             BigField("Dish", name, { name = it })
