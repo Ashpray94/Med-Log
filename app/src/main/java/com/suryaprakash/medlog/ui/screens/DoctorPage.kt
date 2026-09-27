@@ -142,6 +142,13 @@ fun DoctorScreen(nav: Nav) {
 
         if (n.medicines.isNotEmpty()) {
             Section("Medicines")
+            // how well doses were taken belongs here, with the medicines, in words: how many, of how many, over how long
+            run {
+                val due = n.medicines.filter { !it.asNeeded }.sumOf { it.due }
+                val done = n.medicines.filter { !it.asNeeded }.sumOf { it.done }
+                if (due > 0) Text("$done of $due doses taken in ${n.days} days (${done * 100 / due}%)", fontSize = LocalScale.current.body,
+                    color = if (done * 100 / due < 80) LocalPalette.current.amber else LocalPalette.current.inkSoft, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
+            }
             Group { n.medicines.forEachIndexed { i, m -> if (i > 0) Line(); MedRow(m) } }
         }
 
@@ -261,7 +268,8 @@ private fun Stats(n: DoctorNote) {
     Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("${n.symptoms.size}", "Symptoms", p.ink, p.card)
         StatCard("${urgent + watch}", "Need care", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
-        if (pct != null) StatCard("$pct%", "Doses taken", if (pct < 80) p.amber else p.ink, p.card)
+        // doses taken are told with the medicines below, where they make sense
+        @Suppress("UNUSED_VARIABLE") val unused = pct
     }
 }
 

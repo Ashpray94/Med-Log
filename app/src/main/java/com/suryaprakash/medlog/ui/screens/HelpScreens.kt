@@ -582,32 +582,22 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
     }
     val bg = if (urgent) p.red else p.brand
     fun reply(r: String) { com.suryaprakash.medlog.help.Loud.done(ctx, com.suryaprakash.medlog.help.Loud.alertId(latest.id)); scope.launch { app.db.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
-    Column(Modifier.fillMaxWidth().clip(sh).background(bg).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(48.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = bg, modifier = Modifier.size(26.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text("$who needs you", fontSize = sc.body, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("${dayLabel(latest.at)} ${timeLabel(latest.at)}".trim(), fontSize = sc.small, color = Color.White)
-            }
+    // a coloured band says who and when; the message itself is large dark words on white, easiest to read at a glance;
+    // one filled answer, two outlined ones under it, and passing it on as a quiet link
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(2.dp, bg, sh)) {
+        Row(Modifier.fillMaxWidth().background(bg).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = Color.White, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(10.dp))
+            Text("$who needs you", fontSize = sc.body, fontWeight = FontWeight.Bold, color = Color.White, modifier = Modifier.weight(1f))
+            Text(timeLabel(latest.at), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = Color.White)
         }
-        Text(latest.text, fontSize = sc.question, fontWeight = FontWeight.Bold, color = Color.White, lineHeight = sc.question * 1.15f)
-        // white buttons on the colour: the main answer filled, the others outlined
-        Row(Modifier.fillMaxWidth().heightIn(min = sc.target).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).background(Color.White)
-            .steady("I'm coming") { reply("coming") }.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-            Icon(Icons.Rounded.DirectionsWalk, null, tint = bg, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(12.dp))
-            Text("I'm coming", fontSize = sc.button, fontWeight = FontWeight.Bold, color = bg)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            listOf("In 5 min" to "5min", "I'll call" to "call").forEach { (label, key) ->
-                Box(Modifier.weight(1f).heightIn(min = sc.target).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).border(2.dp, Color.White, androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                    .steady(label) { reply(key) }.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                    Text(label, fontSize = sc.button, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
-                }
+        Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text(latest.text, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.15f)
+            BigButton("I'm coming", tone = if (urgent) Tone.DANGER else Tone.PRIMARY, icon = Icons.Rounded.DirectionsWalk, onClick = { reply("coming") })
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                BigButton("In 5 min", Modifier.weight(1f), Tone.SECONDARY, onClick = { reply("5min") })
+                BigButton("I'll call", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { reply("call") })
             }
-        }
         // someone else is nearer: pass it on
         val others = remember(person?.pairId) {
             runCatching { org.json.JSONArray(app.settings.getString("helpers_of_${person?.pairId}") ?: "[]") }.getOrDefault(org.json.JSONArray()).let { arr ->
@@ -616,7 +606,7 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
             }
         }
         var passing by remember { mutableStateOf(false) }
-        if (others.isNotEmpty()) Text("Ask someone else to go", fontSize = sc.body, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center,
+        if (others.isNotEmpty()) Text("Ask someone else to go", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.brand, textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Ask someone else to go") { passing = true }.padding(vertical = 12.dp))
         if (passing) androidx.compose.ui.window.Dialog(onDismissRequest = { passing = false }) {
             com.suryaprakash.medlog.ui.Card(color = p.paper) {
@@ -630,6 +620,7 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
                 }
                 BigButton("Cancel", tone = Tone.SECONDARY, onClick = { passing = false })
             }
+        }
         }
     }
 }
