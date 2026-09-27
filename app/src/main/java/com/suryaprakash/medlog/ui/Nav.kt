@@ -39,6 +39,7 @@ sealed interface Route {
     data object Permissions : Route
     data object Onboarding : Route
     data object HelperHome : Route
+    data object HelperChat : Route
     data object Import : Route
     data object Search : Route
     data object Devices : Route

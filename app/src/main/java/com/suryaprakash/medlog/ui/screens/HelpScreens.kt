@@ -485,10 +485,11 @@ fun HelperHomeScreen(nav: Nav) {
     Screen(when { !paired -> "MedLog Helper"; people.size == 1 -> who; else -> "People you help" },
         if (paired) "The latest from $who, and your reply." else "Connect to the phone of the person you help.", onHome = null,
         subtitle = if (!paired) null else if (updated > 0) "Updated ${com.suryaprakash.medlog.ui.whenWords(updated).removePrefix("Today, ").lowercase().let { if (it.first().isDigit()) "at $it" else it }}" else "Waiting for their first update",
-        trailing = { com.suryaprakash.medlog.ui.RoundIcon(Icons.Rounded.Settings, "Settings") { settings = true } }) {
+        eyebrow = "You're helping",
+        trailing = { com.suryaprakash.medlog.ui.RoundIcon(Icons.Rounded.Settings, "Settings") { settings = true } },
+        side = { PersonaSwitch(nav) }) {
         // ── the latest from them, before anything else: the one thing a helper must see ──
         if (paired) LatestMessage(fromPerson.firstOrNull(), who, person, scope)
-        if (s.role == "helper") PersonaSwitch(nav)
         PermissionListCompact()
         if (!paired) {
             com.suryaprakash.medlog.ui.Question("Connect to their phone", "Hold both phones close. It takes a minute, once.")
@@ -546,8 +547,6 @@ fun HelperHomeScreen(nav: Nav) {
                 }, valueColor = if (a.answer != null) p.ok else null)
             }
         }
-        // ── the other helpers ──
-        FamilyChatSection(who, inbox.filter { it.kind == com.suryaprakash.medlog.help.FamilyChat.KIND })
         // ── earlier ──
         if (fromPerson.size > 1) run {
             com.suryaprakash.medlog.ui.Section("Earlier")
@@ -687,6 +686,18 @@ fun SharingSettings() {
     })
 }
 
+/** The helpers' own page (bottom bar): quick messages between helpers; the person doesn't see them. */
+@Composable
+fun HelperChatScreen(nav: Nav) {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val inbox by app.db.inbox().flow().collectAsState(emptyList())
+    val who = remember { com.suryaprakash.medlog.data.People.all(ctx).firstOrNull()?.name?.ifBlank { null } ?: "them" }
+    Screen("Helpers", "Messages between you and the other helpers. $who doesn't see them.", onHome = null, subtitle = "Only helpers see this") {
+        FamilyChatSection(who, inbox.filter { it.kind == com.suryaprakash.medlog.help.FamilyChat.KIND })
+    }
+}
+
 /** Quick messages between helpers; the person doesn't see them. */
 @Composable
 private fun FamilyChatSection(who: String, chat: List<com.suryaprakash.medlog.data.InboxItem>) {
@@ -705,7 +716,7 @@ private fun FamilyChatSection(who: String, chat: List<com.suryaprakash.medlog.da
             com.suryaprakash.medlog.ui.Chip(q, false) { com.suryaprakash.medlog.help.FamilyChat.send(ctx, q) }
         }
     }
-    val recent = chat.sortedByDescending { it.at }.take(3)
+    val recent = chat.sortedByDescending { it.at }.take(20)
     if (recent.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
         recent.forEachIndexed { i, m ->
             if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
@@ -714,35 +725,23 @@ private fun FamilyChatSection(who: String, chat: List<com.suryaprakash.medlog.da
     }
 }
 
-/** Me | I help someone, at the top of both home pages. Switching asks first. */
+/**
+ * Me | Helping, beside the name on both home pages: two icons, switches at once (no question), and the whole
+ * app changes colour with it, teal for my health and indigo for helping, so the mode is never mistaken.
+ */
 @Composable
 fun PersonaSwitch(nav: Nav) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val s = LocalSettings.current
     val scope = rememberCoroutineScope()
-    var confirm by remember { mutableStateOf<String?>(null) }
-    com.suryaprakash.medlog.ui.Segmented(listOf("Me", "I help someone"), if (s.role == "helper") 1 else 0) { i ->
-        val r = if (i == 0) "self" else "helper"
-        if (r != s.role) confirm = r
-    }
-    confirm?.let { r ->
-        androidx.compose.ui.window.Dialog(onDismissRequest = { confirm = null }) {
-            com.suryaprakash.medlog.ui.Card(color = LocalPalette.current.paper) {
-                com.suryaprakash.medlog.ui.Title(if (r == "helper") "Switch to helping?" else "Switch to my health?")
-                Body(if (r == "helper") "This phone will ring when the person you help needs you." else "This phone will keep your own health notes.")
-                BigButton(if (r == "helper") "Switch to helping" else "Switch to my health", onClick = {
-                    confirm = null
-                    Nearby.stopListening(ctx)
-                    if (r == "helper") { app.settings.update { it.copy(role = "helper", onboarded = true) }; Nearby.startListening(ctx); nav.home(Route.HelperHome) }
-                    else scope.launch {
-                        val set = app.repo.profile().name.isNotBlank()
-                        app.settings.update { it.copy(role = "self", onboarded = set) }
-                        nav.home(if (set) Route.Home else Route.Onboarding)
-                    }
-                })
-                BigButton("Keep it as it is", tone = Tone.SECONDARY, onClick = { confirm = null })
-            }
+    com.suryaprakash.medlog.ui.ModeSwitch(helping = s.role == "helper") { helping ->
+        Nearby.stopListening(ctx)
+        if (helping) { app.settings.update { it.copy(role = "helper", onboarded = true) }; Nearby.startListening(ctx); nav.home(Route.HelperHome) }
+        else scope.launch {
+            val set = app.repo.profile().name.isNotBlank()
+            app.settings.update { it.copy(role = "self", onboarded = set) }
+            nav.home(if (set) Route.Home else Route.Onboarding)
         }
     }
 }

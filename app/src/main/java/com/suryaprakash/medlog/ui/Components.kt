@@ -100,6 +100,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -239,6 +241,8 @@ fun Screen(
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable ColumnScope.() -> Unit)? = null,
     eyebrow: String? = null,
+    /** Beside the title and subtitle, centred on both (Home's Me | Helping switch). */
+    side: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
@@ -247,7 +251,11 @@ fun Screen(
     val ctx = LocalContext.current
     val nav = LocalNav.current
     val full = "$title. $speak"
-    val hasNav = nav != null && s.role != "helper"
+    // the bottom bar only on the main pages; deeper pages get the room back, with SOS up by Read instead
+    val here = nav?.current
+    val topLevel = here == Route.Home || here == Route.Help || here == Route.HelperHome || here == Route.HelperChat
+    val hasNav = nav != null && topLevel
+    val sosUp = nav != null && !topLevel && here != Route.Emergency
     val typing = imeShowing()
     LaunchedEffect(full) { ReadAloud.text = full }
     LaunchedEffect(title) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
@@ -266,15 +274,21 @@ fun Screen(
                     // on a page with a greeting (Home), its one extra button sits up here, level with the greeting
                     val up = !eyebrow.isNullOrBlank() && trailing != null
                     if (up) { trailing?.invoke(); Spacer(Modifier.width(10.dp)) }
+                    if (sosUp) { SosPill(); Spacer(Modifier.width(10.dp)) }
                     ReadToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f,
-                        modifier = Modifier.weight(1f).semantics { heading() })
-                    if (eyebrow.isNullOrBlank()) trailing?.invoke()
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f,
+                                modifier = Modifier.weight(1f).semantics { heading() })
+                            if (eyebrow.isNullOrBlank()) trailing?.invoke()
+                        }
+                        Text(subtitle ?: " ", fontSize = sc.body, color = if (eyebrow != null) p.ink else p.inkSoft, fontWeight = if (eyebrow != null) FontWeight.Medium else null,
+                            modifier = Modifier.padding(top = 2.dp))
+                    }
+                    if (side != null) { Spacer(Modifier.width(12.dp)); side() }
                 }
-                Text(subtitle ?: " ", fontSize = sc.body, color = if (eyebrow != null) p.ink else p.inkSoft, fontWeight = if (eyebrow != null) FontWeight.Medium else null,
-                    modifier = Modifier.padding(top = 2.dp))
             }
             Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = sc.gap), content = header)
             val state = rememberScrollState()
@@ -292,6 +306,38 @@ fun Screen(
             if (hasNav && !typing) BottomBar(onHome)
         }
         UndoBar(Modifier.align(Alignment.BottomCenter).padding(bottom = sc.target + 28.dp).navigationBarsPadding())
+    }
+}
+
+/** SOS in the top corner, on pages without the bottom bar: always one tap away, never taking the page's room. */
+@Composable
+fun SosPill() {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val nav = LocalNav.current ?: return
+    Box(Modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).background(p.red).steady("SOS, emergency help") { nav.go(Route.Emergency) }.padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center) {
+        Text("SOS", color = Color.White, fontSize = sc.small, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+/**
+ * Me | Helping as two icons beside the name: switches at once, no question. Each side shows its own colour
+ * (teal for my health, indigo for helping), the same colour the whole app takes in that mode.
+ */
+@Composable
+fun ModeSwitch(helping: Boolean, onChange: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Row(Modifier.clip(RoundedCornerShape(26.dp)).background(p.card).border(1.dp, p.outline, RoundedCornerShape(26.dp)).padding(3.dp)) {
+        listOf(Triple(false, Icons.Rounded.Person, "My health"), Triple(true, Icons.Rounded.Groups, "Helping someone")).forEach { (h, icon, label) ->
+            val on = h == helping
+            val tint = if (h) HELPER_BRAND else MY_BRAND
+            Box(Modifier.size(48.dp).clip(CircleShape).background(if (on) tint else Color.Transparent)
+                .semantics { role = Role.Tab; selected = on }.steady(label + if (on) ", chosen" else "") { if (!on) onChange(h) },
+                contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = if (on) Color.White else tint, modifier = Modifier.size(24.dp))
+            }
+        }
     }
 }
 
@@ -375,10 +421,14 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
     Column(Modifier.fillMaxWidth().background(p.paper)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         val here = nav.current
+        // the same three places on both kinds of phone: home, SOS in the middle, and the people around you
+        val helper = s.role == "helper"
+        val home = if (helper) Route.HelperHome else Route.Home
+        val people = if (helper) Route.HelperChat else Route.Help
         val tabs = listOfNotNull(
-            Triple("Home", Icons.Rounded.Home, here == Route.Home) to { nav.home() },
+            Triple("Home", Icons.Rounded.Home, here == home) to { nav.home(home) },
             Triple("SOS", Icons.Rounded.Sos, here == Route.Emergency) to { if (here != Route.Emergency) nav.go(Route.Emergency) },
-            Triple("Family", Icons.Rounded.Groups, here == Route.Help) to { nav.home(); nav.go(Route.Help) },
+            Triple(if (helper) "Helpers" else "Family", Icons.Rounded.Groups, here == people) to { nav.home(home); if (people != home) nav.go(people) },
         )
         val ordered = if (s.leftHand) tabs.reversed() else tabs
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {

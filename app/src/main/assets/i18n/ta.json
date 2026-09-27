@@ -1058,7 +1058,7 @@
 "Hear you": "உங்க குரலைக் கேட்க",
 "Heart problem": "இதய நோய்",
 "Help in one tap": "ஒரே தொடுதல்ல உதவி",
-"Helpers": "உதவுறவங்க",
+"Helpers": "உதவியாளர்கள்",
 "Hi {0}, I've added you as my helper in MedLog. If I need help, you'll get a text with where I am and a call. – {1}": "வணக்கம் {0}, MedLog-ல உங்களை எனக்கு உதவுறவரா சேர்த்திருக்கேன். எனக்கு உதவி வேணும்னா நான் இருக்கிற இடத்தோட ஒரு SMS-உம் போனும் வரும். – {1}",
 "High BP": "BP அதிகம்",
 "How should MedLog look?": "MedLog எப்படி தெரியணும்?",
@@ -2482,5 +2482,9 @@
 "Skipped today": "இன்று தவிர்த்தது",
 "Not given today": "இன்று கொடுக்கவில்லை",
 "{0} taken · {1} skipped": "{0} எடுத்தது · {1} தவிர்த்தது",
-"{0} given · {1} not given": "{0} கொடுத்தது · {1} கொடுக்கவில்லை"
+"{0} given · {1} not given": "{0} கொடுத்தது · {1} கொடுக்கவில்லை",
+"{0}: is it better now?": "{0}: இப்போது பரவாயில்லையா?",
+"You're helping": "நீங்கள் உதவுகிறீர்கள்",
+"Only helpers see this": "உதவியாளர்கள் மட்டும் பார்ப்பார்கள்",
+"Helping someone": "ஒருவருக்கு உதவுதல்"
 }

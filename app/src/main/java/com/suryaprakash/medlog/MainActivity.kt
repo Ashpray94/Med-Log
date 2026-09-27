@@ -213,6 +213,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             is Route.HelperEdit -> HelperEditScreen(nav, r.id)
             Route.Pair -> PairScreen(nav)
             Route.HelperHome -> HelperHomeScreen(nav)
+            Route.HelperChat -> HelperChatScreen(nav)
             Route.Doctor -> DoctorScreen(nav)
             Route.Visit -> VisitScreen(nav)
             Route.Appointments -> AppointmentsScreen(nav)

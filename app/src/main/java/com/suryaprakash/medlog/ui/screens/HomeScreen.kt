@@ -136,8 +136,8 @@ fun HomeScreen(nav: Nav) {
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
     Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "",
-        trailing = { RoundIcon(Icons.Rounded.Settings, "Settings") { nav.go(Route.Settings) } }) {
-        PersonaSwitch(nav)
+        trailing = { RoundIcon(Icons.Rounded.Settings, "Settings") { nav.go(Route.Settings) } },
+        side = { PersonaSwitch(nav) }) {
         unshared?.let { t -> Text("Not shared with your helpers yet" + if (t > 0) " · last shared ${com.suryaprakash.medlog.ui.whenWords(t).lowercase()}" else "",
             fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold) }
         // ── the one main action ──
@@ -160,7 +160,7 @@ fun HomeScreen(nav: Nav) {
             Card {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     SpriteIcon(pid, 56.dp); Spacer(Modifier.width(14.dp))
-                    Text("Is your ${label.lowercase()} better now?", fontSize = sc.headline, fontWeight = FontWeight.SemiBold, color = p.ink)
+                    Text("$label: is it better now?", fontSize = sc.headline, fontWeight = FontWeight.SemiBold, color = p.ink)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     BigButton("Yes, better", Modifier.weight(1f), Tone.OK, onClick = { scope.launch { app.repo.markBetter(pid); app.settings.putString("asked_better_$pid", java.time.LocalDate.now().toString()); app.refreshWidgets(); version++ } })

@@ -61,6 +61,11 @@ val Warm = Palette(
     tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFC4600A), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
 )
 
+/** The accent of each mode: a different hue, not a lighter shade, so it's plain which phone you're holding. */
+val MY_BRAND = Color(0xFF0A6B63)
+val HELPER_BRAND = Color(0xFF4F46E5)
+val HelperMode = Warm.copy(brand = HELPER_BRAND, brandSoft = Color(0xFFE9E8FB))
+
 val HighContrast = Warm.copy(
     paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, outline = Color.Black, fill = Color(0xFFE0E0E0),
     brand = Color(0xFF00332F), brandSoft = Color(0xFFD6ECE9), ok = Color(0xFF004D12), amber = Color(0xFF5C3100), red = Color(0xFF8C0000),
@@ -132,7 +137,12 @@ val LocalSettings = staticCompositionLocalOf { Settings() }
 
 @Composable
 fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
-    val palette = if (settings.highContrast) HighContrast else Warm
+    val helping = settings.role == "helper"
+    val palette = when {
+        settings.highContrast -> if (helping) HighContrast.copy(brand = Color(0xFF2E2890), brandSoft = Color(0xFFE2E0FA)) else HighContrast
+        helping -> HelperMode
+        else -> Warm
+    }
     // Large words: the whole layout (words, spacing, buttons) grows together by about 1.2x, so it stays in proportion
     // and never gets crowded; the choice shows first, then after a short pause the change eases in over 0.6 s
     val scale = Standard

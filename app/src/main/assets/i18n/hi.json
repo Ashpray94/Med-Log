@@ -2482,5 +2482,9 @@
 "Skipped today": "आज छोड़ी",
 "Not given today": "आज नहीं दिया",
 "{0} taken · {1} skipped": "{0} ली · {1} छोड़ी",
-"{0} given · {1} not given": "{0} दिए · {1} नहीं दिए"
+"{0} given · {1} not given": "{0} दिए · {1} नहीं दिए",
+"{0}: is it better now?": "{0}: क्या अब ठीक है?",
+"You're helping": "आप मदद कर रहे हैं",
+"Only helpers see this": "सिर्फ़ मददगार देखते हैं",
+"Helping someone": "किसी की मदद"
 }
