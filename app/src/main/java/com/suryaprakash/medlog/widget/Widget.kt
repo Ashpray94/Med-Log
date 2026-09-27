@@ -153,25 +153,75 @@ class MedLogWidget : GlanceAppWidget() {
         if (ask != null || noted != null) { Pending(ctx, ask, noted); return }
         val w = size.width.value - 16f
         var h = size.height.value - 16f
-        // most important first: Speak and SOS; then their usual problems; then the other kinds of log; then messages
-        val topH = 56f; h -= topH + 8f
+        // top to bottom: what just happened; their usual problems (the last place is "More"); food, water, medicine;
+        // their messages; and, always at the bottom where the thumb rests, Speak and SOS
+        val bottomH = 56f; h -= bottomH
         val showStatus = status != null && h >= 30f; if (showStatus) h -= 32f
         val cols = if (w >= 240f) 3 else 2
-        // the kinds row comes before the pictures in the budget; the pictures take what's left (never below 72)
         val kindsH = 52f
-        val showKinds = self && h >= kindsH; if (showKinds) h -= kindsH + 8f
+        val showKinds = self && h >= kindsH + 8f; if (showKinds) h -= kindsH + 8f
         val side = minOf((w - 8f * (cols - 1)) / cols, 116f, h - 8f)
-        val showTiles = self && tiles.isNotEmpty() && side >= 72f; if (showTiles) h -= side + 8f
+        val showTiles = self && side >= 72f; if (showTiles) h -= side + 8f
         val rowH = 46f
-        val nMsgs = if (!self) 0 else minOf(msgs.size, ((h + 6f) / (rowH + 6f)).toInt().coerceAtLeast(0))
+        val nMsgs = if (!self) 0 else minOf(msgs.size, ((h - 8f + 6f) / (rowH + 6f)).toInt().coerceAtLeast(0))
         Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(8.dp)) {
             if (!self) {
                 Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(actionStartActivity(link(ctx, ""))), contentAlignment = Alignment.Center) {
                     Text(com.suryaprakash.medlog.ui.tr("Open the app to finish setting up"), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
                 }
             }
-            // Speak (everything at once) and SOS
-            Row(GlanceModifier.fillMaxWidth().height(topH.dp)) {
+            if (showStatus && status != null) {
+                Box(GlanceModifier.fillMaxWidth().height(28.dp).background(ImageProvider(if (status.second) R.drawable.widget_done else R.drawable.widget_tile)).padding(horizontal = 10.dp)
+                    .clickable(actionStartActivity(link(ctx, "help"))), contentAlignment = Alignment.CenterStart) {
+                    Text(com.suryaprakash.medlog.ui.tr(status.first), style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                }
+                Spacer(GlanceModifier.height(4.dp))
+            }
+            // their usual problems, and "More" in the last place for the full list
+            if (showTiles) {
+                val cells: List<Tile?> = tiles.take(cols - 1) + listOf(null)
+                Row(GlanceModifier.fillMaxWidth()) {
+                    cells.forEachIndexed { i, t ->
+                        if (i > 0) Spacer(GlanceModifier.width(8.dp))
+                        val act = when {
+                            t == null -> actionStartActivity(link(ctx, "tell"))
+                            t.emergency -> actionStartActivity(link(ctx, "tell?problem=${t.id}"))
+                            else -> actionRunCallback<AskFirst>(actionParametersOf(ASK to "problem|${t.id}|${t.label}"))
+                        }
+                        Column(GlanceModifier.defaultWeight().height(side.dp).background(ImageProvider(if (t == null) R.drawable.widget_soft else R.drawable.widget_tile)).padding(4.dp).clickable(act),
+                            horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
+                            if (t != null) Image(ImageProvider(t.picture), t.label, GlanceModifier.size((side * 0.45f).coerceIn(28f, 56f).dp))
+                            else Image(ImageProvider(R.drawable.ic_w_more), null, GlanceModifier.size((side * 0.3f).coerceIn(24f, 40f).dp))
+                            Text(com.suryaprakash.medlog.ui.tr(t?.label ?: "More"), style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 2)
+                        }
+                    }
+                    repeat(cols - cells.size) { Spacer(GlanceModifier.width(8.dp)); Spacer(GlanceModifier.defaultWeight()) }
+                }
+                Spacer(GlanceModifier.height(8.dp))
+            }
+            // food, water and medicine: food and medicine open the app (medicine shows which one is being noted),
+            // water asks here first
+            if (showKinds) {
+                Row(GlanceModifier.fillMaxWidth().height(kindsH.dp)) {
+                    KindButton(ctx, R.drawable.ic_w_food, "Food", actionStartActivity(link(ctx, "open?name=foodadd")))
+                    Spacer(GlanceModifier.width(8.dp))
+                    KindButton(ctx, R.drawable.ic_w_water, "Water", actionRunCallback<AskFirst>(actionParametersOf(ASK to "water|1|a glass of water")))
+                    Spacer(GlanceModifier.width(8.dp))
+                    KindButton(ctx, R.drawable.ic_w_pill, "Medicine", actionStartActivity(link(ctx, "open?name=took").also { dueDose }))
+                }
+                Spacer(GlanceModifier.height(8.dp))
+            }
+            msgs.take(nMsgs).forEach { m ->
+                Row(GlanceModifier.fillMaxWidth().height(rowH.dp).background(ImageProvider(R.drawable.widget_soft)).padding(horizontal = 12.dp)
+                    .clickable(actionRunCallback<AskFirst>(actionParametersOf(ASK to "message|$m|$m"))), verticalAlignment = Alignment.CenterVertically) {
+                    Text(com.suryaprakash.medlog.ui.tr(m), GlanceModifier.defaultWeight(), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
+                    Text(com.suryaprakash.medlog.ui.tr("Send"), style = TextStyle(color = accent, fontSize = 14.sp, fontWeight = FontWeight.Bold))
+                }
+                Spacer(GlanceModifier.height(6.dp))
+            }
+            Spacer(GlanceModifier.defaultWeight())
+            // Speak (everything at once) and SOS, always at the bottom
+            Row(GlanceModifier.fillMaxWidth().height(bottomH.dp)) {
                 if (self) {
                     Row(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(R.drawable.widget_brand)).clickable(actionStartActivity(link(ctx, "speak"))),
                         verticalAlignment = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -186,51 +236,7 @@ class MedLogWidget : GlanceAppWidget() {
                     Text(com.suryaprakash.medlog.ui.tr("SOS"), style = TextStyle(color = white, fontSize = 18.sp, fontWeight = FontWeight.Bold))
                 }
             }
-            Spacer(GlanceModifier.height(8.dp))
-            if (showStatus && status != null) {
-                Box(GlanceModifier.fillMaxWidth().height(28.dp).background(ImageProvider(if (status.second) R.drawable.widget_done else R.drawable.widget_tile)).padding(horizontal = 10.dp)
-                    .clickable(actionStartActivity(link(ctx, "help"))), contentAlignment = Alignment.CenterStart) {
-                    Text(com.suryaprakash.medlog.ui.tr(status.first), style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                }
-                Spacer(GlanceModifier.height(4.dp))
-            }
-            // their usual problems: the full name, on two lines if needed
-            if (showTiles) {
-                Row(GlanceModifier.fillMaxWidth()) {
-                    tiles.take(cols).forEachIndexed { i, t ->
-                        if (i > 0) Spacer(GlanceModifier.width(8.dp))
-                        val act = if (t.emergency) actionStartActivity(link(ctx, "tell?problem=${t.id}")) else actionRunCallback<AskFirst>(actionParametersOf(ASK to "problem|${t.id}|${t.label}"))
-                        Column(GlanceModifier.defaultWeight().height(side.dp).background(ImageProvider(R.drawable.widget_tile)).padding(4.dp).clickable(act),
-                            horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
-                            Image(ImageProvider(t.picture), t.label, GlanceModifier.size((side * 0.45f).coerceIn(28f, 56f).dp))
-                            Text(com.suryaprakash.medlog.ui.tr(t.label), style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 2)
-                        }
-                    }
-                }
-                Spacer(GlanceModifier.height(8.dp))
-            }
-            // the other kinds of log, one tap each
-            if (showKinds) {
-                Row(GlanceModifier.fillMaxWidth().height(kindsH.dp)) {
-                    KindButton(ctx, R.drawable.ic_w_toilet, "Toilet", actionStartActivity(link(ctx, "open?name=toilet")))
-                    Spacer(GlanceModifier.width(8.dp))
-                    KindButton(ctx, R.drawable.ic_w_water, "Water", actionRunCallback<AskFirst>(actionParametersOf(ASK to "water|1|a glass of water")))
-                    Spacer(GlanceModifier.width(8.dp))
-                    KindButton(ctx, R.drawable.ic_w_pill, if (dueDose != null) "Took it" else "Medicine",
-                        if (dueDose != null && nextText != null) actionRunCallback<AskFirst>(actionParametersOf(ASK to "dose|$dueDose|${nextText.substringAfter("· ")}"))
-                        else actionStartActivity(link(ctx, "meds")))
-                }
-                Spacer(GlanceModifier.height(8.dp))
-            }
-            msgs.take(nMsgs).forEach { m ->
-                Row(GlanceModifier.fillMaxWidth().height(rowH.dp).background(ImageProvider(R.drawable.widget_soft)).padding(horizontal = 12.dp)
-                    .clickable(actionRunCallback<AskFirst>(actionParametersOf(ASK to "message|$m|$m"))), verticalAlignment = Alignment.CenterVertically) {
-                    Text(com.suryaprakash.medlog.ui.tr(m), GlanceModifier.defaultWeight(), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold), maxLines = 1)
-                    Text(com.suryaprakash.medlog.ui.tr("Send"), style = TextStyle(color = accent, fontSize = 14.sp, fontWeight = FontWeight.Bold))
-                }
-                Spacer(GlanceModifier.height(6.dp))
-            }
-            @Suppress("UNUSED_VARIABLE") val unused = soft
+            @Suppress("UNUSED_VARIABLE") val unused = soft to nextText
         }
     }
 
@@ -290,7 +296,7 @@ class AnswerAsk : ActionCallback {
         if (parameters[MedLogWidget.YES] == true && ask != null) {
             val (kind, value) = ask.split("|", limit = 3).let { it[0] to it.getOrElse(1) { "" } }
             when (kind) {
-                "problem" -> NoteProblem.note(context, value, src)
+                "problem" -> NoteProblem.note(context, value, src, followUp = true)
                 "message" -> SendMessage.send(context, value)
                 "dose" -> value.toLongOrNull()?.let { Scheduler.take(context, it) }
                 "water" -> { context.medlog.repo.addWater(1); com.suryaprakash.medlog.ui.savedFeedback(context) }
@@ -316,7 +322,7 @@ class NoteProblem : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         note(context, parameters[MedLogWidget.PROBLEM] ?: return)
     }
-    companion object { suspend fun note(context: Context, pid: String, src: String = MedLogWidget.MAIN) {
+    companion object { suspend fun note(context: Context, pid: String, src: String = MedLogWidget.MAIN, followUp: Boolean = false) {
         val app = context.medlog
         val label = app.catalogue.problem(pid)?.label ?: return
         val now = System.currentTimeMillis()
@@ -326,6 +332,7 @@ class NoteProblem : ActionCallback {
         app.settings.putString("widget_noted", "✓ ${com.suryaprakash.medlog.ui.tr(label)} " + (if (today > 1) "(${MedLogWidget.ordinal(today)} today) " else "") + time)
         app.settings.putLong("widget_noted_at", now)
         ids.firstOrNull()?.let { id ->
+            if (followUp) { com.suryaprakash.medlog.care.FollowUp.schedule(context, id); return@let }
             app.settings.putString("${src}_done", "$id|${com.suryaprakash.medlog.ui.tr(label)}|$time|$pid")
             app.settings.putLong("${src}_done_at", now)
         }

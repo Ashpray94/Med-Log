@@ -17,6 +17,8 @@ sealed interface Route {
     data object Meds : Route
     data class MedEdit(val id: Long? = null) : Route
     data object DidITake : Route
+    /** From the widget: which medicine you're noting as taken, one tap each. */
+    data object TookNow : Route
     data object Food : Route
     data class SpeakAll(val text: String? = null) : Route
     data class Output(val tab: Int = -1) : Route

@@ -46,7 +46,7 @@ class Shots {
         "output" to Route.Output(), "readings" to Route.Readings, "help" to Route.Help, "sos" to Route.Emergency,
         "helper" to Route.HelperHome, "doctor" to Route.Doctor, "reports" to Route.Reports, "settings" to Route.Settings,
         "onboarding" to Route.Onboarding, "speakall" to Route.SpeakAll(), "feednew" to Route.FeedNew, "foodpick" to Route.FoodPick(),
-        "helpers" to Route.Helpers, "visit" to Route.Visit, "permissions" to Route.Permissions,
+        "helpers" to Route.Helpers, "visit" to Route.Visit, "permissions" to Route.Permissions, "took" to Route.TookNow,
     )
 
     /** Phone-sized pictures. A name like "history@Food" opens History, then taps "Food". */

@@ -59,8 +59,9 @@ note is the precise record (colour, blood); the ailment is how it feels. The doc
 - **Done**: History: one group per kind; open a group for each entry, times in one column in line with the names.
 
 ### Widgets
-- **Done**: every widget tap asks first (Yes / Cancel).
-- **Done**: after noting a problem the widget offers "Add details" or "Done", and Done sets a reminder in 30 minutes.
+- **Done**: nothing is noted from a widget without asking: a problem asks Done / Add details / Cancel (Done notes it and asks for more in 30 minutes; Add details opens its questions in the app); water asks Done / Cancel; a message asks Send / Cancel.
+- **Done**: food and medicine open the app; medicine shows which medicine is being noted, with "I took it" on each.
+- **Done**: main widget, top to bottom: usual problems with "More" in the last place, then Food / Water / Medicine, then messages, then Speak and SOS at the bottom.
 - **Done**: two small widgets besides the main one: "How I feel" (your usual problems; asked first, then Add details / Done) and "Toilet & vomit" (Stool, Urine, Vomit, each opening its picture page).
 
 ### SOS

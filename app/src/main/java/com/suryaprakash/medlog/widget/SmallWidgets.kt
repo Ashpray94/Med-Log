@@ -56,16 +56,45 @@ private val WHITE = ColorProvider(Color.White)
  * [src] is the widget it belongs to, so a question on one widget never shows on another.
  */
 @Composable
-internal fun WidgetQuestion(ctx: Context, src: String, ask: String?, noted: String?) {
-    val (title, sub, yes, no) = if (ask != null) {
-        val (kind, _, label) = ask.split("|", limit = 3).let { Triple(it[0], it.getOrElse(1) { "" }, it.getOrElse(2) { "" }) }
-        when (kind) {
-            "message" -> listOf("Send \"$label\"?", "To your family", "Yes, send", "Cancel")
-            "water" -> listOf("Add $label?", "Saved with the time", "Yes, add it", "Cancel")
-            "dose" -> listOf("Took $label?", "Marks it taken now", "Yes, taken", "Cancel")
-            else -> listOf("Note $label?", "Saved with the time", "Yes, note it", "Cancel")
+internal fun Confirm(ctx: Context, src: String, ask: String) {
+    val (kind, value, label) = ask.split("|", limit = 3).let { Triple(it[0], it.getOrElse(1) { "" }, it.getOrElse(2) { "" }) }
+    val (title, sub, done) = when (kind) {
+        "message" -> Triple("Send \"$label\"?", "To your family", "Send")
+        "water" -> Triple("Add $label?", "Saved with the time", "Done")
+        else -> Triple("Note $label?", "Saved with the time. We'll ask for more in 30 minutes.", "Done")
+    }
+    val tall = LocalSize.current.height.value >= 180f
+    fun act(yes: Boolean) = actionRunCallback<AnswerAsk>(actionParametersOf(MedLogWidget.YES to yes, MedLogWidget.SRC to src))
+    @Composable fun androidx.glance.layout.RowScope.Btn(text: String, bg: Int, fg: ColorProvider, a: androidx.glance.action.Action) =
+        Box(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(bg)).clickable(a), contentAlignment = Alignment.Center) {
+            Text(tr(text), style = TextStyle(color = fg, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 2)
         }
-    } else {
+    Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(tr(title), style = TextStyle(color = INK, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 3)
+        if (tall) Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 14.sp), maxLines = 2)
+        Spacer(GlanceModifier.height(10.dp))
+        if (kind == "problem") {
+            // nothing is noted until Done; Add details opens the questions for it in the app
+            Row(GlanceModifier.fillMaxWidth().height(48.dp)) { Btn(done, R.drawable.widget_brand, WHITE, act(true)) }
+            Spacer(GlanceModifier.height(8.dp))
+            Row(GlanceModifier.fillMaxWidth().height(48.dp)) {
+                Btn("Add details", R.drawable.widget_tile, INK, actionStartActivity(MedLogWidget.link(ctx, "tell?problem=$value&clear=$src")))
+                Spacer(GlanceModifier.width(8.dp))
+                Btn("Cancel", R.drawable.widget_soft, INK, act(false))
+            }
+        } else Row(GlanceModifier.fillMaxWidth().height(52.dp)) {
+            Btn("Cancel", R.drawable.widget_soft, INK, act(false))
+            Spacer(GlanceModifier.width(8.dp))
+            Btn(done, R.drawable.widget_brand, WHITE, act(true))
+        }
+    }
+}
+
+/** A just-noted entry (older flow): Add details or Done. Every new tap goes through [Confirm]. */
+@Composable
+internal fun WidgetQuestion(ctx: Context, src: String, ask: String?, noted: String?) {
+    if (ask != null) { Confirm(ctx, src, ask); return }
+    val (title, sub, yes, no) = run {
         val parts = noted!!.split("|", limit = 3)
         listOf("✓ ${parts.getOrElse(1) { "" }} noted", parts.getOrElse(2) { "" }, "Add details", "Done")
     }
@@ -167,6 +196,7 @@ class FeelWidget : GlanceAppWidget() {
                         Column(GlanceModifier.defaultWeight().fillMaxHeight().background(ImageProvider(if (t == null) R.drawable.widget_soft else R.drawable.widget_tile)).padding(4.dp).clickable(act),
                             horizontalAlignment = Alignment.CenterHorizontally, verticalAlignment = Alignment.CenterVertically) {
                             if (t != null) Image(ImageProvider(t.picture), t.label, GlanceModifier.size((side * 0.45f).coerceIn(28f, 56f).dp))
+                            else Image(ImageProvider(R.drawable.ic_w_more), null, GlanceModifier.size((side * 0.3f).coerceIn(24f, 40f).dp))
                             Text(tr(t?.label ?: "More"), style = TextStyle(color = INK, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center), maxLines = 2)
                         }
                     }

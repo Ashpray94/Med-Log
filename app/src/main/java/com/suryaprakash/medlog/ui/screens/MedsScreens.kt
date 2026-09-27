@@ -336,3 +336,47 @@ fun DidITakeScreen(nav: Nav) {
         Spacer(Modifier.height(4.dp))
     }
 }
+
+/**
+ * From the widget's Medicine button: the medicines due now, each with its photo, name, strength and time, so
+ * it's plain which one is being noted. One "I took it" each; nothing is marked until it's tapped here.
+ */
+@Composable
+fun TookNowScreen(nav: Nav) {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val scope = rememberCoroutineScope()
+    val (start, end) = remember { Scheduler.today() }
+    val doses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
+    val byId = meds.associateBy { it.id }
+    val now = System.currentTimeMillis()
+    val open = doses.filter { (it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED) && byId[it.medicineId]?.form != "feed" }
+    val due = open.filter { it.scheduledAt <= now + HOUR }.sortedBy { it.scheduledAt }
+    val justTaken = doses.filter { it.status == DoseStatus.TAKEN && (it.actedAt ?: 0) > now - 10 * 60_000L }
+    val next = open.filter { it.scheduledAt > now + HOUR }.minByOrNull { it.scheduledAt }
+    Screen("Which medicine did you take?", if (due.isEmpty()) "Nothing is due right now." else "Tap \"I took it\" on each one you took.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        due.forEach { d ->
+            val m = byId[d.medicineId] ?: return@forEach
+            Card(border = p.outline) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    MedPhoto(m.photoPath)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(m.name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                        Text(listOf(m.strength, "Due ${DoseActivity.time(d.scheduledAt)}").filter { it.isNotBlank() }.joinToString(" · "), fontSize = sc.body, color = p.inkSoft)
+                    }
+                }
+                BigButton("I took it", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, onClick = {
+                    scope.launch { Scheduler.take(ctx, d.id); com.suryaprakash.medlog.ui.savedFeedback(ctx); com.suryaprakash.medlog.widget.MedLogWidget.refresh(ctx) }
+                })
+            }
+        }
+        justTaken.forEach { d -> byId[d.medicineId]?.let { m -> Hint("✓ ${m.name} taken at ${DoseActivity.time(d.actedAt ?: now)}") } }
+        if (due.isEmpty() && next != null) byId[next.medicineId]?.let { m -> Hint("Next: ${m.name} at ${DoseActivity.time(next.scheduledAt)}") }
+        if (due.isEmpty()) BigButton("Done", tone = Tone.PRIMARY, onClick = { nav.home() })
+        BigButton("See all medicines", tone = Tone.SECONDARY, onClick = { nav.replace(Route.Meds) })
+    }
+}

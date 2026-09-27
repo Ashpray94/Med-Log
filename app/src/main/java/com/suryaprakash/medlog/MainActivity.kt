@@ -66,6 +66,11 @@ class MainActivity : ComponentActivity() {
         val uri = i?.data ?: return
         if (uri.scheme != "medlog" || !medlog.settings.value.onboarded) return
         val host = uri.host ?: return
+        // from a widget's "Add details": its question is answered here, so it goes back to its usual face
+        uri.getQueryParameter("clear")?.let { src ->
+            medlog.settings.putString("${src}_ask", null)
+            medlog.scope.launch { com.suryaprakash.medlog.widget.MedLogWidget.refresh(this@MainActivity) }
+        }
         val route: Route? = when (host) {
             "tell" -> Route.Tell(uri.getQueryParameter("problem"), uri.getQueryParameter("text"), noteId = uri.getQueryParameter("note")?.toLongOrNull())
             "meds" -> Route.Meds
@@ -87,7 +92,7 @@ class MainActivity : ComponentActivity() {
             "doctor" -> Route.Doctor
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {
-                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "foodadd" -> Route.FoodPick(); "toilet" -> Route.Output(); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
+                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "foodadd" -> Route.FoodPick(); "toilet" -> Route.Output(); "didtake" -> Route.DidITake; "took" -> Route.TookNow; "food" -> Route.Food; "readings" -> Route.Readings
                 "family" -> Route.Help; "messages" -> Route.Messages; "helpers" -> Route.Helpers; "helperadd" -> Route.HelperEdit(null); "pair" -> Route.Pair
                 "visit" -> Route.Visit; "appointments" -> Route.Appointments; "reports" -> Route.Reports; "settings" -> Route.Settings
                 "easy" -> Route.EasySettings; "permissions" -> Route.Permissions; "backup" -> Route.Backup; "privacy" -> Route.Privacy
@@ -200,6 +205,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Meds -> MedsScreen(nav)
             is Route.MedEdit -> MedEditScreen(nav, r.id)
             Route.DidITake -> DidITakeScreen(nav)
+            Route.TookNow -> TookNowScreen(nav)
             Route.Food -> FoodScreen(nav)
             is Route.SpeakAll -> SpeakAllScreen(nav, r.text)
             is Route.Output -> OutputScreen(nav, r.tab)
