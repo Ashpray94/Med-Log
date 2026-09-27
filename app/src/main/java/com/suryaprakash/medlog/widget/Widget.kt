@@ -226,7 +226,7 @@ class MedLogWidget : GlanceAppWidget() {
             Row(GlanceModifier.fillMaxWidth().height(bottomH.dp)) {
                 if (self) {
                     // messages to family: a square button, left of Speak
-                    Box(GlanceModifier.width(bottomH.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_tile)).clickable(actionStartActivity(link(ctx, "help"))),
+                    Box(GlanceModifier.width(bottomH.dp).fillMaxHeight().background(ImageProvider(R.drawable.widget_outline)).clickable(actionStartActivity(link(ctx, "help"))),
                         contentAlignment = Alignment.Center) {
                         Image(ImageProvider(R.drawable.ic_w_chat), com.suryaprakash.medlog.ui.tr("Messages"), GlanceModifier.size(26.dp))
                     }

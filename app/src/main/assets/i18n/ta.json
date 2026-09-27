@@ -2612,5 +2612,9 @@
 "Open BP & sugar": "BP & சர்க்கரையைத் திற",
 "A glass of water": "ஒரு டம்ளர் தண்ணீர்",
 "You have the newest version.": "உங்களிடம் புதிய பதிப்பு உள்ளது.",
-"Check again": "மீண்டும் சரிபார்"
+"Check again": "மீண்டும் சரிபார்",
+"{0} times a day · {1}": "நாளுக்கு {0} முறை · {1}",
+"Once a day · {0}": "நாளுக்கு ஒருமுறை · {0}",
+"Not updated since {0}. Their phone may be off or offline.": "{0} முதல் புதுப்பிக்கப்படவில்லை. அவர்களின் ஃபோன் அணைக்கப்பட்டிருக்கலாம் அல்லது இணைப்பில் இல்லை.",
+"Food instead": "பதிலாக உணவு"
 }

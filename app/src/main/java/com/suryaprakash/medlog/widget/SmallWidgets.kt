@@ -71,8 +71,8 @@ internal fun Confirm(ctx: Context, src: String, ask: String) {
         }
     // the question at the top, the answers at the bottom, whatever the widget's height
     Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.Top) {
-        Text(tr(title), style = TextStyle(color = INK, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 3)
-        if (tall) Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 14.sp), maxLines = 2)
+        Text(tr(title), style = TextStyle(color = INK, fontSize = 22.sp, fontWeight = FontWeight.Bold), maxLines = 3)
+        if (tall) Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 15.sp), maxLines = 2)
         Spacer(GlanceModifier.defaultWeight())
         if (kind == "problem") {
             // nothing is noted until Done; Add details opens the questions for it in the app
@@ -101,8 +101,8 @@ internal fun WidgetQuestion(ctx: Context, src: String, ask: String?, noted: Stri
     }
     val p = actionParametersOf(MedLogWidget.SRC to src)
     Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(12.dp), verticalAlignment = Alignment.Top) {
-        Text(tr(title), style = TextStyle(color = INK, fontSize = 18.sp, fontWeight = FontWeight.Bold), maxLines = 3)
-        Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 14.sp), maxLines = 2)
+        Text(tr(title), style = TextStyle(color = INK, fontSize = 22.sp, fontWeight = FontWeight.Bold), maxLines = 3)
+        Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 15.sp), maxLines = 2)
         Spacer(GlanceModifier.defaultWeight())
         Row(GlanceModifier.fillMaxWidth().height(52.dp)) {
             val noAct = if (ask != null) actionRunCallback<AnswerAsk>(actionParametersOf(MedLogWidget.YES to false, MedLogWidget.SRC to src)) else actionRunCallback<LaterDetails>(p)

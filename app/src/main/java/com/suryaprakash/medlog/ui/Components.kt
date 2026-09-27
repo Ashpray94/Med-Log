@@ -1361,6 +1361,31 @@ fun NavRow(title: String, value: String? = null, sub: String? = null, valueColor
     }
 }
 
+/**
+ * One row of a timeline, on its own (inside a group that is already a card) or in a [Timeline]: a dot and the
+ * line down to the next, the time small on top, the words under it at full width, a chevron when it opens.
+ */
+@Composable
+fun TimelineRow(it: TimelineItem, last: Boolean, trailing: (@Composable () -> Unit)? = null) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+        .then(if (it.onClick != null) Modifier.clip(RoundedCornerShape(12.dp)).steady("${it.time}. ${it.text}", onClick = it.onClick) else Modifier)) {
+        Column(Modifier.width(18.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(it.mark ?: p.outline))
+            if (!last) Box(Modifier.padding(top = 4.dp).width(2.dp).weight(1f).background(p.line))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f).padding(bottom = 14.dp)) {
+            Text(it.time, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+            Text(it.text, fontSize = sc.body, color = it.mark?.takeIf { m -> m == p.red } ?: p.ink, fontWeight = FontWeight.Medium)
+            if (it.sub != null) Text(it.sub, fontSize = sc.small, color = p.inkSoft)
+        }
+        trailing?.invoke()
+        if (it.onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.padding(top = 10.dp).size(24.dp))
+    }
+}
+
 /** One entry on a [Timeline]: when, what (any length), an optional line under it, and a dot colour only when it matters. */
 data class TimelineItem(val time: String, val text: String, val sub: String? = null, val mark: Color? = null, val onClick: (() -> Unit)? = null)
 
@@ -1374,23 +1399,7 @@ fun Timeline(items: List<TimelineItem>) {
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
     Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card).padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 4.dp)) {
-        items.forEachIndexed { i, it ->
-            val last = i == items.lastIndex
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
-                .then(if (it.onClick != null) Modifier.clip(RoundedCornerShape(12.dp)).steady("${it.time}. ${it.text}", onClick = it.onClick) else Modifier)) {
-                Column(Modifier.width(18.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(it.mark ?: p.outline))
-                    if (!last) Box(Modifier.padding(top = 4.dp).width(2.dp).weight(1f).background(p.line))
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f).padding(bottom = 14.dp)) {
-                    Text(it.time, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
-                    Text(it.text, fontSize = sc.body, color = it.mark?.takeIf { m -> m == p.red } ?: p.ink, fontWeight = FontWeight.Medium)
-                    if (it.sub != null) Text(it.sub, fontSize = sc.small, color = p.inkSoft)
-                }
-                if (it.onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.padding(top = 10.dp).size(24.dp))
-            }
-        }
+        items.forEachIndexed { i, it -> TimelineRow(it, last = i == items.lastIndex) }
     }
 }
 

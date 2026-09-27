@@ -2612,5 +2612,9 @@
 "Open BP & sugar": "बीपी और शुगर खोलें",
 "A glass of water": "एक गिलास पानी",
 "You have the newest version.": "आपके पास सबसे नया संस्करण है।",
-"Check again": "फिर से जाँचें"
+"Check again": "फिर से जाँचें",
+"{0} times a day · {1}": "दिन में {0} बार · {1}",
+"Once a day · {0}": "दिन में एक बार · {0}",
+"Not updated since {0}. Their phone may be off or offline.": "{0} से अपडेट नहीं हुआ। उनका फ़ोन बंद या ऑफ़लाइन हो सकता है।",
+"Food instead": "इसके बदले खाना"
 }

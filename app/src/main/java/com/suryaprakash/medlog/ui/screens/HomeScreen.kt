@@ -250,11 +250,11 @@ fun HeroTell(title: String = "How are you feeling?", onChoose: () -> Unit, onSpe
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius + 4.dp)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.brandSoft).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(title, color = p.ink, fontSize = sc.title, fontWeight = FontWeight.Bold, lineHeight = sc.title * 1.2f, modifier = Modifier.semantics { heading() })
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             listOf(Triple("Choose", Icons.Rounded.TouchApp, onChoose), Triple("Speak", Icons.Rounded.Mic, onSpeak)).forEach { (label, icon, go) ->
-                Column(Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 36.dp).clip(RoundedCornerShape(18.dp)).background(p.card)
+                Column(Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 36.dp).clip(RoundedCornerShape(18.dp)).background(p.brandSoft)
                     .steady(if (label == "Speak") "Speak: say how you feel" else "Choose from pictures", onClick = go).padding(vertical = 14.dp, horizontal = 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Icon(icon, null, tint = p.brand, modifier = Modifier.size(32.dp))
@@ -359,29 +359,18 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
                 Row(Modifier.fillMaxWidth().heightIn(min = headMin), verticalAlignment = Alignment.Top) {
                     MedicinePicture(m, 48.dp)
                     Spacer(Modifier.width(14.dp))
-                    Column(Modifier.weight(1f)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(name, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.cardTitle * 1.2f)
                         Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.takeIf { !feed }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
                             fontSize = sc.small, color = p.inkSoft)
+                        // when: under the name, so the eye reads name, dose, time in one column
+                        Text((if (sorted.size > 1) "${sorted.size} times a day · " else "Once a day · ") + sorted.joinToString(", ") { chipTime(it.scheduledAt) },
+                            fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink)
                     }
                 }
-                // always a time on the card; Details (on the left) only when there's more than one time to see;
-                // the answer, when one is needed, on the right
-                Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    val many = sorted.size > 1
-                    if (next == null) {
-                        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Schedule, null, tint = p.inkSoft, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(if (many) "${sorted.size} times a day" else "Once a day", fontSize = sc.small, color = p.inkSoft)
-                                // the schedule (the banner below says how it stands, so it isn't repeated here)
-                                Text(if (many) sorted.joinToString(", ") { chipTime(it.scheduledAt) } else "At ${chipTime(sorted[0].scheduledAt)}",
-                                    fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
-                            }
-                        }
-                    }
-                    if (many) BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
+                // Details always on the left; the answer, when one is needed, on the right
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
                     next?.let { d ->
                         val t = chipTime(d.scheduledAt)
                         val words = when {

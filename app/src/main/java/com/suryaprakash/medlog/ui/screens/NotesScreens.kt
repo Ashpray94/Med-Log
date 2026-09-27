@@ -289,17 +289,13 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         with(density) { widest.toDp() } + 16.dp
     }
 
+    // each entry in a group is a step on a timeline: the dot, the time on top, what it was, what was noted
+    @Suppress("UNUSED_VARIABLE") val unusedTime = timeStyle to timeWidth
     @Composable
-    fun Entry(n: Note, title: String, sub: String, level: String = "GREEN") {
-        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("$title, ${timeLabel(n.occurredAt)}") { onNote(n.id) }.padding(vertical = 10.dp)) {
-            Text(timeLabel(n.occurredAt), style = timeStyle, color = p.inkSoft, softWrap = false, modifier = Modifier.width(timeWidth).alignByBaseline())
-            Column(Modifier.weight(1f).alignByBaseline()) {
-                Text(title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
-                if (sub.isNotBlank()) Text(sub, fontSize = sc.small, color = p.inkSoft)
-            }
-            if (level != "GREEN") Box(Modifier.alignByBaseline()) { LevelMark(level, withWord = false) }
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.align(Alignment.CenterVertically).size(22.dp))
-        }
+    fun Entry(n: Note, title: String, sub: String, level: String = "GREEN", last: Boolean = false) {
+        com.suryaprakash.medlog.ui.TimelineRow(com.suryaprakash.medlog.ui.TimelineItem(timeLabel(n.occurredAt), title, sub.ifBlank { null },
+            mark = when (level) { "RED" -> p.red; "AMBER" -> p.amber; else -> null }, onClick = { onNote(n.id) }), last,
+            trailing = if (level != "GREEN") { { Box(Modifier.padding(top = 4.dp)) { LevelMark(level, withWord = false) } } } else null)
     }
 
     if (symptoms.isNotEmpty()) {
@@ -308,7 +304,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
             val label = app.catalogue.problem(pid)?.label ?: list.first().text
             val worst = list.maxByOrNull { levelRank(it.triage) }?.triage ?: "GREEN"
             HistoryGroup(label, "${list.size} time${if (list.size == 1) "" else "s"} · ${times(list)}", { SpriteIcon(pid, 44.dp) }, worst, open == "s$pid", { toggle("s$pid") }) {
-                list.forEach { n -> Entry(n, label, shortDetail(app, factsFromJson(n.details), n.occurredAt), n.triage) }
+                list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, label, shortDetail(app, factsFromJson(n.details), n.occurredAt), n.triage, last = lastE) }
             }
         }
     }
@@ -325,21 +321,16 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
                 DoseStatus.SKIPPED -> "Skipped"
                 else -> if (d.scheduledAt > System.currentTimeMillis()) "Later today" else "Not taken yet"
             }
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("$name, ${timeLabel(d.scheduledAt)}, $status. Tap to change.") { doseSheet = name to d }.padding(vertical = 10.dp)) {
-                Text(timeLabel(d.scheduledAt), style = timeStyle, color = p.inkSoft, softWrap = false, modifier = Modifier.width(timeWidth).alignByBaseline())
-                Column(Modifier.weight(1f).alignByBaseline()) {
-                    Text(name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
-                    Text(status, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when (d.status) { DoseStatus.TAKEN -> p.ok; DoseStatus.MISSED -> p.red; else -> p.inkSoft })
-                }
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.align(Alignment.CenterVertically).size(22.dp))
-            }
+            com.suryaprakash.medlog.ui.TimelineRow(com.suryaprakash.medlog.ui.TimelineItem(timeLabel(d.scheduledAt), name, status,
+                mark = when (d.status) { DoseStatus.TAKEN -> p.ok; DoseStatus.MISSED -> p.red; else -> null }, onClick = { doseSheet = name to d }),
+                last = d == medDoses.maxByOrNull { it.second.scheduledAt }?.second)
         }
         GoLine("Open Medicines") { onGo(Route.Meds) }
     }
     if (water.isNotEmpty()) {
         val glasses = water.sumOf { it.count ?: 1 }
         HistoryGroup("Water", "$glasses glass${if (glasses == 1) "" else "es"} · ${times(water)}", { IconTile(Icons.Rounded.LocalDrink, p.tintBlue, 44.dp) }, "GREEN", open == "w", { toggle("w") }) {
-            water.forEach { n -> Entry(n, "${n.count ?: 1} glass", "") }
+            water.forEachIndexed { i, n -> val lastE = i == water.lastIndex; Entry(n, "${n.count ?: 1} glass", "", last = lastE) }
             GoLine("Open Food & water") { onGo(Route.Food) }
         }
     }
@@ -354,10 +345,10 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
                 val main = items.firstOrNull { x -> com.suryaprakash.medlog.nutrition.Foods.all.firstOrNull { it.name == x.optString("name") }?.side != true } ?: items.firstOrNull()
                 val sides = items.filter { it !== main }.joinToString(", ") { it.optString("name") }
                 val k = o?.optInt("kcal", -1) ?: -1
-                if (main == null) Entry(n, n.transcript?.ifBlank { null } ?: "Photo of a meal", if (k >= 0) "$k kcal" else "")
+                if (main == null) Entry(n, n.transcript?.ifBlank { null } ?: "Photo of a meal", if (k >= 0) "$k kcal" else "", last = n == food.last())
                 else Entry(n, main.optString("name").replaceFirstChar(Char::uppercase),
                     listOfNotNull(main.optString("amount").ifBlank { null }?.takeIf { a -> a.any(Char::isDigit) && listOf("katori", "plate", "cup").none { a.contains(it) } },
-                        sides.ifBlank { null }?.let { "with $it" }, if (k >= 0) "$k kcal" else null).joinToString(" · "))
+                        sides.ifBlank { null }?.let { "with $it" }, if (k >= 0) "$k kcal" else null).joinToString(" · "), last = n == food.last())
             }
             GoLine("Open Food & water") { onGo(Route.Food) }
         }
@@ -366,7 +357,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         val flagged = output.any { it.triage != "GREEN" }
         HistoryGroup("Toilet and tummy", "${output.size} · ${times(output)}", { IconTile(Icons.Rounded.Wc, p.tintTeal, 44.dp) }, if (flagged) "AMBER" else "GREEN",
             open == "t", { toggle("t") }) {
-            output.forEach { n -> Entry(n, n.text.substringBefore(":"), n.text.substringAfter(": ", ""), n.triage) }
+            output.forEachIndexed { i, n -> val lastE = i == output.lastIndex; Entry(n, n.text.substringBefore(":"), n.text.substringAfter(": ", ""), n.triage, last = lastE) }
             GoLine("Open Toilet and tummy") { onGo(Route.Output()) }
         }
     }
@@ -374,7 +365,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         val name = mapOf("bp" to "Blood pressure", "sugar" to "Sugar", "spo2" to "Oxygen", "temp" to "Temperature", "pulse" to "Pulse", "weight" to "Weight")[type] ?: "Readings"
         HistoryGroup(name, "${list.size} reading${if (list.size == 1) "" else "s"} · last ${list.last().text?.substringAfter(" ")}", { IconTile(Icons.Rounded.MonitorHeart, p.tintPink, 44.dp) },
             "GREEN", open == "r$type", { toggle("r$type") }) {
-            list.forEach { n -> Entry(n, n.text ?: "", "") }
+            list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, n.text ?: "", "", last = lastE) }
             GoLine("Open BP & sugar") { onGo(Route.Readings) }
         }
     }
@@ -382,7 +373,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         val name = when (kind) { Kind.SOS -> "SOS"; Kind.VISIT -> "Doctor visits"; Kind.MED_TAKEN -> "Medicines when needed"; Kind.QUESTION -> "Questions for the doctor"; else -> "From old reports" }
         HistoryGroup(name, "${list.size} · ${times(list)}", { IconTile(if (kind == Kind.SOS) Icons.Rounded.Sos else Icons.Rounded.StickyNote2, if (kind == Kind.SOS) p.red else p.tintTeal, 44.dp) },
             if (kind == Kind.SOS) "RED" else "GREEN", open == "o$kind", { toggle("o$kind") }) {
-            list.forEach { n -> Entry(n, n.text ?: "", "") }
+            list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, n.text ?: "", "", last = lastE) }
         }
     }
 }

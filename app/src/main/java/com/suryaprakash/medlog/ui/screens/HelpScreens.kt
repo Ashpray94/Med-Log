@@ -486,10 +486,10 @@ fun HelperHomeScreen(nav: Nav) {
     Screen(when { !paired -> "Helping someone"; people.size == 1 -> who; else -> "People you help" },
         if (paired) "The latest from $who, and your reply." else "Connect to the phone of the person you help.", onHome = null,
         subtitle = if (!paired) null else person?.name?.let { "Their records and messages" },
-        banner = if (!paired) null else { {
-            val stale = updated > 0 && System.currentTimeMillis() - updated > 2 * 3600_000L
-            com.suryaprakash.medlog.ui.TopBanner(if (updated > 0) "Updated ${com.suryaprakash.medlog.ui.whenWords(updated).removePrefix("Today, ").lowercase().let { if (it.first().isDigit()) "at $it" else it }}" else "Waiting for their first update",
-                tone = if (stale || updated == 0L) p.amber else null)
+        // only when something is wrong: nothing heard for two hours, or nothing yet
+        banner = if (!paired || (updated > 0 && System.currentTimeMillis() - updated <= 2 * 3600_000L)) null else { {
+            com.suryaprakash.medlog.ui.TopBanner(if (updated > 0) "Not updated since ${com.suryaprakash.medlog.ui.whenWords(updated).removePrefix("Today, ").lowercase()}. Their phone may be off or offline." else "Waiting for their first update",
+                tone = p.amber)
         } },
         eyebrow = "You're helping",
         side = { PersonaSwitch(nav) }) {
@@ -587,21 +587,23 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
     val open = !latest.acked
     val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
     fun reply(r: String) { com.suryaprakash.medlog.help.Loud.done(ctx, com.suryaprakash.medlog.help.Loud.alertId(latest.id)); scope.launch { app.db.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
-    // one card, both before and after answering: a tinted strip on top (who and when), the message in large dark
-    // words, the answers; once answered, the answers make way for a thin banner along the bottom saying what was said
+    // one white card, before and after answering: a round icon with who and when, the message in large words,
+    // then (open) the answers, or (answered) a thin line and what was said
     Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)) {
-        // two colours at most: the tinted strip only while it needs an answer; once answered, white with a banner under it
-        Row(Modifier.fillMaxWidth().then(if (open) Modifier.background(if (urgent) p.redSoft else p.brandSoft) else Modifier)
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = if (open) 12.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = if (!open) p.inkSoft else if (urgent) p.red else p.brand, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(if (open) "$who needs you" else "Last message from $who", fontSize = sc.small, fontWeight = FontWeight.Bold, color = if (open) p.ink else p.inkSoft, modifier = Modifier.weight(1f))
-            Text("${dayLabel(latest.at)} ${timeLabel(latest.at)}".trim(), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
-        }
         androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalOnCard provides true) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text(shown(latest.text), fontSize = if (open) sc.headline * 1.15f else sc.body * 1.05f, fontWeight = if (open) FontWeight.Bold else FontWeight.SemiBold,
-                    color = p.ink, lineHeight = (if (open) sc.headline * 1.15f else sc.body * 1.05f) * 1.25f)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (urgent) p.redSoft else p.brandSoft), contentAlignment = Alignment.Center) {
+                        Icon(if (urgent) Icons.Rounded.Sos else Icons.Rounded.ChatBubble, null, tint = if (urgent) p.red else p.brand, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(if (open) "$who needs you" else who, fontSize = sc.body, fontWeight = FontWeight.Bold, color = if (open && urgent) p.red else p.ink)
+                        Text("${dayLabel(latest.at)} ${timeLabel(latest.at)}".trim(), fontSize = sc.small, color = p.inkSoft)
+                    }
+                }
+                Text(shown(latest.text), fontSize = sc.headline * (if (open) 1.15f else 1f), fontWeight = if (open) FontWeight.Bold else FontWeight.SemiBold,
+                    color = p.ink, lineHeight = sc.headline * (if (open) 1.15f else 1f) * 1.25f)
                 if (open) {
                     BigButton("I'm coming", tone = if (urgent) Tone.DANGER else Tone.PRIMARY, icon = Icons.Rounded.DirectionsWalk, onClick = { reply("coming") })
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -638,7 +640,8 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
             // what was answered, in the words sent; green only for "I'm coming"
             val said = app.settings.getString("my_last_reply")?.split("|")?.takeIf { it.size == 2 && (it[1].toLongOrNull() ?: 0) >= latest.at }?.get(0)
             val coming = said == "coming"
-            Row(Modifier.fillMaxWidth().background(if (coming) p.okSoft else p.fill).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.padding(horizontal = 16.dp).fillMaxWidth().height(1.dp).background(p.line))
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(if (coming) Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.Reply, null, tint = if (coming) p.ok else p.inkSoft, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(if (said != null) "You answered: ${Nearby.replyWords(said)}" else "You answered", fontSize = sc.small, fontWeight = FontWeight.Bold,

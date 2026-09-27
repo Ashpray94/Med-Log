@@ -1,15 +1,11 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
-- **Updates are found straight away.** Opening Settings → Updates always checks again, and "Check again" is there too.
-- **"Medicines taken" is right.** Feeds no longer count as medicines, on My health and the doctor page.
-- **Sheets never cover the top of the screen.** They open at most three quarters high and grow as you scroll.
-- **Feed history** includes today.
-- **History:** Feeds, Medicines, Food and the rest each lead to their own page. Back is on every page that needs it.
-- **Medicine cards** always show their times; Details only when there's more than one.
-- **Up to date?** A thin strip at the very top says when the records were last updated, or that something isn't shared yet.
-- **My health charts** fit the screen for any span, a year included; no sideways scrolling.
-- **Widget:** a Messages button next to Speak; a note shows for 10 seconds, then goes; questions sit at the top with the buttons at the bottom.
-- Calmer cards: no coloured stripes, two colours at most; the back button is a round button again.
+- **A cleaner message card** on the helper's page: who and when beside a round icon, the message in large words, and what you answered under a thin line.
+- **"How are you feeling?"** is a white card with two tinted buttons, so it stands out from the page.
+- **Medicine cards:** name, dose and times in one column; Details always there.
+- **History as a timeline:** feed history and every group on the History page read top to bottom with the time, what happened and a coloured dot.
+- **The strip at the top** shows only when something is wrong (no update for two hours, or nothing yet).
+- **Widget:** a larger question, and an outlined Messages button.
 
 Install **MedLog-VERSION-arm64.apk** on most phones.

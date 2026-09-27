@@ -673,32 +673,20 @@ private fun FeedHistory(feeds: List<com.suryaprakash.medlog.data.Medicine>) {
     days.forEach { (date, ds) ->
         val words = if (date == java.time.LocalDate.now()) "Today" else if (date == java.time.LocalDate.now().minusDays(1)) "Yesterday"
             else date.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", com.suryaprakash.medlog.speech.I18n.locale))
-        Text(words, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(top = 4.dp))
-        com.suryaprakash.medlog.ui.Group {
-            ds.groupBy { it.medicineId }.entries.forEachIndexed { i, (id, g) ->
-                if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                val m = byId[id] ?: return@forEachIndexed
-                Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
-                    val sorted = g.sortedBy { it.scheduledAt }
-                    fun times(l: List<com.suryaprakash.medlog.data.Dose>) = l.joinToString(", ") { chipTime(it.scheduledAt) }
-                    val food = sorted.filter { it.status == S.SKIPPED && it.reason == "Ate food instead" }
-                    listOf(
-                        Triple(Icons.Rounded.CheckCircle, "Given", sorted.filter { it.status == S.TAKEN }) to p.ok,
-                        Triple(Icons.Rounded.Restaurant, "Food instead", food) to p.inkSoft,
-                        Triple(Icons.Rounded.RemoveCircleOutline, "Not given", sorted.filter { it.status == S.SKIPPED && it !in food }) to p.inkSoft,
-                        Triple(Icons.Rounded.Cancel, "Missed", sorted.filter { it.status == S.MISSED || it.status == S.DUE || it.status == S.SNOOZED }) to p.red,
-                    ).forEach { (t, tint) ->
-                        val (icon, label, list) = t
-                        if (list.isEmpty()) return@forEach
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text("$label · ${times(list)}", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (tint == p.red) p.red else p.ink)
-                        }
-                    }
-                }
-            }
+        // one feed that day: its name once, under the day; several: each entry says which
+        val oneFeed = ds.map { it.medicineId }.distinct().size == 1
+        Column(Modifier.padding(top = 4.dp)) {
+            Text(words, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
+            if (oneFeed) byId[ds.first().medicineId]?.let { Text(it.name, fontSize = sc.small, color = p.inkSoft) }
         }
+        com.suryaprakash.medlog.ui.Timeline(ds.sortedByDescending { it.scheduledAt }.map { d ->
+            val (what, mark) = when {
+                d.status == S.TAKEN -> "Given" to p.ok
+                d.status == S.SKIPPED && d.reason == "Ate food instead" -> "Food instead" to p.inkSoft
+                d.status == S.SKIPPED -> "Not given" to p.inkSoft
+                else -> "Missed" to p.red
+            }
+            com.suryaprakash.medlog.ui.TimelineItem(chipTime(d.scheduledAt), what, sub = if (oneFeed) null else byId[d.medicineId]?.name, mark = mark)
+        })
     }
 }
