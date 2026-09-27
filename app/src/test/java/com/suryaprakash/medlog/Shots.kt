@@ -192,13 +192,14 @@ class Shots {
         val now = System.currentTimeMillis()
         val h = 3600_000L
         var u = 0
-        suspend fun med(name: String, strength: String, hours: List<Int>, purpose: String, form: String = "tablet", amount: String = "1", states: List<String?> = emptyList()) {
+        suspend fun med(name: String, strength: String, hours: List<Int>, purpose: String, form: String = "tablet", amount: String = "1", states: List<String?> = emptyList()): Long {
             val id = db.medicines().insert(Medicine(name = name, strength = strength, times = hours.joinToString(",") { "%02d:00".format(it) }, purpose = purpose, form = form, amount = amount, uid = "w${u++}"))
             hours.forEachIndexed { i, hr ->
                 val at = today + hr * h
                 val st = states.getOrNull(i) ?: if (at < now - 20 * 60_000) DoseStatus.MISSED else DoseStatus.DUE
                 db.doses().insert(Dose(medicineId = id, scheduledAt = at, status = st, actedAt = if (st == DoseStatus.TAKEN) at + 25 * 60_000 else null, uid = "wd${u++}"))
             }
+            return id
         }
         med("Isuvaconazole sulfate (Cresemba) capsules", "100 mg", listOf(6, 11, 16, 21), "Fungal infection of the lungs after chemotherapy", "capsule", "2",
             listOf(DoseStatus.TAKEN, DoseStatus.MISSED, null, null))
@@ -210,8 +211,15 @@ class Shots {
         // one due right now, whatever the time of day
         val dueId = db.medicines().insert(Medicine(name = "Pantoprazole + Domperidone", strength = "40 mg / 30 mg", times = "%02d:00".format(java.time.LocalTime.now().hour), purpose = "Acidity and vomiting", uid = "wdue"))
         db.doses().insert(Dose(medicineId = dueId, scheduledAt = now - 5 * 60_000, uid = "wdue1"))
-        med("Mix - Plant protein powder + Ensure + ragi malt with jaggery", "", listOf(7, 10, 13, 16, 19, 21), "", "feed", "200 ml",
+        val mix = med("Mix - Plant protein powder + Ensure + ragi malt with jaggery", "", listOf(7, 10, 13, 16, 19, 21), "", "feed", "200 ml",
             listOf(DoseStatus.TAKEN, DoseStatus.SKIPPED, DoseStatus.MISSED, null, null, null))
+        // the days before: some given, one food instead, some missed
+        (1..3).forEach { back ->
+            listOf(7, 10, 13, 16, 19, 21).forEachIndexed { i, hr ->
+                val st = listOf(DoseStatus.TAKEN, DoseStatus.TAKEN, DoseStatus.MISSED, DoseStatus.SKIPPED, DoseStatus.TAKEN, DoseStatus.MISSED)[(i + back) % 6]
+                db.doses().insert(Dose(medicineId = mix, scheduledAt = today - back * 24 * h + hr * h, status = st, reason = if (st == DoseStatus.SKIPPED) "Ate food instead" else null, uid = "wh${u++}"))
+            }
+        }
         med("Tender coconut water", "", listOf(11, 17), "", "feed", "250 ml")
         fun note(kind: String, pid: String?, at: Long, text: String, triage: String = "GREEN") =
             Note(kind = kind, problemId = pid, occurredAt = at, text = text, triage = triage, uid = "wn${u++}")

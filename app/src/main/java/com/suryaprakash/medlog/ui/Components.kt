@@ -368,8 +368,9 @@ fun ActionArea(content: @Composable ColumnScope.() -> Unit) {
  */
 val LocalOnCard = androidx.compose.runtime.compositionLocalOf { false }
 
-/** A soft shadow that lifts a white surface off the page. */
-fun Modifier.lift(shape: Shape, on: Boolean = true): Modifier = if (on) this.shadow(1.5.dp, shape, clip = false, ambientColor = Color(0x33000000), spotColor = Color(0x33000000)) else this
+/** A soft shadow and a faint edge (8% black, never a heavy frame) that lift a white surface off the page. */
+fun Modifier.lift(shape: Shape, on: Boolean = true): Modifier = if (on) this.shadow(1.5.dp, shape, clip = false, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
+    .border(1.dp, Color(0x14000000), shape) else this
 
 /** True when a task page is shown inside a sheet: then its top has only Close. */
 val LocalInSheet = androidx.compose.runtime.compositionLocalOf { false }

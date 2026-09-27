@@ -110,9 +110,19 @@ fun NutritionScreen(nav: Nav) {
         }
         if (rep.missed.isNotEmpty()) {
             SectionHeader("Missed feeds", "${rep.missed.size} in this time", null)
-            com.suryaprakash.medlog.ui.Timeline(rep.missed.sortedByDescending { it.at }.take(20).map { m ->
-                com.suryaprakash.medlog.ui.TimelineItem("${dayLabel(m.at)} ${timeLabel(m.at)}".trim(), "${m.feed} · ${m.ml.roundToInt()} ml", mark = p.red)
-            })
+            // each feed named once, then its missed times day by day ("Today: 10 AM, 1 PM · Yesterday: 7 AM")
+            Group {
+                rep.missed.groupBy { it.feed }.entries.forEachIndexed { i, (feed, ms) ->
+                    if (i > 0) GroupLine()
+                    val byDay = ms.sortedByDescending { it.at }.groupBy { dayLabel(it.at).ifBlank { "Today" } }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                        Text("$feed · ${ms.size} missed", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        byDay.forEach { (day, l) ->
+                            Text("$day: " + l.sortedBy { it.at }.joinToString(", ") { chipTime(it.at) }, fontSize = sc.small, color = p.red, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
         }
         if (rep.feedLines.isNotEmpty()) {
             SectionHeader("Feeds", "Given now", null)

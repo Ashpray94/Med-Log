@@ -2592,5 +2592,14 @@
 "{0} more today": "आज {0} और",
 "Feed history": "फ़ीड का इतिहास",
 "Each feed given or missed, day by day, and what went in": "हर फ़ीड दी गई या छूटी, दिन-ब-दिन, और उसमें क्या था",
-"You answered: {0}": "आपने जवाब दिया: {0}"
+"You answered: {0}": "आपने जवाब दिया: {0}",
+"Last message from {0}": "{0} का आख़िरी संदेश",
+"Their feeds today": "उनकी आज की फ़ीड",
+"The last 7 days": "पिछले 7 दिन",
+"Nothing yet. Each feed you note shows here, day by day.": "अभी कुछ नहीं। जो भी फ़ीड लिखेंगे, दिन-ब-दिन यहाँ दिखेगी।",
+"Food instead · {0}": "इसके बदले खाना · {0}",
+"Not given · {0}": "नहीं दी · {0}",
+"{0} · {1} missed": "{0} · {1} छूटी",
+"{0}: {1}": "{0}: {1}",
+"{0} of {1} {2}": "{1} में से {0} {2}"
 }

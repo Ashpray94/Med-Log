@@ -90,7 +90,8 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
     val doses by db.doses().betweenFlow(start, end).collectAsState(emptyList())
     val meds by db.medicines().activeFlow().collectAsState(emptyList())
     val byId = meds.associateBy { it.id }
-    val days: List<MedDay> = doses.groupBy { it.medicineId }.mapNotNull { (id, ds) -> byId[id]?.let { it to ds } }.filter { feeds || it.first.form != "feed" }
+    // medicines and feeds are never mixed: this page is one or the other
+    val days: List<MedDay> = doses.groupBy { it.medicineId }.mapNotNull { (id, ds) -> byId[id]?.let { it to ds } }.filter { (it.first.form == "feed") == feeds }
     val ranked = rankToday(days)
     val now = System.currentTimeMillis()
     fun part(d: MedDay) = when {
@@ -99,12 +100,14 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
         else -> 2
     }
     val parts = ranked.groupBy(::part)
-    val taken = doses.count { it.status == DoseStatus.TAKEN && byId[it.medicineId]?.let { m -> feeds || m.form != "feed" } == true }
+    val taken = doses.count { it.status == DoseStatus.TAKEN && byId[it.medicineId]?.let { m -> (m.form == "feed") == feeds } == true }
     val total = days.sumOf { it.second.size }
     val viewing = com.suryaprakash.medlog.data.Viewing.pairId.value
     val who = viewing?.let { id -> com.suryaprakash.medlog.data.People.all(ctx).firstOrNull { it.pairId == id }?.name?.substringBefore(' ')?.ifBlank { null } ?: "They" }
-    Screen(if (viewing != null) "Their medicines today" else "Today's medicines", "$taken of $total taken.", onHome = { nav.home() }, onBack = { nav.back() },
-        subtitle = "$taken of $total taken", scroll = false) {
+    val title = when { feeds && viewing != null -> "Their feeds today"; feeds -> "Today's feeds"; viewing != null -> "Their medicines today"; else -> "Today's medicines" }
+    val done = if (feeds) "given" else "taken"
+    Screen(title, "$taken of $total $done.", onHome = { nav.home() }, onBack = { nav.back() },
+        subtitle = "$taken of $total $done", scroll = false) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {
             listOf(0 to "Needs you now", 1 to "Later today", 2 to "Done for today").forEach { (k, title) ->
                 val list = parts[k].orEmpty()
@@ -122,7 +125,7 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
                 }
             }
             item(key = "add") {
-                Column(Modifier.padding(top = 8.dp)) { com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) } }
+                Column(Modifier.padding(top = 8.dp)) { if (feeds) com.suryaprakash.medlog.ui.DashedAddCard("Set up a feed") { nav.go(Route.FeedNew) } else com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) } }
             }
         }
     }

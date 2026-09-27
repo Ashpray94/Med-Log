@@ -1,5 +1,8 @@
 package com.suryaprakash.medlog.ui.screens
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.RemoveCircleOutline
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Alarm
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Medication
@@ -186,10 +189,8 @@ fun FoodScreen(nav: Nav) {
                         onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } },
                         onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead") }; nav.go(Route.FoodPick()) })
                 }
-                // every feed given or missed, day by day, with amounts
-                if (feeds.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
-                    com.suryaprakash.medlog.ui.NavRow("Feed history", sub = "Each feed given or missed, day by day, and what went in") { nav.go(Route.Nutrition) }
-                }
+                // the days before today, right here: each day once, each feed's name once, its times under it
+                if (feeds.isNotEmpty()) FeedHistory(feeds)
             }
         }
     }
@@ -654,4 +655,56 @@ private fun ScaleCard(onSave: (Double) -> Unit) {
     }
     if (!typing) BigButton("Type it instead", tone = Tone.TINT, height = 52.dp, onClick = { typing = true })
     else NumberPad("kg", allowDecimal = true, range = 20.0..250.0) { v -> onSave(v) }
+}
+
+/**
+ * Feed history on the Feeds page: the last 7 days before today, newest first. Each day is named once; under it each
+ * feed is named once, with its times sorted into plain lines: given, food instead, not given, missed.
+ */
+@Composable
+private fun FeedHistory(feeds: List<com.suryaprakash.medlog.data.Medicine>) {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val start = remember { com.suryaprakash.medlog.meds.Scheduler.today().first }
+    val from = remember { start - 7 * com.suryaprakash.medlog.data.DAY }
+    val doses by app.viewDb.doses().betweenFlow(from, start).collectAsState(emptyList())
+    val byId = feeds.associateBy { it.id }
+    val zone = java.time.ZoneId.systemDefault()
+    val days = doses.filter { it.medicineId in byId }.groupBy { java.time.Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalDate() }.toSortedMap(compareByDescending { it })
+    com.suryaprakash.medlog.ui.SectionHeader("Feed history", "The last 7 days", null)
+    if (days.isEmpty()) { com.suryaprakash.medlog.ui.Hint("Nothing yet. Each feed you note shows here, day by day."); return }
+    val S = com.suryaprakash.medlog.data.DoseStatus
+    days.forEach { (date, ds) ->
+        val words = if (date == java.time.LocalDate.now().minusDays(1)) "Yesterday"
+            else date.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", com.suryaprakash.medlog.speech.I18n.locale))
+        Text(words, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.padding(top = 4.dp))
+        com.suryaprakash.medlog.ui.Group {
+            ds.groupBy { it.medicineId }.entries.forEachIndexed { i, (id, g) ->
+                if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
+                val m = byId[id] ?: return@forEachIndexed
+                Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                    val sorted = g.sortedBy { it.scheduledAt }
+                    fun times(l: List<com.suryaprakash.medlog.data.Dose>) = l.joinToString(", ") { chipTime(it.scheduledAt) }
+                    val food = sorted.filter { it.status == S.SKIPPED && it.reason == "Ate food instead" }
+                    listOf(
+                        Triple(Icons.Rounded.CheckCircle, "Given", sorted.filter { it.status == S.TAKEN }) to p.ok,
+                        Triple(Icons.Rounded.Restaurant, "Food instead", food) to p.inkSoft,
+                        Triple(Icons.Rounded.RemoveCircleOutline, "Not given", sorted.filter { it.status == S.SKIPPED && it !in food }) to p.inkSoft,
+                        Triple(Icons.Rounded.Cancel, "Missed", sorted.filter { it.status == S.MISSED || it.status == S.DUE || it.status == S.SNOOZED }) to p.red,
+                    ).forEach { (t, tint) ->
+                        val (icon, label, list) = t
+                        if (list.isEmpty()) return@forEach
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("$label · ${times(list)}", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (tint == p.red) p.red else p.ink)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

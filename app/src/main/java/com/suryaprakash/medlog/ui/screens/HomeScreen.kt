@@ -365,7 +365,9 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
                             fontSize = sc.small, color = p.inkSoft)
                     }
                 }
+                // Details always on the left, the answer (when one is needed) on the right
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
                     next?.let { d ->
                         val t = chipTime(d.scheduledAt)
                         val words = when {
@@ -375,7 +377,6 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
                         }
                         BigButton(words, Modifier.weight(1.4f), if (due(d)) Tone.PRIMARY else Tone.SECONDARY, height = 52.dp, onClick = { answer(d) })
                     }
-                    BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
                 }
             }
         }
