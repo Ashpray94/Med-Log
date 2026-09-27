@@ -112,6 +112,7 @@ import com.suryaprakash.medlog.ui.ValueRow
 import com.suryaprakash.medlog.ui.YesNo
 import com.suryaprakash.medlog.ui.rememberContactPicker
 import com.suryaprakash.medlog.ui.rememberPermissionAsker
+import com.suryaprakash.medlog.ui.lift
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -926,32 +927,18 @@ private fun WelcomeCarousel() {
         Slide(Icons.Rounded.Sos, p.red, "Help in one tap", "Your family is called and told where you are."),
         Slide(Icons.Rounded.Description, p.tintPurple, "One page for the doctor", "What happened, when, and how bad."),
     )
-    val pager = androidx.compose.foundation.pager.rememberPagerState { slides.size }
-    LaunchedEffect(still) {
-        if (still) return@LaunchedEffect
-        while (true) { kotlinx.coroutines.delay(3500); pager.animateScrollToPage((pager.currentPage + 1) % slides.size) }
-    }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // portrait cards with the next one peeking in, so it's clear they can be swiped by thumb too
-        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth(), pageSpacing = 14.dp,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 40.dp)) { i ->
-            val sl = slides[i]
-            val sh = androidx.compose.foundation.shape.RoundedCornerShape(32.dp)
-            Column(
-                Modifier.fillMaxWidth().height(if (sc.big) 420.dp else 380.dp).clip(sh).background(sl.tint.copy(alpha = 0.10f)).padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-            ) {
-                com.suryaprakash.medlog.ui.IconTile(sl.icon, sl.tint, 104.dp)
-                Spacer(Modifier.height(28.dp))
-                Text(sl.title, fontSize = sc.title, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, minLines = 2)
-                Spacer(Modifier.height(8.dp))
-                Text(sl.sub, fontSize = sc.body, color = p.inkSoft, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, minLines = 2)
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(slides.size) { i ->
-                Box(Modifier.height(8.dp).width(if (i == pager.currentPage) 24.dp else 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-                    .background(if (i == pager.currentPage) p.brand else p.line))
+    @Suppress("UNUSED_VARIABLE") val unusedStill = still
+    // four plain points, one under the other: nothing slides sideways or moves by itself
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        slides.forEach { sl ->
+            Row(Modifier.fillMaxWidth().lift(androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)).clip(androidx.compose.foundation.shape.RoundedCornerShape(sc.radius))
+                .background(p.card).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                com.suryaprakash.medlog.ui.IconTile(sl.icon, sl.tint, 56.dp)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sl.title, fontSize = sc.headline, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink)
+                    Text(sl.sub, fontSize = sc.body, color = p.inkSoft)
+                }
             }
         }
     }

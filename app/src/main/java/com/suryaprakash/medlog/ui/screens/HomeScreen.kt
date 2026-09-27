@@ -365,23 +365,29 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
                         Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.takeIf { !feed }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
                             fontSize = sc.small, color = p.inkSoft)
                         // when: under the name, so the eye reads name, dose, time in one column
-                        // one line only: the first three times, then how many more (Details has them all)
-                        Text((if (sorted.size > 1) "${sorted.size} times a day · " else "Once a day · ") + sorted.take(3).joinToString(", ") { chipTime(it.scheduledAt) } +
-                            (if (sorted.size > 3) " +${sorted.size - 3}" else ""), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1)
+                        // one line only, the times first (they matter most): the first three, then how many more; Details has them all
+                        Text(if (sorted.size == 1) "${chipTime(sorted[0].scheduledAt)} every day"
+                            else sorted.take(3).joinToString(", ") { chipTime(it.scheduledAt) } + if (sorted.size > 3) " +${sorted.size - 3} more" else "",
+                            fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
-                // Details always on the left; the answer, when one is needed, on the right
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
-                    next?.let { d ->
-                        val t = chipTime(d.scheduledAt)
-                        val words = when {
-                            feed -> if (missed(d)) "Given late" else "Given · $t"
-                            who != null -> if (missed(d)) "$who took it late" else "$who took it"
-                            else -> if (missed(d)) "Took it late" else "I took it"
-                        }
-                        BigButton(words, Modifier.weight(1.4f), if (due(d)) Tone.PRIMARY else Tone.SECONDARY, height = 52.dp, onClick = { answer(d) })
+                // Details always on the left; the answer, when one is needed, on the right. With large words or in
+                // Hindi or Tamil the two stack (answer on top), so no word is ever split across lines
+                val stack = sc.big || com.suryaprakash.medlog.ui.LocalScript.current.indic
+                val answerWords = next?.let { d ->
+                    val t = chipTime(d.scheduledAt)
+                    when {
+                        feed -> if (missed(d)) "Given late" else "Given · $t"
+                        who != null -> if (missed(d)) "$who took it late" else "$who took it"
+                        else -> if (missed(d)) "Took it late" else "I took it"
                     }
+                }
+                if (stack) Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    next?.let { d -> BigButton(answerWords!!, tone = if (due(d)) Tone.PRIMARY else Tone.SECONDARY, height = 52.dp, onClick = { answer(d) }) }
+                    BigButton("Details", tone = Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
+                } else Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BigButton("Details", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { sheet = true })
+                    next?.let { d -> BigButton(answerWords!!, Modifier.weight(1.4f), if (due(d)) Tone.PRIMARY else Tone.SECONDARY, height = 52.dp, onClick = { answer(d) }) }
                 }
             }
         }

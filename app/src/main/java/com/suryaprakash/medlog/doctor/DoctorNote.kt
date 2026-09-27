@@ -143,8 +143,12 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         val concerns = LinkedHashSet<String>()
         val levels = ArrayList<String>()
         for ((pid, list) in byProblem.sortedByDescending { (_, l) -> l.maxOf { rank(it.triage) } }) {
-            val reasons = list.filter { rank(it.triage) > 0 }.flatMap { it.triageReasons.lines() }.filter { it.isNotBlank() }.distinct()
-            if (reasons.isNotEmpty() && concerns.add("${cat.problem(pid)?.label}: ${reasons.take(2).joinToString("; ")} (${d(list.filter { rank(it.triage) > 0 }.maxOf { it.occurredAt })})"))
+            val flagged = list.filter { rank(it.triage) > 0 }
+            if (flagged.isEmpty()) continue
+            // an urgent note ranks first even when it carries no written reason
+            val reasons = flagged.flatMap { it.triageReasons.lines() }.filter { it.isNotBlank() }.distinct()
+                .ifEmpty { listOf(if (flagged.any { it.triage == "RED" }) "noted as urgent" else "noted to watch") }
+            if (concerns.add("${cat.problem(pid)?.label}: ${reasons.take(2).joinToString("; ")} (${d(list.filter { rank(it.triage) > 0 }.maxOf { it.occurredAt })})"))
                 levels += list.maxBy { rank(it.triage) }.triage
         }
         for (r in rows) if (concerns.size < 3 && r.urgent == "GREEN" && concerns.add("${r.name}: " + (if (r.total > 1) "${r.total} times in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else "once") + " (${r.whenText.substringAfter("(").substringBefore(")")})")) levels += "GREEN"

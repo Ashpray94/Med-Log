@@ -78,7 +78,7 @@ fun NutritionScreen(nav: Nav) {
     val rep = r
     Screen("Nutrition", rep?.headline?.text ?: "Preparing.", onHome = { nav.home() }, onBack = { nav.back() }, subtitle = "What went in, and weight") {
         Segmented(SPANS.map { it.second }, SPANS.indexOfFirst { it.first == days }) { days = SPANS[it].first }
-        if (rep == null) return@Screen
+        if (rep == null) { com.suryaprakash.medlog.ui.Loading(); return@Screen }
         NutritionSummary(rep)
 
         // the charts

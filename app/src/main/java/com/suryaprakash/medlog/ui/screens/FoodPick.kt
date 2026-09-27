@@ -170,7 +170,8 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
         com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search dishes")
         if (query.isBlank()) {
             // when, then where from
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // the choices wrap onto a second line rather than scroll sideways out of sight
+            com.suryaprakash.medlog.ui.FlowRowOf(Modifier.fillMaxWidth()) {
                 FilterChip(cuisine ?: "Cuisine", cuisine != null, trailing = true) { cuisineSheet = true }
                 Foods.MEALS.forEach { m -> FilterChip(if (m == "Lunch") "Lunch & dinner" else m, meal == m) { meal = m } }
             }

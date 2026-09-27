@@ -1517,3 +1517,15 @@ fun AppSheet(onDismissRequest: () -> Unit, containerColor: Color = LocalPalette.
         }
     }
 }
+
+/** While a page is being put together: a spinner and a word, never a blank page. */
+@Composable
+fun Loading(text: String = "Getting it ready…") {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), color = p.brand, strokeWidth = 3.dp)
+        Spacer(Modifier.width(14.dp))
+        Text(text, fontSize = sc.body, color = p.inkSoft)
+    }
+}

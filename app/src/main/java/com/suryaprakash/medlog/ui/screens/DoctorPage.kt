@@ -122,7 +122,7 @@ fun DoctorScreen(nav: Nav) {
         // how far back: four choices, one tap, no window
         com.suryaprakash.medlog.ui.Segmented(listOf("1W", "2W", "1M", "3M"), PERIODS.indexOfFirst { it.first == days }) { days = PERIODS[it].first }
         n?.period?.let { com.suryaprakash.medlog.ui.Hint(it) }
-        if (n == null) return@Screen
+        if (n == null) { com.suryaprakash.medlog.ui.Loading(); return@Screen }
 
         Stats(n)
 
@@ -293,8 +293,8 @@ private fun ConcernRow(text: String, level: String) {
     val rest = text.substringAfter(":", "").trim()
     val date = Regex("""\(([^()]*)\)$""").find(rest)?.groupValues?.get(1)
     val what = rest.removeSuffix(date?.let { "($it)" } ?: "").trim()
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = 16.dp)) {
-        Box(Modifier.padding(vertical = 16.dp).width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(levelColor(level, p)))
+    // the level is said by its tag beside the name; no bar down the side
+    Row(Modifier.fillMaxWidth().padding(start = 4.dp)) {
         Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(title, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
