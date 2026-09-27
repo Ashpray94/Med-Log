@@ -47,6 +47,11 @@ jobs:
           elif [ -f signing/release.properties ]; then
             cp signing/medlog-release.jks "$K"; P=signing/release.properties
             PUBLISH=yes
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # asked for a release by hand: without the real key it could never install over the app on a phone,
+            # so stop here and say why, rather than build something that looks fine and isn't
+            echo "::error::MEDLOG_SIGNING is not set. Add it (see signing/README.md, or run scripts/make_signing_secret.ps1 on the PC), then run this again."
+            exit 1
           else
             P="$RUNNER_TEMP/oneoff.txt"; PW="$(openssl rand -hex 16)"
             printf 'storePassword=%s\nkeyAlias=medlog\nkeyPassword=%s\n' "$PW" "$PW" > "$P"
