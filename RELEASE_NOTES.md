@@ -1,6 +1,7 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
+- **Text messages (SMS) can be allowed.** When Android says "App was denied access to SMS", the app now shows the steps to allow it: Settings, ⋮, Allow restricted settings. Once is enough.
 - **Today's medicines, one card at a time.** The one that needs you first; swipe for the next. "See all" opens the whole list (needs you now, later today, done), however many medicines there are.
 - **Clear medicine cards.** A thin banner along the bottom says how the day stands: missed (red), due now (amber), all taken (green). Every time shows with ✓ or ✕. One button, only when a dose needs an answer.
 - **Calmer look.** The accent colour is kept for the one main thing on each page. No outlines on cards; every button is filled, so it's plain what can be tapped. Helper mode is a calm blue.

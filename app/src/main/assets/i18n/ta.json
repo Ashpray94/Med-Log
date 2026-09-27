@@ -2580,5 +2580,7 @@
 "{0} days not noted · {1} – {2}": "{0} நாட்கள் எதுவும் பதியவில்லை · {1} – {2}",
 "Nothing noted · {0}": "எதுவும் பதியவில்லை · {0}",
 "Started {0}": "{0} முதல் தொடங்கியது",
-"{0} g protein · {1} glasses of water": "{0} கி புரதம் · {1} டம்ளர் தண்ணீர்"
+"{0} g protein · {1} glasses of water": "{0} கி புரதம் · {1} டம்ளர் தண்ணீர்",
+"Android holds back SMS for apps installed from a file. Allow it once; updates keep it:": "கோப்பிலிருந்து நிறுவிய செயலிகளுக்கு Android SMS-ஐ நிறுத்தி வைக்கிறது. ஒருமுறை அனுமதிக்கவும்; புதுப்பிப்புகளுக்குப் பின்னும் இருக்கும்:",
+"1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.": "1. அமைப்புகளைத் திற என்பதைத் தட்டவும்.\n2. மேல் வலதில் ⋮ தட்டி, கட்டுப்படுத்தப்பட்ட அமைப்புகளை அனுமதி என்பதைத் தட்டி உறுதிசெய்யவும்.\n3. இங்கே திரும்பி மீண்டும் இயக்கவும்."
 }

@@ -2580,5 +2580,7 @@
 "{0} days not noted · {1} – {2}": "{0} दिन कुछ नहीं लिखा · {1} – {2}",
 "Nothing noted · {0}": "कुछ नहीं लिखा · {0}",
 "Started {0}": "{0} से शुरू",
-"{0} g protein · {1} glasses of water": "{0} ग्राम प्रोटीन · {1} गिलास पानी"
+"{0} g protein · {1} glasses of water": "{0} ग्राम प्रोटीन · {1} गिलास पानी",
+"Android holds back SMS for apps installed from a file. Allow it once; updates keep it:": "फ़ाइल से इंस्टॉल किए गए ऐप के लिए Android SMS रोक देता है। एक बार अनुमति दें; अपडेट के बाद भी बनी रहेगी:",
+"1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.": "1. सेटिंग्स खोलें दबाएँ।\n2. ऊपर दाईं ओर ⋮ दबाएँ, फिर प्रतिबंधित सेटिंग्स की अनुमति दें, और पुष्टि करें।\n3. यहाँ लौटकर इसे फिर से चालू करें।"
 }

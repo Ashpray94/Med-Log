@@ -116,7 +116,10 @@ fun rememberPermissionAsker(onResult: (Boolean) -> Unit): (Array<String>) -> Uni
         val act = ctx.activity()
         // no question was shown: the answer came back at once, and Android wouldn't explain it either
         val silent = System.currentTimeMillis() - askedAt < 700 && denied.none { act?.shouldShowRequestPermissionRationale(it) == true }
-        if (denied.isNotEmpty() && silent) blocked = denied.map(::permWord).distinct()
+        // SMS is "restricted" on Android 13 and newer for apps installed from a file: Android shows its own
+        // "App was denied access" note instead of the question, so the steps follow that note too
+        val restricted = Build.VERSION.SDK_INT >= 33 && Manifest.permission.SEND_SMS in denied && act?.shouldShowRequestPermissionRationale(Manifest.permission.SEND_SMS) != true
+        if (denied.isNotEmpty() && (silent || restricted)) blocked = denied.map(::permWord).distinct()
         result.value(denied.isEmpty())
     }
     val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -131,9 +134,14 @@ fun rememberPermissionAsker(onResult: (Boolean) -> Unit): (Array<String>) -> Uni
         val names = blocked.joinToString(" and ")
         Card {
             Title("Allow it in Settings")
-            Body("Android didn't show the question here, so please turn it on in Settings:")
-            Body("1. Tap Open Settings.\n2. Tap Permissions, then $names, then Allow.", bold = true)
-            Hint("If $names is greyed out: tap ⋮ at the top right of that screen, then Allow restricted settings, and try again.")
+            if ("SMS" in blocked) {
+                Body("Android holds back SMS for apps installed from a file. Allow it once; updates keep it:")
+                Body("1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.", bold = true)
+            } else {
+                Body("Android didn't show the question here, so please turn it on in Settings:")
+                Body("1. Tap Open Settings.\n2. Tap Permissions, then $names, then Allow.", bold = true)
+                Hint("If $names is greyed out: tap ⋮ at the top right of that screen, then Allow restricted settings, and try again.")
+            }
             BigButton("Open Settings", onClick = { blocked = emptyList(); Perms.openAppSettings(ctx) })
             BigButton("Not now", tone = Tone.SECONDARY, onClick = { blocked = emptyList() })
         }
