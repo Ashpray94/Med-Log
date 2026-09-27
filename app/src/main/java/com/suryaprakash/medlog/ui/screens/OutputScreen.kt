@@ -54,6 +54,7 @@ import com.suryaprakash.medlog.ui.WhenRow
 import com.suryaprakash.medlog.ui.savedFeedback
 import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.launch
+import androidx.compose.runtime.LaunchedEffect
 import org.json.JSONObject
 
 /**
@@ -108,6 +109,22 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
     fun reset() { form = 0; colour = null; amount = null; blood = false; pain = false }
     val ready = when (type) { "stool" -> form > 0; else -> colour != null }
     val warn = Output.danger(type, colour, blood)
+    // kept as it's tapped: closing MedLog loses nothing, and one reminder comes 30 minutes later
+    LaunchedEffect(Unit) {
+        com.suryaprakash.medlog.care.Drafts.get(ctx, "output")?.let { d -> runCatching {
+            val o = JSONObject(d)
+            tab = o.optInt("tab", start); form = o.optInt("form"); colour = o.optString("colour").ifBlank { null }
+            amount = o.optString("amount").ifBlank { null }; blood = o.optBoolean("blood"); pain = o.optBoolean("pain")
+            if (o.has("at")) at = o.getLong("at")
+        } }
+    }
+    LaunchedEffect(tab, form, colour, amount, blood, pain, at) {
+        if (form == 0 && colour == null && amount == null && !blood && !pain) { com.suryaprakash.medlog.care.Drafts.clear(ctx, "output"); return@LaunchedEffect }
+        com.suryaprakash.medlog.care.Drafts.save(ctx, "output", "toilet note", "medlog://open?name=toilet",
+            JSONObject().put("tab", tab).put("form", form).put("colour", colour ?: "").put("amount", amount ?: "").put("blood", blood).put("pain", pain).apply { at?.let { put("at", it) } }.toString())
+        kotlinx.coroutines.delay(2000)
+        com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
+    }
 
     Screen("Toilet & vomit", "Choose stool, urine or vomit, then tap what it looked like.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "What it looked like", actions = {
@@ -118,6 +135,7 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
                 scope.launch {
                     app.viewDb.notes().insert(Note(kind = Kind.OUTPUT, occurredAt = at ?: System.currentTimeMillis(), details = o.toString(), text = Output.words(o),
                         triage = if (warn != null) "AMBER" else "GREEN"))
+                    com.suryaprakash.medlog.care.Drafts.clear(ctx, "output")
                     savedFeedback(ctx); app.speaker.say("Saved.")
                     if (warn != null) nav.replace(Route.Tell(warn.second)) else nav.back()
                 }
@@ -131,7 +149,7 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
                 TileGrid((1..7).toList(), 2, aspect = 1.25f) { n, mod ->
                     val on = form == n
                     val sh = RoundedCornerShape(sc.radius)
-                    Column(mod.clip(sh).background(if (on) p.brandSoft else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, sh)
+                    Column(mod.clip(sh).background(if (on) p.brandSoft else p.card).border(if (on) 3.dp else 1.5.dp, if (on) p.brand else p.outline, sh)
                         .steady("Type $n, ${Output.STOOL[n - 1]}" + if (on) ", chosen" else "") { form = n }.padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         StoolPicture(n, Modifier.fillMaxWidth().height(48.dp))
