@@ -69,7 +69,8 @@ class Shots {
         for (full in names) {
             val n = full.substringBefore('@')
             val r = routes[n] ?: continue
-            rule.runOnUiThread { nav.home(if (n == "helper") Route.HelperHome else Route.Home); if (r != Route.Home && n != "helper") nav.go(r) }
+            if (n == "onboarding") app.settings.update { it.copy(onboarded = false) }
+            rule.runOnUiThread { nav.home(when (n) { "helper" -> Route.HelperHome; "onboarding" -> Route.Onboarding; else -> Route.Home }); if (r != Route.Home && n != "helper" && n != "onboarding") nav.go(r) }
             rule.mainClock.advanceTimeBy(3000)
             rule.waitForIdle()
             full.split('@').drop(1).forEach { tap ->
