@@ -347,7 +347,7 @@ class NoteProblem : ActionCallback {
         val now = System.currentTimeMillis()
         val ids = app.repo.saveTold(listOf(com.suryaprakash.medlog.nlu.Mention(pid)), null, now, com.suryaprakash.medlog.clinical.Triage.OK, emptyList(), emptyList(), null)
         val today = app.repo.recentProblems(12).firstOrNull { it.problemId == pid }?.todayCount ?: 1
-        val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(now))
+        val time = java.text.SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(java.util.Date(now))
         app.settings.putString("widget_noted", "✓ ${com.suryaprakash.medlog.ui.tr(label)} " + (if (today > 1) "(${MedLogWidget.ordinal(today)} today) " else "") + time)
         app.settings.putLong("widget_noted_at", now)
         ids.firstOrNull()?.let { id ->

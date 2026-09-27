@@ -51,17 +51,18 @@ object I18n {
 
     private val SLOT = Regex("\\{(\\d)\\}")
 
-    /** "Call {0}" → ^Call (.+?)$, longest fixed text first so the most specific pattern wins. */
+    /** "Call {0}" → ^Call (.+?)$, most fixed words first so the most specific pattern wins ("I took the {0} dose" before "{0} took the {1} dose"). */
     private fun compile(map: Map<String, String>) = map.filterKeys { SLOT.containsMatchIn(it) }.map { (en, tr) ->
         val parts = SLOT.split(en)
         val order = SLOT.findAll(en).map { it.groupValues[1] }.toList()
         val rx = buildString {
             append('^')
-            parts.forEachIndexed { i, p -> append(Regex.escape(p)); if (i < order.size) append("(.+?)") }
+            // a slot right after a letter is a plural ending ("item{1}" → "item" / "items"), so it may be empty
+            parts.forEachIndexed { i, p -> append(Regex.escape(p)); if (i < order.size) append(if (p.lastOrNull()?.isLetter() == true) "(.*?)" else "(.+?)") }
             append('$')
         }
-        Triple(Regex(rx, RegexOption.DOT_MATCHES_ALL), tr, order)
-    }.sortedByDescending { (rx, _, _) -> rx.pattern.length }.map { (rx, tr, order) ->
+        Triple(Regex(rx, RegexOption.DOT_MATCHES_ALL), tr, order) to parts.sumOf { it.length }
+    }.sortedByDescending { it.second }.map { it.first }.map { (rx, tr, order) ->
         // translation slots refer to English slot numbers; remember the order they were captured in
         rx to (order.joinToString(",") + "\u0000" + tr)
     }

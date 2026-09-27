@@ -124,7 +124,7 @@ fun HomeScreen(nav: Nav) {
     val greeting = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" }
     val first = name.split(" ").first()
     val hello = if (first.isNotBlank()) "$greeting, $first" else greeting
-    val today = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date())
+    val today = SimpleDateFormat("EEEE, d MMMM", com.suryaprakash.medlog.speech.I18n.locale).format(Date())
     var unshared by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(version, recent) {
         val peers = com.suryaprakash.medlog.data.Sync.peers(ctx).filter { it.dir == com.suryaprakash.medlog.help.Relay.DOWN }
@@ -211,7 +211,7 @@ fun HomeScreen(nav: Nav) {
             val last = recent.maxByOrNull { it.lastAt }
             val lastWords = last?.let { r ->
                 val label = app.catalogue.problem(r.problemId)?.label ?: return@let null
-                "Last: $label, " + SimpleDateFormat("d MMMM", Locale.getDefault()).format(Date(r.lastAt))
+                "Last: $label, " + SimpleDateFormat("d MMMM", com.suryaprakash.medlog.speech.I18n.locale).format(Date(r.lastAt))
             } ?: "Everything you have noted"
             val hsh = RoundedCornerShape(sc.radius)
             Row(Modifier.fillMaxWidth().clip(hsh).background(p.card).border(1.dp, p.line, hsh).steady("History. $lastWords") { nav.go(Route.Notes) }
@@ -311,7 +311,7 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
         } else if (m.form == "feed" && !missed && onNotGiven != null) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BigButton("Given", Modifier.weight(1f), if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
             BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = onNotGiven)
-        } else BigButton(if (m.form == "feed") (if (missed) "Given late" else "Given") else if (missed) "I took it late" else if (dueNow) "I took it" else "Log taken", tone = if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
+        } else BigButton(if (m.form == "feed") (if (missed) "Given late" else "Given") else if (missed) "I took it late" else "I took it", tone = if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
     }
 }
 

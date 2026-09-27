@@ -265,7 +265,7 @@ class AlertActivity : ComponentActivity() {
         val left = deadline?.let { ((it - now + 999) / 1000).toInt().coerceAtLeast(0) } ?: 0
         val red = urgent || screaming || (deadline != null && left <= 10)
         val card = if (red) Color(0xFFB3261E) else Color(0xFF1F2023)
-        val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
+        val at = remember { java.text.SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(java.util.Date()) }
         fun reply(r: String) {
             Loud.done(this@AlertActivity, Loud.alertId(id))
             val mid = intent.getStringExtra("mid").orEmpty(); val pairId = intent.getStringExtra("pairId")?.ifEmpty { null }

@@ -259,7 +259,7 @@ fun Screen(
             val header: @Composable ColumnScope.() -> Unit = {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (onBack != null) BackLink(onBack)
-                    else if (!eyebrow.isNullOrBlank()) Text(eyebrow.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp)
+                    else if (!eyebrow.isNullOrBlank()) Text(tr(eyebrow).uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp)
                     Spacer(Modifier.weight(1f))
                     // on a page with a greeting (Home), its one extra button sits up here, level with the greeting
                     val up = !eyebrow.isNullOrBlank() && trailing != null
@@ -903,12 +903,14 @@ fun BoxScope.Centered(content: @Composable () -> Unit) = Box(Modifier.align(Alig
 fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).border(1.5.dp, p.outline, RoundedCornerShape(16.dp)).padding(4.dp)) {
+    // every choice as tall as the tallest: a long label (in Hindi or Tamil, or large words) wraps instead of being cut
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.card).border(1.5.dp, p.outline, RoundedCornerShape(16.dp)).padding(4.dp)) {
         options.forEachIndexed { i, o ->
             Box(
-                Modifier.weight(1f).height(sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent).steady(o + if (i == selected) ", chosen" else "") { onSelect(i) },
+                Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent)
+                    .steady(o + if (i == selected) ", chosen" else "") { onSelect(i) }.padding(horizontal = 6.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text(o, fontSize = sc.body, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium, color = if (i == selected) p.onBrand else p.inkSoft, maxLines = 1) }
+            ) { Text(o, fontSize = sc.body, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium, color = if (i == selected) p.onBrand else p.inkSoft, textAlign = TextAlign.Center) }
         }
     }
 }

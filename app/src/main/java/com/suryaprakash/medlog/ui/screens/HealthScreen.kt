@@ -233,7 +233,7 @@ private fun summaryOf(m: Metric, pts: List<Point>, bars: List<Bar>, days: Int): 
     val last = pts.last()
     val latest = if (last.v2 != null) "${last.v.toInt()}/${last.v2.toInt()}" else fmt1(last.v)
     val lo = pts.minOf { it.v }; val hi = pts.maxOf { it.v }
-    return latest to "Latest, ${SimpleDateFormat("d MMMM", Locale.getDefault()).format(Date(last.at))} · range ${fmt1(lo)} to ${fmt1(hi)}"
+    return latest to "Latest, ${SimpleDateFormat("d MMMM", com.suryaprakash.medlog.speech.I18n.locale).format(Date(last.at))} · range ${fmt1(lo)} to ${fmt1(hi)}"
 }
 
 /** One measure in the list: icon, name, latest value, and a small trend line. */
