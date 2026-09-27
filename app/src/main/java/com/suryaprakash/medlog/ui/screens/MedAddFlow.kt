@@ -320,7 +320,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
         M.REVIEW -> {
             val valid = m.name.isNotBlank() && (m.asNeeded || times.isNotEmpty())
             FlowScreen(task, "Check and save", step = ps.size, steps = ps.size, onBack = { back() }, onClose = close,
-                primary = "Save", primaryEnabled = valid, onPrimary = {
+                primary = "Done", primaryEnabled = valid, onPrimary = {
                     scope.launch {
                         val now = System.currentTimeMillis()
                         val change = original?.let { o ->

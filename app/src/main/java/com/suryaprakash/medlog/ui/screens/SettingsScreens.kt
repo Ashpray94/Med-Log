@@ -110,7 +110,7 @@ fun SettingsScreen(nav: Nav) {
             BigField("Illnesses", profile.conditions, { profile = profile.copy(conditions = it) }, lines = 2)
             BigField("Allergies", profile.allergies, { profile = profile.copy(allergies = it) }, lines = 2)
             Toggle("I take a blood thinner", profile.onBloodThinner) { profile = profile.copy(onBloodThinner = it) }
-            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
+            BigButton("Done", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
         }
         "reminders" -> Screen("Medicine reminders", "How reminders work.", onHome = { nav.home() }, onBack = { section = null }) {
             Body("Remind again after", bold = true)
@@ -132,7 +132,7 @@ fun SettingsScreen(nav: Nav) {
             if (s.checkInEnabled) run { val o = listOf("08:00", "09:00", "10:00", "11:00"); com.suryaprakash.medlog.ui.Segmented(o, o.indexOf(s.checkInTime)) { i -> app.settings.update { it.copy(checkInTime = o[i]) }; scope.launch { Scheduler.reschedule(ctx) } } }
             Toggle("Fall detection", s.fallDetection, "Asks \"Did you fall?\" after a hard fall, then starts SOS if you don't answer. Uses more battery. Can be wrong.") { on -> app.settings.update { it.copy(fallDetection = on) }; FallService.sync(ctx) }
             Toggle("Sunday summary", s.weeklySummary, "A short spoken summary of your week.") { on -> app.settings.update { it.copy(weeklySummary = on) } }
-            Toggle("Log from the lock screen", s.persistentNotification, "A Speak button in your notifications. Works without unlocking.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
+            Toggle("Note things from the lock screen", s.persistentNotification, "A Speak button in your notifications. Works without unlocking.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
             Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.settings.update { it.copy(diabetic = on) } }
             Body("Glasses of water a day", bold = true)
             run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
@@ -147,7 +147,7 @@ fun SettingsScreen(nav: Nav) {
             if (s.internetLink) {
                 var relay by remember { mutableStateOf(s.relayUrl) }
                 BigField("Relay address (optional)", relay, { relay = it.trim() }, hint = "Leave empty to use ${Relay.DEFAULT_URL}. If you change it, pair helper phones again.")
-                if (relay != s.relayUrl) BigButton("Save address", tone = Tone.QUIET, enabled = relay.isEmpty() || relay.startsWith("https://"), onClick = { app.settings.update { it.copy(relayUrl = relay) } })
+                if (relay != s.relayUrl) BigButton("Done", tone = Tone.QUIET, enabled = relay.isEmpty() || relay.startsWith("https://"), onClick = { app.settings.update { it.copy(relayUrl = relay) } })
             }
             Title("WhatsApp group call (extra)")
             Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so phone calls and SMS always follow.")
@@ -250,7 +250,7 @@ private fun DoctorsSection(onBack: () -> Unit) {
     val e = editing
     if (e != null) {
         com.suryaprakash.medlog.ui.FlowScreen("Doctor", if (e < 0) "Add a doctor" else "Change ${name.ifBlank { "doctor" }}", onBack = { editing = null },
-            primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
+            primary = "Done", primaryEnabled = name.isNotBlank(), onPrimary = {
                 val d = com.suryaprakash.medlog.data.CarePlan.Doctor(name.trim(), spec, phone.trim(), hospital.trim())
                 save(if (e < 0) plan.doctors + d else plan.doctors.mapIndexed { i, x -> if (i == e) d else x }); editing = null
             }, secondary = if (e >= 0) "Remove this doctor" else null, onSecondary = { save(plan.doctors.filterIndexed { i, _ -> i != e }); editing = null }) {
@@ -405,13 +405,13 @@ fun BackupScreen(nav: Nav) {
     Screen("Backup and new phone", "Save a locked copy of everything, or bring it back on a new phone.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Title("Setup file")
         Body("Your details, helpers, languages, messages and settings, in one file. Load it on a new phone to skip the setup questions. It has no notes or readings.")
-        BigButton("Save setup file", onClick = { saveSetup.launch("MedLog-setup-${java.time.LocalDate.now()}.json") })
+        BigButton("Keep a setup file", onClick = { saveSetup.launch("MedLog-setup-${java.time.LocalDate.now()}.json") })
         BigButton("Load setup file", tone = Tone.SECONDARY, onClick = { loadSetup.launch(arrayOf("application/json", "application/octet-stream", "*/*")) })
         Hint("Keep the file private: it has your name, illnesses and helpers' numbers.")
         Title("Full backup")
         Body("The backup is locked with a password. Keep the password safe; without it the backup can't be opened.")
         BigField("Backup password", password, { password = it }, keyboard = KeyboardType.Password, hint = "At least 6 letters or numbers")
-        BigButton("Save a backup", enabled = password.length >= 6, onClick = { save.launch("MedLog-backup-${java.time.LocalDate.now()}.medlog") })
+        BigButton("Make a backup copy", enabled = password.length >= 6, onClick = { save.launch("MedLog-backup-${java.time.LocalDate.now()}.medlog") })
         BigButton("Restore a backup", tone = Tone.SECONDARY, enabled = password.length >= 6, onClick = { open.launch(arrayOf("*/*")) })
         status?.let { Card() { Body(it, bold = true) } }
         Hint("You choose where the file goes: this phone, an SD card, a computer, or your own Drive.")
@@ -466,7 +466,7 @@ fun PrivacyScreen(nav: Nav) {
         listOf("SOS and help messages: by SMS and phone calls to your helpers", "Helper phones: by Bluetooth nearby, or the internet far away, locked with a key", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
         Body("Your notes are locked (encrypted) on the phone. No ads. No tracking.")
         BigButton("Open App info", tone = Tone.SECONDARY, onClick = { Perms.openAppSettings(ctx) })
-        if (!confirm) BigButton("Delete everything", tone = Tone.SECONDARY, onClick = { confirm = true })
+        if (!confirm) BigButton("Remove everything", tone = Tone.SECONDARY, onClick = { confirm = true })
         else Card(border = p.red) {
             Body("This deletes all notes, medicines and helpers from this phone. It cannot be undone.", bold = true)
             BigButton("Yes, delete everything", tone = Tone.DANGER, onClick = {

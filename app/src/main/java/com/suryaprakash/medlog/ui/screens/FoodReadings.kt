@@ -224,7 +224,7 @@ private fun CustomFoodSheet(name: String, onDone: (com.suryaprakash.medlog.nutri
                 BigField("Calories", kcal, { kcal = it.filter(Char::isDigit).take(4) }, Modifier.weight(1f), keyboard = androidx.compose.ui.text.input.KeyboardType.Number)
                 BigField("Protein (g)", protein, { protein = it.filter { c -> c.isDigit() || c == '.' }.take(4) }, Modifier.weight(1f), keyboard = androidx.compose.ui.text.input.KeyboardType.Decimal)
             }
-            BigButton("Save ${name.replaceFirstChar(Char::uppercase)}", enabled = kcal.isNotBlank(), onClick = {
+            BigButton("Add ${name.replaceFirstChar(Char::uppercase)}", enabled = kcal.isNotBlank(), onClick = {
                 onDone(com.suryaprakash.medlog.nutrition.Foods.Food(listOf(name.trim()), units[unit], 150, kcal.toDouble(), protein.toDoubleOrNull() ?: 0.0, custom = true))
             })
         }
@@ -288,7 +288,7 @@ private fun MealMenu(title: String, onChange: () -> Unit, onDelete: () -> Unit, 
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(title, "Change it, or delete it", null)
             BigButton("Change meal", icon = Icons.Rounded.Edit, onClick = onChange)
-            BigButton("Delete meal", tone = Tone.OUTLINE, icon = Icons.Rounded.Delete, onClick = onDelete)
+            BigButton("Remove this meal", tone = Tone.OUTLINE, icon = Icons.Rounded.Delete, onClick = onDelete)
         }
     }
 }
@@ -330,7 +330,7 @@ fun FeedNewScreen(nav: Nav) {
     Screen("New feed", "Set how it's given, a name, what goes in, then how much and how often.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "Four steps, one at a time",
         actions = {
-            BigButton("Save feed", enabled = ok, onClick = {
+            BigButton("Done", enabled = ok, onClick = {
                 scope.launch {
                     app.viewDb.medicines().insert(com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed", amount = "$ml ml", times = times.joinToString(","),
                         purpose = if (tube == 1) "Feed by tube" else "Feed by mouth", critical = tube == 1,
@@ -634,7 +634,7 @@ private fun ScaleCard(onSave: (Double) -> Unit) {
             w != null -> {
                 Text("%.1f kg".format(w.kg), fontSize = sc.title * 1.6f, fontWeight = FontWeight.Bold, color = p.ink)
                 Text(if (w.steady) "Steady" else "Settling… stay still", fontSize = sc.body, color = if (w.steady) p.ok else p.inkSoft)
-                if (w.steady) BigButton("Save %.1f kg".format(w.kg), onClick = { onSave(Math.round(w.kg * 10) / 10.0); com.suryaprakash.medlog.help.Scale.live.value = null })
+                if (w.steady) BigButton("Add %.1f kg".format(w.kg), onClick = { onSave(Math.round(w.kg * 10) / 10.0); com.suryaprakash.medlog.help.Scale.live.value = null })
             }
             listening -> {
                 Text("Step on your scale", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)

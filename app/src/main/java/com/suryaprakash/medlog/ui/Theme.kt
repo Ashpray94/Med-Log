@@ -27,7 +27,9 @@ data class Palette(
     val card: Color,        // raised surfaces
     val ink: Color,         // primary text
     val inkSoft: Color,     // secondary text
-    val line: Color,        // separators
+    val line: Color,        // separators (decorative only)
+    /** The edge of anything you can tap or type in: 3:1 against the page and cards (WCAG 1.4.11). */
+    val outline: Color = Color(0xFF858580),
     val fill: Color,        // quiet button fill
     val brand: Color,
     val onBrand: Color,
@@ -60,7 +62,7 @@ val Warm = Palette(
 )
 
 val HighContrast = Warm.copy(
-    paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, fill = Color(0xFFE0E0E0),
+    paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, outline = Color.Black, fill = Color(0xFFE0E0E0),
     brand = Color(0xFF00332F), brandSoft = Color(0xFFD6ECE9), ok = Color(0xFF004D12), amber = Color(0xFF5C3100), red = Color(0xFF8C0000),
 )
 

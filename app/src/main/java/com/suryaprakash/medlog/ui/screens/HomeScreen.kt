@@ -431,7 +431,7 @@ private fun TimeStrip(sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dos
             sorted.subList(start, start + shown).forEach { d -> TimeChip(d, taken(d), missed(d), due(d)) }
             val rest = sorted.size - shown
             if (rest > 0) Text("+$rest more", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand, maxLines = 1, softWrap = false,
-                modifier = Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.5.dp, p.brand.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                modifier = Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(12.dp)).border(1.5.dp, p.brand, RoundedCornerShape(12.dp))
                     .steady("$rest more times today. Tap to see them all.", onClick = onMore).padding(horizontal = 10.dp, vertical = 11.dp))
         }
     }

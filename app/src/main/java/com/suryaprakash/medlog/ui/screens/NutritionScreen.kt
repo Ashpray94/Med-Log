@@ -230,7 +230,7 @@ private fun TargetsSheet(kcal: Double?, protein: Double?, onDone: (Double?, Doub
                 com.suryaprakash.medlog.ui.BigField("Calories (kcal)", k, { k = it.filter(Char::isDigit).take(4) }, Modifier.weight(1f), keyboard = androidx.compose.ui.text.input.KeyboardType.Number)
                 com.suryaprakash.medlog.ui.BigField("Protein (g)", pr, { pr = it.filter(Char::isDigit).take(3) }, Modifier.weight(1f), keyboard = androidx.compose.ui.text.input.KeyboardType.Number)
             }
-            BigButton("Save targets", onClick = { onDone(k.toDoubleOrNull(), pr.toDoubleOrNull()) })
+            BigButton("Done", onClick = { onDone(k.toDoubleOrNull(), pr.toDoubleOrNull()) })
         }
     }
 }

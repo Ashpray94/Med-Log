@@ -540,7 +540,7 @@ private fun DoctorForm(plan: CarePlan, onSave: (List<CarePlan.Doctor>) -> Unit, 
     var hospital by remember(i) { mutableStateOf(old?.hospital ?: "") }
     val pick = rememberContactPicker { n, ph -> if (name.isBlank()) name = n; phone = ph }
     FlowScreen("Doctor", if (old == null) "Add a doctor" else "Change ${old.name}", onBack = onBack,
-        primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
+        primary = "Done", primaryEnabled = name.isNotBlank(), onPrimary = {
             val d = CarePlan.Doctor(name.trim(), spec, phone.trim(), hospital.trim())
             onSave(if (old == null) plan.doctors + d else plan.doctors.mapIndexed { k, x -> if (k == i) d else x })
         }, secondary = if (old != null) "Remove this doctor" else null, onSecondary = { onSave(plan.doctors.filterIndexed { k, _ -> k != i }) }) {
@@ -590,7 +590,7 @@ private fun HelperForm(back: () -> Unit) {
     val ok = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6
     var confirmRemove by remember { mutableStateOf(false) }
     FlowScreen("Helper", if (id == null) "Add a helper" else "Change ${h.name}", onBack = back,
-        primary = "Save", primaryEnabled = ok, onPrimary = {
+        primary = "Done", primaryEnabled = ok, onPrimary = {
             scope.launch {
                 if (id == null) app.db.helpers().insert(h.copy(name = h.name.trim(), phone = h.phone.trim(), sortOrder = app.db.helpers().all().size))
                 else app.db.helpers().update(h.copy(name = h.name.trim(), phone = h.phone.trim()))

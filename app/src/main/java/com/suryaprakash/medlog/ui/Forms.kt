@@ -99,7 +99,7 @@ fun Toggle(label: String, checked: Boolean, sub: String? = null, onChange: (Bool
     val p = LocalPalette.current
     val sc = LocalScale.current
     Row(
-        Modifier.fillMaxWidth().heightIn(min = sc.target).clip(RoundedCornerShape(18.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(18.dp))
+        Modifier.fillMaxWidth().heightIn(min = sc.target).clip(RoundedCornerShape(18.dp)).background(p.card).border(1.5.dp, p.outline, RoundedCornerShape(18.dp))
             .steady("$label, ${if (checked) "on" else "off"}") { onChange(!checked) }.padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -333,7 +333,7 @@ fun WhenRow(at: Long?, onChange: (Long?) -> Unit) {
     val sc = LocalScale.current
     var open by remember { mutableStateOf(false) }
     val sh = RoundedCornerShape(sc.radius)
-    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(sh).background(p.card).border(1.dp, p.line, sh).steady("When: ${whenWords(at)}. Tap to change") { open = true }
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(sh).background(p.card).border(1.5.dp, p.outline, sh).steady("When: ${whenWords(at)}. Tap to change") { open = true }
         .padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(androidx.compose.material.icons.Icons.Rounded.Schedule, null, tint = p.brand, modifier = Modifier.size(26.dp))
         Spacer(Modifier.width(12.dp))

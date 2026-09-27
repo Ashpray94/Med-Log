@@ -378,7 +378,7 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
         Toggle("Call and message in an SOS", h.sos) { h = h.copy(sos = it) }
         Toggle("Tell them about missed medicines", h.alerts) { h = h.copy(alerts = it) }
         Toggle("Let them see my notes", h.canSeeNotes, "Only used when you share your doctor page with them") { h = h.copy(canSeeNotes = it) }
-        BigButton("Save", tone = Tone.OK, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
+        BigButton("Done", tone = Tone.OK, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
             scope.launch { if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h); app.refreshWidgets(); nav.back() }
         })
         if (id != null) {
@@ -673,7 +673,7 @@ private fun FamilyChatSection(who: String, chat: List<com.suryaprakash.medlog.da
     if (!ready) { Hint("Starts once $who's phone has the new MedLog and is online. Only helpers see this."); return }
     if (com.suryaprakash.medlog.help.FamilyChat.myName(ctx).isBlank()) {
         BigField("Your name", name, { name = it }, hint = "The other helpers will see this")
-        BigButton("Save", tone = Tone.SECONDARY, enabled = name.isNotBlank(), onClick = { app.settings.putString("my_name", name.trim()) })
+        BigButton("Done", tone = Tone.SECONDARY, enabled = name.isNotBlank(), onClick = { app.settings.putString("my_name", name.trim()) })
     }
     com.suryaprakash.medlog.ui.FlowRowOf {
         listOf("I'm going there now", "Can someone check on $who?", "I'll call $who", "I can't go today").forEach { q ->

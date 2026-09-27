@@ -332,7 +332,7 @@ fun ReadToggle(modifier: Modifier = Modifier) {
     val on = s.autoRead
     val sh = RoundedCornerShape(24.dp)
     Row(
-        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card).border(1.5.dp, if (on) p.ok else p.line, sh)
+        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card).border(1.5.dp, if (on) p.ok else p.outline, sh)
             .semantics { role = Role.Switch; stateDescription = if (on) "On" else "Off" }
             .steady("Read aloud") {
                 val now = !on
@@ -354,7 +354,7 @@ private fun BackLink(onBack: () -> Unit) {
     val sc = LocalScale.current
     @Suppress("UNUSED_VARIABLE") val unused = sc
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.5.dp, p.line, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.5.dp, p.outline, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
         Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
     }
 }
@@ -428,7 +428,7 @@ fun PillButton(text: String, icon: ImageVector?, bg: Color, fg: Color, border: C
 fun RoundIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
-        Modifier.size(48.dp).clip(CircleShape).background(p.card).border(1.5.dp, p.line, CircleShape).steady(label, onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).background(p.card).border(1.5.dp, p.outline, CircleShape).steady(label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = p.inkSoft, modifier = Modifier.size(28.dp)) }
 }
@@ -468,7 +468,7 @@ fun BigButton(
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
             .background(if (enabled) bg else p.fill.copy(alpha = 0.6f))
-            .then(if (tone == Tone.SECONDARY && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else if (tone == Tone.OUTLINE && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else Modifier)
+            .then(if (tone == Tone.SECONDARY && enabled) Modifier.border(2.dp, p.outline, RoundedCornerShape(16.dp)) else if (tone == Tone.OUTLINE && enabled) Modifier.border(2.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -522,7 +522,7 @@ fun Choice(text: String, selected: Boolean, multi: Boolean = false, sub: String?
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
             .clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.line, sh)
+            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.outline, sh)
             .steady(text + if (selected) ", chosen" else ", not chosen", onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -579,7 +579,7 @@ fun Panel(title: String, icon: ImageVector, tint: Color, summary: String, open: 
     // opening: the body grows down from the header, then its contents fade in; closing is the same, reversed and a little quicker
     val ease = androidx.compose.animation.core.FastOutSlowInEasing
     fun <T> t(ms: Int, delay: Int = 0) = androidx.compose.animation.core.tween<T>(if (still) 0 else ms, if (still) 0 else delay, ease)
-    val edge by androidx.compose.animation.animateColorAsState(if (open) p.brand else p.line, t(240), label = "edge")
+    val edge by androidx.compose.animation.animateColorAsState(if (open) p.brand else p.outline, t(240), label = "edge")
     val keep = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
     LaunchedEffect(open) { if (open) { delay(if (still) 0 else 300); keep.bringIntoView() } }
     Column(Modifier.fillMaxWidth().bringIntoViewRequester(keep).clip(sh).background(p.card).border(if (open) 2.dp else 1.dp, edge, sh)) {
@@ -813,7 +813,7 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
     val sh = RoundedCornerShape(sc.radius)
     Box(
         modifier.scale(pressScale(pressed)).clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.line, sh)
+            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.outline, sh)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
         Column(Modifier.fillMaxSize().padding(TILE_PAD), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
@@ -851,7 +851,7 @@ fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick
     Row(
         modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(26.dp))
             .background(if (selected) p.brand else p.paper)
-            .then(if (!selected) Modifier.border(1.5.dp, p.line, RoundedCornerShape(26.dp)) else Modifier)
+            .then(if (!selected) Modifier.border(1.5.dp, p.outline, RoundedCornerShape(26.dp)) else Modifier)
             .steady(text + if (selected) ", chosen" else "", onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -886,7 +886,7 @@ fun BoxScope.Centered(content: @Composable () -> Unit) = Box(Modifier.align(Alig
 fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(16.dp)).padding(4.dp)) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).border(1.5.dp, p.outline, RoundedCornerShape(16.dp)).padding(4.dp)) {
         options.forEachIndexed { i, o ->
             Box(
                 Modifier.weight(1f).height(sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent).steady(o + if (i == selected) ", chosen" else "") { onSelect(i) },
@@ -1056,7 +1056,7 @@ private fun BigOptionCard(o: BigOption, modifier: Modifier) {
         modifier.heightIn(min = if (sc.big) 230.dp else 200.dp).scale(pressScale(pressed))
             
             .clip(sh).background(if (o.selected) Color(0xFFBFE0DA) else p.card)
-            .border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.line, sh)
+            .border(if (o.selected) 3.dp else 1.5.dp, if (o.selected) p.brand else p.outline, sh)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick),
         contentAlignment = Alignment.Center,          // the picture and words sit in the middle of the card
     ) {
@@ -1085,7 +1085,7 @@ fun ChoiceGrid(items: List<String>, isOn: (String) -> Boolean, onToggle: (String
                     val sh = RoundedCornerShape(18.dp)
                     Box(
                         Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(sh)
-                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, sh)
+                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.5.dp, if (on) p.brand else p.outline, sh)
                             .steady(item + if (on) ", chosen" else ", not chosen") { onToggle(item) }.padding(horizontal = 16.dp, vertical = 12.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) { Text(item, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink) }
@@ -1143,7 +1143,7 @@ private fun BigOptionRow(o: BigOption) {
     var pressed by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().heightIn(min = if (sc.big) 132.dp else 116.dp).scale(pressScale(pressed)).clip(sh)
-            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.line, sh)
+            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.5.dp, if (o.selected) p.brand else p.outline, sh)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,

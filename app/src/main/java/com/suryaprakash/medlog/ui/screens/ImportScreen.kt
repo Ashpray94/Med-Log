@@ -95,7 +95,7 @@ fun ImportScreen(nav: Nav) {
             Toggle("Keep these for the doctor page", keepMeds) { keepMeds = it }
             Hint("To get reminders, add them in Medicines.")
         }
-        BigButton("Save to my history", tone = Tone.OK, onClick = {
+        BigButton("Add to my history", tone = Tone.OK, onClick = {
             scope.launch {
                 val zone = ZoneId.systemDefault()
                 app.db.docLines().insertAll(r.lines.map { DocLine(source = source, content = it) })

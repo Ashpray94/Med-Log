@@ -111,7 +111,7 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
 
     Screen("Toilet & vomit", "Choose stool, urine or vomit, then tap what it looked like.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "What it looked like", actions = {
-            BigButton("Save", enabled = ready, onClick = {
+            BigButton("Done", enabled = ready, onClick = {
                 val o = JSONObject().put("type", type).put("colour", colour ?: "").put("amount", amount ?: "").put("blood", blood)
                 if (type == "stool") o.put("form", form).put("pain", pain)
                 if (type == "urine") o.put("burning", pain)

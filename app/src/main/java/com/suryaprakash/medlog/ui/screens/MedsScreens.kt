@@ -267,7 +267,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
         Toggle("This is a blood thinner", m.bloodThinner) { m = m.copy(bloodThinner = it) }
         val valid = m.name.isNotBlank() && (m.asNeeded || times.isNotEmpty())
         if (!valid) Hint(if (m.name.isBlank()) "Please add the name." else "Please choose when to take it.")
-        BigButton("Save", tone = Tone.OK, enabled = valid, height = sc.target * 1.3f, onClick = {
+        BigButton("Done", tone = Tone.OK, enabled = valid, height = sc.target * 1.3f, onClick = {
             scope.launch {
                 val now = System.currentTimeMillis()
                 val change = original?.let { o ->

@@ -328,7 +328,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
                     triage.reasons.forEach { Hint(it) }
                     DoctorCallButton(pr.dept)
                 }
-                BigButton("Save", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.2f, onClick = {
+                BigButton("Done", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.2f, onClick = {
                     scope.launch {
                         persist()
                         val id = noteId
@@ -502,7 +502,7 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
         Kind.FREE -> {
             var text by remember(a.id) { mutableStateOf("") }
             com.suryaprakash.medlog.ui.SearchBox(text, { text = it }, "Type or tap Speak")
-            BigButton("Save this", tone = Tone.PRIMARY, enabled = text.isNotBlank(), icon = Icons.Rounded.Check, onClick = { onAnswer(text.trim(), text.trim()) })
+            BigButton("Done", tone = Tone.PRIMARY, enabled = text.isNotBlank(), icon = Icons.Rounded.Check, onClick = { onAnswer(text.trim(), text.trim()) })
             Hint("Nothing to add? Tap Skip.")
         }
     }
