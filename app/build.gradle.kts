@@ -82,6 +82,8 @@ android {
             listOf("shots", "shots.role", "shots.tall", "shots.lang", "shots.big").forEach { k -> System.getProperty(k)?.let { t.systemProperty(k, it) } }
             t.systemProperty("shots.dir", layout.buildDirectory.dir("shots").get().asFile.absolutePath)
             t.maxHeapSize = "3g"
+            // screenshots load Robolectric's native graphics; only when asked for, never in ordinary test runs
+            if (System.getProperty("shots") == null) t.exclude("**/Shots*")
         }
     }
     // One APK per phone type keeps the download small (the speech engine is native code).
