@@ -131,7 +131,7 @@ class Shots {
         listOf(
             note(Kind.SYMPTOM, "cough", today + 9 * h, "Cough, dry, for 3 days"),
             note(Kind.SYMPTOM, "vomiting", today + 11 * h, "Vomiting, 2 times"),
-            note(Kind.SYMPTOM, "tiredness", today - 20 * h, "Tired"),
+            note(Kind.SYMPTOM, "tired", today - 20 * h, "Tired"),
             note(Kind.FOOD, null, today + 8 * h + 1_800_000, "Idli, 2 · Sambar").copy(details = """{"items":[{"name":"idli","amount":"2"},{"name":"sambar","amount":"1 katori"},{"name":"coconut chutney","amount":"2 tbsp"}],"kcal":310}"""),
             note(Kind.FOOD, null, today + 13 * h, "Rice · Dal · Curd").copy(details = """{"items":[{"name":"rice","amount":"1 plate"},{"name":"dal","amount":"1 katori"},{"name":"curd","amount":"1 katori"}],"kcal":520}"""),
             note(Kind.WATER, null, today + 10 * h, "1 glass of water"),

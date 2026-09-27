@@ -472,12 +472,12 @@ fun BigButton(
             .background(if (enabled) bg else p.fill.copy(alpha = 0.6f))
             .then(if ((tone == Tone.SECONDARY || tone == Tone.OUTLINE || tone == Tone.QUIET) && enabled) Modifier.border(if (tone == Tone.QUIET) 1.5.dp else 2.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = if (left) Arrangement.Start else Arrangement.Center,
     ) {
         leading?.let { it(); Spacer(Modifier.width(14.dp)) }
-        if (icon != null) { Icon(icon, null, tint = if (enabled) fg else p.inkSoft, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(14.dp)) }
+        if (icon != null) { Icon(icon, null, tint = if (enabled) fg else p.inkSoft, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(10.dp)) }
         Column(Modifier.then(if (left) Modifier.weight(1f) else Modifier)) {
             Text(text, color = if (enabled) fg else p.inkSoft, fontSize = sc.button, fontWeight = FontWeight.SemiBold, lineHeight = sc.button * 1.2f, maxLines = 3,
                 textAlign = if (left) TextAlign.Start else TextAlign.Center)
@@ -1235,14 +1235,15 @@ fun ValueRow(label: String, value: String?, sub: String? = null, valueColor: Col
             .padding(horizontal = 18.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.weight(1f)) {
+        // the name and the value share the row (the name a little more), so neither squeezes the other into broken words
+        Column(Modifier.weight(1.2f)) {
             Text(label, fontSize = sc.body, color = p.ink, fontWeight = FontWeight.Medium)
             if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
         }
         Spacer(Modifier.width(12.dp))
         Text(value?.ifBlank { null } ?: if (onClick != null) "Add" else "–", fontSize = sc.body, fontWeight = FontWeight.SemiBold,
             color = when { value.isNullOrBlank() && onClick != null -> p.brand; else -> valueColor ?: p.inkSoft },
-            textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 170.dp))
+            textAlign = TextAlign.End, modifier = Modifier.weight(1f, fill = false))
         if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
     }
 }
