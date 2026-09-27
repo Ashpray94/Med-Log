@@ -220,7 +220,7 @@ fun HomeScreen(nav: Nav) {
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
                     Text("History", fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text(lastWords, fontSize = sc.body, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(lastWords, fontSize = sc.body, color = p.inkSoft)
                 }
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(28.dp))
             }
@@ -296,10 +296,9 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
             MedicinePicture(m, 64.dp)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink,
-                    maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = sc.cardTitle * 1.2f)
+                Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.cardTitle * 1.2f)
                 Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
-                    fontSize = sc.body, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    fontSize = sc.body, color = p.inkSoft)
             }
         }
         // where it stands

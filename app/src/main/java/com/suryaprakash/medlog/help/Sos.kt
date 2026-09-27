@@ -74,7 +74,14 @@ object Sos {
     /** Answers from the SOS screen. */
     val answer = MutableStateFlow<String?>(null)
 
-    fun start(ctx: Context, reason: String, countdown: Boolean = true) {
+    /** The kinds of emergency, in pictures: chosen on the SOS page or once SOS has started, and sent to helpers. */
+    val KINDS = listOf("fall" to "A fall", "chest_pain" to "Chest pain", "breathless" to "Can't breathe", "bleeding" to "Bleeding",
+        "fainted" to "Fainted", "one_side_weak" to "Face or arm weak", "confusion" to "Confused", "fits" to "Fits")
+    /** The kind chosen for the SOS running now, if any. */
+    val kind = MutableStateFlow<String?>(null)
+
+    fun start(ctx: Context, reason: String, countdown: Boolean = true, kindId: String? = null) {
+        kind.value = kindId
         if (_phase.value !is Phase.Idle && _phase.value !is Phase.Cancelled && _phase.value !is Phase.HelpComing) { showScreen(ctx); return }
         log.value = emptyList(); smsSentTo.value = emptyList(); answer.value = null
         val i = Intent(ctx, SosService::class.java).putExtra("reason", reason).putExtra("countdown", countdown)

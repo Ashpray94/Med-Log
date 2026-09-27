@@ -247,7 +247,7 @@ fun SpeakAllScreen(nav: Nav, start: String? = null) {
                 if (s.kind == Kind.SYMPTOM) (s.route as? Route.Tell)?.problemId?.let { SpriteIcon(it, 48.dp) } ?: OptionIcon(icon, tint, 48.dp) else OptionIcon(icon, tint, 48.dp)
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(s.title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(s.title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
                     Text(listOf(kindName(s.kind).takeIf { it != s.title }.orEmpty(), s.sub).filter { it.isNotBlank() }.joinToString(" · "), fontSize = sc.small, color = p.inkSoft, maxLines = 2)
                 }
                 Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(24.dp))

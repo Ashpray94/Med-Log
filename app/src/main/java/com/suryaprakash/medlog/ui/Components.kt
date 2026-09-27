@@ -555,7 +555,7 @@ fun SectionHeader(title: String, caption: String, action: String?, actionIcon: I
     Row(Modifier.fillMaxWidth().padding(top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.semantics { heading() })
-            Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft)
         }
         if (action != null) Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("$action: $title", onClick = onAction)
             .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -719,8 +719,8 @@ fun ListRow(title: String, sub: String? = null, icon: ImageVector? = null, tint:
         if (leading != null) { leading(); Spacer(Modifier.width(14.dp)) }
         else if (icon != null) { IconTile(icon, tint ?: p.ink, 44.dp); Spacer(Modifier.width(14.dp)) }
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink)
+            if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(28.dp))
     }
@@ -757,6 +757,11 @@ val LocalTileFit = androidx.compose.runtime.compositionLocalOf<TileFit?> { null 
 fun <T> TileGrid(items: List<T>, cols: Int, aspect: Float = 1f, gap: Dp = 12.dp, tile: @Composable (T, Modifier) -> Unit) {
     androidx.compose.ui.layout.SubcomposeLayout { c ->
         val g = gap.roundToPx()
+        // the widest single word any label has: fewer columns rather than a word broken in two ("Bleedin / g")
+        val need = TileNeed()
+        subcompose("need") { CompositionLocalProvider(LocalTileNeed provides need) { items.forEach { tile(it, Modifier) } } }
+        var cols = cols
+        while (cols > 2 && need.widest > (c.maxWidth - g * (cols - 1)) / cols) cols--
         val w = ((c.maxWidth - g * (cols - 1)) / cols).coerceAtLeast(0)
         val natural = subcompose("measure") { items.forEach { tile(it, Modifier) } }
             .map { it.measure(androidx.compose.ui.unit.Constraints(minWidth = w, maxWidth = w)) }
@@ -783,6 +788,14 @@ fun PicTile(label: String, modifier: Modifier, picture: Dp, selected: Boolean = 
     val p = LocalPalette.current
     val sc = LocalScale.current
     val fit = LocalTileFit.current
+    // tell the grid how wide the longest word is, so it never has to break one
+    LocalTileNeed.current?.let { need ->
+        val m = androidx.compose.ui.text.rememberTextMeasurer()
+        val style = androidx.compose.ui.text.TextStyle(fontSize = sc.small, fontWeight = FontWeight.SemiBold)
+        val px = remember(label, sc.small) { label.split(' ', '\n').maxOfOrNull { w -> m.measure(w, style).size.width } ?: 0 }
+        val pad = with(androidx.compose.ui.platform.LocalDensity.current) { (TILE_PAD * 2 + 4.dp).roundToPx() }
+        need.widest = maxOf(need.widest, px + pad)
+    }
     Tile(speak, modifier, selected = selected, color = color, onClick = onClick) {
         // everything but the label box has a fixed height, so the label box gets what the tallest tile's label needed
         val fixed = TILE_PAD * 2 + picture + TILE_GAP
@@ -797,6 +810,10 @@ fun PicTile(label: String, modifier: Modifier, picture: Dp, selected: Boolean = 
         }
     }
 }
+
+/** Filled while a [TileGrid] works out its columns: the width the widest word in any label needs. */
+class TileNeed { var widest = 0 }
+val LocalTileNeed = androidx.compose.runtime.compositionLocalOf<TileNeed?> { null }
 
 val TILE_PAD = 12.dp
 val TILE_GAP = 10.dp
@@ -936,18 +953,16 @@ fun FlowScreen(
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(width = 40.dp, height = 5.dp).clip(RoundedCornerShape(3.dp)).background(p.line))
                 }
-                Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (onClose != null) RoundButton(Icons.Rounded.Close, "Close", onClose) else Spacer(Modifier.size(56.dp))
-                    Text(task, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                    Text(task, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
                     Spacer(Modifier.size(56.dp))
                 }
             } else
             // the top bar keeps its height on every page (empty on a first page), so the title never moves between pages
-            Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (onBack != null) RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack) else Spacer(Modifier.size(56.dp))
-                Text(if (onBack != null || onClose != null) task else "", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                Text(if (onBack != null || onClose != null) task else "", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
                 ReadToggle()
                 if (onClose != null) { Spacer(Modifier.width(8.dp)); RoundButton(Icons.Rounded.Close, "Close", onClose) }
                 else if (!s.readAloud) Spacer(Modifier.size(56.dp))
@@ -1219,7 +1234,7 @@ fun ValueRow(label: String, value: String?, sub: String? = null, valueColor: Col
         Spacer(Modifier.width(12.dp))
         Text(value?.ifBlank { null } ?: if (onClick != null) "Add" else "–", fontSize = sc.body, fontWeight = FontWeight.SemiBold,
             color = when { value.isNullOrBlank() && onClick != null -> p.brand; else -> valueColor ?: p.inkSoft },
-            textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 170.dp))
+            textAlign = TextAlign.End, modifier = Modifier.widthIn(max = 170.dp))
         if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
     }
 }

@@ -231,7 +231,7 @@ private fun DishRow(f: Foods.Food, qty: Double, size: String, onSize: (String) -
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(f.name.replaceFirstChar(Char::uppercase), fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(f.name.replaceFirstChar(Char::uppercase), fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
                 Text("${now.words} · ${now.kcal.roundToInt()} kcal", fontSize = sc.small, color = if (qty > 0) p.brand else p.inkSoft, fontWeight = if (qty > 0) FontWeight.SemiBold else null)
                 Text("${now.protein.roundToInt()} g protein", fontSize = sc.small * 0.88f, color = p.inkSoft)
             }

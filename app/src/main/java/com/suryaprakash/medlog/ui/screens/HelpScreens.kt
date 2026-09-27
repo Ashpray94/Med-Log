@@ -293,7 +293,7 @@ private fun MessageStatus(st: HelpMessages.Status, acks: List<Nearby.Ack>, reach
                 Icon(Icons.Rounded.Check, null, tint = p.ok, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
-                Text(" · $what", fontSize = sc.body, color = p.inkSoft, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(" · $what", fontSize = sc.body, color = p.inkSoft)
             }
         }
         if ((st.stage == "noanswer" || st.stage == "failed") && answered == null && first != null)

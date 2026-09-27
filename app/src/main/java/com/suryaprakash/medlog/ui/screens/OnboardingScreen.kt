@@ -664,7 +664,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(h.name, fontSize = sc.cardTitle, fontWeight = bold, color = p.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(h.name, fontSize = sc.cardTitle, fontWeight = bold, color = p.ink)
                     Text(listOfNotNull(h.relation.ifBlank { null }, h.phone).joinToString(" · "), fontSize = sc.body, color = p.inkSoft, maxLines = 1)
                 }
             }

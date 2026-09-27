@@ -157,10 +157,9 @@ class AlertActivity : ComponentActivity() {
             }
             // if there's time: what happened, in pictures. Helpers get it straight away. Nothing waits for it.
             if (!calm || phase is Sos.Phase.HelpComing) {
-                var picked by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                var picked by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(Sos.kind.value) }
                 com.suryaprakash.medlog.ui.SectionHeader("What happened?", if (picked == null) "If you can, tap one. Help is coming anyway." else "Sent to your helpers", null)
-                val kinds = listOf("fall" to "A fall", "chest_pain" to "Chest pain", "breathless" to "Can't breathe", "bleeding" to "Bleeding",
-                    "fainted" to "Fainted", "one_side_weak" to "Face or arm weak", "confusion" to "Confused", "fits" to "Fits")
+                val kinds = Sos.KINDS
                 com.suryaprakash.medlog.ui.TileGrid(kinds, 4, aspect = 0.66f) { (id, label), mod ->
                     com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 44.dp, selected = picked == id, onClick = {
                         picked = id

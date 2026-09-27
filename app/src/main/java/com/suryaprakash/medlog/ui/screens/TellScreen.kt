@@ -390,7 +390,7 @@ private fun Conversation(
             com.suryaprakash.medlog.ui.RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack)
             Row(Modifier.weight(1f).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                 if (problem != null) { SpriteIcon(problem.id, 32.dp); Spacer(Modifier.width(8.dp)) }
-                Text(problem?.label ?: title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(problem?.label ?: title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
             }
             if (onChange != null) com.suryaprakash.medlog.ui.RoundButton(Icons.Rounded.Edit, "Change the problem", onChange) else Spacer(Modifier.size(56.dp))
         }

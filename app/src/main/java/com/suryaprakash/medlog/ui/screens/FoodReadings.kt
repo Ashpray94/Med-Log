@@ -253,7 +253,7 @@ private fun MealCard(n: com.suryaprakash.medlog.data.Note, onChange: () -> Unit,
             FoodPicture(main?.optString("name")?.let { nm -> com.suryaprakash.medlog.nutrition.Foods.all.firstOrNull { it.name == nm } }, 72.dp)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
                 Text(listOfNotNull(main?.optString("amount")?.ifBlank { null }, timeLabel(n.occurredAt)).joinToString(" · "), fontSize = sc.small, color = p.inkSoft)
             }
             if (kcal >= 0) {

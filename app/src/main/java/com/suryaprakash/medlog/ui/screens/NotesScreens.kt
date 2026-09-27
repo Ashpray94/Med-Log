@@ -390,7 +390,7 @@ private fun HistoryGroup(title: String, sub: String, icon: @Composable () -> Uni
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1)
-                Text(sub, fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text(sub, fontSize = sc.small, color = p.inkSoft)
             }
             if (level != "GREEN") { Spacer(Modifier.width(8.dp)); LevelMark(level, withWord = false) }
             val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(260), label = "chevron")

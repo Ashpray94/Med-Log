@@ -252,7 +252,7 @@ private fun MetricRow(m: Metric, pts: List<Point>, daily: Map<LocalDate, Double>
         OptionIcon(m.icon, tint, 44.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
             Text(latest, fontSize = sc.small, color = if (latest == "No data") p.inkSoft else p.ink, maxLines = 1)
         }
         val series = if (m.bars) daily.entries.sortedBy { it.key }.takeLast(14).map { it.value } else pts.takeLast(14).map { it.v }
