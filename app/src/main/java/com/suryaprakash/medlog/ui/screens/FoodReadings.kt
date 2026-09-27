@@ -173,7 +173,7 @@ fun FoodScreen(nav: Nav) {
             else -> {
                 val feedDoses = doses.filter { d -> feeds.any { it.id == d.medicineId } }
                 com.suryaprakash.medlog.ui.SectionHeader("Today's feeds",
-                    if (feeds.isEmpty()) "None set up" else if (feedDoses.isEmpty()) "None due today" else "${feedDoses.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }} of ${feedDoses.size} given",
+                    if (feeds.isEmpty()) "None set up" else if (feedDoses.isEmpty()) "None due today" else "${feedDoses.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) }} of ${feedDoses.size} done",
                     if (feeds.isNotEmpty()) "Add feed" else null, Icons.Rounded.Add) { feedSheet = true }
                 if (feeds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Set up a feed") { feedSheet = true }
                 // feeds set up but not due today still show, so they can be changed or stopped

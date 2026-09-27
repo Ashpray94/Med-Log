@@ -2636,5 +2636,9 @@
 "Dismissed": "நீக்கப்பட்டது",
 "Answered": "பதில் அளிக்கப்பட்டது",
 "Done for today · {0} with food instead": "இன்றைக்கு முடிந்தது · {0} முறை உணவு",
-"Food instead, all {0} times": "எல்லா {0} முறையும் பதிலாக உணவு"
+"Food instead, all {0} times": "எல்லா {0} முறையும் பதிலாக உணவு",
+"Today {0}": "இன்று {0}",
+"Yesterday {0}": "நேற்று {0}",
+"{0} of {1} done": "{1}-இல் {0} முடிந்தது",
+"Getting it ready…": "தயாராகிறது…"
 }

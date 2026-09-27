@@ -2636,5 +2636,9 @@
 "Dismissed": "हटाया गया",
 "Answered": "जवाब दिया",
 "Done for today · {0} with food instead": "आज के लिए हो गया · {0} में खाना दिया",
-"Food instead, all {0} times": "सभी {0} बार खाना दिया"
+"Food instead, all {0} times": "सभी {0} बार खाना दिया",
+"Today {0}": "आज {0}",
+"Yesterday {0}": "कल {0}",
+"{0} of {1} done": "{1} में से {0} हो गई",
+"Getting it ready…": "तैयार हो रहा है…"
 }

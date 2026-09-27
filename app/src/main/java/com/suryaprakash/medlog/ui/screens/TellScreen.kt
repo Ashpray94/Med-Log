@@ -393,6 +393,8 @@ private fun Conversation(
                 if (problem != null) { SpriteIcon(problem.id, 32.dp); Spacer(Modifier.width(8.dp)) }
                 Text(problem?.label ?: title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
             }
+            com.suryaprakash.medlog.ui.SosPill()
+            Spacer(Modifier.width(8.dp))
             if (onChange != null) com.suryaprakash.medlog.ui.RoundButton(Icons.Rounded.Edit, "Change the problem", onChange) else Spacer(Modifier.size(56.dp))
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = sc.margin), verticalArrangement = Arrangement.spacedBy(sc.gap)) {
@@ -412,8 +414,7 @@ private fun Conversation(
                 if (onDone != null) BigButton("Finish", Modifier.weight(1f), Tone.SECONDARY, onClick = onDone)
             }
         }
-        val nav = com.suryaprakash.medlog.ui.LocalNav.current
-        com.suryaprakash.medlog.ui.BottomBar(onHome = { nav?.home() })
+        // a question page is a step, not a main page: no bottom bar (SOS is at the top instead)
     }
 }
 

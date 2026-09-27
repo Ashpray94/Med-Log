@@ -520,10 +520,11 @@ fun HelperHomeScreen(nav: Nav) {
             listOf(false, true).forEach { feedPart ->
                 val part = today.filter { (byId[it.medicineId]?.form == "feed") == feedPart }
                 if (part.isEmpty()) return@forEach
-                val taken = part.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }
+                // for feeds, food given instead counts as done
+                val taken = part.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (feedPart && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD && it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) }
                 val days = part.groupBy { it.medicineId }.map { (id, g) -> byId[id]!! to g }
                 com.suryaprakash.medlog.ui.SectionHeader(if (feedPart) "Their feeds today" else "Their medicines today",
-                    "$taken of ${part.size} ${if (feedPart) "given" else "taken"}", "See all ${days.size}") { view(Route.TodayMeds(feeds = feedPart)) }
+                    "$taken of ${part.size} ${if (feedPart) "done" else "taken"}", "See all ${days.size}") { view(Route.TodayMeds(feeds = feedPart)) }
                 TodayMedsPreview(days) { (m, g), mod ->
                     DayCard(m, g, onOpen = { view(Route.Meds) },
                         onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.take(ctx, d.id); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },

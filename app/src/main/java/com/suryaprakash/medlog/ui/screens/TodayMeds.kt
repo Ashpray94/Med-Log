@@ -100,12 +100,13 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
         else -> 2
     }
     val parts = ranked.groupBy(::part)
-    val taken = doses.count { it.status == DoseStatus.TAKEN && byId[it.medicineId]?.let { m -> (m.form == "feed") == feeds } == true }
+    val taken = doses.count { (it.status == DoseStatus.TAKEN || (feeds && it.status == DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD)) &&
+        byId[it.medicineId]?.let { m -> (m.form == "feed") == feeds } == true }
     val total = days.sumOf { it.second.size }
     val viewing = com.suryaprakash.medlog.data.Viewing.pairId.value
     val who = viewing?.let { id -> com.suryaprakash.medlog.data.People.all(ctx).firstOrNull { it.pairId == id }?.name?.substringBefore(' ')?.ifBlank { null } ?: "They" }
     val title = when { feeds && viewing != null -> "Their feeds today"; feeds -> "Today's feeds"; viewing != null -> "Their medicines today"; else -> "Today's medicines" }
-    val done = if (feeds) "given" else "taken"
+    val done = if (feeds) "done" else "taken"
     Screen(title, "$taken of $total $done.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "$taken of $total $done", scroll = false) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp), contentPadding = PaddingValues(bottom = 24.dp)) {

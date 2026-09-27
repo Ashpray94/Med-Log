@@ -2,6 +2,8 @@
 
 Every request so far, grouped by what it is for. Status: **Done**, **Partly done** (what's left is noted), or **Next**.
 
+**Best version so far: 2.10.9** (release `v2.10.9`, commit `36b7755`), marked before the 2.11 persona review. The review, with every issue found and what is still open, is in [REVIEW.md](REVIEW.md).
+
 ## The model: three kinds of thing a person notes
 
 The app felt complex because different kinds of entry were mixed together. Everything fits into three kinds, and each
