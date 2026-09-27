@@ -5,6 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import com.suryaprakash.medlog.data.Dose
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Kind
@@ -45,8 +49,13 @@ class Shots {
         "helpers" to Route.Helpers, "visit" to Route.Visit, "permissions" to Route.Permissions,
     )
 
-    @Test fun shots() {
-        val want = System.getProperty("shots")
+    /** Phone-sized pictures. A name like "history@Food" opens History, then taps "Food". */
+    @Test fun shots() = run(System.getProperty("shots"), "")
+
+    /** Whole pages, top to bottom (SHOTS_TALL=1). */
+    @Test @Config(qualifiers = "w393dp-h2600dp-xxhdpi") fun tall() = run(System.getProperty("shots")?.takeIf { System.getProperty("shots.tall") != null }, "-tall")
+
+    private fun run(want: String?, suffix: String) {
         assumeTrue(want != null)
         val app = rule.activity.application as MedLogApp
         seed(app, System.getProperty("shots.role") ?: "self")
@@ -57,16 +66,22 @@ class Shots {
             val s by app.settings.flow.collectAsState()
             MedTheme(s) { App(nav) }
         }
-        for (n in names) {
+        for (full in names) {
+            val n = full.substringBefore('@')
             val r = routes[n] ?: continue
             rule.runOnUiThread { nav.home(if (n == "helper") Route.HelperHome else Route.Home); if (r != Route.Home && n != "helper") nav.go(r) }
             rule.mainClock.advanceTimeBy(3000)
             rule.waitForIdle()
+            full.split('@').drop(1).forEach { tap ->
+                runCatching { rule.onAllNodesWithText(tap, substring = true).onFirst().performScrollTo() }
+                runCatching { rule.onAllNodesWithText(tap, substring = true).onFirst().performClick() }
+                rule.mainClock.advanceTimeBy(1500); rule.waitForIdle()
+            }
             // draw the window straight into a picture (the test library's capture waits for a real screen)
             val v = rule.activity.window.decorView
             val bmp = Bitmap.createBitmap(v.width, v.height, Bitmap.Config.ARGB_8888)
             rule.runOnUiThread { v.draw(android.graphics.Canvas(bmp)) }
-            File(out, "$n.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            File(out, full.replace('@', '_').replace(' ', '-') + "$suffix.png").outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
         }
     }
 

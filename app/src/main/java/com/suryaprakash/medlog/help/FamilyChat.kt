@@ -76,14 +76,14 @@ object FamilyChat {
     }
 
     /** Sends [text] to the other helpers, and keeps it in this phone's chat. */
-    fun send(ctx: Context, text: String, p: com.suryaprakash.medlog.data.CaredFor? = null) {
+    fun send(ctx: Context, text: String, p: com.suryaprakash.medlog.data.CaredFor? = null, answered: String? = null) {
         val app = ctx.medlog
         val key = key(ctx, p) ?: return
         val me = myName(ctx).ifBlank { "Helper" }
         app.scope.launch {
             app.db.inbox().insert(InboxItem(fromName = "You", text = text, kind = KIND, acked = true))
             Relay.post(ctx, key, DIR, JSONObject().put("from", me).put("text", text).put("at", System.currentTimeMillis())
-                .put("mid", Keys.randomB64(9)).put("dev", device(ctx)))
+                .put("mid", Keys.randomB64(9)).put("dev", device(ctx)).apply { answered?.let { put("answered", it) } })
         }
     }
 
@@ -91,11 +91,13 @@ object FamilyChat {
     fun received(ctx: Context, o: JSONObject) {
         if (o.optString("dev") == device(ctx)) return
         val app = ctx.medlog
+        // another helper answered the person: the alarm for that message stops here too
+        o.optString("answered").takeIf { it.isNotEmpty() }?.let { Loud.answeredElsewhere(ctx, it) }
         app.scope.launch {
             val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from", "Helper"), text = o.optString("text"), kind = KIND,
                 at = o.optLong("at", System.currentTimeMillis()), acked = true))
             val pi = PendingIntent.getActivity(ctx, 6000 + (id % 500).toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
-            val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
+            val n = NotificationCompat.Builder(ctx, MedLogApp.CH_CARE).setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(com.suryaprakash.medlog.ui.tr("Family") + ": " + o.optString("from", "Helper"))
                 .setContentText(o.optString("text"))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT).setCategory(NotificationCompat.CATEGORY_MESSAGE)
@@ -105,10 +107,10 @@ object FamilyChat {
     }
 
     /** After a helper answers the person, the other helpers see who is going. */
-    fun announceReply(ctx: Context, reply: String, about: String?, p: com.suryaprakash.medlog.data.CaredFor) {
+    fun announceReply(ctx: Context, reply: String, about: String?, p: com.suryaprakash.medlog.data.CaredFor, re: String? = null) {
         if (key(ctx, p) == null) return
         val who = p.name.ifBlank { "them" }
         val words = Nearby.replyWords(reply)
-        send(ctx, if (about.isNullOrBlank()) "$words (answering $who)" else "$words (answering $who: \"$about\")", p)
+        send(ctx, if (about.isNullOrBlank()) "$words (answering $who)" else "$words (answering $who: \"$about\")", p, answered = re)
     }
 }

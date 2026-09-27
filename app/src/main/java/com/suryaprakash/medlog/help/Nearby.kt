@@ -248,7 +248,7 @@ object Nearby {
         val p = person(ctx, pairId) ?: return
         ctx.medlog.scope.launch { Relay.post(ctx, p.keyBytes, Relay.UP, msg) }
         // the other helpers see who answered, so nobody is left wondering who went
-        if (r != "got") FamilyChat.announceReply(ctx, r, lastText, p)
+        if (r != "got") FamilyChat.announceReply(ctx, r, lastText, p, re)
     }
 
     /** The helper's "How are you?" and what came of it, shown on the helper's home screen. */
@@ -373,7 +373,7 @@ object Nearby {
                     .setContentText(com.suryaprakash.medlog.ui.tr(if (worried) "You may want to call them." else "Answer to your \"How are you?\""))
                     .setPriority(if (worried) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
                     .setContentIntent(pi).setAutoCancel(true).build()
-                runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
+                runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(Loud.alertId(id), n) }
             }
             return
         }
@@ -390,27 +390,34 @@ object Nearby {
             if (!fresh) {
                 // old news: a normal notification, not an alarm in the middle of the night
                 val sentWords = java.text.SimpleDateFormat("h:mm a, d MMM", java.util.Locale.getDefault()).format(java.util.Date(sentAt))
-                val pi = PendingIntent.getActivity(ctx, id.toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+                val pi = PendingIntent.getActivity(ctx, id.toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
                 val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                     .setContentTitle(com.suryaprakash.medlog.ui.tr("${o.optString("from")}: ${o.optString("text")}")).setContentText(com.suryaprakash.medlog.ui.tr("Sent earlier (at $sentWords). A call can check they're OK."))
                     .setContentIntent(pi).setAutoCancel(true).build()
-                runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
+                runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(Loud.alertId(id), n) }
                 return@launch
             }
             val urgent = kind in setOf("SOS", "DANGER", "FALL")
+            Loud.rang(ctx, mid, id)
             AlertSound.start(ctx, urgent = urgent)
             audio?.let { runCatching { android.media.MediaPlayer().apply { setDataSource(it.absolutePath); prepare(); start() } } }
             val open = Intent(ctx, AlertActivity::class.java).putExtra(AlertActivity.MODE, AlertActivity.HELPER)
                 .putExtra("from", o.optString("from")).putExtra("text", o.optString("text")).putExtra("kind", kind).putExtra("id", id)
+                .putExtra("mid", mid).putExtra("pairId", pairId)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             val pi = PendingIntent.getActivity(ctx, id.toInt(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val nid = Loud.alertId(id)
+            // loud, but never pinned: a swipe (even of the pop-up) silences it and leaves a quiet reminder until answered
             val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.alertTitle(o.optString("from"), urgent))).setContentText(com.suryaprakash.medlog.ui.tr(o.optString("text")))
                 .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setFullScreenIntent(pi, true).setContentIntent(pi).setOngoing(true).setAutoCancel(false)
-                .setDeleteIntent(SilenceReceiver.intent(ctx, 5000 + id.toInt(), "${o.optString("from")}: ${o.optString("text")}", "Not answered yet. Tap to answer.", pi))
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(false)
+                .setDeleteIntent(SilenceReceiver.intent(ctx, nid, "${o.optString("from")}: ${o.optString("text")}", "Not answered yet. Tap to answer.", pi))
+                .addAction(0, com.suryaprakash.medlog.ui.tr("I'm coming"), AlertReplyReceiver.intent(ctx, id, "coming", mid, pairId.ifEmpty { null }))
+                .addAction(0, com.suryaprakash.medlog.ui.tr("I'll call"), AlertReplyReceiver.intent(ctx, id, "call", mid, pairId.ifEmpty { null }))
                 .build()
-            runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
+            runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(nid, n) }
             runCatching { ctx.startActivity(open) }
         }
     }

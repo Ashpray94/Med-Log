@@ -33,7 +33,7 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
         return PersonContext(ageYears(p.dob), thinner, p.conditions)
     }
 
-    fun ageYears(dob: String): Int? = runCatching { Period.between(LocalDate.parse(dob), LocalDate.now()).years }.getOrNull()
+    fun ageYears(dob: String): Int? = ageFromDob(dob)
 
     // ───────── symptoms ─────────
 
@@ -177,5 +177,8 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     companion object {
         /** Most common problems for older adults, shown until the person has their own history. */
         val DEFAULT_PROBLEMS = listOf("headache", "dizzy", "stomach_pain", "back_pain", "knee_pain", "cough", "fever", "tired", "breathless", "vomiting")
+
+        /** Age from the year of birth only: setup asks for the year, so the day and month are never assumed. */
+        fun ageFromDob(dob: String): Int? = dob.take(4).toIntOrNull()?.takeIf { it in 1900..LocalDate.now().year }?.let { LocalDate.now().year - it }
     }
 }

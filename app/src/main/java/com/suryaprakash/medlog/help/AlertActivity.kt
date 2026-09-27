@@ -268,8 +268,9 @@ class AlertActivity : ComponentActivity() {
         val card = if (red) Color(0xFFB3261E) else Color(0xFF1F2023)
         val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
         fun reply(r: String) {
-            AlertSound.stop()
-            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
+            Loud.done(this@AlertActivity, Loud.alertId(id))
+            val mid = intent.getStringExtra("mid").orEmpty(); val pairId = intent.getStringExtra("pairId")?.ifEmpty { null }
+            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); if (mid.isNotEmpty()) Nearby.reply(this@AlertActivity, r, re = mid, pairId = pairId) else Nearby.reply(this@AlertActivity, r, pairId = pairId) }
             onClose()
         }
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000)).padding(12.dp), contentAlignment = Alignment.BottomCenter) {
@@ -312,7 +313,7 @@ class AlertActivity : ComponentActivity() {
                     AlertButton("Can't now", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
                 }
                 Text("Open MedLog", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { AlertSound.stop(); openApp("helper") }.padding(vertical = 12.dp))
+                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { Loud.silence(); openApp("helper") }.padding(vertical = 12.dp))
             }
         }
     }

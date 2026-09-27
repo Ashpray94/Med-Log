@@ -221,8 +221,8 @@ object HelperCare {
                 val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                     .setContentTitle(title).setContentText("Due at $time. Please check on them.")
                     .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
-                    .setContentIntent(open).setOngoing(true).setAutoCancel(false)
-                    .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, id, title, "Due at $time. Tap to open.", open))
+                    .setContentIntent(open).setAutoCancel(true)
+                    .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, id, title, "Due at $time. Tap to open.", open, keep = false))
                     .build()
                 runCatching { NotificationManagerCompat.from(ctx).notify(id, n) }
                 com.suryaprakash.medlog.help.AlertSound.start(ctx, urgent = false)

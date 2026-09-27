@@ -68,7 +68,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             .entries.sortedWith(compareByDescending<Map.Entry<String, List<Note>>> { e -> e.value.maxOf { rank(it.triage) } }.thenByDescending { e -> e.value.sumOf { it.count ?: 1 } })
 
         // ── patient ──
-        val age = runCatching { Period.between(LocalDate.parse(profile.dob), LocalDate.now()).years }.getOrNull()
+        val age = com.suryaprakash.medlog.data.Repo.ageFromDob(profile.dob)
         val patient = listOfNotNull(profile.name.ifBlank { null }, age?.let { "$it y" }, when (profile.sex) { "F" -> "female"; "M" -> "male"; else -> null },
             profile.hospitalId.ifBlank { null }?.let { "ID $it" }).joinToString(", ")
         val active = meds.filter { it.active }

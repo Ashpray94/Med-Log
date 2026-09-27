@@ -62,9 +62,9 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
         val days = generateSequence(day(from)) { it.plusDays(1) }.takeWhile { !it.isAfter(day(to - 1)) }.toList().takeLast(14)
 
         // ── header ──
-        val age = runCatching { Period.between(LocalDate.parse(profile.dob), LocalDate.now()).years }.getOrNull()
+        val age = com.suryaprakash.medlog.data.Repo.ageFromDob(profile.dob)
         val header = listOfNotNull(
-            listOfNotNull(profile.name.ifBlank { "Patient" }, profile.sex.takeIf { it.isNotBlank() }, age?.let { "$it y" }, profile.dob.takeIf { it.isNotBlank() }?.let { "DOB $it" },
+            listOfNotNull(profile.name.ifBlank { "Patient" }, profile.sex.takeIf { it.isNotBlank() }, age?.let { "$it y" }, profile.dob.take(4).takeIf { it.length == 4 }?.let { "Born $it" },
                 profile.bloodGroup.takeIf { it.isNotBlank() }?.let { "Blood $it" }, profile.hospitalId.takeIf { it.isNotBlank() }?.let { "ID $it" }).joinToString(" · "),
             profile.conditions.takeIf { it.isNotBlank() }?.let { "Conditions: $it" },
             if (profile.onBloodThinner || meds.any { it.bloodThinner && it.active }) "On a blood thinner" else null,

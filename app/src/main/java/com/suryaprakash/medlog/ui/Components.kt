@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui
 
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -565,27 +566,38 @@ fun SectionHeader(title: String, caption: String, action: String?, actionIcon: I
  * One part of a longer form, in its own white container: an icon, the part's name and what's chosen so far, and a
  * chevron. Tap the head to open or close it; only what's inside the open one needs reading.
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun Panel(title: String, icon: ImageVector, tint: Color, summary: String, open: Boolean, onToggle: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
+    val still = LocalSettings.current.lessMotion
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (open) 2.dp else 1.dp, if (open) p.brand else p.line, sh)) {
+    // opening: the body grows down from the header, then its contents fade in; closing is the same, reversed and a little quicker
+    val ease = androidx.compose.animation.core.FastOutSlowInEasing
+    fun <T> t(ms: Int, delay: Int = 0) = androidx.compose.animation.core.tween<T>(if (still) 0 else ms, if (still) 0 else delay, ease)
+    val edge by androidx.compose.animation.animateColorAsState(if (open) p.brand else p.line, t(240), label = "edge")
+    val keep = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    LaunchedEffect(open) { if (open) { delay(if (still) 0 else 300); keep.bringIntoView() } }
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(keep).clip(sh).background(p.card).border(if (open) 2.dp else 1.dp, edge, sh)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title, $summary. ${if (open) "Close" else "Open"}", onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             OptionIcon(icon, tint, 44.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1)
-                Text(summary, fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+                Text(summary, fontSize = sc.small, color = p.inkSoft)
             }
-            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(260), label = "chevron")
+            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, t(260), label = "chevron")
             Icon(Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.size(28.dp).graphicsLayer { rotationZ = turn })
         }
         androidx.compose.animation.AnimatedVisibility(open,
-            enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(260), expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, delayMillis = 60)),
-            exit = androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(220), shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))) {
-            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp), content = content)
+            enter = androidx.compose.animation.expandVertically(t(280), expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(t(200, 100)),
+            exit = androidx.compose.animation.fadeOut(t(120)) + androidx.compose.animation.shrinkVertically(t(240, 40), shrinkTowards = Alignment.Top)) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+                content()
+            }
         }
     }
 }

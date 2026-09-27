@@ -40,7 +40,8 @@ object DoseAlert {
             .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setFullScreenIntent(full, true).setContentIntent(full)
-            .setOngoing(true).setAutoCancel(false)
+            // loud, never pinned: a swipe (even of the pop-up) silences it and leaves a quiet reminder until taken
+            .setAutoCancel(false)
             .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, BASE_ID, com.suryaprakash.medlog.ui.tr(title), "Not taken yet. Tap to open.", full))
             .addAction(0, if (meds.size == 1) "I took it" else "I took them", action("take"))
             .addAction(0, "In ${app.settings.value.snoozeMinutes} min", action("snooze"))

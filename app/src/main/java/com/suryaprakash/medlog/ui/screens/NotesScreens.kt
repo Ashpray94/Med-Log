@@ -264,17 +264,28 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     fun toggle(k: String) { open = if (open == k) null else k }
     fun times(list: List<Note>) = list.joinToString(", ") { timeLabel(it.occurredAt) }
 
+    // every time in the same column, as wide as the widest time ("12:59 PM") in this text size, so the times and
+    // the names line up down the list and on their first line
+    val timeStyle = androidx.compose.ui.text.TextStyle(fontSize = sc.body, fontWeight = FontWeight.SemiBold)
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val timeWidth = remember(sc.body, com.suryaprakash.medlog.speech.I18n.lang) {
+        val widest = listOf(0L, 12 * 3600_000L + 59 * 60_000L, 22 * 3600_000L + 59 * 60_000L).maxOf { t ->
+            measurer.measure(timeLabel(java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() + t), timeStyle).size.width
+        }
+        with(density) { widest.toDp() } + 16.dp
+    }
+
     @Composable
     fun Entry(n: Note, title: String, sub: String, level: String = "GREEN") {
-        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("$title, ${timeLabel(n.occurredAt)}") { onNote(n.id) }.padding(vertical = 10.dp),
-            verticalAlignment = Alignment.Top) {
-            Text(timeLabel(n.occurredAt), fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, maxLines = 1, modifier = Modifier.width(104.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, fontSize = sc.body, color = p.ink, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                if (sub.isNotBlank()) Text(sub, fontSize = sc.small, color = p.inkSoft, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("$title, ${timeLabel(n.occurredAt)}") { onNote(n.id) }.padding(vertical = 10.dp)) {
+            Text(timeLabel(n.occurredAt), style = timeStyle, color = p.inkSoft, softWrap = false, modifier = Modifier.width(timeWidth).alignByBaseline())
+            Column(Modifier.weight(1f).alignByBaseline()) {
+                Text(title, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                if (sub.isNotBlank()) Text(sub, fontSize = sc.small, color = p.inkSoft)
             }
-            if (level != "GREEN") LevelMark(level, withWord = false)
-            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.5f), modifier = Modifier.padding(top = 2.dp).size(22.dp))
+            if (level != "GREEN") Box(Modifier.alignByBaseline()) { LevelMark(level, withWord = false) }
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.align(Alignment.CenterVertically).size(22.dp))
         }
     }
 
