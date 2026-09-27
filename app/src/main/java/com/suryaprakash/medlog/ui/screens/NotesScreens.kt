@@ -357,7 +357,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     }
     if (output.isNotEmpty()) {
         val flagged = output.any { it.triage != "GREEN" }
-        HistoryGroup("Toilet & vomit", "${output.size} · ${times(output)}", { IconTile(Icons.Rounded.Wc, p.tintTeal, 44.dp) }, if (flagged) "AMBER" else "GREEN",
+        HistoryGroup("Toilet and tummy", "${output.size} · ${times(output)}", { IconTile(Icons.Rounded.Wc, p.tintTeal, 44.dp) }, if (flagged) "AMBER" else "GREEN",
             open == "t", { toggle("t") }) {
             output.forEach { n -> Entry(n, n.text.substringBefore(":"), n.text.substringAfter(": ", ""), n.triage) }
         }

@@ -35,7 +35,7 @@ class FallService : Service(), SensorEventListener {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val n = NotificationCompat.Builder(this, MedLogApp.CH_SERVICE).setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle(com.suryaprakash.medlog.ui.tr("Watching for falls")).setContentText(com.suryaprakash.medlog.ui.tr("MedLog will ask if you're OK after a fall."))
+            .setContentTitle(com.suryaprakash.medlog.ui.tr("Watching for falls")).setContentText(com.suryaprakash.medlog.ui.tr("You'll be asked if you're OK after a fall."))
             .setOngoing(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
         val type = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH else 0
         runCatching { ServiceCompat.startForeground(this, 43, n, type) }.onFailure { stopSelf(); return START_NOT_STICKY }

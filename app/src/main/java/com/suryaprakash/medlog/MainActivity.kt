@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
             "doctor" -> Route.Doctor
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {
-                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "foodadd" -> Route.FoodPick(); "toilet" -> Route.Output(0); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
+                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "foodadd" -> Route.FoodPick(); "toilet" -> Route.Output(); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
                 "family" -> Route.Help; "messages" -> Route.Messages; "helpers" -> Route.Helpers; "helperadd" -> Route.HelperEdit(null); "pair" -> Route.Pair
                 "visit" -> Route.Visit; "appointments" -> Route.Appointments; "reports" -> Route.Reports; "settings" -> Route.Settings
                 "easy" -> Route.EasySettings; "permissions" -> Route.Permissions; "backup" -> Route.Backup; "privacy" -> Route.Privacy

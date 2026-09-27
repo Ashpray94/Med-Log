@@ -311,8 +311,8 @@ class AlertActivity : ComponentActivity() {
                     AlertButton("I'll call", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
                     AlertButton("Can't now", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
                 }
-                Text("Open MedLog", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { Loud.silence(); openApp("helper") }.padding(vertical = 12.dp))
+                Text("Open the app", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open the app") { Loud.silence(); openApp("helper") }.padding(vertical = 12.dp))
             }
         }
     }

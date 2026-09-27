@@ -167,7 +167,7 @@ class MedLogWidget : GlanceAppWidget() {
         Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(8.dp)) {
             if (!self) {
                 Box(GlanceModifier.fillMaxWidth().defaultWeight().clickable(actionStartActivity(link(ctx, ""))), contentAlignment = Alignment.Center) {
-                    Text(com.suryaprakash.medlog.ui.tr("Open MedLog to finish setting up"), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                    Text(com.suryaprakash.medlog.ui.tr("Open the app to finish setting up"), style = TextStyle(color = ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
                 }
             }
             // Speak (everything at once) and SOS

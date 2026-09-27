@@ -54,6 +54,10 @@ import com.suryaprakash.medlog.ui.WhenRow
 import com.suryaprakash.medlog.ui.savedFeedback
 import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.heightIn
+import com.suryaprakash.medlog.ui.cardTitle
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import org.json.JSONObject
 
@@ -92,13 +96,21 @@ object Output {
 }
 
 @Composable
-fun OutputScreen(nav: Nav, start: Int = 0) {
+fun OutputScreen(nav: Nav, start: Int = -1) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val p = LocalPalette.current
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
-    var tab by remember { mutableStateOf(start) }
+    var tab by remember { mutableStateOf(start.coerceAtLeast(0)) }
+    // first, which one: the ones this person notes most come first (no fixed order that may not fit them)
+    var picking by remember { mutableStateOf(start < 0) }
+    val since = remember { System.currentTimeMillis() - 60 * com.suryaprakash.medlog.data.DAY }
+    val past by app.viewDb.notes().kindSinceFlow(Kind.OUTPUT, since).collectAsState(emptyList())
+    val order = remember(past) {
+        val n = past.groupingBy { runCatching { JSONObject(it.details).optString("type") }.getOrDefault("") }.eachCount()
+        listOf(0, 1, 2).sortedByDescending { n[listOf("stool", "urine", "vomit")[it]] ?: 0 }
+    }
     var form by remember { mutableStateOf(0) }
     var colour by remember { mutableStateOf<String?>(null) }
     var amount by remember { mutableStateOf<String?>(null) }
@@ -113,7 +125,7 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
     LaunchedEffect(Unit) {
         com.suryaprakash.medlog.care.Drafts.get(ctx, "output")?.let { d -> runCatching {
             val o = JSONObject(d)
-            tab = o.optInt("tab", start); form = o.optInt("form"); colour = o.optString("colour").ifBlank { null }
+            tab = o.optInt("tab", start.coerceAtLeast(0)); picking = false; form = o.optInt("form"); colour = o.optString("colour").ifBlank { null }
             amount = o.optString("amount").ifBlank { null }; blood = o.optBoolean("blood"); pain = o.optBoolean("pain")
             if (o.has("at")) at = o.getLong("at")
         } }
@@ -126,7 +138,26 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
         com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
     }
 
-    Screen("Toilet & vomit", "Choose stool, urine or vomit, then tap what it looked like.", onHome = { nav.home() }, onBack = { nav.back() },
+    if (picking) {
+        Screen("Toilet and tummy", "What would you like to note? Stool, urine or vomit.", onHome = { nav.home() }, onBack = { nav.back() },
+            subtitle = "Noting it helps your doctor look after you") {
+            SectionHeader("What would you like to note?", "The ones you note most come first", null)
+            val names = listOf("Stool", "Urine", "Vomit")
+            val pics = listOf("loose_motions", "frequent_urine", "vomiting")
+            order.forEach { i ->
+                val sh = RoundedCornerShape(sc.radius)
+                Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).clip(sh).background(p.card).border(1.dp, p.outline, sh)
+                    .steady(names[i]) { tab = i; reset(); picking = false }.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.suryaprakash.medlog.pictogram.SpriteIcon(pics[i], 56.dp)
+                    Spacer(Modifier.width(16.dp))
+                    Text(names[i], fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
+                }
+            }
+        }
+        return
+    }
+    Screen(listOf("Stool", "Urine", "Vomit")[tab], "Tap what it looked like.", onHome = { nav.home() }, onBack = { picking = true },
         subtitle = "What it looked like", actions = {
             BigButton("Done", enabled = ready, onClick = {
                 val o = JSONObject().put("type", type).put("colour", colour ?: "").put("amount", amount ?: "").put("blood", blood)
@@ -141,7 +172,6 @@ fun OutputScreen(nav: Nav, start: Int = 0) {
                 }
             })
         }) {
-        Segmented(listOf("Stool", "Urine", "Vomit"), tab) { tab = it; reset() }
         WhenRow(at) { at = it }
         when (type) {
             "stool" -> {

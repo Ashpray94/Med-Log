@@ -192,10 +192,10 @@ fun OnboardingScreen(nav: Nav) {
                 if (uri != null) scope.launch {
                     runCatching { com.suryaprakash.medlog.data.SetupFile.import(ctx, uri) }
                         .onSuccess { Onboard.step = 0; nav.home(Route.Home) }
-                        .onFailure { setupError = "That file isn't a MedLog setup file." }
+                        .onFailure { setupError = "That file isn't a setup file." }
                 }
             }
-            FlowScreen("MedLog", "Welcome to MedLog", hint = "Everything stays on this phone.",
+            FlowScreen("MedLog", "Welcome", hint = "Everything stays on this phone.",
                 primary = "Start", onPrimary = { go(S.WHO) }, secondary = "Skip", onSecondary = { confirmSkip = true }) {
                 WelcomeCarousel()
                 // room kept for a message, so nothing moves when one appears
@@ -211,7 +211,7 @@ fun OnboardingScreen(nav: Nav) {
             // one person can be both: keep their own health, and help someone else (more people can be added later)
             var own by remember { mutableStateOf(s.role != "helper") }
             var helps by remember { mutableStateOf(Onboard.alsoHelps || s.role == "helper") }
-            FlowScreen(task, "How will you use MedLog?", hint = "Tap one or both.", step = n, steps = total, onBack = { back() }, primary = "Next", primaryEnabled = own || helps, onPrimary = {
+            FlowScreen(task, "How will you use this?", hint = "Tap one or both.", step = n, steps = total, onBack = { back() }, primary = "Next", primaryEnabled = own || helps, onPrimary = {
                 Onboard.alsoHelps = helps
                 when {
                     !own -> { app.settings.update { it.copy(role = "helper", onboarded = true) }; Onboard.step = 0; PairMode.helping = true; nav.home(Route.HelperHome); nav.go(Route.Pair) }
@@ -245,7 +245,7 @@ fun OnboardingScreen(nav: Nav) {
             }
         }
 
-        S.SIZE -> FlowScreen(task, "Make MedLog easy for you", hint = "Pick a word size, and anything that's harder for you.", step = n, steps = total, onBack = { back() },
+        S.SIZE -> FlowScreen(task, "Make it easy for you", hint = "Pick a word size, and anything that's harder for you.", step = n, steps = total, onBack = { back() },
             primary = "Next", onPrimary = { next() }) {
             // one group per kind of difficulty, as an accordion: all closed at first, one open at a time
             val p = com.suryaprakash.medlog.ui.LocalPalette.current
@@ -284,7 +284,7 @@ fun OnboardingScreen(nav: Nav) {
         // ───────────── read aloud ─────────────
         S.READ -> {
             val now = when { !s.readAloud -> 2; s.autoRead -> 0; else -> 1 }
-            FlowScreen(task, "Should MedLog read pages out loud?", step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
+            FlowScreen(task, "Should pages be read out loud?", step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
                 val p = com.suryaprakash.medlog.ui.LocalPalette.current
                 com.suryaprakash.medlog.ui.ChoiceCards(listOf(
                     com.suryaprakash.medlog.ui.BigOption("Read every page", "Good if reading is hard", now == 0, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.RecordVoiceOver, p.tintBlue, 64.dp) }) {
@@ -337,7 +337,7 @@ fun OnboardingScreen(nav: Nav) {
         S.BORN -> {
             var year by remember { mutableStateOf(pr.dob.take(4)) }
             val ok = year.toIntOrNull()?.let { it in 1900..java.time.LocalDate.now().year } == true
-            FlowScreen(task, "Which year were you born?", hint = "MedLog suggests the problems common at your age.", step = n, steps = total, onBack = { back() },
+            FlowScreen(task, "Which year were you born?", hint = "This shows the problems common at your age first.", step = n, steps = total, onBack = { back() },
                 primary = "Next", primaryEnabled = ok, onPrimary = { if (pr.dob.take(4) != year) update { cur -> cur.copy(dob = "$year-07-01") }; next() },
                 ) {
                 var picking by remember { mutableStateOf(false) }
@@ -409,7 +409,7 @@ fun OnboardingScreen(nav: Nav) {
         // ───────────── medicines ─────────────
         S.MEDS -> {
             val meds by app.db.medicines().activeFlow().collectAsState(emptyList())
-            FlowScreen(task, "Which medicines do you take?", hint = "Add each one once. MedLog reminds you on time.", step = n, steps = total, onBack = { back() },
+            FlowScreen(task, "Which medicines do you take?", hint = "Add each one once. You'll be reminded on time.", step = n, steps = total, onBack = { back() },
                 primary = if (meds.isEmpty()) "I don't take any" else "Next", onPrimary = { next() }) {
                 meds.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
                 BigButton(if (meds.isEmpty()) "Add a medicine" else "Add another", tone = Tone.SECONDARY, icon = Icons.Rounded.Medication, onClick = { nav.go(Route.MedEdit(null)) })
@@ -453,13 +453,13 @@ fun OnboardingScreen(nav: Nav) {
         }
 
         // ───────────── risks ─────────────
-        S.RISKS -> FlowScreen(task, "Do any of these apply to you?", hint = "It helps MedLog know when to call your family.", step = n, steps = total, onBack = { back() },
+        S.RISKS -> FlowScreen(task, "Do any of these apply to you?", hint = "It helps us know when to call your family.", step = n, steps = total, onBack = { back() },
             primary = if (plan.risks.isEmpty()) "None of these" else "Next", onPrimary = { next() }) {
             CarePlan.RISKS.forEach { (k, l) -> Choice(l, k in plan.risks, multi = true) { savePlan { it.copy(risks = if (k in it.risks) it.risks - k else it.risks + k) } } }
         }
 
         // ───────────── doctors ─────────────
-        S.DOCTORS -> FlowScreen(task, "Who are your doctors?", hint = "Add each doctor with what they treat. MedLog then offers the right one to call.", step = n, steps = total,
+        S.DOCTORS -> FlowScreen(task, "Who are your doctors?", hint = "Add each doctor with what they treat, so the right one is offered to call.", step = n, steps = total,
             onBack = { back() }, primary = if (plan.doctors.isEmpty()) "Add a doctor" else "Next",
             onPrimary = { if (plan.doctors.isEmpty()) { Onboard.editingDoctor = -1; go(S.DOCTOR_FORM) } else go(S.HELPERS) },
             secondary = if (plan.doctors.isEmpty()) "Skip for now" else null, onSecondary = { go(S.HELPERS) }) {
@@ -495,7 +495,7 @@ fun OnboardingScreen(nav: Nav) {
         // ───────────── check-in ─────────────
         S.CHECKIN -> {
             val opts = listOf("08:00" to ("Morning" to "8 am"), "10:00" to ("Mid-morning" to "10 am"), "13:00" to ("Afternoon" to "1 pm"), "18:00" to ("Evening" to "6 pm"))
-            FlowScreen(task, "When should MedLog ask how you are?", hint = "Once a day. If you don't answer within 2 hours, your helpers get a message.", step = n, steps = total,
+            FlowScreen(task, "When should we ask how you are?", hint = "Once a day. If you don't answer within 2 hours, your helpers get a message.", step = n, steps = total,
                 onBack = { back() }, primary = "Next", onPrimary = { scope.launch { Scheduler.reschedule(ctx) }; next() }) {
                 opts.forEach { (t, l) ->
                     val part = com.suryaprakash.medlog.ui.dayPart(t.substringBefore(":").toInt())
@@ -511,7 +511,7 @@ fun OnboardingScreen(nav: Nav) {
         S.PERMISSIONS -> PermissionsStep(n, total, onBack = { back() }) { next() }
 
         // ───────────── widget ─────────────
-        S.WIDGET -> FlowScreen(task, "Put MedLog on your home screen", hint = "One tap notes how you feel. No need to open the app.", step = n, steps = total,
+        S.WIDGET -> FlowScreen(task, "Put it on your home screen", hint = "One tap notes how you feel. No need to open the app.", step = n, steps = total,
             onBack = { back() }, primary = "Add to home screen",
             onPrimary = { pinWidget(ctx); scope.launch { delay(600); next() } },
             secondary = "Not now", onSecondary = { next() }) {
@@ -573,7 +573,7 @@ private fun HelpersStep(nav: Nav, n: Int?, total: Int, first: String, onBack: ()
             if (helpers.size < 5) BigButton("Add another helper", tone = Tone.OUTLINE, icon = Icons.Rounded.PersonAdd, onClick = { onEdit(null) })
         }
     }
-    if (askSkip) ConfirmDialog("Continue without a helper?", "Without a helper, MedLog can only call ${s.emergencyNumber} in an emergency.",
+    if (askSkip) ConfirmDialog("Continue without a helper?", "Without a helper, only ${s.emergencyNumber} can be called in an emergency.",
         yes = "Add a helper", no = "Continue anyway", onYes = { askSkip = false; onEdit(null) }, onNo = { askSkip = false; next() })
 }
 
@@ -746,7 +746,7 @@ private fun PermissionsStep(n: Int?, total: Int, onBack: () -> Unit, next: () ->
         if (!Perms.fullScreenOk(ctx)) add(Triple("Show alarms on the lock screen", Icons.Rounded.Notifications) { Perms.openFullScreen(ctx) })
         if (!Perms.batteryOk(ctx)) add(Triple("Keep working when the phone sleeps", Icons.Rounded.BatteryChargingFull) { Perms.openBattery(ctx) })
     }
-    FlowScreen("Setting up", "Allow MedLog to look after you", hint = "Turn each one on, then tap Allow on the phone's message.", step = n, steps = total, onBack = onBack,
+    FlowScreen("Setting up", "Allow this phone to look after you", hint = "Turn each one on, then tap Allow on the phone's message.", step = n, steps = total, onBack = onBack,
         primary = if (missing.size > 1) "Allow all" else if (missing.isNotEmpty()) "Allow" else "Next", onPrimary = { if (missing.isNotEmpty()) ask(missing.flatMap { it.third.toList() }.toTypedArray()) else next() },
         secondary = if (missing.isNotEmpty()) "Not now" else null, onSecondary = next) {
         Group {
@@ -795,7 +795,7 @@ private fun WidgetPreview(onAdd: () -> Unit) {
     val wall = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFDCE6EE), androidx.compose.ui.graphics.Color(0xFFE9E4DA)))
     // the home screen
     Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(wall)
-        .steady("The MedLog widget. Tap to add it to your home screen", onClick = onAdd).padding(18.dp)) {
+        .steady("The home-screen widget. Tap to add it", onClick = onAdd).padding(18.dp)) {
         // the widget
         val wsh = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
         Column(Modifier.fillMaxWidth().clip(wsh).background(p.card).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -838,7 +838,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
     val meds by app.db.medicines().activeFlow().collectAsState(emptyList())
     val name = pr.name.substringBefore(" ")
     FlowScreen("Setting up", if (name.isBlank()) "You're all set" else "You're all set, $name", hint = "Change anything later in Settings.",
-        onBack = { Onboard.step = S.WIDGET.ordinal }, primary = "Start using MedLog", onPrimary = {
+        onBack = { Onboard.step = S.WIDGET.ordinal }, primary = "Start", onPrimary = {
             scope.launch {
                 app.settings.update { it.copy(onboarded = true, role = "self") }
                 Scheduler.reschedule(ctx)
@@ -872,7 +872,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
             com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Warning, p.amber, 40.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Body("MedLog is not a doctor", bold = true)
+                Body("This is not a doctor", bold = true)
                 Hint(if (app.catalogue.reviewed) "In an emergency, press SOS." else "In an emergency, press SOS. Follow your doctor's advice.")
             }
         }

@@ -273,7 +273,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
         }
 
         // ───────────── only when needed: the gap ─────────────
-        M.GAP -> FlowScreen(task, "How long between doses, at least?", hint = "MedLog warns you if you try to take it sooner.", step = n, steps = ps.size,
+        M.GAP -> FlowScreen(task, "How long between doses, at least?", hint = "You'll be warned if you try to take it sooner.", step = n, steps = ps.size,
             onBack = { back() }, onClose = close, primary = primaryNext, onPrimary = { next() }) {
             AmountLine(m.amount, m.form, unit) { m = m.copy(amount = it) }
             Section("Wait at least")

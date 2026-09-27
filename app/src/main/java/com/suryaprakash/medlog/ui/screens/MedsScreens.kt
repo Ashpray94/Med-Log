@@ -263,7 +263,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
             FlowRowOf { listOf("before" to "Before food", "after" to "After food", "with" to "With food", "any" to "Any time").forEach { (k, l) -> Chip(l, m.food == k) { m = m.copy(food = k) } } }
             BigField("For how many days? (leave empty if always)", daysCount, { daysCount = it.filter(Char::isDigit).take(3) }, keyboard = KeyboardType.Number)
         }
-        BigField("How many tablets do you have? (optional)", pills, { pills = it.filter(Char::isDigit).take(4) }, keyboard = KeyboardType.Number, hint = "MedLog tells you before they run out")
+        BigField("How many tablets do you have? (optional)", pills, { pills = it.filter(Char::isDigit).take(4) }, keyboard = KeyboardType.Number, hint = "You'll be told before they run out")
         Toggle("Important medicine", m.critical, "Heart, sugar, fits, blood thinner: faster alerts to helpers if missed") { m = m.copy(critical = it) }
         Toggle("This is a blood thinner", m.bloodThinner) { m = m.copy(bloodThinner = it) }
         val valid = m.name.isNotBlank() && (m.asNeeded || times.isNotEmpty())

@@ -259,7 +259,7 @@ fun SpokenResults(r: SpeakSort.Result, nav: Nav, onAgain: () -> Unit) {
         }.padding(vertical = 12.dp))
 }
 
-private fun kindName(k: String) = when (k) { Kind.SYMPTOM -> "How I feel"; Kind.OUTPUT -> "Toilet & vomit"; Kind.FOOD -> "Food"; Kind.WATER -> "Water"; Kind.MED_TAKEN -> "Medicine"; else -> "Reading" }
+private fun kindName(k: String) = when (k) { Kind.SYMPTOM -> "How I feel"; Kind.OUTPUT -> "Toilet and tummy"; Kind.FOOD -> "Food"; Kind.WATER -> "Water"; Kind.MED_TAKEN -> "Medicine"; else -> "Reading" }
 private fun kindLook(k: String, p: com.suryaprakash.medlog.ui.Palette): Pair<ImageVector, Color> = when (k) {
     Kind.OUTPUT -> Icons.Rounded.Wc to p.tintTeal; Kind.FOOD -> Icons.Rounded.Restaurant to p.tintGreen; Kind.WATER -> Icons.Rounded.LocalDrink to p.tintBlue
     Kind.MED_TAKEN -> Icons.Rounded.Medication to p.tintOrange; else -> Icons.Rounded.MonitorHeart to p.tintPink

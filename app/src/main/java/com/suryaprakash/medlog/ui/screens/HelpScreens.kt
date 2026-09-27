@@ -182,10 +182,10 @@ fun HelpScreen(nav: Nav) {
     val speak = "Tap a message to send it to your family. For an emergency, tap the red SOS button at the bottom. " + (if (helpers.isEmpty()) "You have no helpers yet. Add one first." else "")
     Screen("Family", speak, onHome = { nav.home() }, subtitle = "Tell your family what you need", eyebrow = "") {
         if (helpers.isEmpty()) Card(border = p.amber) {
-            Body("Add at least one helper so MedLog knows who to ask.", bold = true)
+            Body("Add at least one helper, so we know who to ask.", bold = true)
             BigButton("Add a helper", onClick = { nav.go(Route.HelperEdit(null)) })
         }
-        if (!smsOk) Card(border = p.amber) { Body("Allow MedLog to send text messages, so your messages always get through."); BigButton("Allow", tone = Tone.QUIET, onClick = { ask(Perms.SMS + Perms.CALL) }) }
+        if (!smsOk) Card(border = p.amber) { Body("Allow text messages, so your messages always get through."); BigButton("Allow", tone = Tone.QUIET, onClick = { ask(Perms.SMS + Perms.CALL) }) }
 
         // ── what happened to the last message, person by person ──
         status?.let { st -> MessageStatus(st, acks, reached, helpers.firstOrNull()) }
@@ -410,8 +410,8 @@ fun PairScreen(nav: Nav) {
     // a phone can connect both ways: to its own helper's phone, or to the phone of someone it helps
     var helperSide by remember { mutableStateOf(s.role == "helper" || PairMode.helping) }
     DisposableEffect(Unit) { onDispose { PairMode.helping = false } }
-    Screen("Connect phones", if (helperSide) "Hold this phone next to the other person's phone." else "Ask your helper to open MedLog on their phone and choose I'm a helper.", onHome = { nav.home(if (helperSide) Route.HelperHome else Route.Home) }, onBack = { nav.back() }) {
-        if (!allowed) { Body("MedLog needs Bluetooth and nearby devices to pair."); BigButton("Allow", onClick = { ask(Perms.NEARBY + Perms.NOTIFY) }); return@Screen }
+    Screen("Connect phones", if (helperSide) "Hold this phone next to the other person's phone." else "Ask your helper to open the app on their phone and choose I'm a helper.", onHome = { nav.home(if (helperSide) Route.HelperHome else Route.Home) }, onBack = { nav.back() }) {
+        if (!allowed) { Body("Bluetooth and nearby devices are needed to connect."); BigButton("Allow", onClick = { ask(Perms.NEARBY + Perms.NOTIFY) }); return@Screen }
         st.done?.let { name ->
             Card(border = p.ok) { Body(if (helperSide) "Paired with $name. You'll be alerted when $name needs you." else "$name's phone is paired.", bold = true) }
             BigButton("Done", tone = Tone.OK, onClick = { if (!s.onboarded) nav.back() else nav.home(if (s.role == "helper") Route.HelperHome else Route.Home) })
@@ -434,7 +434,7 @@ fun PairScreen(nav: Nav) {
             else Body("Waiting for the other phone… Keep both phones close together.")
         } else {
             if (!started) BigButton("Look for my helper's phone", onClick = { started = true; Nearby.findHelpers(ctx) })
-            if (started && st.found.isEmpty()) Body("Looking… On your helper's phone: open MedLog → I'm a helper → Start pairing.")
+            if (started && st.found.isEmpty()) Body("Looking… On your helper's phone: open the app → I'm a helper → Start pairing.")
             if (chosen == null) st.found.forEach { (eid, name) -> BigButton(name, tone = Tone.SECONDARY, onClick = { chosen = eid to name; phone = "" }) }
             chosen?.let { (eid, name) ->
                 // the helper is already in the list (with their number): link to them, never ask for the number again
@@ -482,7 +482,7 @@ fun HelperHomeScreen(nav: Nav) {
     val fromPerson = inbox.filter { it.kind != com.suryaprakash.medlog.help.FamilyChat.KIND && (people.size < 2 || it.fromName == person?.name) }
     val heard by com.suryaprakash.medlog.data.Sync.lastHeard.collectAsState()
     val updated = person?.let { heard[it.pairId] ?: com.suryaprakash.medlog.data.Sync.heardAt(ctx, it.pairId) } ?: 0L
-    Screen(when { !paired -> "MedLog Helper"; people.size == 1 -> who; else -> "People you help" },
+    Screen(when { !paired -> "Helping someone"; people.size == 1 -> who; else -> "People you help" },
         if (paired) "The latest from $who, and your reply." else "Connect to the phone of the person you help.", onHome = null,
         subtitle = if (!paired) null else if (updated > 0) "Updated ${com.suryaprakash.medlog.ui.whenWords(updated).removePrefix("Today, ").lowercase().let { if (it.first().isDigit()) "at $it" else it }}" else "Waiting for their first update",
         eyebrow = "You're helping",
@@ -522,7 +522,7 @@ fun HelperHomeScreen(nav: Nav) {
             com.suryaprakash.medlog.ui.SectionHeader("Their records", "See and add, the same as on their phone", null)
             val tiles: List<Triple<String, Pair<androidx.compose.ui.graphics.vector.ImageVector, androidx.compose.ui.graphics.Color>, Route>> = listOf(
                 Triple("History", Icons.Rounded.History to p.tintTeal, Route.Notes), Triple("Medicines", Icons.Rounded.Medication to p.tintOrange, Route.Meds),
-                Triple("Food & water", Icons.Rounded.Restaurant to p.tintGreen, Route.Food), Triple("Toilet & vomit", Icons.Rounded.Wc to p.tintTeal, Route.Output()),
+                Triple("Food & water", Icons.Rounded.Restaurant to p.tintGreen, Route.Food), Triple("Toilet and tummy", Icons.Rounded.Wc to p.tintTeal, Route.Output()),
                 Triple("BP & sugar", Icons.Rounded.MonitorHeart to p.tintPink, Route.Readings), Triple("Their health", Icons.Rounded.Insights to p.tintPurple, Route.Reports),
             )
             com.suryaprakash.medlog.ui.TileGrid(tiles, 3, aspect = 1f) { (label, look, route), mod ->
@@ -705,7 +705,7 @@ private fun FamilyChatSection(who: String, chat: List<com.suryaprakash.medlog.da
     var name by remember { mutableStateOf(com.suryaprakash.medlog.help.FamilyChat.myName(ctx)) }
     val ready = com.suryaprakash.medlog.help.FamilyChat.key(ctx) != null
     com.suryaprakash.medlog.ui.Section("Other helpers")
-    if (!ready) { Hint("Starts once $who's phone has the new MedLog and is online. Only helpers see this."); return }
+    if (!ready) { Hint("Starts once $who's phone has the new version and is online. Only helpers see this."); return }
     if (com.suryaprakash.medlog.help.FamilyChat.myName(ctx).isBlank()) {
         BigField("Your name", name, { name = it }, hint = "The other helpers will see this")
         BigButton("Done", tone = Tone.SECONDARY, enabled = name.isNotBlank(), onClick = { app.settings.putString("my_name", name.trim()) })
@@ -784,7 +784,7 @@ private fun PermissionListCompact() {
     val needBattery = !batteryOk && ctx.medlog.settings.value.internetLink
     // one card, one button: the permissions first, then running in the background
     if (need.isNotEmpty() || needBattery) Card(border = LocalPalette.current.amber) {
-        Body("Allow MedLog to ring this phone when you are needed, even when it is asleep.", bold = true)
+        Body("Allow this phone to ring when you are needed, even when it is asleep.", bold = true)
         BigButton("Allow", tone = Tone.PRIMARY, onClick = {
             if (need.isNotEmpty()) ask(need.flatMap { it.perms.toList() }.toTypedArray()) else Perms.openBattery(ctx)
         })

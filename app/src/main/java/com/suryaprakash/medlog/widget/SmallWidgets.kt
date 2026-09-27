@@ -149,7 +149,7 @@ class FeelWidget : GlanceAppWidget() {
         Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(8.dp)) {
             if (!f.self) {
                 Box(GlanceModifier.fillMaxSize().clickable(actionStartActivity(MedLogWidget.link(ctx, ""))), contentAlignment = Alignment.Center) {
-                    Text(tr("Open MedLog to finish setting up"), style = TextStyle(color = INK, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                    Text(tr("Open the app to finish setting up"), style = TextStyle(color = INK, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
                 }
                 return@Column
             }
@@ -181,7 +181,7 @@ class FeelWidget : GlanceAppWidget() {
 }
 
 /**
- * "Toilet & vomit": three big buttons. Each opens that page in MedLog, where the pictures of what it looked like
+ * "Toilet and tummy": three big buttons. Each opens that page in MedLog, where the pictures of what it looked like
  * make the note precise (the colour, blood, how much); nothing is guessed from the widget.
  */
 class OutWidget : GlanceAppWidget() {
@@ -203,7 +203,7 @@ class OutWidget : GlanceAppWidget() {
         Column(GlanceModifier.fillMaxSize().background(ImageProvider(R.drawable.widget_bg)).padding(8.dp)) {
             if (!self) {
                 Box(GlanceModifier.fillMaxSize().clickable(actionStartActivity(MedLogWidget.link(ctx, ""))), contentAlignment = Alignment.Center) {
-                    Text(tr("Open MedLog to finish setting up"), style = TextStyle(color = INK, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
+                    Text(tr("Open the app to finish setting up"), style = TextStyle(color = INK, fontSize = 15.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center))
                 }
                 return@Column
             }

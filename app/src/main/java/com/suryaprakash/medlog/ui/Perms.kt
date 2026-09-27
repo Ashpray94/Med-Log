@@ -35,13 +35,13 @@ object Perms {
     val CALENDAR = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
 
     fun list(role: String) = if (role == "helper") listOf(
-        P("notify", "Let MedLog alert you", "So you hear when someone needs you.", NOTIFY, true),
+        P("notify", "Let this phone alert you", "So you hear when someone needs you.", NOTIFY, true),
         P("nearby", "Find the phone nearby", "So messages arrive without internet, over Bluetooth.", NEARBY, true),
     ) else listOf(
-        P("mic", "Let MedLog hear you", "So you can talk instead of typing. Your voice stays on this phone.", MIC, true),
-        P("notify", "Let MedLog remind you", "For medicine times and check-ins.", NOTIFY, true),
-        P("sms", "Send help messages", "So MedLog can text your helpers in an SOS. Uses SMS, not internet.", SMS, true),
-        P("call", "Call your helpers", "So MedLog can call your helpers in an SOS.", CALL, true),
+        P("mic", "Let this phone hear you", "So you can talk instead of typing. Your voice stays on this phone.", MIC, true),
+        P("notify", "Let this phone remind you", "For medicine times and check-ins.", NOTIFY, true),
+        P("sms", "Send help messages", "So your helpers get a text in an SOS. Uses SMS, not internet.", SMS, true),
+        P("call", "Call your helpers", "So your helpers can be called in an SOS.", CALL, true),
         P("location", "Share where you are in an SOS", "Only sent in an SOS message, only to your helpers.", LOCATION, false),
         P("nearby", "Reach phones in your home", "So your family's phones ring when you tap a help message.", NEARBY, false),
     )

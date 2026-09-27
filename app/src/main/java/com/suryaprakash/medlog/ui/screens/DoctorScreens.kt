@@ -123,7 +123,7 @@ fun VisitScreen(nav: Nav) {
                 if (f.newMedicine.isNotBlank()) nav.replace(Route.MedEdit(null)) else nav.back()
             }
         })
-        if (f.newMedicine.isNotBlank()) Hint("After saving, you'll add the new medicine so MedLog can remind you.")
+        if (f.newMedicine.isNotBlank()) Hint("After this, add the new medicine so you get reminders.")
     }
 }
 
@@ -184,7 +184,7 @@ fun AppointmentsScreen(nav: Nav) {
     var doctor by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
     var purpose by remember { mutableStateOf("") }
-    Screen("Doctor appointments", "Your next doctor visits. MedLog reminds you the evening before and prepares your doctor page.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Doctor appointments", "Your next doctor visits. You'll get a reminder the evening before, with your doctor page ready.", onHome = { nav.home() }, onBack = { nav.back() }) {
         if (list.isEmpty()) Hint("No appointments yet.")
         list.forEach { a -> Card { Body("${dayLabel(a.at)} · ${timeLabel(a.at)}", bold = true); Body(listOf(a.doctor, a.place, a.purpose).filter { it.isNotBlank() }.joinToString(" · ")); BigButton("Remove", tone = Tone.SECONDARY, onClick = { scope.launch { app.viewDb.appointments().delete(a.id) } }) } }
         Title("Add an appointment")

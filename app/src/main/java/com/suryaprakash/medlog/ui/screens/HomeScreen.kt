@@ -201,7 +201,7 @@ fun HomeScreen(nav: Nav) {
         // ── everything else, equal tiles ──
         val tiles = listOfNotNull(
             if ("food" !in s.hidden) HomeTile("Food & water", Icons.Rounded.Restaurant, p.tintGreen) { nav.go(Route.Food) } else null,
-            HomeTile("Toilet & vomit", Icons.Rounded.Wc, p.tintTeal) { nav.go(Route.Output()) },
+            HomeTile("Toilet and tummy", Icons.Rounded.Wc, p.tintTeal) { nav.go(Route.Output()) },
             if ("readings" !in s.hidden) HomeTile("BP & sugar", Icons.Rounded.MonitorHeart, p.tintPink) { nav.go(Route.Readings) } else null,
             if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, p.tintBlue) { nav.go(Route.Doctor) } else null,
             if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, p.tintPurple) { nav.go(Route.Reports) } else null,

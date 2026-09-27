@@ -122,7 +122,7 @@ fun SettingsScreen(nav: Nav) {
             CalendarPicker()
             Title("Meeting Timer")
             val mt = CalendarSync.meetingTimerInstalled(ctx)
-            Toggle("Show reminders in Meeting Timer", s.useMeetingTimer && mt, if (mt) "Meeting Timer shows the medicine card; MedLog steps in if it doesn't within 2 minutes." else "Meeting Timer is not installed on this phone.") { on ->
+            Toggle("Show reminders in Meeting Timer", s.useMeetingTimer && mt, if (mt) "Meeting Timer shows the medicine card; this app steps in if it doesn't within 2 minutes." else "Meeting Timer is not installed on this phone.") { on ->
                 if (mt) { app.settings.update { it.copy(useMeetingTimer = on) }; scope.launch { Scheduler.reschedule(ctx) } }
             }
             if (mt) BigButton("Open Meeting Timer", tone = Tone.SECONDARY, onClick = { CalendarSync.openMeetingTimer(ctx) })
@@ -157,9 +157,9 @@ fun SettingsScreen(nav: Nav) {
             if (s.whatsappSos && !enabled) BigButton("Turn on in Accessibility", tone = Tone.QUIET, onClick = { Perms.open(ctx, Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)) })
         }
         "lang" -> LanguagesSection(onBack = { section = null }, onHome = { nav.home() })
-        "update" -> Screen("Updates", "Check for a new version of MedLog and install it.", onHome = { nav.home() }, onBack = { section = null }) {
+        "update" -> Screen("Updates", "Check for a new version and install it.", onHome = { nav.home() }, onBack = { section = null }) {
             UpdateCard(auto = true)
-            Hint("You're on MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. MedLog also checks once a day by itself.")
+            Hint("You're on version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. It also checks once a day by itself.")
         }
         "helperlock" -> Screen("Helper controls", "Things a helper can set.", onHome = { nav.home() }, onBack = { section = null }) {
             Body("Hide what isn't needed", bold = true)
@@ -267,7 +267,7 @@ private fun DoctorsSection(onBack: () -> Unit) {
     Screen("My doctors", "Your doctors and what they treat.", onHome = null, onBack = onBack, actions = {
         BigButton("Add a doctor", onClick = { name = ""; phone = ""; spec = "Family doctor"; hospital = ""; editing = -1 })
     }) {
-        if (plan.doctors.isEmpty()) Hint("No doctors yet. Add each doctor with what they treat, so MedLog offers the right one to call.")
+        if (plan.doctors.isEmpty()) Hint("No doctors yet. Add each doctor with what they treat, so the right one is offered to call.")
         else com.suryaprakash.medlog.ui.Group {
             plan.doctors.forEachIndexed { i, d ->
                 if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
@@ -286,7 +286,7 @@ private fun CalendarPicker() {
     var granted by remember { mutableStateOf(Perms.has(ctx, *Perms.CALENDAR)) }
     val ask = rememberPermissionAsker { granted = it }
     if (!granted) {
-        Hint("Put medicine times into your Google Calendar. Android syncs them; MedLog itself never uses the internet.")
+        Hint("Put medicine times into your Google Calendar. Android syncs them; this app itself never sends them online.")
         BigButton("Allow calendar", tone = Tone.QUIET, onClick = { ask(Perms.CALENDAR) })
         return
     }
@@ -306,7 +306,7 @@ fun EasySettingsScreen(nav: Nav) {
     val s = LocalSettings.current
     val speakerOk by app.speaker.available.collectAsState()
     fun set(f: (com.suryaprakash.medlog.data.Settings) -> com.suryaprakash.medlog.data.Settings) = app.settings.update(f)
-    Screen("Seeing and hearing", "Change how MedLog looks and sounds.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Seeing and hearing", "Change how it looks and sounds.", onHome = { nav.home() }, onBack = { nav.back() }) {
         com.suryaprakash.medlog.ui.Section("Text size")
         com.suryaprakash.medlog.ui.Choice("Regular", !s.bigMode) { set { it.copy(bigMode = false) } }
         com.suryaprakash.medlog.ui.Choice("Large", s.bigMode) { set { it.copy(bigMode = true) } }
@@ -377,7 +377,7 @@ fun PermissionList(role: String) {
 @Composable
 fun PermissionsScreen(nav: Nav) {
     val s = LocalSettings.current
-    Screen("Permissions", "MedLog needs these to remind you and get help. Tap Allow on each one that isn't ticked.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Permissions", "These are needed to remind you and get help. Tap Allow on each one that isn't ticked.", onHome = { nav.home() }, onBack = { nav.back() }) {
         PermissionList(s.role)
     }
 }
@@ -400,7 +400,7 @@ fun BackupScreen(nav: Nav) {
         if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.export(ctx, uri); "Setup file saved." }.getOrElse { "Could not save: ${it.message}" } }
     }
     val loadSetup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.import(ctx, uri); "Setup loaded." }.getOrElse { "That file isn't a MedLog setup file." } }
+        if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.import(ctx, uri); "Setup loaded." }.getOrElse { "That file isn't a setup file." } }
     }
     Screen("Backup and new phone", "Save a locked copy of everything, or bring it back on a new phone.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Title("Setup file")
@@ -430,10 +430,10 @@ fun UpdateCard(auto: Boolean = false) {
     androidx.compose.runtime.LaunchedEffect(Unit) { if (auto && st is com.suryaprakash.medlog.Updater.State.Idle) com.suryaprakash.medlog.Updater.check(ctx) }
     when (val s = st) {
         is com.suryaprakash.medlog.Updater.State.Available -> Card(border = p.ok) {
-            Body("A new MedLog is ready: ${s.release.name}", bold = true)
+            Body("A new version is ready: ${s.release.name}", bold = true)
             if (s.release.notes.isNotBlank()) Body(s.release.notes)
             if (!canInstall) {
-                Body("First, let MedLog install updates. Turn on the switch, then come back.")
+                Body("First, allow updates to install. Turn on the switch, then come back.")
                 BigButton("Allow updates", tone = Tone.QUIET, onClick = { com.suryaprakash.medlog.Updater.openInstallPermission(ctx) })
             } else BigButton("Update now", tone = Tone.OK, onClick = { scope.launch { com.suryaprakash.medlog.Updater.install(ctx, s.release) } })
             Hint("Your notes and settings stay. Android will ask you to confirm.")

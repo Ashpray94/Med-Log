@@ -639,7 +639,7 @@ private fun ScaleCard(onSave: (Double) -> Unit) {
             }
             listening -> {
                 Text("Step on your scale", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
-                Text("MedLog is listening for it now", fontSize = sc.body, color = p.inkSoft)
+                Text("Listening for it now", fontSize = sc.body, color = p.inkSoft)
             }
             tried -> {
                 Text("Turn on Bluetooth", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
