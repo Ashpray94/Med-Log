@@ -145,7 +145,14 @@ object Nearby {
         }
     }
 
-    private suspend fun nearbySend(ctx: Context, helpers: List<Helper>, body: JSONObject) {
+    private suspend fun nearbySend(ctx: Context, helpers: List<Helper>, body: JSONObject) = nearbySendEach(ctx, helpers.associateWith { body })
+
+    /**
+     * Bluetooth / Wi-Fi Direct to helper phones in range, a different note for each ([bodies]); [onSent] for each
+     * phone that took its note. Looks for 20 seconds, then keeps the line open 40 seconds for replies.
+     */
+    suspend fun nearbySendEach(ctx: Context, bodies: Map<Helper, JSONObject>, onSent: (Helper) -> Unit = {}) {
+        val helpers = bodies.keys.toList()
         val c = client(ctx)
         val connected = HashMap<String, Helper>()
         val lifecycle = object : ConnectionLifecycleCallback() {
@@ -162,8 +169,9 @@ object Nearby {
             override fun onConnectionResult(id: String, r: ConnectionResolution) {
                 val h = connected[id] ?: return
                 if (r.status.isSuccess) {
+                    val body = bodies[h] ?: return
                     c.sendPayload(id, Payload.fromBytes(Keys.seal(key(h), body.toString().toByteArray())))
-                    reached.value = reached.value + h.name
+                    if (body.has("sync")) onSent(h) else reached.value = reached.value + h.name
                 }
             }
             override fun onDisconnected(id: String) {}

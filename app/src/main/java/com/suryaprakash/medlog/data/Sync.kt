@@ -82,21 +82,47 @@ object Sync {
 
     /** Sends every peer what changed since it last got something from here. */
     suspend fun push(ctx: Context) = lock.withLock {
-        if (!Relay.enabled(ctx)) return@withLock
-        for (p in peers(ctx)) runCatching { sendSince(ctx, p, sentUpTo(ctx, p.id)) }.onFailure { Log.w(TAG, "push ${p.id}", it) }
+        val stuck = ArrayList<Peer>()
+        for (p in peers(ctx)) {
+            val ok = Relay.enabled(ctx) && runCatching { sendSince(ctx, p, sentUpTo(ctx, p.id)) }.onFailure { Log.w(TAG, "push ${p.id}", it) }.getOrDefault(false)
+            if (!ok && p.dir == Relay.DOWN) stuck += p
+        }
+        if (stuck.isNotEmpty()) nearby(ctx, stuck)
+    }
+
+    /**
+     * No internet (or sharing over the internet is off): hand the changes to helper phones in Bluetooth range
+     * instead. At most once every 15 minutes, and only with something new, so it costs next to no battery.
+     */
+    private suspend fun nearby(ctx: Context, stuck: List<Peer>) {
+        val app = ctx.medlog
+        if (!com.suryaprakash.medlog.help.Nearby.allowed(ctx)) return
+        val now = System.currentTimeMillis()
+        if (now - app.settings.getLong("sync_bt_at") < 15 * 60_000L) return
+        val helpers = app.db.helpers().all().filter { it.pairKey != null }
+        val bodies = HashMap<Helper, JSONObject>(); val upTo = HashMap<String, Long>()
+        for (p in stuck) {
+            val h = helpers.firstOrNull { it.pairId == p.id } ?: continue
+            val (body, to) = pack(ctx, p, sentUpTo(ctx, p.id)) ?: continue
+            bodies[h] = body; upTo[p.id] = to
+        }
+        if (bodies.isEmpty()) return
+        app.settings.putLong("sync_bt_at", now)
+        com.suryaprakash.medlog.help.Nearby.nearbySendEach(ctx, bodies) { h -> upTo[h.pairId]?.let { app.settings.putLong("sync_sent_${h.pairId}", it) } }
     }
 
     private fun sentUpTo(ctx: Context, peer: String) = ctx.medlog.settings.getLong("sync_sent_$peer")
 
     /** Everything that changed after [since], in batches; the "sent up to" mark moves only once the mailbox has it. */
-    private suspend fun sendSince(ctx: Context, p: Peer, since: Long) {
+    /** True when everything got through (or there was nothing to send). */
+    private suspend fun sendSince(ctx: Context, p: Peer, since: Long): Boolean {
         var from = since
         while (true) {
-            val (body, to) = pack(ctx, p, from) ?: return Unit.also { Log.d(TAG, "send ${p.id} since $from: nothing") }
+            val (body, to) = pack(ctx, p, from) ?: return true.also { Log.d(TAG, "send ${p.id} since $from: nothing") }
             Log.d(TAG, "send ${p.id} since $from to $to")
-            if (!Relay.post(ctx, p.key, p.dir, body)) return
+            if (!Relay.post(ctx, p.key, p.dir, body)) return false
             ctx.medlog.settings.putLong("sync_sent_${p.id}", to)
-            if (to <= from) return
+            if (to <= from) return true
             from = to
         }
     }
