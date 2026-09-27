@@ -2582,5 +2582,15 @@
 "Started {0}": "{0} முதல் தொடங்கியது",
 "{0} g protein · {1} glasses of water": "{0} கி புரதம் · {1} டம்ளர் தண்ணீர்",
 "Android holds back SMS for apps installed from a file. Allow it once; updates keep it:": "கோப்பிலிருந்து நிறுவிய செயலிகளுக்கு Android SMS-ஐ நிறுத்தி வைக்கிறது. ஒருமுறை அனுமதிக்கவும்; புதுப்பிப்புகளுக்குப் பின்னும் இருக்கும்:",
-"1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.": "1. அமைப்புகளைத் திற என்பதைத் தட்டவும்.\n2. மேல் வலதில் ⋮ தட்டி, கட்டுப்படுத்தப்பட்ட அமைப்புகளை அனுமதி என்பதைத் தட்டி உறுதிசெய்யவும்.\n3. இங்கே திரும்பி மீண்டும் இயக்கவும்."
+"1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.": "1. அமைப்புகளைத் திற என்பதைத் தட்டவும்.\n2. மேல் வலதில் ⋮ தட்டி, கட்டுப்படுத்தப்பட்ட அமைப்புகளை அனுமதி என்பதைத் தட்டி உறுதிசெய்யவும்.\n3. இங்கே திரும்பி மீண்டும் இயக்கவும்.",
+"{0} took it": "{0} எடுத்துக்கொண்டார்",
+"{0} took it late": "{0} தாமதமாக எடுத்தார்",
+"Ate food instead": "இதற்குப் பதில் உணவு சாப்பிட்டார்",
+"Missed · {0} and {1} more": "தவறியது · {0} மற்றும் இன்னும் {1}",
+"{0} more due now": "இன்னும் {0} இப்போது எடுக்க வேண்டும்",
+"{0} more with a missed dose": "இன்னும் {0}-இல் அளவு தவறியது",
+"{0} more today": "இன்று இன்னும் {0}",
+"Feed history": "உணவு பான வரலாறு",
+"Each feed given or missed, day by day, and what went in": "ஒவ்வொரு உணவு பானமும் கொடுக்கப்பட்டதா தவறியதா, நாள்தோறும், அதில் என்ன இருந்தது",
+"You answered: {0}": "நீங்கள் பதில் அளித்தீர்கள்: {0}"
 }

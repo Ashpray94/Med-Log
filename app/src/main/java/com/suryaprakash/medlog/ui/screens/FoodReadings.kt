@@ -183,7 +183,12 @@ fun FoodScreen(nav: Nav) {
                         onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx) } },
                         onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
                         onNotGiven = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given") } },
-                        onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } })
+                        onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } },
+                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead") }; nav.go(Route.FoodPick()) })
+                }
+                // every feed given or missed, day by day, with amounts
+                if (feeds.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
+                    com.suryaprakash.medlog.ui.NavRow("Feed history", sub = "Each feed given or missed, day by day, and what went in") { nav.go(Route.Nutrition) }
                 }
             }
         }

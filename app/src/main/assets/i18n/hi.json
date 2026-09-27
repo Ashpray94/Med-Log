@@ -2582,5 +2582,15 @@
 "Started {0}": "{0} से शुरू",
 "{0} g protein · {1} glasses of water": "{0} ग्राम प्रोटीन · {1} गिलास पानी",
 "Android holds back SMS for apps installed from a file. Allow it once; updates keep it:": "फ़ाइल से इंस्टॉल किए गए ऐप के लिए Android SMS रोक देता है। एक बार अनुमति दें; अपडेट के बाद भी बनी रहेगी:",
-"1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.": "1. सेटिंग्स खोलें दबाएँ।\n2. ऊपर दाईं ओर ⋮ दबाएँ, फिर प्रतिबंधित सेटिंग्स की अनुमति दें, और पुष्टि करें।\n3. यहाँ लौटकर इसे फिर से चालू करें।"
+"1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.": "1. सेटिंग्स खोलें दबाएँ।\n2. ऊपर दाईं ओर ⋮ दबाएँ, फिर प्रतिबंधित सेटिंग्स की अनुमति दें, और पुष्टि करें।\n3. यहाँ लौटकर इसे फिर से चालू करें।",
+"{0} took it": "{0} ने ली",
+"{0} took it late": "{0} ने देर से ली",
+"Ate food instead": "इसके बदले खाना खाया",
+"Missed · {0} and {1} more": "छूट गई · {0} और {1} और",
+"{0} more due now": "{0} और अभी लेनी हैं",
+"{0} more with a missed dose": "{0} और में खुराक छूटी",
+"{0} more today": "आज {0} और",
+"Feed history": "फ़ीड का इतिहास",
+"Each feed given or missed, day by day, and what went in": "हर फ़ीड दी गई या छूटी, दिन-ब-दिन, और उसमें क्या था",
+"You answered: {0}": "आपने जवाब दिया: {0}"
 }

@@ -84,6 +84,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -355,9 +356,20 @@ fun ActionArea(content: @Composable ColumnScope.() -> Unit) {
     // the page's main action on its own white band, so it stands apart from the page and the bar under it
     Column(Modifier.fillMaxWidth().background(p.card)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            androidx.compose.runtime.CompositionLocalProvider(LocalOnCard provides true) { content() }
+        }
     }
 }
+
+/**
+ * True inside a white card. Quiet controls (grey buttons, segmented choices, chips) take the opposite surface of
+ * what they sit on: grey on a card, white (lifted by a soft shadow) on the page, so they never melt into it.
+ */
+val LocalOnCard = androidx.compose.runtime.compositionLocalOf { false }
+
+/** A soft shadow that lifts a white surface off the page. */
+fun Modifier.lift(shape: Shape, on: Boolean = true): Modifier = if (on) this.shadow(1.5.dp, shape, clip = false, ambientColor = Color(0x33000000), spotColor = Color(0x33000000)) else this
 
 /** True when a task page is shown inside a sheet: then its top has only Close. */
 val LocalInSheet = androidx.compose.runtime.compositionLocalOf { false }
@@ -404,8 +416,8 @@ private fun BackLink(onBack: () -> Unit) {
     val sc = LocalScale.current
     @Suppress("UNUSED_VARIABLE") val unused = sc
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.size(48.dp).clip(sh).background(p.card).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
-        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
+    Box(Modifier.offset(x = (-12).dp).size(48.dp).clip(sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+        Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(28.dp))
     }
 }
 
@@ -508,20 +520,23 @@ fun BigButton(
     val sc = LocalScale.current
     // PRIMARY is the one main action on a screen. SECONDARY is white with a grey outline, OUTLINE a grey outline with teal words, TINT a light teal fill with teal words, QUIET is a grey fill:
     // both clearly less important, never competing with the accent.
+    val onCard = LocalOnCard.current
+    val quiet = if (onCard) p.fill else p.card
     val (bg, fg) = when (tone) {
         Tone.PRIMARY -> p.brand to p.onBrand
-        Tone.SECONDARY -> p.fill to p.ink
-        Tone.OUTLINE -> p.fill to p.ink
-        Tone.TINT -> p.fill to p.ink
+        Tone.SECONDARY -> quiet to p.ink
+        Tone.OUTLINE -> quiet to p.ink
+        Tone.TINT -> quiet to p.ink
         Tone.DANGER -> p.red to Color.White
         Tone.OK -> p.ok to Color.White
         Tone.AMBER -> p.amberSoft to p.amber
-        Tone.QUIET -> p.fill to p.ink
+        Tone.QUIET -> quiet to p.ink
     }
     var pressed by remember { mutableStateOf(false) }
     val left = leading != null || sub != null
     Row(
-        modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
+        modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target)
+            .lift(RoundedCornerShape(16.dp), on = !onCard && enabled && tone in setOf(Tone.SECONDARY, Tone.OUTLINE, Tone.TINT, Tone.QUIET)).clip(RoundedCornerShape(16.dp))
             .background(if (enabled) bg else p.fill.copy(alpha = 0.5f))
             
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
@@ -745,9 +760,10 @@ fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = n
     val p = LocalPalette.current
     val sh = shape ?: RoundedCornerShape(LocalScale.current.radius)
     var pressed by remember { mutableStateOf(false) }
+    val white = (color ?: p.card) == p.card
     Column(
         modifier.fillMaxWidth().scale(pressScale(pressed))
-            
+            .lift(sh, on = white)
             .clip(sh).background(color ?: p.card)
             .then(when {
                 border == null -> Modifier
@@ -757,8 +773,7 @@ fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = n
             .then(if (onClick != null) Modifier.steady(label, onPress = { pressed = it }, onClick = onClick) else Modifier)
             .padding(padding),
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        content = content,
-    )
+    ) { androidx.compose.runtime.CompositionLocalProvider(LocalOnCard provides white) { content() } }
 }
 
 /** A row: grey icon tile, title, optional subtitle, chevron. */
@@ -770,7 +785,7 @@ fun ListRow(title: String, sub: String? = null, icon: ImageVector? = null, tint:
     Row(
         Modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
             
-            .clip(RoundedCornerShape(sc.radius)).background(p.card)
+            .lift(RoundedCornerShape(sc.radius)).clip(RoundedCornerShape(sc.radius)).background(p.card)
             .steady(title + (sub?.let { ". $it" } ?: ""), onPress = { pressed = it }, onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -891,7 +906,7 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
     var pressed by remember { mutableStateOf(false) }
     val sh = RoundedCornerShape(sc.radius)
     Box(
-        modifier.scale(pressScale(pressed)).clip(sh)
+        modifier.scale(pressScale(pressed)).lift(sh, on = !LocalOnCard.current).clip(sh)
             .background(if (selected) p.brandSoft else color ?: p.card).then(if (selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
@@ -929,7 +944,7 @@ fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick
     val sc = LocalScale.current
     Row(
         modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(26.dp))
-            .background(if (selected) p.brand else p.fill)
+            .background(if (selected) p.brand else if (LocalOnCard.current) p.fill else p.card)
             .steady(text + if (selected) ", chosen" else "", onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -965,7 +980,7 @@ fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     // every choice as tall as the tallest: a long label (in Hindi or Tamil, or large words) wraps instead of being cut
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.fill).padding(4.dp)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).lift(RoundedCornerShape(16.dp), on = !LocalOnCard.current).clip(RoundedCornerShape(16.dp)).background(if (LocalOnCard.current) p.fill else p.card).padding(4.dp)) {
         options.forEachIndexed { i, o ->
             Box(
                 Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent)
@@ -1268,7 +1283,9 @@ fun Section(title: String, action: String? = null, onAction: () -> Unit = {}) {
 @Composable
 fun Group(content: @Composable ColumnScope.() -> Unit) {
     val sh = RoundedCornerShape(LocalScale.current.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(LocalPalette.current.card), content = content)
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(LocalPalette.current.card)) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalOnCard provides true) { content() }
+    }
 }
 
 @Composable
@@ -1334,7 +1351,7 @@ fun Timeline(items: List<TimelineItem>) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 4.dp)) {
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card).padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 4.dp)) {
         items.forEachIndexed { i, it ->
             val last = i == items.lastIndex
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
+import androidx.compose.material.icons.automirrored.rounded.Reply
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
@@ -516,7 +517,8 @@ fun HelperHomeScreen(nav: Nav) {
                         onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.untake(ctx, d.id); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },
                         onNotGiven = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given"); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },
                         onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },
-                        who = pp.name.substringBefore(' ').ifBlank { "They" }, modifier = mod)
+                        who = pp.name.substringBefore(' ').ifBlank { "They" }, modifier = mod,
+                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead"); view(Route.FoodPick()) } })
                 }
             }
             com.suryaprakash.medlog.ui.SectionHeader("Their records", "See and add, the same as on their phone", null)
@@ -580,10 +582,12 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
         com.suryaprakash.medlog.ui.Card(border = p.line) {
             Text("Last message · ${dayLabel(latest.at)} ${timeLabel(latest.at)}".trim(), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
             Text(shown(latest.text), fontSize = sc.body, fontWeight = FontWeight.Medium, color = p.ink)
+            // what was answered, in the words sent; green only for "I'm coming"
+            val said = app.settings.getString("my_last_reply")?.split("|")?.takeIf { it.size == 2 && (it[1].toLongOrNull() ?: 0) >= latest.at }?.get(0)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(20.dp))
+                Icon(if (said == "coming") Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.Reply, null, tint = if (said == "coming") p.ok else p.inkSoft, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("You answered", fontSize = sc.small, color = p.inkSoft)
+                Text(if (said != null) "You answered: ${Nearby.replyWords(said)}" else "You answered", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (said == "coming") p.ok else p.ink)
             }
         }
         return

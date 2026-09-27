@@ -54,8 +54,8 @@ data class Palette(
  *      My health purple, History teal) and the status colours (red urgent/SOS, amber watch, green OK).
  */
 val Warm = Palette(
-    paper = Color(0xFFF2F2F0), card = Color(0xFFFFFFFF), ink = Color(0xFF141414), inkSoft = Color(0xFF45454A),
-    line = Color(0xFFDDDDD8), fill = Color(0xFFE9E9E5), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
+    paper = Color(0xFFECECE8), card = Color(0xFFFFFFFF), ink = Color(0xFF141414), inkSoft = Color(0xFF45454A),
+    line = Color(0xFFDDDDD8), fill = Color(0xFFE3E3DD), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
     ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE2F2E6), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF0D6),
     red = Color(0xFFC0271F), redSoft = Color(0xFFFCE8E5), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFFFFFFF),
     tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFC4600A), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),

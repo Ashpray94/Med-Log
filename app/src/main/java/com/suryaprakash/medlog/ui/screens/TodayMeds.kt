@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,8 +49,9 @@ fun rankToday(days: List<MedDay>, now: Long = System.currentTimeMillis()): List<
 }, { (_, ds) -> ds.filter { it.status == DoseStatus.DUE }.minOfOrNull { it.scheduledAt } ?: Long.MAX_VALUE }))
 
 /**
- * Today's medicines on a home page: one card at a time, the one that needs attention first; swipe for the next.
- * However many there are (3 or 150), it takes the same room; "See all" opens the full list.
+ * Today's medicines on a home page: one card, the one that needs attention first, and a line saying how the rest
+ * stand. However many there are (3 or 150), it takes the same room; "See all" (in the section header) opens the list.
+ * Nothing scrolls sideways.
  */
 @Composable
 fun TodayMedsPreview(days: List<MedDay>, card: @Composable (MedDay, Modifier) -> Unit) {
@@ -60,14 +59,19 @@ fun TodayMedsPreview(days: List<MedDay>, card: @Composable (MedDay, Modifier) ->
     val sc = LocalScale.current
     val ranked = remember(days) { rankToday(days) }
     if (ranked.isEmpty()) return
-    val pager = rememberPagerState { ranked.size }
-    // the next card peeks in at the edge, so it's plain there are more to swipe to
-    HorizontalPager(pager, contentPadding = PaddingValues(end = if (ranked.size > 1) 28.dp else 0.dp), pageSpacing = 10.dp,
-        verticalAlignment = Alignment.Top, key = { ranked[it].first.id }) { i ->
-        card(ranked[i], Modifier)
+    card(ranked.first(), Modifier)
+    if (ranked.size > 1) {
+        val now = System.currentTimeMillis()
+        val rest = ranked.drop(1)
+        val missed = rest.count { (_, ds) -> ds.any { it.status == DoseStatus.MISSED } }
+        val dueNow = rest.count { (_, ds) -> ds.any { it.status == DoseStatus.DUE && it.scheduledAt <= now + 10 * 60_000 } }
+        val words = listOfNotNull(
+            if (dueNow > 0) "$dueNow more due now" else null,
+            if (missed > 0) "$missed more with a missed dose" else null,
+        ).ifEmpty { listOf("${rest.size} more today") }.joinToString(" · ")
+        Text(words, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (missed + dueNow > 0) p.ink else p.inkSoft,
+            textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
     }
-    if (ranked.size > 1) Text("${pager.currentPage + 1} of ${ranked.size} · swipe for the next", fontSize = sc.small, color = p.inkSoft,
-        textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 }
 
 /**
@@ -113,7 +117,8 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
                         onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx) } },
                         onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
                         onNotGiven = if (m.form == "feed") { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given") } } else null,
-                        onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } }, who = who)
+                        onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } }, who = who,
+                        onAteInstead = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Ate food instead") }; nav.go(Route.FoodPick()) })
                 }
             }
             item(key = "add") {

@@ -1,13 +1,11 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
-- **Text messages (SMS) can be allowed.** When Android says "App was denied access to SMS", the app now shows the steps to allow it: Settings, ⋮, Allow restricted settings. Once is enough.
-- **Today's medicines, one card at a time.** The one that needs you first; swipe for the next. "See all" opens the whole list (needs you now, later today, done), however many medicines there are.
-- **Clear medicine cards.** A thin banner along the bottom says how the day stands: missed (red), due now (amber), all taken (green). Every time shows with ✓ or ✕. One button, only when a dose needs an answer.
-- **Calmer look.** The accent colour is kept for the one main thing on each page. No outlines on cards; every button is filled, so it's plain what can be tapped. Helper mode is a calm blue.
-- **Less at the top.** Settings is in the bottom bar; the top corner has only the Me / I help switch.
-- **Messages read properly.** Time on top, the words at full width; earlier messages, helper chat, water and missed feeds are timelines.
-- **Nutrition is shorter.** Empty days show as one "13 days not noted" pill; each feed is one short entry.
-- **Permissions work.** If Android doesn't show its question (like SMS for apps installed from a file), the app opens Settings with the exact steps, and checks again when you come back.
+- **Medicine cards are all the same shape.** Name and dose; one button for the dose that needs you, and Details for every time today; a thin banner with the closest time. Home shows the one that needs you first; nothing scrolls sideways.
+- **Food instead of a feed.** When noting a feed there's "Ate food instead", which then asks what was eaten.
+- **Feed history** from the Feeds page, day by day.
+- **Nothing blends in.** Cards sit on a soft shadow; buttons and choices stand out from the page.
+- **What you answered** shows on the helper's page ("You answered: Can't come now"), in green only for "I'm coming".
+- **Back arrow** lines up with the page title.
 
 Install **MedLog-VERSION-arm64.apk** on most phones.
