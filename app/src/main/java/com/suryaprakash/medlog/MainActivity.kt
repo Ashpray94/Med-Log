@@ -69,6 +69,7 @@ class MainActivity : ComponentActivity() {
         val route: Route? = when (host) {
             "tell" -> Route.Tell(uri.getQueryParameter("problem"), uri.getQueryParameter("text"), noteId = uri.getQueryParameter("note")?.toLongOrNull())
             "meds" -> Route.Meds
+            "speak" -> Route.SpeakAll()
             "help" -> {
                 // from the family widget: send the chosen message straight away, then show who got it
                 uri.getQueryParameter("send")?.let { key ->
@@ -86,7 +87,7 @@ class MainActivity : ComponentActivity() {
             "doctor" -> Route.Doctor
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {
-                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
+                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "foodadd" -> Route.FoodPick(); "toilet" -> Route.Output(0); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
                 "family" -> Route.Help; "messages" -> Route.Messages; "helpers" -> Route.Helpers; "helperadd" -> Route.HelperEdit(null); "pair" -> Route.Pair
                 "visit" -> Route.Visit; "appointments" -> Route.Appointments; "reports" -> Route.Reports; "settings" -> Route.Settings
                 "easy" -> Route.EasySettings; "permissions" -> Route.Permissions; "backup" -> Route.Backup; "privacy" -> Route.Privacy
@@ -94,6 +95,35 @@ class MainActivity : ComponentActivity() {
                 else -> null
             }
             "reports" -> Route.Reports
+            // debug builds only: pair this phone with itself through the relay, to test sharing end to end on one device
+            "debugloop" -> if (!BuildConfig.DEBUG) null else {
+                medlog.scope.launch {
+                    val key = com.suryaprakash.medlog.data.Keys.randomB64(32)
+                    com.suryaprakash.medlog.data.Sync.forget(this@MainActivity, "looptest")
+                    medlog.db.helpers().insert(com.suryaprakash.medlog.data.Helper(name = "Loop helper", phone = "0000000", pairId = "looptest", pairKey = key, sos = false, alerts = false))
+                    com.suryaprakash.medlog.data.People.put(this@MainActivity, com.suryaprakash.medlog.data.CaredFor("looptestB", key, "Loop person"))
+                    medlog.settings.update { it.copy(internetLink = true) }
+                    com.suryaprakash.medlog.help.Nearby.startListening(this@MainActivity)
+                }
+                null
+            }
+            // debug builds only: fire the next medicine alarm now, to test the alarm screen and swipe-to-silence
+            "debugalarm" -> if (!BuildConfig.DEBUG) null else {
+                medlog.scope.launch {
+                    val d = medlog.db.doses().between(System.currentTimeMillis() - 3 * com.suryaprakash.medlog.data.HOUR, System.currentTimeMillis() + 2 * com.suryaprakash.medlog.data.DAY)
+                        .firstOrNull { it.status == com.suryaprakash.medlog.data.DoseStatus.DUE && medlog.db.medicines().get(it.medicineId)?.form != "feed" }
+                    if (d != null) com.suryaprakash.medlog.meds.DoseAlert.show(this@MainActivity, listOf(d), louder = false)
+                }
+                null
+            }
+            "debugunloop" -> if (!BuildConfig.DEBUG) null else {
+                medlog.scope.launch {
+                    medlog.db.helpers().all().filter { it.pairId == "looptest" }.forEach { medlog.db.helpers().delete(it.id) }
+                    com.suryaprakash.medlog.data.People.remove(this@MainActivity, "looptestB")
+                    com.suryaprakash.medlog.help.Nearby.startListening(this@MainActivity)
+                }
+                null
+            }
             "helper" -> Route.HelperHome
             "history" -> Route.Notes
             "checkin" -> Route.Home
@@ -170,6 +200,8 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             is Route.MedEdit -> MedEditScreen(nav, r.id)
             Route.DidITake -> DidITakeScreen(nav)
             Route.Food -> FoodScreen(nav)
+            is Route.SpeakAll -> SpeakAllScreen(nav, r.text)
+            is Route.Output -> OutputScreen(nav, r.tab)
             is Route.FoodPick -> FoodPickScreen(nav, r.noteId)
             Route.FeedNew -> FeedNewScreen(nav)
             Route.Readings -> ReadingsScreen(nav)

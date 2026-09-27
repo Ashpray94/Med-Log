@@ -74,7 +74,16 @@ android {
     packaging {
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/*.kotlin_module")
     }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
+        // scripts/shots.sh passes which screens to draw
+        unitTests.all { t ->
+            listOf("shots", "shots.role").forEach { k -> System.getProperty(k)?.let { t.systemProperty(k, it) } }
+            t.systemProperty("shots.dir", layout.buildDirectory.dir("shots").get().asFile.absolutePath)
+            t.maxHeapSize = "3g"
+        }
+    }
     // One APK per phone type keeps the download small (the speech engine is native code).
     // arm64-v8a: almost all phones from 2017 on; armeabi-v7a: older/cheaper phones; x86_64: emulator.
     splits {
@@ -129,4 +138,9 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    // screenshots of real screens on the computer (scripts/shots.sh)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    testImplementation("androidx.test:core-ktx:1.6.1")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }

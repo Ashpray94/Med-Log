@@ -102,7 +102,8 @@ fun SettingsScreen(nav: Nav) {
     when (section) {
         "me" -> Screen("My details", "Your details for the doctor page.", onHome = { nav.home() }, onBack = { section = null }) {
             BigField("Name", profile.name, { profile = profile.copy(name = it) })
-            BigField("Date of birth (YYYY-MM-DD)", profile.dob, { profile = profile.copy(dob = it) }, hint = "For example 1948-03-12")
+            BigField("Year of birth", profile.dob.take(4), { y -> val v = y.filter(Char::isDigit).take(4); profile = profile.copy(dob = if (v.length == 4) "$v-07-01" else v) },
+                keyboard = KeyboardType.Number, hint = "For example 1948")
             run { val o = listOf("F" to "Woman", "M" to "Man", "" to "Not said"); com.suryaprakash.medlog.ui.Segmented(o.map { it.second }, o.indexOfFirst { it.first == profile.sex }) { profile = profile.copy(sex = o[it].first) } }
             BigField("Blood group", profile.bloodGroup, { profile = profile.copy(bloodGroup = it) })
             BigField("Hospital ID", profile.hospitalId, { profile = profile.copy(hospitalId = it) })
@@ -131,7 +132,7 @@ fun SettingsScreen(nav: Nav) {
             if (s.checkInEnabled) run { val o = listOf("08:00", "09:00", "10:00", "11:00"); com.suryaprakash.medlog.ui.Segmented(o, o.indexOf(s.checkInTime)) { i -> app.settings.update { it.copy(checkInTime = o[i]) }; scope.launch { Scheduler.reschedule(ctx) } } }
             Toggle("Fall detection", s.fallDetection, "Asks \"Did you fall?\" after a hard fall, then starts SOS if you don't answer. Uses more battery. Can be wrong.") { on -> app.settings.update { it.copy(fallDetection = on) }; FallService.sync(ctx) }
             Toggle("Sunday summary", s.weeklySummary, "A short spoken summary of your week.") { on -> app.settings.update { it.copy(weeklySummary = on) } }
-            Toggle("Always-there buttons", s.persistentNotification, "Tell and Help buttons in your notifications, even on the lock screen.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
+            Toggle("Log from the lock screen", s.persistentNotification, "A Speak button in your notifications. Works without unlocking.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
             Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.settings.update { it.copy(diabetic = on) } }
             Body("Glasses of water a day", bold = true)
             run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
@@ -203,6 +204,7 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("SOS", "Calls ${s.emergencyNumber} last") { section = "sos" }
             }
+            SharingSettings()
             com.suryaprakash.medlog.ui.Section("This phone")
             com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("Home-screen widget", "Add") { pinWidget(ctx) }
@@ -243,31 +245,33 @@ private fun DoctorsSection(onBack: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var spec by remember { mutableStateOf("Family doctor") }
+    var hospital by remember { mutableStateOf("") }
     val pick = com.suryaprakash.medlog.ui.rememberContactPicker { n, ph -> if (name.isBlank()) name = n; phone = ph }
     val e = editing
     if (e != null) {
         com.suryaprakash.medlog.ui.FlowScreen("Doctor", if (e < 0) "Add a doctor" else "Change ${name.ifBlank { "doctor" }}", onBack = { editing = null },
             primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
-                val d = com.suryaprakash.medlog.data.CarePlan.Doctor(name.trim(), spec, phone.trim())
+                val d = com.suryaprakash.medlog.data.CarePlan.Doctor(name.trim(), spec, phone.trim(), hospital.trim())
                 save(if (e < 0) plan.doctors + d else plan.doctors.mapIndexed { i, x -> if (i == e) d else x }); editing = null
             }, secondary = if (e >= 0) "Remove this doctor" else null, onSecondary = { save(plan.doctors.filterIndexed { i, _ -> i != e }); editing = null }) {
             BigField("Doctor's name", name, { name = it }, hint = "For example: Dr. Rao")
+            BigField("Hospital or clinic", hospital, { hospital = it }, hint = "For example: City Hospital")
             com.suryaprakash.medlog.ui.Section("What do they treat?")
             com.suryaprakash.medlog.ui.FlowRowOf { com.suryaprakash.medlog.data.CarePlan.SPECIALITIES.forEach { sp -> com.suryaprakash.medlog.ui.Chip(sp, spec == sp) { spec = sp } } }
             com.suryaprakash.medlog.ui.Section("Phone number")
             BigButton("Choose from contacts", tone = Tone.SECONDARY, onClick = pick)
-            BigField("Or type it", phone, { phone = it }, keyboard = KeyboardType.Phone)
+            BigField("Mobile number", phone, { phone = it }, keyboard = KeyboardType.Phone)
         }
         return
     }
     Screen("My doctors", "Your doctors and what they treat.", onHome = null, onBack = onBack, actions = {
-        BigButton("Add a doctor", onClick = { name = ""; phone = ""; spec = "Family doctor"; editing = -1 })
+        BigButton("Add a doctor", onClick = { name = ""; phone = ""; spec = "Family doctor"; hospital = ""; editing = -1 })
     }) {
         if (plan.doctors.isEmpty()) Hint("No doctors yet. Add each doctor with what they treat, so MedLog offers the right one to call.")
         else com.suryaprakash.medlog.ui.Group {
             plan.doctors.forEachIndexed { i, d ->
                 if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                com.suryaprakash.medlog.ui.ValueRow(d.name, d.speciality, sub = d.phone.ifBlank { null }) { name = d.name; phone = d.phone; spec = d.speciality; editing = i }
+                com.suryaprakash.medlog.ui.ValueRow(d.name, d.speciality, sub = listOf(d.hospital, d.phone).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null }) { name = d.name; phone = d.phone; spec = d.speciality; hospital = d.hospital; editing = i }
             }
         }
     }

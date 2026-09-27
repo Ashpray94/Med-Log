@@ -19,10 +19,10 @@ data class CarePlan(
     /** problem ids that, for this person, mean: call the helpers now */
     val emergencies: List<String> = emptyList(),
 ) {
-    data class Doctor(val name: String, val speciality: String, val phone: String)
+    data class Doctor(val name: String, val speciality: String, val phone: String, val hospital: String = "")
 
     fun toJson(): String = JSONObject()
-        .put("doctors", JSONArray(doctors.map { JSONObject().put("name", it.name).put("speciality", it.speciality).put("phone", it.phone) }))
+        .put("doctors", JSONArray(doctors.map { JSONObject().put("name", it.name).put("speciality", it.speciality).put("phone", it.phone).put("hospital", it.hospital) }))
         .put("symptoms", JSONArray(symptoms)).put("treatments", JSONArray(treatments))
         .put("risks", JSONArray(risks)).put("emergencies", JSONArray(emergencies))
         .toString()
@@ -42,7 +42,7 @@ data class CarePlan(
                 fun list(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
                 CarePlan(
                     doctors = o.optJSONArray("doctors")?.let { a ->
-                        (0 until a.length()).map { a.getJSONObject(it) }.map { Doctor(it.optString("name"), it.optString("speciality"), it.optString("phone")) }
+                        (0 until a.length()).map { a.getJSONObject(it) }.map { Doctor(it.optString("name"), it.optString("speciality"), it.optString("phone"), it.optString("hospital")) }
                     }.orEmpty(),
                     symptoms = list("symptoms"), treatments = list("treatments"), risks = list("risks"), emergencies = list("emergencies"),
                 )

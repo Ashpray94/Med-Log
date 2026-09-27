@@ -142,7 +142,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
     var someDays by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
-        if (id != null) app.db.medicines().get(id)?.let { e ->
+        if (id != null) app.viewDb.medicines().get(id)?.let { e ->
             m = e; original = e; times.clear(); times.addAll(e.times.split(",").map { it.trim() }.filter { it.isNotBlank() })
             pills = e.pillsLeft?.toInt()?.toString() ?: ""; someDays = e.days.isNotBlank()
         }
@@ -339,10 +339,10 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                             changedAt = if (original == null || change != original?.changeNote) now else m.changedAt,
                             changeNote = change,
                         )
-                        val mid = if (id == null) app.db.medicines().insert(saved) else { app.db.medicines().update(saved); id }
-                        app.db.doses().dropFuture(mid, now)
+                        val mid = if (id == null) app.viewDb.medicines().insert(saved) else { app.viewDb.medicines().update(saved); id }
+                        app.viewDb.doses().dropFuture(mid, now)
                         Scheduler.reschedule(ctx)
-                        app.db.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
+                        app.viewDb.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
                         savedFeedback(ctx); app.refreshWidgets(); nav.back()
                     }
                 }) {
@@ -400,8 +400,8 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                         .steady("Stop this medicine") {
                             scope.launch {
                                 val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
-                                app.db.medicines().update(stopped)
-                                app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
+                                app.viewDb.medicines().update(stopped)
+                                app.viewDb.doses().dropFuture(stopped.id, System.currentTimeMillis())
                                 CalendarSync.removeMedicine(ctx, stopped)
                                 Scheduler.reschedule(ctx); nav.back()
                             }
@@ -416,7 +416,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
 /** "08:00" → "8:00 AM". */
 private fun timeWords(t: String): String = runCatching {
     val lt = java.time.LocalTime.parse(t.padStart(5, '0'))
-    lt.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH))
+    lt.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", com.suryaprakash.medlog.speech.I18n.locale))
 }.getOrDefault(t)
 
 private fun amountSteps(form: String) = if (form == "syrup" || form == "drops") listOf("1 ml", "2.5 ml", "5 ml", "7.5 ml", "10 ml", "15 ml", "20 ml") else listOf("½", "1", "1½", "2", "3", "4")
@@ -517,7 +517,7 @@ private fun PurposeSheet(start: String, onDone: (String) -> Unit, onDismiss: () 
     val chosen = remember { mutableStateListOf<String>().apply { addAll(start.split(",").map { it.trim() }.filter { it.isNotEmpty() }) } }
     var query by remember { mutableStateOf("") }
     var mine by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(Unit) { mine = ctx.medlog.repo.profile().conditions.split(",").map { it.trim() }.filter { it.isNotEmpty() } }
+    LaunchedEffect(Unit) { mine = ctx.medlog.viewRepo.profile().conditions.split(",").map { it.trim() }.filter { it.isNotEmpty() } }
     // (label, picture) for every choice
     val illnesses = remember(mine) { (mine + com.suryaprakash.medlog.data.CarePlan.CONDITIONS).distinct().map { it to (ILLNESS_PICTURE[it] ?: "confusion") } }
     val problems = remember { com.suryaprakash.medlog.pictogram.Sprites.SECTIONS.flatMap { it.second }.mapNotNull { id -> cat.problem(id)?.let { it.label to id } } }
@@ -547,11 +547,8 @@ private fun PurposeSheet(start: String, onDone: (String) -> Unit, onDismiss: () 
 private fun PictureGrid(items: List<Pair<String, String>>, chosen: List<String>, toggle: (String) -> Unit) {
     val sc = LocalScale.current
     com.suryaprakash.medlog.ui.TileGrid(items, 2, aspect = 1.0f) { (label, pic), mod ->
-        com.suryaprakash.medlog.ui.Tile(label, mod, selected = label in chosen, onClick = { toggle(label) }) {
+        com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 84.dp, selected = label in chosen, onClick = { toggle(label) }) {
             com.suryaprakash.medlog.pictogram.SpriteIcon(pic, 84.dp)
-            Spacer(Modifier.height(8.dp))
-            Text(label, fontSize = sc.body, lineHeight = sc.body * 1.15f, maxLines = 2, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold,
-                color = LocalPalette.current.ink)
         }
     }
 }
@@ -761,7 +758,7 @@ fun MedicineCard(m: Medicine, onClick: () -> Unit) {
         MedicinePicture(m, 64.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+            Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
             if (m.purpose.isNotBlank()) Text("For ${m.purpose}", fontSize = sc.body, color = p.ink)
             else Text("Add what it's for", fontSize = sc.body, color = p.brand)
             Text(whenWords, fontSize = sc.small, color = p.inkSoft)

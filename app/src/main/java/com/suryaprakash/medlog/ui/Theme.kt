@@ -56,7 +56,7 @@ val Warm = Palette(
     line = Color(0xFFDDDDD8), fill = Color(0xFFE9E9E5), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
     ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE2F2E6), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF0D6),
     red = Color(0xFFC0271F), redSoft = Color(0xFFFCE8E5), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFFFFFFF),
-    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFEA7310), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
+    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFC4600A), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
 )
 
 val HighContrast = Warm.copy(
@@ -91,6 +91,39 @@ val Big = Scale(huge = 54.sp, question = 36.sp, title = 33.sp, headline = 25.sp,
 val AppFont: FontFamily = FontFamily.Default
 val Atkinson: FontFamily = AppFont
 
+/**
+ * Hindi and Tamil in full-size Noto Sans (not the phone's squeezed "UI" versions), so they read as large as English.
+ * Latin letters and numbers inside them fall back to the phone's own font.
+ */
+val Devanagari = FontFamily(
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_bold, FontWeight.Bold),
+)
+val TamilFont = FontFamily(
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_bold, FontWeight.Bold),
+)
+
+/** How each language is set: its font, a size factor so its letters match English letters in height, and line spacing. */
+data class Script(val code: String, val family: FontFamily, val size: Float, val lines: Float) {
+    val indic get() = family != AppFont
+    val locale: androidx.compose.ui.text.intl.LocaleList get() = androidx.compose.ui.text.intl.LocaleList(if (code == "en") "en-IN" else "$code-IN")
+}
+
+// Devanagari letters stand 0.62 em tall against English capitals at 0.71 em; Tamil letters match English lower case
+// (0.55 vs 0.53 em) but carry more detail. Both have marks above and below, so they get more room between lines.
+fun scriptFor(tag: String?): Script = when (tag?.substringBefore('-')?.lowercase()) {
+    "hi", "mr" -> Script("hi", Devanagari, 1.1f, 1.5f)
+    "ta" -> Script("ta", TamilFont, 1.05f, 1.5f)
+    else -> Script("en", AppFont, 1f, 1.4f)
+}
+
+val LocalScript = staticCompositionLocalOf { scriptFor("en") }
+
 val LocalPalette = staticCompositionLocalOf { Warm }
 val LocalScale = staticCompositionLocalOf { Standard }
 val LocalSettings = staticCompositionLocalOf { Settings() }
@@ -105,7 +138,9 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
         androidx.compose.animation.core.tween(if (settings.lessMotion) 0 else 600, delayMillis = if (settings.lessMotion) 0 else 250), label = "zoom")
     val density = androidx.compose.ui.platform.LocalDensity.current
     val weight = if (settings.boldText) FontWeight.Medium else FontWeight.Normal
-    val base = TextStyle(fontFamily = AppFont, fontWeight = weight, color = palette.ink, fontSize = scale.body, lineHeight = scale.body * 1.4f)
+    val script = scriptFor(settings.languages.firstOrNull())
+    val base = TextStyle(fontFamily = script.family, fontWeight = weight, color = palette.ink, fontSize = scale.body, lineHeight = scale.body * script.lines,
+        localeList = script.locale)
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = palette.brand, onPrimary = palette.onBrand, background = palette.paper, surface = palette.card,
@@ -113,12 +148,12 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
         ),
         typography = MaterialTheme.typography.copy(
             bodyLarge = base, bodyMedium = base, bodySmall = base.copy(fontSize = scale.small),
-            titleLarge = base.copy(fontSize = scale.title, fontWeight = FontWeight.Bold, lineHeight = scale.title * 1.15f),
+            titleLarge = base.copy(fontSize = scale.title, fontWeight = FontWeight.Bold, lineHeight = scale.title * (script.lines - 0.25f)),
             labelLarge = base.copy(fontSize = scale.button, fontWeight = FontWeight.SemiBold),
         ),
     ) {
-        CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings,
-            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * zoom, density.fontScale)) {
+        CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings, LocalScript provides script,
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * zoom, density.fontScale * script.size)) {
             androidx.compose.material3.ProvideTextStyle(base, content)
         }
     }

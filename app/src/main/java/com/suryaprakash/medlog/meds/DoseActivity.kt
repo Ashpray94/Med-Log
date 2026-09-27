@@ -85,7 +85,7 @@ class DoseActivity : ComponentActivity() {
             val meds = medlog.db.medicines().all().associateBy { it.id }
             due = medlog.db.doses().between(now - 3 * 3600_000L, now + 60_000)
                 .filter { (it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED) && (it.snoozeUntil == null || it.snoozeUntil <= now + 60_000) }
-                .mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
+                .mapNotNull { d -> meds[d.medicineId]?.let { d to it } }.filter { it.second.form != "feed" }
             loaded = true
             if (due.isEmpty() && version > 0) { AlarmTone.stop(); onClose() }
         }

@@ -30,6 +30,10 @@ class MedLogApp : Application() {
     val describe by lazy { Describe(catalogue) }
     val db by lazy { MedDb.open(this) }
     val repo by lazy { Repo(db, catalogue, describe) }
+    fun repoFor(d: com.suryaprakash.medlog.data.MedDb) = Repo(d, catalogue, describe)
+    /** What the screens show: this phone's own records, or the person a helper is looking after ([com.suryaprakash.medlog.data.Viewing]). */
+    val viewDb: com.suryaprakash.medlog.data.MedDb get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.let { com.suryaprakash.medlog.data.Mirror.db(this, it) } ?: db
+    val viewRepo: Repo get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.let { com.suryaprakash.medlog.data.Mirror.repo(this, it) } ?: repo
     val speaker by lazy { Speaker(this) { settings.value.speechRate } }
     override fun onCreate() {
         super.onCreate()
@@ -40,6 +44,7 @@ class MedLogApp : Application() {
         speaker.init()
         scope.launch {
             runCatching { com.suryaprakash.medlog.help.Nearby.startListening(this@MedLogApp) }
+            runCatching { com.suryaprakash.medlog.data.Sync.watch(this@MedLogApp, db); com.suryaprakash.medlog.data.Sync.schedule(this@MedLogApp) }
             runCatching { Updater.dailyCheck(this@MedLogApp) }
             catalogue
             runCatching { repo.purgeRemoved() }
@@ -52,7 +57,7 @@ class MedLogApp : Application() {
     /** Redraws the home-screen widget after anything it shows has changed. */
     fun refreshWidgets() {
         scope.launch {
-            runCatching { com.suryaprakash.medlog.widget.MedLogWidget().updateAll(this@MedLogApp) }
+            runCatching { com.suryaprakash.medlog.widget.MedLogWidget.refresh(this@MedLogApp) }
         }
     }
 

@@ -187,11 +187,8 @@ fun ProblemGrid(ids: List<String>, onPick: (String) -> Unit) {
     val sc = LocalScale.current
     com.suryaprakash.medlog.ui.TileGrid(ids, if (sc.big) 2 else 3, aspect = 0.9f) { id, m ->
         val label = cat.problem(id)?.label ?: id
-        com.suryaprakash.medlog.ui.Tile(label, m, onClick = { onPick(id) }) {
-            com.suryaprakash.medlog.pictogram.SpriteIcon(id, if (sc.big) sc.target * 1.6f else sc.target * 1.45f)
-            Spacer(Modifier.size(6.dp))
-            Text(label, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                maxLines = 2, minLines = 2, lineHeight = sc.small * 1.15f, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        com.suryaprakash.medlog.ui.PicTile(label, m, picture = 64.dp, onClick = { onPick(id) }) {
+            com.suryaprakash.medlog.pictogram.SpriteIcon(id, 64.dp)
         }
     }
 }

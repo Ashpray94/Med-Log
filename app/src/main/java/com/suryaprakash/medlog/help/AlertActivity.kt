@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
  * SOS progress, "Did you fall?", the morning check-in, and (on a helper's phone) an incoming alert.
  */
 class AlertActivity : ComponentActivity() {
+    override fun onDestroy() { if (isFinishing) AlertSound.stop(); super.onDestroy() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
@@ -153,8 +155,26 @@ class AlertActivity : ComponentActivity() {
                 Sos.Phase.HelpComing, Sos.Phase.Cancelled, Sos.Phase.Idle -> BigButton("Close", tone = Tone.OK, height = sc.target * 1.3f, onClick = onClose)
                 else -> BigButton("Help is coming – stop calling", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
             }
-            // the three steps, so it is clear what has happened and what comes next
-            Card {
+            // if there's time: what happened, in pictures. Helpers get it straight away. Nothing waits for it.
+            if (!calm || phase is Sos.Phase.HelpComing) {
+                var picked by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                com.suryaprakash.medlog.ui.SectionHeader("What happened?", if (picked == null) "If you can, tap one. Help is coming anyway." else "Sent to your helpers", null)
+                val kinds = listOf("fall" to "A fall", "chest_pain" to "Chest pain", "breathless" to "Can't breathe", "bleeding" to "Bleeding",
+                    "fainted" to "Fainted", "one_side_weak" to "Face or arm weak", "confusion" to "Confused", "fits" to "Fits")
+                com.suryaprakash.medlog.ui.TileGrid(kinds, 4, aspect = 0.66f) { (id, label), mod ->
+                    com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 44.dp, selected = picked == id, onClick = {
+                        picked = id
+                        com.suryaprakash.medlog.help.Nearby.broadcast(this@AlertActivity, "SOS", "What happened: $label")
+                        medlog.scope.launch { medlog.repo.addEvent(com.suryaprakash.medlog.data.Kind.SOS, "SOS: $label") }
+                    }) {
+                        com.suryaprakash.medlog.pictogram.SpriteIcon(id, 44.dp)
+                    }
+                }
+            }
+            // the three steps, so it is clear what has happened and what comes next. Only steps that really ran get a tick.
+            var reached by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(0) }
+            if (step in 1..3 && step > reached) reached = step
+            if (!(calm && reached == 0)) Card {
                 val steps = listOf(
                     "Message family" to (if (sent.isNotEmpty()) "Sent to ${sent.joinToString(", ")}" else "Your location by text"),
                     "Call family, one by one" to ((phase as? Sos.Phase.Calling)?.let { "Calling ${it.name} now" } ?: "On speaker"),
@@ -162,7 +182,7 @@ class AlertActivity : ComponentActivity() {
                 )
                 steps.forEachIndexed { i, (name, sub) ->
                     val n = i + 1
-                    val done = step > n || (calm && step == 4 && phase is Sos.Phase.HelpComing && n < 3)
+                    val done = n < reached && (step > n) || (phase is Sos.Phase.HelpComing && n == reached)
                     val now = step == n
                     androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.foundation.layout.Box(

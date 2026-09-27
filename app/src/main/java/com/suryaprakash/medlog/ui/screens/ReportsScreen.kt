@@ -55,7 +55,7 @@ suspend fun buildStats(ctx: android.content.Context, days: Int): Pair<List<Probl
     val zone = ZoneId.systemDefault()
     val end = LocalDate.now().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val start = end - days * DAY
-    val notes = app.db.notes().between(start - days * DAY, end)
+    val notes = app.viewDb.notes().between(start - days * DAY, end)
     val cur = notes.filter { it.occurredAt >= start }
     val prev = notes.filter { it.occurredAt < start }
     val buckets = if (days <= 31) days else 12
@@ -79,8 +79,8 @@ suspend fun buildStats(ctx: android.content.Context, days: Int): Pair<List<Probl
         ProblemStat(pid, app.catalogue.problem(pid)?.label ?: pid, counts, total, before, caption, tod, link)
     }.sortedByDescending { it.total }
     // medicines
-    val meds = app.db.medicines().all().associateBy { it.id }
-    val doses = app.db.doses().between(start, minOf(end, System.currentTimeMillis()))
+    val meds = app.viewDb.medicines().all().associateBy { it.id }
+    val doses = app.viewDb.doses().between(start, minOf(end, System.currentTimeMillis()))
     val medLines = ArrayList<String>()
     if (doses.isNotEmpty()) {
         val taken = doses.count { it.status == DoseStatus.TAKEN }

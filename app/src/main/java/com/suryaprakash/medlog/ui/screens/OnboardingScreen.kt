@@ -467,7 +467,7 @@ fun OnboardingScreen(nav: Nav) {
                 Group {
                     plan.doctors.forEachIndexed { i, d ->
                         if (i > 0) GroupLine()
-                        ValueRow(d.name, d.speciality, sub = d.phone.ifBlank { null }) { Onboard.editingDoctor = i; go(S.DOCTOR_FORM) }
+                        ValueRow(d.name, d.speciality, sub = listOf(d.hospital, d.phone).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null }) { Onboard.editingDoctor = i; go(S.DOCTOR_FORM) }
                     }
                 }
                 BigButton("Add another doctor", tone = Tone.SECONDARY, icon = Icons.Rounded.PersonAdd, onClick = { Onboard.editingDoctor = -1; go(S.DOCTOR_FORM) })
@@ -537,18 +537,20 @@ private fun DoctorForm(plan: CarePlan, onSave: (List<CarePlan.Doctor>) -> Unit, 
     var name by remember(i) { mutableStateOf(old?.name ?: "") }
     var phone by remember(i) { mutableStateOf(old?.phone ?: "") }
     var spec by remember(i) { mutableStateOf(old?.speciality ?: "Family doctor") }
+    var hospital by remember(i) { mutableStateOf(old?.hospital ?: "") }
     val pick = rememberContactPicker { n, ph -> if (name.isBlank()) name = n; phone = ph }
     FlowScreen("Doctor", if (old == null) "Add a doctor" else "Change ${old.name}", onBack = onBack,
         primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
-            val d = CarePlan.Doctor(name.trim(), spec, phone.trim())
+            val d = CarePlan.Doctor(name.trim(), spec, phone.trim(), hospital.trim())
             onSave(if (old == null) plan.doctors + d else plan.doctors.mapIndexed { k, x -> if (k == i) d else x })
         }, secondary = if (old != null) "Remove this doctor" else null, onSecondary = { onSave(plan.doctors.filterIndexed { k, _ -> k != i }) }) {
         BigField("Doctor's name", name, { name = it }, hint = "For example: Dr. Rao")
+        BigField("Hospital or clinic", hospital, { hospital = it }, hint = "For example: City Hospital")
         Section("What do they treat?")
         FlowRowOf { CarePlan.SPECIALITIES.forEach { sp -> Chip(sp, spec == sp) { spec = sp } } }
         Section("Phone number")
         BigButton("Choose from contacts", tone = Tone.SECONDARY, icon = Icons.Rounded.Contacts, onClick = pick)
-        BigField("Or type it", phone, { phone = it }, keyboard = KeyboardType.Phone)
+        BigField("Mobile number", phone, { phone = it }, keyboard = KeyboardType.Phone)
     }
 }
 
@@ -993,11 +995,8 @@ private fun SymptomGrid(ids: List<String>, chosen: List<String>, toggle: (String
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     com.suryaprakash.medlog.ui.TileGrid(ids, 2, aspect = 1.0f) { id, m ->
         val label = cat.problem(id)?.label ?: id
-        com.suryaprakash.medlog.ui.Tile(label, m, selected = id in chosen, onClick = { toggle(id) }) {
-            com.suryaprakash.medlog.pictogram.SpriteIcon(id, 92.dp)
-            Spacer(Modifier.size(8.dp))
-            com.suryaprakash.medlog.ui.Text(label, fontSize = sc.body, lineHeight = sc.body * 1.15f, maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        com.suryaprakash.medlog.ui.PicTile(label, m, picture = 84.dp, selected = id in chosen, onClick = { toggle(id) }) {
+            com.suryaprakash.medlog.pictogram.SpriteIcon(id, 84.dp)
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.suryaprakash.medlog.ui
 
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.ExpandMore
 import android.content.Intent
 import android.provider.ContactsContract
@@ -61,21 +63,21 @@ fun BigField(label: String, value: String, onChange: (String) -> Unit, modifier:
     // in a notch in the outline, clear of the text. The box never changes height.
     val base = androidx.compose.material3.MaterialTheme.typography
     androidx.compose.material3.MaterialTheme(typography = base.copy(
-        bodyLarge = base.bodyLarge.copy(fontSize = sc.body * 1.1f, fontFamily = Atkinson),
-        bodySmall = base.bodySmall.copy(fontSize = sc.small, fontFamily = Atkinson),
+        bodyLarge = base.bodyLarge.copy(fontSize = sc.body * 1.1f, fontFamily = LocalScript.current.family),
+        bodySmall = base.bodySmall.copy(fontSize = sc.small, fontFamily = LocalScript.current.family),
     )) {
         Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box {
             androidx.compose.material3.OutlinedTextField(
                 value = value, onValueChange = onChange, readOnly = onTap != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = sc.target + 8.dp),
-                label = { androidx.compose.material3.Text(label, color = androidx.compose.material3.LocalContentColor.current) },
-                textStyle = TextStyle(fontSize = sc.body * 1.1f, color = p.ink, fontFamily = Atkinson),
+                label = { androidx.compose.material3.Text(tr(label), color = androidx.compose.material3.LocalContentColor.current) },
+                textStyle = TextStyle(fontSize = sc.body * 1.1f, color = p.ink, fontFamily = LocalScript.current.family),
                 singleLine = lines == 1, minLines = lines,
                 shape = RoundedCornerShape(16.dp),
                 colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = p.brand, unfocusedBorderColor = p.inkSoft.copy(alpha = 0.55f),
-                    focusedLabelColor = p.brand, unfocusedLabelColor = if (value.isEmpty()) p.inkSoft.copy(alpha = 0.45f) else p.inkSoft,
+                    focusedBorderColor = p.brand, unfocusedBorderColor = p.inkSoft.copy(alpha = 0.65f),
+                    focusedLabelColor = p.brand, unfocusedLabelColor = if (value.isEmpty()) p.inkSoft.copy(alpha = 0.8f) else p.inkSoft,
                     focusedContainerColor = p.card, unfocusedContainerColor = p.card, cursorColor = p.brand,
                     focusedTextColor = p.ink, unfocusedTextColor = p.ink,
                 ),
@@ -173,15 +175,15 @@ fun SearchBox(value: String, onChange: (String) -> Unit, placeholder: String, mo
     val sh = RoundedCornerShape(18.dp)
     Row(
         modifier.fillMaxWidth().heightIn(min = sc.target + 8.dp).clip(sh).background(p.card)
-            .border(if (focused) 3.dp else 1.5.dp, if (focused) p.brand else p.inkSoft.copy(alpha = 0.55f), sh).padding(start = 16.dp, end = 8.dp),
+            .border(if (focused) 3.dp else 1.5.dp, if (focused) p.brand else p.inkSoft.copy(alpha = 0.65f), sh).padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Search, null, tint = p.inkSoft, modifier = Modifier.padding(end = 10.dp))
         androidx.compose.foundation.layout.Box(Modifier.weight(1f)) {
-            if (value.isEmpty()) Text(placeholder, fontSize = sc.body, color = p.inkSoft.copy(alpha = 0.45f), maxLines = 1)
+            if (value.isEmpty()) Text(placeholder, fontSize = sc.body, color = p.inkSoft.copy(alpha = 0.8f))
             BasicTextField(
-                value, onChange, Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.semantics { contentDescription = placeholder },
-                textStyle = TextStyle(fontSize = sc.body * 1.05f, color = p.ink, fontFamily = Atkinson), singleLine = true, cursorBrush = SolidColor(p.brand),
+                value, onChange, Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused }.semantics { contentDescription = tr(placeholder) },
+                textStyle = TextStyle(fontSize = sc.body * 1.05f, color = p.ink, fontFamily = LocalScript.current.family), singleLine = true, cursorBrush = SolidColor(p.brand),
                 keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
             )
         }
@@ -266,7 +268,7 @@ fun Counter(value: String, canMinus: Boolean, canPlus: Boolean, onMinus: () -> U
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(12.dp)
-    Row(Modifier.height(48.dp).width(168.dp).clip(sh).border(1.5.dp, p.inkSoft.copy(alpha = 0.4f), sh).background(p.card),
+    Row(Modifier.height(48.dp).width(168.dp).clip(sh).border(1.5.dp, p.inkSoft.copy(alpha = 0.65f), sh).background(p.card),
         verticalAlignment = Alignment.CenterVertically) {
         CounterHalf("−", "Less $label".trim(), canMinus, onMinus)
         Text(value, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.brand, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -308,5 +310,75 @@ fun StepperRow(label: String, value: String, canMinus: Boolean, canPlus: Boolean
             if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
         }
         Counter(value, canMinus, canPlus, onMinus, onPlus, label)
+    }
+}
+
+
+/** When something happened, in words: "Now", "Today, 8:30 AM", "Yesterday, 9:00 PM", "Thu 24 Sep, 7:15 AM". */
+fun whenWords(at: Long?): String {
+    if (at == null) return "Now"
+    val z = java.time.ZoneId.systemDefault()
+    val t = java.time.Instant.ofEpochMilli(at).atZone(z)
+    val d = t.toLocalDate(); val today = java.time.LocalDate.now(z)
+    val day = when (d) { today -> "Today"; today.minusDays(1) -> "Yesterday"; else -> t.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM", com.suryaprakash.medlog.speech.I18n.locale)) }
+    return "$day, " + t.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", com.suryaprakash.medlog.speech.I18n.locale))
+}
+
+/**
+ * "When": now, unless changed. Any entry can be logged later for an earlier time. [at] null means now.
+ */
+@Composable
+fun WhenRow(at: Long?, onChange: (Long?) -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    var open by remember { mutableStateOf(false) }
+    val sh = RoundedCornerShape(sc.radius)
+    Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(sh).background(p.card).border(1.dp, p.line, sh).steady("When: ${whenWords(at)}. Tap to change") { open = true }
+        .padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(androidx.compose.material.icons.Icons.Rounded.Schedule, null, tint = p.brand, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(12.dp))
+        Text("When", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = Modifier.weight(1f))
+        Text(whenWords(at), fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = if (at == null) p.inkSoft else p.brand)
+        Icon(androidx.compose.material.icons.Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.padding(start = 4.dp).size(24.dp))
+    }
+    if (open) WhenSheet(at, onDone = { onChange(it); open = false }, onDismiss = { open = false })
+}
+
+/** Day and time on wheels, never in the future. "Now" puts it back to the moment it's saved. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun WhenSheet(start: Long?, onDone: (Long?) -> Unit, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val z = java.time.ZoneId.systemDefault()
+    val now = java.time.ZonedDateTime.now(z)
+    val t0 = start?.let { java.time.Instant.ofEpochMilli(it).atZone(z) } ?: now
+    val today = now.toLocalDate()
+    var back by remember { mutableStateOf(java.time.temporal.ChronoUnit.DAYS.between(t0.toLocalDate(), today).toInt().coerceIn(0, 13)) }
+    var h by remember { mutableStateOf(((t0.hour + 11) % 12) + 1) }
+    var mi by remember { mutableStateOf(t0.minute - t0.minute % 5) }
+    var pm by remember { mutableStateOf(if (t0.hour >= 12) 1 else 0) }
+    fun result(): Long {
+        val hour24 = (h % 12) + if (pm == 1) 12 else 0
+        val t = today.minusDays(back.toLong()).atTime(hour24, mi).atZone(z).toInstant().toEpochMilli()
+        return minOf(t, System.currentTimeMillis())
+    }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("When was it?", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberWheel((0..13).toList(), back, { back = it }, Modifier.weight(1.6f), label = { b ->
+                    when (b) { 0 -> "Today"; 1 -> "Yesterday"; else -> today.minusDays(b.toLong()).format(java.time.format.DateTimeFormatter.ofPattern("EEE d", com.suryaprakash.medlog.speech.I18n.locale)) }
+                })
+                NumberWheel((1..12).toList(), h, { h = it }, Modifier.weight(0.9f))
+                NumberWheel((0..55 step 5).toList(), mi, { mi = it }, Modifier.weight(0.9f), label = { "%02d".format(it) })
+                NumberWheel(listOf(0, 1), pm, { pm = it }, Modifier.weight(0.9f), label = { if (it == 0) "AM" else "PM" })
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigButton("Now", Modifier.weight(1f), Tone.SECONDARY, onClick = { onDone(null) })
+                BigButton("Done", Modifier.weight(1f), onClick = { onDone(result()) })
+            }
+        }
     }
 }

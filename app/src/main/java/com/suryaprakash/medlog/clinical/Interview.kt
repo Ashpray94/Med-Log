@@ -171,7 +171,7 @@ object Interview {
         // other catalogue fields that have simple answers
         for (f in p.fields) {
             val field = cat.field(f) ?: continue
-            if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "pillows", "timeOnFloor", "sleepHours")) continue
+            if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "days", "pillows", "timeOnFloor", "sleepHours")) continue
             when (field.type) {
                 FieldType.YESNO -> add(Ask("f_$f", f, yesNoText(field.label), Kind.YESNO, core = false, danger = field.danger))
                 FieldType.CHOICE -> add(Ask("f_$f", f, choiceText(f, field.label), Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false))

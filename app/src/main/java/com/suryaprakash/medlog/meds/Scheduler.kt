@@ -84,6 +84,7 @@ object Scheduler {
             for (t in events(d, m, s.snoozeMinutes, s.escalateMinutes, s.escalateCriticalMinutes, s.useMeetingTimer)) if (t > now - 1000) next = minOf(next, t)
         }
         Care.nextWake(ctx, now)?.let { next = minOf(next, it) }
+        runCatching { com.suryaprakash.medlog.care.HelperCare.nextWake(ctx, now) }.getOrNull()?.let { next = minOf(next, it) }
         return next
     }
 
@@ -149,6 +150,7 @@ object Scheduler {
         }
         if (toShow.isNotEmpty()) DoseAlert.show(ctx, toShow, louder)
         Care.tick(ctx, now)
+        runCatching { com.suryaprakash.medlog.care.HelperCare.tick(ctx, now) }
         reschedule(ctx)
     }
 

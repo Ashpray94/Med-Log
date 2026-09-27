@@ -92,7 +92,7 @@ fun NutritionScreen(nav: Nav) {
         Group {
             rep.days.reversed().forEachIndexed { i, d ->
                 if (i > 0) GroupLine()
-                ValueRow(d.date.format(DateTimeFormatter.ofPattern("EEE, d MMM")),
+                ValueRow(d.date.format(DateTimeFormatter.ofPattern("EEE, d MMM", com.suryaprakash.medlog.speech.I18n.locale)),
                     if (d.logged) "${d.kcal.roundToInt()} kcal" else "Nothing logged",
                     sub = if (d.logged) "${d.protein.roundToInt()} g protein · ${d.water} glasses water · " + d.items.joinToString(", ").take(90) else null,
                     valueColor = if (!d.logged) p.inkSoft else rep.kcalTarget?.let { t -> if (d.kcal < t * 0.6) p.red else if (d.kcal < t * 0.85) p.amber else null })

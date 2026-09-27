@@ -1,4 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Wc
 
 import com.suryaprakash.medlog.ui.cardTitle
 import androidx.compose.foundation.background
@@ -112,7 +114,7 @@ fun HomeScreen(nav: Nav) {
         next = Scheduler.nextDose(ctx)
         val (from, to) = Scheduler.today()
         val meds = app.db.medicines().all().associateBy { it.id }
-        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
+        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.let { d to it } }.filter { it.second.form != "feed" }
         val now = System.currentTimeMillis()
         askBetter = recent.firstOrNull { it.ongoing && now - it.lastAt > 20 * 3600_000L && app.settings.getString("asked_better_${it.problemId}") != java.time.LocalDate.now().toString() }?.problemId
         remindersBlocked = !Perms.exactAlarmsOk(ctx) || !Perms.has(ctx, *Perms.NOTIFY)
@@ -122,13 +124,23 @@ fun HomeScreen(nav: Nav) {
     val first = name.split(" ").first()
     val hello = if (first.isNotBlank()) "$greeting, $first" else greeting
     val today = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date())
+    var unshared by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(version, recent) {
+        val peers = com.suryaprakash.medlog.data.Sync.peers(ctx).filter { it.dir == com.suryaprakash.medlog.help.Relay.DOWN }
+        val last = listOfNotNull(app.db.notes().lastChange(), app.db.doses().lastChange(), app.db.medicines().lastChange()).maxOrNull() ?: 0L
+        val sent = peers.minOfOrNull { app.settings.getLong("sync_sent_${it.id}") } ?: Long.MAX_VALUE
+        unshared = if (peers.isNotEmpty() && last > sent + 90_000) sent else null
+    }
     val due = next?.let { it.first.scheduledAt <= System.currentTimeMillis() + 10 * 60_000 } == true
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
     Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
         PersonaSwitch(nav)
+        unshared?.let { t -> Text("Not shared with your helpers yet" + if (t > 0) " · last shared ${com.suryaprakash.medlog.ui.whenWords(t).lowercase()}" else "",
+            fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold) }
         // ── the one main action ──
         HeroTell { nav.go(Route.Tell()) }
+        BigButton("Speak it all", tone = Tone.TINT, icon = Icons.Rounded.Mic, height = 56.dp, onClick = { nav.go(Route.SpeakAll()) })
 
         // a new version, found by the daily check
         val update by com.suryaprakash.medlog.Updater.state.collectAsState()
@@ -162,10 +174,10 @@ fun HomeScreen(nav: Nav) {
                 if (todays.isEmpty()) "Nothing to take today" else if (takenCount == todays.size) "All ${todays.size} taken" else "$takenCount of ${todays.size} taken",
                 if (todays.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
             if (todays.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
-            todays.forEach { (d, m) ->
-                DoseCard(d, m, onOpen = { nav.go(Route.Meds) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); version++ } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id); version++ } })
+            todays.groupBy { it.second.id }.values.forEach { g ->
+                DayCard(g.first().second, g.map { it.first }, onOpen = { nav.go(Route.Meds) },
+                    onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx); version++ } },
+                    onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id); version++ } })
             }
         }
 
@@ -174,11 +186,10 @@ fun HomeScreen(nav: Nav) {
             Title("Recent")
             TileGrid(recent, 3, aspect = 0.84f) { r, m ->
                 val pr = app.catalogue.problem(r.problemId)
-                Tile((pr?.label ?: "") + if (r.todayCount > 0) ", ${r.todayCount} today" else "", m, onClick = { nav.go(Route.Tell(r.problemId)) }) {
-                    SpriteIcon(r.problemId, sc.target * 1.4f)
-                    Spacer(Modifier.height(6.dp))
-                    Text(pr?.label ?: "", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2, minLines = 2, lineHeight = sc.small * 1.15f, overflow = TextOverflow.Ellipsis)
-                    Text(if (r.todayCount > 0) "${r.todayCount} today" else " ", fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold)
+                com.suryaprakash.medlog.ui.PicTile(pr?.label ?: "", m, picture = 64.dp, speak = (pr?.label ?: "") + if (r.todayCount > 0) ", ${r.todayCount} today" else "",
+                    onClick = { nav.go(Route.Tell(r.problemId)) },
+                    under = { Text(if (r.todayCount > 0) "${r.todayCount} today" else " ", fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold) }) {
+                    SpriteIcon(r.problemId, 64.dp)
                 }
             }
         }
@@ -186,6 +197,7 @@ fun HomeScreen(nav: Nav) {
         // ── everything else, equal tiles ──
         val tiles = listOfNotNull(
             if ("food" !in s.hidden) HomeTile("Food & water", Icons.Rounded.Restaurant, p.tintGreen) { nav.go(Route.Food) } else null,
+            HomeTile("Toilet & vomit", Icons.Rounded.Wc, p.tintTeal) { nav.go(Route.Output()) },
             if ("readings" !in s.hidden) HomeTile("BP & sugar", Icons.Rounded.MonitorHeart, p.tintPink) { nav.go(Route.Readings) } else null,
             if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, p.tintBlue) { nav.go(Route.Doctor) } else null,
             if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, p.tintPurple) { nav.go(Route.Reports) } else null,
@@ -214,11 +226,7 @@ fun HomeScreen(nav: Nav) {
 
         Title("More")
         TileGrid(tiles, if (sc.big) 2 else 3, aspect = if (sc.big) 1.25f else 1f) { t, m ->
-            Tile(t.label, m, onClick = t.onClick) {
-                IconTile(t.icon, t.tint, if (sc.big) 56.dp else 48.dp)
-                Spacer(Modifier.height(10.dp))
-                Text(t.label, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2, lineHeight = sc.small * 1.15f)
-            }
+            com.suryaprakash.medlog.ui.PicTile(t.label, m, picture = 48.dp, onClick = t.onClick) { IconTile(t.icon, t.tint, 48.dp) }
         }
 
     }
@@ -228,18 +236,18 @@ data class HomeTile(val label: String, val icon: ImageVector, val tint: Color, v
 
 /** The main action: big, calm, unmistakable. */
 @Composable
-fun HeroTell(onClick: () -> Unit) {
+fun HeroTell(title: String = "How are you feeling?", onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius + 4.dp)
     // one row: the question and what to do on the left, the arrow on the right, all centred
     Row(
         Modifier.fillMaxWidth().heightIn(min = if (sc.big) 168.dp else 152.dp).clip(sh).background(p.brand)
-            .steady("How are you feeling? Tap to choose.", onClick = onClick).padding(horizontal = 24.dp, vertical = 20.dp),
+            .steady("$title Tap to choose.", onClick = onClick).padding(horizontal = 24.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("How are you feeling?", color = Color.White, fontSize = sc.title, fontWeight = FontWeight.Bold, lineHeight = sc.title * 1.2f)
+            Text(title, color = Color.White, fontSize = sc.title, fontWeight = FontWeight.Bold, lineHeight = sc.title * 1.2f)
             Spacer(Modifier.height(8.dp))
             Text("Tap to choose", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body)
         }
@@ -286,7 +294,7 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
             MedicinePicture(m, 64.dp)
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink,
+                Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = sc.cardTitle * 1.2f)
                 Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
                     fontSize = sc.body, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -303,6 +311,74 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
             BigButton("Given", Modifier.weight(1f), if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
             BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = onNotGiven)
         } else BigButton(if (m.form == "feed") (if (missed) "Given late" else "Given") else if (missed) "I took it late" else if (dueNow) "I took it" else "Log taken", tone = if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
+    }
+}
+
+/**
+ * One medicine (or feed) for the whole day, however many times it's due: its picture and name, then a chip for
+ * each time that shows where that dose stands (✓ taken, due now, missed, later), then one button for the next dose.
+ * Tap a taken time to undo it. Keeps the list short however many doses there are.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)? = null) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val now = System.currentTimeMillis()
+    val S = com.suryaprakash.medlog.data.DoseStatus
+    fun taken(d: Dose) = d.status == S.TAKEN
+    fun missed(d: Dose) = d.status == S.MISSED || d.status == S.SKIPPED
+    fun due(d: Dose) = !taken(d) && !missed(d) && d.scheduledAt <= now + 10 * 60_000
+    val sorted = doses.sortedBy { it.scheduledAt }
+    val next = sorted.firstOrNull { !taken(it) && !missed(it) } ?: sorted.lastOrNull { missed(it) && it.status == S.MISSED }
+    val feed = m.form == "feed"
+    val border = when { sorted.any(::due) -> p.amber; sorted.any { it.status == S.MISSED } -> p.red; sorted.all(::taken) -> p.ok; else -> p.line }
+    val sh = RoundedCornerShape(sc.radius)
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (border == p.line) 1.dp else 2.dp, border, sh)
+        .padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(Modifier.fillMaxWidth().steady(m.name, onClick = onOpen), verticalAlignment = Alignment.CenterVertically) {
+            MedicinePicture(m, 52.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(listOfNotNull(doseWords(m), m.purpose.ifBlank { null }?.takeIf { !feed }?.let { "for ${it.lowercase()}" }).joinToString(" · ").replaceFirstChar(Char::uppercase),
+                    fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        // one chip per time today
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            sorted.forEach { d ->
+                val part = com.suryaprakash.medlog.ui.dayPart(java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).hour)
+                val (bg, fg) = when {
+                    taken(d) -> p.ok to Color.White
+                    missed(d) -> p.red.copy(alpha = 0.1f) to p.red
+                    due(d) -> p.amber.copy(alpha = 0.14f) to p.amber
+                    else -> p.fill to p.inkSoft
+                }
+                val csh = RoundedCornerShape(12.dp)
+                Row(Modifier.heightIn(min = 48.dp).clip(csh).background(bg)
+                    .then(if (taken(d)) Modifier.steady("Undo ${DoseActivity.time(d.scheduledAt)}") { onUndo(d) } else Modifier)
+                    .padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(if (taken(d)) Icons.Rounded.CheckCircle else part.icon, null, tint = if (taken(d)) Color.White else part.tint, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(DoseActivity.time(d.scheduledAt), fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1)
+                }
+            }
+        }
+        // the next dose to answer
+        next?.let { d ->
+            val t = DoseActivity.time(d.scheduledAt)
+            if (feed && onNotGiven != null) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                BigButton("Given $t", Modifier.weight(1f), if (due(d)) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
+                BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { onNotGiven(d) })
+            } else BigButton(when { missed(d) -> "Took $t late"; due(d) -> if (feed) "Given $t" else "I took $t"; else -> if (feed) "Given $t" else "Log $t taken" },
+                tone = if (due(d)) Tone.OK else Tone.TINT, height = 52.dp, onClick = { onTaken(d) })
+        } ?: Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (feed) "All given today" else "All taken today", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ok)
+        }
     }
 }
 

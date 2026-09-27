@@ -64,16 +64,21 @@ object Sprites {
         val sample = when { px * 4 <= size -> 4; px * 2 <= size -> 2; else -> 1 }
         val ck = "$key@$sample"
         cache.get(ck)?.let { return it }
-        val dec = synchronized(decoders) {
-            decoders.getOrPut(cell.sheet) {
-                app.assets.open("sprites/${cell.sheet}.png").use {
-                    if (Build.VERSION.SDK_INT >= 31) BitmapRegionDecoder.newInstance(it) else @Suppress("DEPRECATION") BitmapRegionDecoder.newInstance(it, false)
-                }!!
-            }
-        }
         val x = (cell.index % cols) * size
         val y = (cell.index / cols) * size
-        val bmp = synchronized(dec) { dec.decodeRegion(Rect(x, y, x + size, y + size), BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return null
+        val dec = synchronized(decoders) {
+            decoders[cell.sheet] ?: runCatching {
+                app.assets.open("sprites/${cell.sheet}.png").use {
+                    if (Build.VERSION.SDK_INT >= 31) BitmapRegionDecoder.newInstance(it) else @Suppress("DEPRECATION") BitmapRegionDecoder.newInstance(it, false)
+                }
+            }.getOrNull()?.also { decoders[cell.sheet] = it }
+        }
+        val bmp = if (dec != null) synchronized(dec) { dec.decodeRegion(Rect(x, y, x + size, y + size), BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return null
+            // no region decoder (some very old phones, and screenshot tests): cut the cell from the whole sheet
+            else runCatching {
+                val sheet = app.assets.open("sprites/${cell.sheet}.png").use { BitmapFactory.decodeStream(it) }
+                Bitmap.createScaledBitmap(Bitmap.createBitmap(sheet, x, y, size, size), size / sample, size / sample, true)
+            }.getOrNull() ?: return null
         cache.put(ck, bmp)
         return bmp
     }
