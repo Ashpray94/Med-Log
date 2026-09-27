@@ -84,6 +84,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.NavigationBarItem
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.foundation.layout.offset
@@ -134,14 +136,34 @@ private var lastTapAt = 0L
  */
 @Composable
 fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -> Unit = {}, onClick: () -> Unit): Modifier {
+    val latestPress = androidx.compose.runtime.rememberUpdatedState(onPress)
+    val act = steadyAction(label, enabled, onClick)
+    return this
+        .semantics { role = Role.Button; contentDescription = label; onClick(label) { act(); true } }
+        .pointerInput(label, enabled) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                latestPress.value(true)
+                val up = waitForUpOrCancellation()
+                latestPress.value(false)
+                if (up != null) act()
+            }
+        }
+}
+
+/**
+ * The app's tap rules as a plain action, for Android's own buttons, tabs and chips too: a steady-hands pause
+ * between taps, and (when "touch to hear" is on) the first tap reads the label and the second does it.
+ */
+@Composable
+fun steadyAction(label: String, enabled: Boolean = true, onClick: () -> Unit): () -> Unit {
     val s = LocalSettings.current
     val haptic = LocalHapticFeedback.current
     val ctx = LocalContext.current
-    // always run the latest action: the tap handler below lives across recompositions, so it must not keep an
+    // always run the latest action: the tap handler lives across recompositions, so it must not keep an
     // old copy of onClick (that made a second tap undo the first on multi-choice pages)
     val latest = androidx.compose.runtime.rememberUpdatedState(onClick)
-    val latestPress = androidx.compose.runtime.rememberUpdatedState(onPress)
-    val act = {
+    return {
         val now = System.currentTimeMillis()
         val debounce = if (s.steadyTouch) 600 else 250
         if (enabled && now - lastTapAt > debounce) {
@@ -156,17 +178,6 @@ fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -
             }
         }
     }
-    return this
-        .semantics { role = Role.Button; contentDescription = label; onClick(label) { act(); true } }
-        .pointerInput(label, enabled) {
-            awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
-                latestPress.value(true)
-                val up = waitForUpOrCancellation()
-                latestPress.value(false)
-                if (up != null) act()
-            }
-        }
 }
 
 /** Soft press feedback shared by every tappable surface. */
@@ -467,32 +478,24 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
             Triple("Settings", Icons.Rounded.Settings, here == Route.Settings) to { nav.home(home); nav.go(Route.Settings) },
         )
         val ordered = if (s.leftHand) tabs.reversed() else tabs
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
+        // Android's own navigation bar; SOS is its one red, larger place
+        androidx.compose.material3.NavigationBar(containerColor = p.paper, tonalElevation = 0.dp) {
             ordered.forEach { (t, go) ->
                 val (label, icon, on) = t
-                if (label == "SOS") {
-                    // the one thing that must always be reachable: a solid red button, bigger than the rest
-                    Column(
-                        Modifier.weight(1f).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp)).steady("SOS, emergency help", onClick = go),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                    ) {
-                        Box(Modifier.size(if (sc.big) 62.dp else 58.dp).clip(RoundedCornerShape(18.dp)).background(p.red), contentAlignment = Alignment.Center) {
+                val sos = label == "SOS"
+                NavigationBarItem(
+                    selected = on && !sos,
+                    onClick = steadyAction(if (sos) "SOS, emergency help" else label, onClick = go),
+                    icon = {
+                        if (sos) Box(Modifier.size(if (sc.big) 60.dp else 56.dp, if (sc.big) 48.dp else 44.dp).clip(RoundedCornerShape(16.dp)).background(p.red), contentAlignment = Alignment.Center) {
                             Text("SOS", color = Color.White, fontSize = sc.body, fontWeight = FontWeight.ExtraBold)
-                        }
-                    }
-                    return@forEach
-                }
-                val tint = if (on) p.brand else p.inkSoft
-                // the current place: a quiet grey square, the icon in the accent, the word in bold dark
-                Column(
-                    Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp))
-                        .background(if (on) p.fill else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                ) {
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
-                    Spacer(Modifier.height(3.dp))
-                    Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.ink else p.inkSoft, maxLines = 1)
-                }
+                        } else Icon(icon, null, modifier = Modifier.size(if (sc.big) 28.dp else 26.dp))
+                    },
+                    label = if (sos) null else { { Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, maxLines = 1) } },
+                    colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                        selectedIconColor = p.brand, selectedTextColor = p.ink, indicatorColor = p.fill,
+                        unselectedIconColor = p.inkSoft, unselectedTextColor = p.inkSoft),
+                )
             }
         }
     }
@@ -554,24 +557,28 @@ fun BigButton(
         Tone.AMBER -> p.amberSoft to p.amber
         Tone.QUIET -> quiet to p.ink
     }
-    var pressed by remember { mutableStateOf(false) }
     val left = leading != null || sub != null
-    Row(
-        modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target)
-            .lift(RoundedCornerShape(16.dp), on = !onCard && enabled && tone in setOf(Tone.SECONDARY, Tone.OUTLINE, Tone.TINT, Tone.QUIET)).clip(RoundedCornerShape(16.dp))
-            .background(if (enabled) bg else p.fill.copy(alpha = 0.5f))
-            
-            .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = if (left) Arrangement.Start else Arrangement.Center,
+    val shape = RoundedCornerShape(16.dp)
+    val quietTone = tone in setOf(Tone.SECONDARY, Tone.OUTLINE, Tone.TINT, Tone.QUIET)
+    // Android's own Material button (ripple, states, accessibility), with the app's tap rules and sizes
+    androidx.compose.material3.Button(
+        onClick = steadyAction(text + (sub?.let { ". $it" } ?: ""), enabled, onClick),
+        enabled = enabled,
+        modifier = modifier.fillMaxWidth().heightIn(min = height ?: sc.target).lift(shape, on = !onCard && enabled && quietTone),
+        shape = shape,
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg,
+            disabledContainerColor = p.fill.copy(alpha = 0.5f), disabledContentColor = p.inkSoft),
+        elevation = null,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
     ) {
-        leading?.let { it(); Spacer(Modifier.width(14.dp)) }
-        if (icon != null) { Icon(icon, null, tint = if (enabled) fg else p.inkSoft, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(10.dp)) }
-        Column(Modifier.then(if (left) Modifier.weight(1f) else Modifier)) {
-            Text(text, color = if (enabled) fg else p.inkSoft, fontSize = sc.button, fontWeight = FontWeight.SemiBold, lineHeight = sc.button * 1.2f, maxLines = 3,
-                textAlign = if (left) TextAlign.Start else TextAlign.Center)
-            if (sub != null) Text(sub, color = (if (enabled) fg else p.inkSoft).copy(alpha = 0.8f), fontSize = sc.small, lineHeight = sc.small * 1.25f)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = if (left) Arrangement.Start else Arrangement.Center) {
+            leading?.let { it(); Spacer(Modifier.width(14.dp)) }
+            if (icon != null) { Icon(icon, null, tint = if (enabled) fg else p.inkSoft, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(10.dp)) }
+            Column(Modifier.then(if (left) Modifier.weight(1f) else Modifier)) {
+                Text(text, color = if (enabled) fg else p.inkSoft, fontSize = sc.button, fontWeight = FontWeight.SemiBold, lineHeight = sc.button * 1.2f, maxLines = 3,
+                    textAlign = if (left) TextAlign.Start else TextAlign.Center)
+                if (sub != null) Text(sub, color = (if (enabled) fg else p.inkSoft).copy(alpha = 0.8f), fontSize = sc.small, lineHeight = sc.small * 1.25f)
+            }
         }
     }
 }
@@ -964,15 +971,19 @@ fun LevelMark(level: String, withWord: Boolean = true) {
 fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(
-        modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(26.dp))
-            .background(if (selected) p.brand else if (LocalOnCard.current) p.fill else p.card)
-            .steady(text + if (selected) ", chosen" else "", onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (selected) { Icon(Icons.Rounded.Check, null, tint = p.onBrand, modifier = Modifier.size(22.dp)); Spacer(Modifier.width(6.dp)) }
-        Text(text, color = if (selected) p.onBrand else p.ink, fontSize = sc.body, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
-    }
+    // Android's own filter chip, finger-sized
+    androidx.compose.material3.FilterChip(
+        selected = selected,
+        onClick = steadyAction(text + if (selected) ", chosen" else "", onClick = onClick),
+        label = { Text(text, fontSize = sc.body, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 10.dp)) },
+        modifier = modifier.heightIn(min = 52.dp),
+        shape = RoundedCornerShape(26.dp),
+        leadingIcon = if (selected) { { Icon(Icons.Rounded.Check, null, modifier = Modifier.size(22.dp)) } } else null,
+        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+            containerColor = if (LocalOnCard.current) p.fill else p.card, labelColor = p.ink,
+            selectedContainerColor = p.brand, selectedLabelColor = p.onBrand, selectedLeadingIconColor = p.onBrand),
+        border = null,
+    )
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -1001,14 +1012,19 @@ fun BoxScope.Centered(content: @Composable () -> Unit) = Box(Modifier.align(Alig
 fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    // every choice as tall as the tallest: a long label (in Hindi or Tamil, or large words) wraps instead of being cut
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).lift(RoundedCornerShape(16.dp), on = !LocalOnCard.current).clip(RoundedCornerShape(16.dp)).background(if (LocalOnCard.current) p.fill else p.card).padding(4.dp)) {
+    // Android's own segmented buttons; every choice as tall as the tallest, so a long label wraps instead of being cut
+    androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         options.forEachIndexed { i, o ->
-            Box(
-                Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent)
-                    .steady(o + if (i == selected) ", chosen" else "") { onSelect(i) }.padding(horizontal = 6.dp, vertical = 6.dp),
-                contentAlignment = Alignment.Center,
-            ) { Text(o, fontSize = sc.body, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium, color = if (i == selected) p.onBrand else p.inkSoft, textAlign = TextAlign.Center) }
+            SegmentedButton(
+                selected = i == selected,
+                onClick = steadyAction(o + if (i == selected) ", chosen" else "") { onSelect(i) },
+                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
+                modifier = Modifier.fillMaxHeight().heightIn(min = sc.target - 8.dp),
+                colors = androidx.compose.material3.SegmentedButtonDefaults.colors(
+                    activeContainerColor = p.brand, activeContentColor = p.onBrand, activeBorderColor = p.brand,
+                    inactiveContainerColor = p.card, inactiveContentColor = p.ink, inactiveBorderColor = p.outline.copy(alpha = 0.6f)),
+                icon = {},
+            ) { Text(o, fontSize = sc.body, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium, textAlign = TextAlign.Center) }
         }
     }
 }
