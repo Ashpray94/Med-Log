@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -124,7 +125,7 @@ fun DoctorCallButton(dept: String? = null) {
  * (setup, conditions, age, time of day), then everything by body area.
  */
 @Composable
-fun PickProblem(nav: Nav, onPicked: (String) -> Unit, onBack: () -> Unit, title: String = "How are you feeling?") {
+fun PickProblem(nav: Nav, onPicked: (String) -> Unit, onBack: () -> Unit, title: String = "How are you feeling?", speak: Boolean = false) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val cat = app.catalogue
@@ -142,25 +143,40 @@ fun PickProblem(nav: Nav, onPicked: (String) -> Unit, onBack: () -> Unit, title:
         yours = r.yours; suggested = r.suggested
     }
     com.suryaprakash.medlog.pictogram.Sprites.init(ctx)
-    Screen(title, "Tap the one that matches, or search.", onHome = { nav.home() }, onBack = onBack) {
+    // Speak: the mic opens straight away; what was heard is saved and shown on top, and every picture stays below,
+    // so anything misheard can be put right by hand
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var heard by remember { mutableStateOf<SpeakSort.Result?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val dictate = com.suryaprakash.medlog.ui.rememberDictation("Say how you feel, and anything else") { t ->
+        busy = true; scope.launch { heard = SpeakSort.sort(ctx, t); busy = false; com.suryaprakash.medlog.ui.savedFeedback(ctx) }
+    }
+    androidx.compose.runtime.saveable.rememberSaveable { if (speak) dictate?.invoke(); true }
+    // one tile size for every group on the page
+    val sc = com.suryaprakash.medlog.ui.LocalScale.current
+    val cols = if (sc.big || com.suryaprakash.medlog.ui.LocalScript.current.indic) 2 else 3
+    Screen(title, "Tap the one that matches, or tap Speak and say it.", onHome = { nav.home() }, onBack = onBack) {
+        if (busy) Hint("One moment…")
+        heard?.let { r -> SpokenResults(r, nav) { heard = null; dictate?.invoke() } }
         com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search problems")
         if (query.isNotBlank()) {
             val found = remember(query) { searchProblems(app, query) }
             if (found.isEmpty()) Hint("Nothing found for \"$query\". Try a simpler word, like pain, fever or cough.")
-            else ProblemGrid(found, onPicked)
+            else ProblemGrid(found, onPicked, cols)
             return@Screen
         }
+        // asked, never told: what they've had before, then what they might notice, then everything
         if (yours.isNotEmpty()) {
-            com.suryaprakash.medlog.ui.Title("You told me before")
-            ProblemGrid(yours, onPicked)
+            com.suryaprakash.medlog.ui.SectionHeader("Still troubling you?", "What you've told us before", null)
+            ProblemGrid(yours, onPicked, cols)
         }
         if (suggested.isNotEmpty()) {
-            com.suryaprakash.medlog.ui.Title(if (yours.isEmpty()) "Common for you" else "Others you may have")
-            ProblemGrid(suggested, onPicked)
+            com.suryaprakash.medlog.ui.SectionHeader(if (yours.isEmpty()) "Is it one of these?" else "Do you notice anything else?", "Tap if it's there", null)
+            ProblemGrid(suggested, onPicked, cols)
         }
         com.suryaprakash.medlog.pictogram.Sprites.SECTIONS.forEach { (title, ids) ->
             com.suryaprakash.medlog.ui.Title(title)
-            ProblemGrid(ids.filter { cat.problem(it) != null }, onPicked)
+            ProblemGrid(ids.filter { cat.problem(it) != null }, onPicked, cols)
         }
     }
 }
@@ -180,12 +196,14 @@ fun searchProblems(app: com.suryaprakash.medlog.MedLogApp, q: String): List<Stri
 }
 
 @Composable
-fun ProblemGrid(ids: List<String>, onPick: (String) -> Unit) {
+fun ProblemGrid(ids: List<String>, onPick: (String) -> Unit, cols: Int? = null) {
     val ctx = LocalContext.current
     val cat = ctx.medlog.catalogue
     val p = LocalPalette.current
     val sc = LocalScale.current
-    com.suryaprakash.medlog.ui.TileGrid(ids, if (sc.big) 2 else 3, aspect = 0.9f) { id, m ->
+    // a fixed column count and a height for up to three lines of label: every grid on a page looks the same
+    val h = com.suryaprakash.medlog.ui.TILE_PAD * 2 + 64.dp + com.suryaprakash.medlog.ui.TILE_GAP + with(androidx.compose.ui.platform.LocalDensity.current) { (sc.small * 1.3f * 3).toDp() }
+    com.suryaprakash.medlog.ui.TileGrid(ids, cols ?: if (sc.big) 2 else 3, aspect = 0.9f, minHeight = h, fixedCols = cols != null) { id, m ->
         val label = cat.problem(id)?.label ?: id
         com.suryaprakash.medlog.ui.PicTile(label, m, picture = 64.dp, onClick = { onPick(id) }) {
             com.suryaprakash.medlog.pictogram.SpriteIcon(id, 64.dp)

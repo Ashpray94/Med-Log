@@ -191,77 +191,72 @@ object SpeakSort {
     }
 }
 
+/**
+ * "Tell it all" on its own (from the lock screen and the notification): the mic starts at once, what was heard is
+ * saved and shown, and Speak again is there if it misheard. No typing here; the full page (How are you feeling)
+ * also has pictures to choose from.
+ */
 @Composable
 fun SpeakAllScreen(nav: Nav, start: String? = null) {
     val ctx = LocalContext.current
-    val p = LocalPalette.current
     val sc = LocalScale.current
+    val p = LocalPalette.current
     val scope = rememberCoroutineScope()
-    var typed by remember { mutableStateOf("") }
     var result by remember { mutableStateOf<SpeakSort.Result?>(null) }
     var busy by remember { mutableStateOf(false) }
     fun go(t: String) { if (t.isBlank()) return; busy = true; scope.launch { result = SpeakSort.sort(ctx, t); busy = false; savedFeedback(ctx) } }
     val dictate = com.suryaprakash.medlog.ui.rememberDictation("Say everything: how you feel, what you ate, toilet, medicines") { go(it) }
-    LaunchedEffect(start) { if (!start.isNullOrBlank() && result == null) go(start) }
-    val r = result
-    if (r == null) {
-        Screen("Tell it all", "Tap Speak and say everything: how you feel, what you ate, toilet, medicines. MedLog puts each thing in its place.", onHome = { nav.home() }, onBack = { if (!nav.back()) nav.home() },
-            subtitle = "Say everything at once") {
-            val hsh = RoundedCornerShape(sc.radius + 4.dp)
-            Column(Modifier.fillMaxWidth().heightIn(min = 180.dp).clip(hsh).background(p.brand).steady("Speak") { dictate?.invoke() }.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Icon(Icons.Rounded.Mic, null, tint = Color.White, modifier = Modifier.size(56.dp))
-                Spacer(Modifier.size(10.dp))
-                Text(if (busy) "One moment…" else "Speak", fontSize = sc.title, fontWeight = FontWeight.Bold, color = Color.White)
-            }
-            SectionHeader("For example", "Say it your way", null)
-            Text("\"Fell in the bathroom, knee hurts. Had two idlis and coffee. Loose motion twice. BP 150 by 90.\"", fontSize = sc.body, color = p.inkSoft)
-            SectionHeader("Or write it", "Then tap Done", null)
-            BigField("Everything, in your words", typed, { typed = it }, lines = 3)
-            if (typed.isNotBlank()) BigButton("Done", onClick = { go(typed) })
-        }
-        return
-    }
-    Screen("Saved", "Here's what MedLog noted. Tap any to change it.", onHome = { nav.home() }, onBack = { if (!nav.back()) nav.home() },
-        subtitle = if (r.saved.isEmpty()) "Nothing was understood" else "${r.saved.size} thing${if (r.saved.size == 1) "" else "s"} noted", actions = {
-            BigButton("Done", onClick = { nav.home() })
+    LaunchedEffect(start) { if (!start.isNullOrBlank()) go(start) else dictate?.invoke() }
+    Screen("Tell it all", "Say everything: how you feel, what you ate, toilet, medicines. Each thing goes in its place.", onHome = { nav.home() }, onBack = { if (!nav.back()) nav.home() },
+        subtitle = if (busy) "One moment…" else "Say everything at once", actions = {
+            if (result != null) BigButton("Done", onClick = { nav.home() })
         }) {
-        r.urgent?.let { u ->
-            val sh = RoundedCornerShape(sc.radius)
-            Column(Modifier.fillMaxWidth().clip(sh).background(p.red).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(u, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = Color.White)
-                Text("Your helpers are being told now.", fontSize = sc.body, color = Color.White)
-                BigButton("SOS – call for help", tone = Tone.SECONDARY, icon = Icons.Rounded.Sos, onClick = { com.suryaprakash.medlog.help.Sos.start(ctx, "Emergency: $u") })
+        result?.let { SpokenResults(it, nav) { result = null; dictate?.invoke() } }
+        if (result == null) BigButton(if (busy) "One moment…" else "Speak", icon = Icons.Rounded.Mic, height = sc.target * 1.4f, enabled = !busy && dictate != null, onClick = { dictate?.invoke() })
+        if (dictate == null) Text("Speech typing isn't available on this phone.", fontSize = sc.body, color = p.inkSoft)
+    }
+}
+
+/** What was heard, saved in its places: an emergency first (helpers already told), then each thing, tap to change. */
+@Composable
+fun SpokenResults(r: SpeakSort.Result, nav: Nav, onAgain: () -> Unit) {
+    val ctx = LocalContext.current
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val scope = rememberCoroutineScope()
+    r.urgent?.let { u ->
+        val sh = RoundedCornerShape(sc.radius)
+        Column(Modifier.fillMaxWidth().clip(sh).background(p.red).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(u, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Your helpers are being told now.", fontSize = sc.body, color = Color.White)
+            BigButton("SOS – call for help", tone = Tone.SECONDARY, icon = Icons.Rounded.Sos, onClick = { com.suryaprakash.medlog.help.Sos.start(ctx, "Emergency: $u") })
+        }
+    }
+    SectionHeader(if (r.saved.isEmpty()) "I didn't catch that" else "Here's what I noted", if (r.saved.isEmpty()) "Try again, or tap a picture below" else "Tap any to change it", "Speak again", Icons.Rounded.Mic, onAgain)
+    val order = listOf(Kind.SYMPTOM, Kind.OUTPUT, Kind.FOOD, Kind.WATER, Kind.MED_TAKEN, Kind.READING)
+    r.saved.sortedBy { order.indexOf(it.kind) }.forEach { s ->
+        val (icon, tint) = kindLook(s.kind, p)
+        val sh = RoundedCornerShape(sc.radius)
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(sh).background(p.card).border(1.dp, p.line, sh)
+            .steady("${s.title}. Tap to change") { s.route?.let { nav.go(it) } }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (s.kind == Kind.SYMPTOM) (s.route as? Route.Tell)?.problemId?.let { SpriteIcon(it, 48.dp) } ?: OptionIcon(icon, tint, 48.dp) else OptionIcon(icon, tint, 48.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(s.title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+                Text(listOf(kindName(s.kind).takeIf { it != s.title }.orEmpty(), s.sub).filter { it.isNotBlank() }.joinToString(" · "), fontSize = sc.small, color = p.inkSoft)
             }
+            Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(24.dp))
         }
-        if (r.saved.isEmpty()) {
-            Text("Try again, naming each thing: \"headache\", \"ate rice and dal\", \"urine burning\".", fontSize = sc.body, color = p.inkSoft)
-            BigButton("Speak again", tone = Tone.TINT, icon = Icons.Rounded.Mic, onClick = { result = null })
-        }
-        val order = listOf(Kind.SYMPTOM, Kind.OUTPUT, Kind.FOOD, Kind.WATER, Kind.MED_TAKEN, Kind.READING)
-        r.saved.sortedBy { order.indexOf(it.kind) }.forEach { s ->
-            val (icon, tint) = kindLook(s.kind, p)
-            val sh = RoundedCornerShape(sc.radius)
-            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(sh).background(p.card).border(1.dp, p.line, sh)
-                .steady("${s.title}. Tap to change") { s.route?.let { nav.go(it) } }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (s.kind == Kind.SYMPTOM) (s.route as? Route.Tell)?.problemId?.let { SpriteIcon(it, 48.dp) } ?: OptionIcon(icon, tint, 48.dp) else OptionIcon(icon, tint, 48.dp)
-                Spacer(Modifier.width(14.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(s.title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text(listOf(kindName(s.kind).takeIf { it != s.title }.orEmpty(), s.sub).filter { it.isNotBlank() }.joinToString(" · "), fontSize = sc.small, color = p.inkSoft, maxLines = 2)
-                }
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(24.dp))
-            }
-        }
-        if (r.saved.isNotEmpty()) BigButton("Remove all of these", tone = Tone.OUTLINE, onClick = {
+    }
+    if (r.saved.isNotEmpty()) Text("Remove all of these", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("Remove all of these") {
             scope.launch {
                 val ids = r.saved.mapNotNull { it.noteId }
                 ctx.medlog.viewRepo.remove(ids)
                 UndoHost.show("Removed.") { scope.launch { ctx.medlog.viewRepo.restore(ids) } }
-                nav.back()
+                onAgain()
             }
-        })
-    }
+        }.padding(vertical = 12.dp))
 }
 
 private fun kindName(k: String) = when (k) { Kind.SYMPTOM -> "How I feel"; Kind.OUTPUT -> "Toilet & vomit"; Kind.FOOD -> "Food"; Kind.WATER -> "Water"; Kind.MED_TAKEN -> "Medicine"; else -> "Reading" }

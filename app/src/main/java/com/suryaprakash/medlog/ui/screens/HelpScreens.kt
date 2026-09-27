@@ -500,8 +500,7 @@ fun HelperHomeScreen(nav: Nav) {
         // ── their health, from their phone: the same pages they see ──
         person?.let { pp ->
             fun view(r: Route) { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; nav.go(r) }
-            HeroTell(title = "How are they feeling?") { view(Route.Tell()) }
-            BigButton("Speak it all for them", tone = Tone.TINT, icon = Icons.Rounded.Mic, height = 56.dp, onClick = { view(Route.SpeakAll()) })
+            HeroTell(title = "How are they feeling?", onChoose = { view(Route.Tell()) }, onSpeak = { view(Route.Tell(speak = true)) })
             val mdb = com.suryaprakash.medlog.data.Mirror.db(ctx, pp.pairId)
             val (start, end) = remember { com.suryaprakash.medlog.meds.Scheduler.today() }
             val doses by mdb.doses().betweenFlow(start, end).collectAsState(emptyList())

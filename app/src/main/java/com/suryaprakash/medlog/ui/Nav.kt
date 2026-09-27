@@ -9,7 +9,7 @@ val LocalNav = staticCompositionLocalOf<Nav?> { null }
 /** Every screen in the app (plan section 5). */
 sealed interface Route {
     data object Home : Route
-    data class Tell(val problemId: String? = null, val text: String? = null, val pick: Boolean = false, val noteId: Long? = null) : Route
+    data class Tell(val problemId: String? = null, val text: String? = null, val pick: Boolean = false, val noteId: Long? = null, val speak: Boolean = false) : Route
     data object Notes : Route
     data class ProblemHistory(val problemId: String) : Route
     data class NoteDetail(val id: Long) : Route

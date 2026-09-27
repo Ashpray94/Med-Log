@@ -2486,5 +2486,18 @@
 "{0}: is it better now?": "{0}: क्या अब ठीक है?",
 "You're helping": "आप मदद कर रहे हैं",
 "Only helpers see this": "सिर्फ़ मददगार देखते हैं",
-"Helping someone": "किसी की मदद"
+"Helping someone": "किसी की मदद",
+"Choose": "चुनें",
+"Still troubling you?": "अब भी परेशान कर रहा है?",
+"What you've told us before": "जो आपने पहले बताया",
+"Is it one of these?": "क्या इनमें से कुछ है?",
+"Do you notice anything else?": "क्या कुछ और महसूस हो रहा है?",
+"Tap if it's there": "हो तो छुएँ",
+"Say how you feel, and anything else": "बताइए कैसा लग रहा है, और कुछ भी",
+"Tap the one that matches, or tap Speak and say it.": "जो मिलता है उसे छुएँ, या बोलें छूकर कहें।",
+"I didn't catch that": "मैं समझ नहीं पाया",
+"Try again, or tap a picture below": "फिर से कहें, या नीचे तस्वीर छुएँ",
+"Tap any to change it": "बदलने के लिए छुएँ",
+"Speech typing isn't available on this phone.": "इस फ़ोन पर बोलकर लिखना उपलब्ध नहीं है।",
+"Speak: say how you feel": "बोलें: बताइए कैसा लग रहा है"
 }

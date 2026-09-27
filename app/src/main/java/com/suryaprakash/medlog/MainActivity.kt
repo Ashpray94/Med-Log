@@ -69,7 +69,7 @@ class MainActivity : ComponentActivity() {
         val route: Route? = when (host) {
             "tell" -> Route.Tell(uri.getQueryParameter("problem"), uri.getQueryParameter("text"), noteId = uri.getQueryParameter("note")?.toLongOrNull())
             "meds" -> Route.Meds
-            "speak" -> Route.SpeakAll()
+            "speak" -> Route.Tell(speak = true)
             "help" -> {
                 // from the family widget: send the chosen message straight away, then show who got it
                 uri.getQueryParameter("send")?.let { key ->

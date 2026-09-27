@@ -253,6 +253,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         // ───────────── choose, or change, the problem ─────────────
         Phase.PICK -> PickProblem(
             nav,
+            speak = route.speak && problem == null,
             onPicked = { pid -> begin(pid) },
             onBack = { if (problem != null) phase = Phase.ASK else nav.back() },
             title = if (problem != null) "Change to…" else "How are you feeling?",

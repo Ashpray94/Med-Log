@@ -808,19 +808,19 @@ val LocalTileFit = androidx.compose.runtime.compositionLocalOf<TileFit?> { null 
  * for all, and nothing is ever cut off or squeezed.
  */
 @Composable
-fun <T> TileGrid(items: List<T>, cols: Int, aspect: Float = 1f, gap: Dp = 12.dp, tile: @Composable (T, Modifier) -> Unit) {
+fun <T> TileGrid(items: List<T>, cols: Int, aspect: Float = 1f, gap: Dp = 12.dp, minHeight: Dp = 0.dp, fixedCols: Boolean = false, tile: @Composable (T, Modifier) -> Unit) {
     androidx.compose.ui.layout.SubcomposeLayout { c ->
         val g = gap.roundToPx()
         // the widest single word any label has: fewer columns rather than a word broken in two ("Bleedin / g")
         val need = TileNeed()
         subcompose("need") { CompositionLocalProvider(LocalTileNeed provides need) { items.forEach { tile(it, Modifier) } } }
         var cols = cols
-        while (cols > 2 && need.widest > (c.maxWidth - g * (cols - 1)) / cols) cols--
+        while (!fixedCols && cols > 2 && need.widest > (c.maxWidth - g * (cols - 1)) / cols) cols--
         val w = ((c.maxWidth - g * (cols - 1)) / cols).coerceAtLeast(0)
         val natural = subcompose("measure") { items.forEach { tile(it, Modifier) } }
             .map { it.measure(androidx.compose.ui.unit.Constraints(minWidth = w, maxWidth = w)) }
         val tallest = natural.maxOfOrNull { it.height } ?: 0
-        val h = maxOf(tallest, (w / aspect).toInt())
+        val h = maxOf(tallest, (w / aspect).toInt(), minHeight.roundToPx())
         val fit = TileFit(h.toDp(), tallest.toDp())
         val placed = subcompose("place") {
             CompositionLocalProvider(LocalTileFit provides fit) { items.forEach { tile(it, Modifier) } }

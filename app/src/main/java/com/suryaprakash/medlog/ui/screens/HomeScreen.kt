@@ -1,5 +1,7 @@
 package com.suryaprakash.medlog.ui.screens
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material.icons.rounded.Wc
 
 import com.suryaprakash.medlog.ui.cardTitle
@@ -141,8 +143,7 @@ fun HomeScreen(nav: Nav) {
         unshared?.let { t -> Text("Not shared with your helpers yet" + if (t > 0) " · last shared ${com.suryaprakash.medlog.ui.whenWords(t).lowercase()}" else "",
             fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold) }
         // ── the one main action ──
-        HeroTell { nav.go(Route.Tell()) }
-        BigButton("Speak it all", tone = Tone.TINT, icon = Icons.Rounded.Mic, height = 56.dp, onClick = { nav.go(Route.SpeakAll()) })
+        HeroTell(onChoose = { nav.go(Route.Tell()) }, onSpeak = { nav.go(Route.Tell(speak = true)) })
 
         // a new version, found by the daily check
         val update by com.suryaprakash.medlog.Updater.state.collectAsState()
@@ -236,26 +237,27 @@ fun HomeScreen(nav: Nav) {
 
 data class HomeTile(val label: String, val icon: ImageVector, val tint: Color, val onClick: () -> Unit)
 
-/** The main action: big, calm, unmistakable. */
+/**
+ * The main action: big, calm, unmistakable. One card, the question in the largest words, and two equal ways to
+ * answer side by side: choose from pictures, or speak (the mic opens straight away on the same page).
+ */
 @Composable
-fun HeroTell(title: String = "How are you feeling?", onClick: () -> Unit) {
+fun HeroTell(title: String = "How are you feeling?", onChoose: () -> Unit, onSpeak: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius + 4.dp)
-    // one row: the question and what to do on the left, the arrow on the right, all centred
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = if (sc.big) 168.dp else 152.dp).clip(sh).background(p.brand)
-            .steady("$title Tap to choose.", onClick = onClick).padding(horizontal = 24.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, color = Color.White, fontSize = sc.title, fontWeight = FontWeight.Bold, lineHeight = sc.title * 1.2f)
-            Spacer(Modifier.height(8.dp))
-            Text("Tap to choose", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body)
-        }
-        Spacer(Modifier.width(16.dp))
-        Box(Modifier.size(sc.target + 8.dp).clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowForward, null, tint = p.brand, modifier = Modifier.size(28.dp))
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.brand).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(title, color = Color.White, fontSize = sc.title, fontWeight = FontWeight.Bold, lineHeight = sc.title * 1.2f, modifier = Modifier.semantics { heading() })
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            listOf(Triple("Choose", Icons.Rounded.TouchApp, onChoose), Triple("Speak", Icons.Rounded.Mic, onSpeak)).forEach { (label, icon, go) ->
+                Column(Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 36.dp).clip(RoundedCornerShape(18.dp)).background(Color.White)
+                    .steady(if (label == "Speak") "Speak: say how you feel" else "Choose from pictures", onClick = go).padding(vertical = 14.dp, horizontal = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Icon(icon, null, tint = p.brand, modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.height(6.dp))
+                    Text(label, color = p.brand, fontSize = sc.button, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
+            }
         }
     }
 }
