@@ -126,29 +126,31 @@ fun FoodScreen(nav: Nav) {
             0 -> {
                 com.suryaprakash.medlog.ui.SectionHeader("Water", "Goal: ${s.waterGoal} glasses a day", "Change goal") { goalSheet = true }
                 val wsh = RoundedCornerShape(sc.radius)
-                Row(Modifier.fillMaxWidth().clip(wsh).background(p.card).border(1.dp, p.line, wsh).padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    WaterGlass(water, s.waterGoal, Modifier.width(120.dp).height(170.dp))
-                    Spacer(Modifier.width(22.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Column {
+                Column(Modifier.fillMaxWidth().clip(wsh).background(p.card).border(1.dp, p.line, wsh).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        WaterGlass(water, s.waterGoal, Modifier.width(96.dp).height(136.dp))
+                        Spacer(Modifier.width(22.dp))
+                        Column(Modifier.weight(1f)) {
                             Text("$water of ${s.waterGoal}", fontSize = sc.title * 1.2f, fontWeight = FontWeight.Bold, color = p.ink)
                             Text(if (water >= s.waterGoal) "Goal reached today" else "glasses today", fontSize = sc.body, color = if (water >= s.waterGoal) p.ok else p.inkSoft)
                         }
-                        BigButton("Add a glass", tone = Tone.TINT, icon = Icons.Rounded.Add, height = 52.dp, onClick = {
-                            scope.launch {
-                                val id = app.viewRepo.addWater(1); water = app.viewRepo.waterToday(); savedFeedback(ctx)
-                                UndoHost.show("Added a glass.") { scope.launch { app.viewRepo.remove(listOf(id)); water = app.viewRepo.waterToday() } }
-                            }
-                        })
                     }
+                    // saved the moment it's tapped; a wrong time is changed on the glass itself, below
+                    BigButton("Add a glass", tone = Tone.PRIMARY, icon = Icons.Rounded.Add, onClick = {
+                        scope.launch {
+                            val id = app.viewRepo.addWater(1); water = app.viewRepo.waterToday(); savedFeedback(ctx)
+                            UndoHost.show("Added a glass.") { scope.launch { app.viewRepo.remove(listOf(id)); water = app.viewRepo.waterToday() } }
+                        }
+                    })
                 }
                 // each glass, logged the moment it's added: tap one to change its time or remove it
                 val glasses by app.viewDb.notes().kindSinceFlow(Kind.WATER, start).collectAsState(emptyList())
                 var editing by remember { mutableStateOf<com.suryaprakash.medlog.data.Note?>(null) }
+                if (glasses.isNotEmpty()) com.suryaprakash.medlog.ui.SectionHeader("Each glass", "Tap one to change its time", null)
                 if (glasses.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
                     glasses.sortedByDescending { it.occurredAt }.forEachIndexed { i, n ->
                         if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                        com.suryaprakash.medlog.ui.ValueRow("${n.count ?: 1} glass", timeLabel(n.occurredAt), sub = "Tap to change") { editing = n }
+                        com.suryaprakash.medlog.ui.ValueRow(timeLabel(n.occurredAt), "${n.count ?: 1} glass") { editing = n }
                     }
                 }
                 editing?.let { n ->
@@ -171,9 +173,13 @@ fun FoodScreen(nav: Nav) {
             else -> {
                 val feedDoses = doses.filter { d -> feeds.any { it.id == d.medicineId } }
                 com.suryaprakash.medlog.ui.SectionHeader("Today's feeds",
-                    if (feedDoses.isEmpty()) "None set up" else "${feedDoses.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }} of ${feedDoses.size} given",
+                    if (feeds.isEmpty()) "None set up" else if (feedDoses.isEmpty()) "None due today" else "${feedDoses.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }} of ${feedDoses.size} given",
                     if (feeds.isNotEmpty()) "Add feed" else null, Icons.Rounded.Add) { feedSheet = true }
                 if (feeds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Set up a feed") { feedSheet = true }
+                // feeds set up but not due today still show, so they can be changed or stopped
+                feeds.filter { f -> feedDoses.none { it.medicineId == f.id } }.forEach { f ->
+                    com.suryaprakash.medlog.ui.Group { com.suryaprakash.medlog.ui.ValueRow(f.name, "Not today", sub = f.amount) { feedMenu = f } }
+                }
                 feedDoses.groupBy { it.medicineId }.forEach { (id, g) ->
                     val m = feeds.firstOrNull { it.id == id } ?: return@forEach
                     DayCard(m, g, onOpen = { feedMenu = m },

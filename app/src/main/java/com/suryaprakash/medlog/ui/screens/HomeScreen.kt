@@ -111,7 +111,7 @@ fun HomeScreen(nav: Nav) {
 
     LaunchedEffect(version) {
         name = app.repo.profile().name
-        recent = app.repo.recentProblems(3)
+        recent = app.repo.recentProblems(6).filter { app.catalogue.problem(it.problemId) != null }.take(3)
         next = Scheduler.nextDose(ctx)
         val (from, to) = Scheduler.today()
         val meds = app.db.medicines().all().associateBy { it.id }
@@ -135,7 +135,8 @@ fun HomeScreen(nav: Nav) {
     val due = next?.let { it.first.scheduledAt <= System.currentTimeMillis() + 10 * 60_000 } == true
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
-    Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
+    Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "",
+        trailing = { RoundIcon(Icons.Rounded.Settings, "Settings") { nav.go(Route.Settings) } }) {
         PersonaSwitch(nav)
         unshared?.let { t -> Text("Not shared with your helpers yet" + if (t > 0) " · last shared ${com.suryaprakash.medlog.ui.whenWords(t).lowercase()}" else "",
             fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold) }
@@ -203,7 +204,6 @@ fun HomeScreen(nav: Nav) {
             if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, p.tintBlue) { nav.go(Route.Doctor) } else null,
             if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, p.tintPurple) { nav.go(Route.Reports) } else null,
             if ("meds" !in s.hidden) HomeTile("Medicines", Icons.Rounded.Medication, p.tintOrange) { nav.go(Route.Meds) } else null,
-            HomeTile("Settings", Icons.Rounded.Settings, Color(0xFF5F6368)) { nav.go(Route.Settings) },
         )
         // ── history: what you've noted, one tap away ──
         run {

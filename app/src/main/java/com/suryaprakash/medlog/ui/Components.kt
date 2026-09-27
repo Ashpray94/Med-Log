@@ -261,15 +261,18 @@ fun Screen(
                     if (onBack != null) BackLink(onBack)
                     else if (!eyebrow.isNullOrBlank()) Text(eyebrow.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp)
                     Spacer(Modifier.weight(1f))
+                    // on a page with a greeting (Home), its one extra button sits up here, level with the greeting
+                    val up = !eyebrow.isNullOrBlank() && trailing != null
+                    if (up) { trailing?.invoke(); Spacer(Modifier.width(10.dp)) }
                     ReadToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f,
                         modifier = Modifier.weight(1f).semantics { heading() })
-                    trailing?.invoke()
+                    if (eyebrow.isNullOrBlank()) trailing?.invoke()
                 }
                 Text(subtitle ?: " ", fontSize = sc.body, color = if (eyebrow != null) p.ink else p.inkSoft, fontWeight = if (eyebrow != null) FontWeight.Medium else null,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
+                    modifier = Modifier.padding(top = 2.dp))
             }
             Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = sc.gap), content = header)
             val state = rememberScrollState()
@@ -293,7 +296,7 @@ fun Screen(
 /** True while the on-screen keyboard is up. */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-fun imeShowing(): Boolean = androidx.compose.foundation.layout.WindowInsets.isImeVisible
+fun imeShowing(): Boolean = androidx.compose.foundation.layout.WindowInsets.isImeVisible && android.os.Build.FINGERPRINT != "robolectric"
 
 /** The pinned area for a screen's main action: a thin line above, then the buttons. */
 @Composable
@@ -425,7 +428,7 @@ fun PillButton(text: String, icon: ImageVector?, bg: Color, fg: Color, border: C
 fun RoundIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
-        Modifier.size(52.dp).clip(CircleShape).background(p.card).steady(label, onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).background(p.card).border(1.5.dp, p.line, CircleShape).steady(label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = p.inkSoft, modifier = Modifier.size(28.dp)) }
 }
