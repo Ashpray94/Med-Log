@@ -2555,5 +2555,6 @@
 "Due {0}": "{0} மணிக்கு",
 "{0} taken at {1}": "{0} {1} மணிக்கு எடுக்கப்பட்டது",
 "Next: {0} at {1}": "அடுத்தது: {0}, {1} மணிக்கு",
-"Saved with the time. We'll ask for more in 30 minutes.": "நேரத்துடன் சேமிக்கப்படும். 30 நிமிடத்தில் மேலும் கேட்போம்."
+"Saved with the time. We'll ask for more in 30 minutes.": "நேரத்துடன் சேமிக்கப்படும். 30 நிமிடத்தில் மேலும் கேட்போம்.",
+"This phone has a copy of MedLog made with a different key, so it can't update itself. Save a backup, uninstall MedLog, and install the new version once; after that, updates work.": "இந்த ஃபோனில் உள்ள MedLog வேறு சாவியால் உருவானது, அதனால் தானாகப் புதுப்பிக்க முடியாது. காப்புப் பிரதி எடுத்து, MedLog-ஐ நீக்கி, புதிய பதிப்பை ஒருமுறை நிறுவவும்; அதன் பிறகு புதுப்பிப்புகள் வேலை செய்யும்."
 }

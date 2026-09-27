@@ -2555,5 +2555,6 @@
 "Due {0}": "{0} बजे लेनी है",
 "{0} taken at {1}": "{0} {1} बजे ली",
 "Next: {0} at {1}": "अगली: {0}, {1} बजे",
-"Saved with the time. We'll ask for more in 30 minutes.": "समय के साथ लिखा जाएगा। 30 मिनट बाद और पूछेंगे।"
+"Saved with the time. We'll ask for more in 30 minutes.": "समय के साथ लिखा जाएगा। 30 मिनट बाद और पूछेंगे।",
+"This phone has a copy of MedLog made with a different key, so it can't update itself. Save a backup, uninstall MedLog, and install the new version once; after that, updates work.": "इस फ़ोन में MedLog की कॉपी किसी दूसरी चाबी से बनी है, इसलिए यह अपने-आप अपडेट नहीं हो सकती। बैकअप रखें, MedLog हटाएँ, और नया संस्करण एक बार इंस्टॉल करें; उसके बाद अपडेट चलेंगे।"
 }
