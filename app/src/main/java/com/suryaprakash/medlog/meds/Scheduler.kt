@@ -168,11 +168,16 @@ object Scheduler {
     enum class Taken { OK, ALREADY }
 
     /** Marks a dose taken. Returns ALREADY if it was already taken (the double-dose guard asks first). */
-    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false): Taken {
+    /** [at]: when it was really taken, for noting it afterwards (at night, or for an earlier day); now if null. */
+    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false, at: Long? = null): Taken {
         val app = ctx.medlog
         val d = app.db.doses().get(doseId) ?: return Taken.OK
-        if (d.status == DoseStatus.TAKEN && !force) return Taken.ALREADY
-        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
+        if (d.status == DoseStatus.TAKEN && !force) {
+            // already taken: only the time changes
+            if (at != null) { app.db.doses().update(d.copy(actedAt = at)); app.refreshWidgets() }
+            return Taken.ALREADY
+        }
+        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = at ?: System.currentTimeMillis(), snoozeUntil = null))
         app.db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
         if (force && d.status == DoseStatus.TAKEN) {
             val m = app.db.medicines().get(d.medicineId)

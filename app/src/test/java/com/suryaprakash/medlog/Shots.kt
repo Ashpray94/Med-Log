@@ -113,7 +113,7 @@ class Shots {
         app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 8 * h, status = DoseStatus.TAKEN, actedAt = today + 8 * h + 300_000, uid = "d1"))
         app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 14 * h, uid = "d2"))
         app.db.doses().insert(Dose(medicineId = met, scheduledAt = today + 20 * h, uid = "d3"))
-        app.db.doses().insert(Dose(medicineId = aml, scheduledAt = today + 8 * h, status = DoseStatus.MISSED, uid = "d4"))
+        app.db.doses().insert(Dose(medicineId = aml, scheduledAt = today + 1 * h, status = DoseStatus.MISSED, uid = "d4"))
         fun note(kind: String, pid: String?, at: Long, text: String) = Note(kind = kind, problemId = pid, occurredAt = at, text = text, uid = "n$at$kind")
         listOf(
             note(Kind.SYMPTOM, "cough", today + 9 * h, "Cough, dry, for 3 days"),

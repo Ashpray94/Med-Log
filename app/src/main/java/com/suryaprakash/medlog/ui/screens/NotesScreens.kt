@@ -270,6 +270,8 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     // one group per kind of thing; open a group to see each entry
     var open by remember { mutableStateOf<String?>(null) }
     fun toggle(k: String) { open = if (open == k) null else k }
+    var doseSheet by remember { mutableStateOf<Pair<String, com.suryaprakash.medlog.data.Dose>?>(null) }
+    doseSheet?.let { (name, d) -> DoseAfterSheet(name, d, onDismiss = { doseSheet = null }) }
     fun times(list: List<Note>) = list.joinToString(", ") { timeLabel(it.occurredAt) }
 
     // every time in the same column, as wide as the widest time ("12:59 PM") in this text size, so the times and
@@ -311,7 +313,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
     com.suryaprakash.medlog.ui.SectionHeader("Medicines, food and more", "Tap a group to see each one", null)
     if (feeds > 0) HistoryGroup("Feeds", "$fed of $feeds given", { IconTile(Icons.Rounded.LocalDrink, p.tintPurple, 44.dp) }, if (feedsLate) "AMBER" else "GREEN", false, {}, expandable = false) {}
     if (due > 0) HistoryGroup("Medicines", "$taken of $due taken", { IconTile(Icons.Rounded.Medication, p.tintOrange, 44.dp) }, if (medsLate) "AMBER" else "GREEN", open == "m", { toggle("m") }) {
-        // one line per dose, in time order: when, which medicine, and what happened
+        // one line per dose, in time order: when, which medicine, and what happened. Tap one to note it afterwards.
         medDoses.sortedBy { it.second.scheduledAt }.forEach { (name, d) ->
             val status = when (d.status) {
                 DoseStatus.TAKEN -> "Taken" + (d.actedAt?.let { " at ${timeLabel(it)}" } ?: "")
@@ -319,12 +321,13 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
                 DoseStatus.SKIPPED -> "Skipped"
                 else -> if (d.scheduledAt > System.currentTimeMillis()) "Later today" else "Not taken yet"
             }
-            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(vertical = 10.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).steady("$name, ${timeLabel(d.scheduledAt)}, $status. Tap to change.") { doseSheet = name to d }.padding(vertical = 10.dp)) {
                 Text(timeLabel(d.scheduledAt), style = timeStyle, color = p.inkSoft, softWrap = false, modifier = Modifier.width(timeWidth).alignByBaseline())
                 Column(Modifier.weight(1f).alignByBaseline()) {
                     Text(name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
                     Text(status, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when (d.status) { DoseStatus.TAKEN -> p.ok; DoseStatus.MISSED -> p.red; else -> p.inkSoft })
                 }
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.align(Alignment.CenterVertically).size(22.dp))
             }
         }
     }
@@ -633,5 +636,32 @@ fun SearchScreen(nav: Nav) {
         notes.forEach { n -> NoteRow(n) { nav.go(Route.NoteDetail(n.id)) } }
         if (docs.isNotEmpty()) { Title("From your old reports"); docs.forEach { d -> Card { Hint(d.source); Body(d.content) } } }
         BigButton("Removed notes", tone = Tone.SECONDARY, icon = Icons.Rounded.Restore, onClick = { nav.go(Route.Removed) })
+    }
+}
+
+/**
+ * One dose from any day, noted afterwards: taken on time, taken at another time, not taken, or skipped.
+ * So a day's medicines can be put right at night or the next day, by the person or a helper.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DoseAfterSheet(name: String, d: com.suryaprakash.medlog.data.Dose, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val p = LocalPalette.current
+    val sc = com.suryaprakash.medlog.ui.LocalScale.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var other by remember { mutableStateOf(false) }
+    fun done(block: suspend () -> Unit) { scope.launch { block(); com.suryaprakash.medlog.ui.savedFeedback(ctx) }; onDismiss() }
+    if (other) { com.suryaprakash.medlog.ui.WhenSheet(d.actedAt ?: d.scheduledAt, onDone = { t -> done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, t ?: System.currentTimeMillis()) } }, onDismiss = onDismiss); return }
+    val t = com.suryaprakash.medlog.ui.screens.chipTime(d.scheduledAt)
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.suryaprakash.medlog.ui.SectionHeader(name, "The $t dose, ${dayLabel(d.scheduledAt).lowercase()}", null)
+            BigButton("Taken on time · $t", tone = com.suryaprakash.medlog.ui.Tone.OK, onClick = { done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, d.scheduledAt) } })
+            BigButton("Taken at another time", tone = com.suryaprakash.medlog.ui.Tone.TINT, onClick = { other = true })
+            if (d.status == DoseStatus.TAKEN) BigButton("Not taken", tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, onClick = { done { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } })
+            if (d.status != DoseStatus.SKIPPED) BigButton("Skipped on purpose", tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, onClick = { done { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Skipped") } })
+        }
     }
 }

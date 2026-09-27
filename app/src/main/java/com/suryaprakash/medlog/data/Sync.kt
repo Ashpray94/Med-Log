@@ -288,10 +288,11 @@ class SyncWorker(ctx: Context, params: androidx.work.WorkerParameters) : android
 /** Taking, undoing or skipping a dose from a screen, on whichever records the screen shows. */
 object Doses {
     private fun mirror() = Viewing.pairId.value
-    suspend fun take(ctx: Context, id: Long) {
-        if (mirror() == null) { com.suryaprakash.medlog.meds.Scheduler.take(ctx, id); return }
+    /** Taken, now or at [at] (noted afterwards); on a dose already taken, [at] just changes the time. */
+    suspend fun take(ctx: Context, id: Long, at: Long? = null) {
+        if (mirror() == null) { com.suryaprakash.medlog.meds.Scheduler.take(ctx, id, at = at); return }
         val db = ctx.medlog.viewDb
-        db.doses().get(id)?.let { db.doses().update(it.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null)) }
+        db.doses().get(id)?.let { db.doses().update(it.copy(status = DoseStatus.TAKEN, actedAt = at ?: it.actedAt?.takeIf { _ -> it.status == DoseStatus.TAKEN } ?: System.currentTimeMillis(), snoozeUntil = null)) }
     }
     suspend fun untake(ctx: Context, id: Long) {
         if (mirror() == null) { com.suryaprakash.medlog.meds.Scheduler.untake(ctx, id); return }

@@ -185,7 +185,8 @@ fun FoodScreen(nav: Nav) {
                     DayCard(m, g, onOpen = { feedMenu = m },
                         onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx) } },
                         onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
-                        onNotGiven = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given") } })
+                        onNotGiven = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Not given") } },
+                        onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } })
                 }
             }
         }

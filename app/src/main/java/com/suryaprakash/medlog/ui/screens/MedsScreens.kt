@@ -140,7 +140,8 @@ fun MedsScreen(nav: Nav) {
                 val m = byId[id] ?: return@forEach
                 DayCard(m, g, onOpen = { nav.go(Route.MedEdit(m.id)) },
                     onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") } },
-                    onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } })
+                    onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
+                    onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } })
             }
         }
         // taken only when needed

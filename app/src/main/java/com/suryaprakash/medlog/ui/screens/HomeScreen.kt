@@ -179,7 +179,8 @@ fun HomeScreen(nav: Nav) {
             todays.groupBy { it.second.id }.values.forEach { g ->
                 DayCard(g.first().second, g.map { it.first }, onOpen = { nav.go(Route.Meds) },
                     onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx); version++ } },
-                    onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id); version++ } })
+                    onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id); version++ } },
+                    onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx); version++ } })
             }
         }
 
@@ -322,7 +323,8 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
  * its own answer, so a medicine taken four times a day never makes the list longer.
  */
 @Composable
-fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)? = null) {
+fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)? = null,
+            onTakenAt: ((Dose, Long) -> Unit)? = null) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val now = System.currentTimeMillis()
@@ -335,6 +337,9 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
     val feed = m.form == "feed"
     val border = when { sorted.any(::due) -> p.amber; sorted.any { it.status == S.MISSED } -> p.red; sorted.all(::taken) -> p.ok; else -> p.line }
     var sheet by remember { mutableStateOf(false) }
+    // a dose whose time has passed: ask when it was taken (on time, just now, or another time), so it can all be noted later
+    var asking by remember { mutableStateOf<Dose?>(null) }
+    val answer: (Dose) -> Unit = { d -> if (onTakenAt != null && d.scheduledAt < now - 30 * 60_000) asking = d else onTaken(d) }
     val sh = RoundedCornerShape(sc.radius)
     val name = listOf(m.name, m.strength.takeIf { !feed }.orEmpty()).filter { it.isNotBlank() }.joinToString(" ")
     val taken = sorted.count(::taken)
@@ -352,13 +357,40 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
         }
         TimeStrip(sorted, ::taken, ::missed, ::due) { sheet = true }
         // the next dose to answer
-        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), onTaken, onNotGiven) } ?: Row(verticalAlignment = Alignment.CenterVertically) {
+        next?.let { d -> NextDoseButton(d, feed, due(d), missed(d), answer, onNotGiven) } ?: Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(24.dp))
             Spacer(Modifier.width(8.dp))
             Text(if (feed) "All given today" else "All taken today", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ok)
         }
     }
-    if (sheet) DaySheet(m, name, sorted, ::taken, ::missed, ::due, onOpen = { sheet = false; onOpen() }, onTaken = onTaken, onUndo = onUndo, onNotGiven = onNotGiven, onDismiss = { sheet = false })
+    if (sheet) DaySheet(m, name, sorted, ::taken, ::missed, ::due, onOpen = { sheet = false; onOpen() }, onTaken = answer, onUndo = onUndo, onNotGiven = onNotGiven,
+        onChangeTime = onTakenAt, onDismiss = { sheet = false })
+    asking?.let { d -> TakenWhenSheet(d, feed, onPick = { at -> asking = null; if (at == null) onTaken(d) else onTakenAt?.invoke(d, at) }, onDismiss = { asking = null }) }
+}
+
+/**
+ * "When did you take it?" for a dose whose time has passed: on time (its own time), just now, or another time
+ * (up to two weeks back), so a whole day can be noted at night, by the person or a helper.
+ * [onPick] gets null for "just now".
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun TakenWhenSheet(d: Dose, feed: Boolean, onPick: (Long?) -> Unit, onDismiss: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    var other by remember { mutableStateOf(false) }
+    if (other) { com.suryaprakash.medlog.ui.WhenSheet(d.scheduledAt, onDone = { t -> onPick(t) }, onDismiss = onDismiss); return }
+    val onDay = java.time.Instant.ofEpochMilli(d.scheduledAt).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+    val day = if (onDay == java.time.LocalDate.now()) "" else ", " + dayLabel(d.scheduledAt).lowercase()
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
+        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.suryaprakash.medlog.ui.SectionHeader(if (feed) "When was it given?" else "When did you take it?", "The ${chipTime(d.scheduledAt)} ${if (feed) "feed" else "dose"}$day", null)
+            BigButton("On time · ${chipTime(d.scheduledAt)}$day", tone = Tone.OK, icon = Icons.Rounded.CheckCircle, onClick = { onPick(d.scheduledAt) })
+            if (onDay == java.time.LocalDate.now()) BigButton("Just now", tone = Tone.TINT, onClick = { onPick(null) })
+            BigButton("Another time", tone = Tone.SECONDARY, onClick = { other = true })
+        }
+    }
 }
 
 @Composable
@@ -441,7 +473,9 @@ private fun TimeStrip(sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dos
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dose) -> Boolean, due: (Dose) -> Boolean,
-                     onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?, onDismiss: () -> Unit) {
+                     onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?, onChangeTime: ((Dose, Long) -> Unit)? = null, onDismiss: () -> Unit) {
+    var changing by remember { mutableStateOf<Dose?>(null) }
+    changing?.let { d -> com.suryaprakash.medlog.ui.WhenSheet(d.actedAt ?: d.scheduledAt, onDone = { t -> changing = null; onChangeTime?.invoke(d, t ?: System.currentTimeMillis()) }, onDismiss = { changing = null }); return }
     val p = LocalPalette.current
     val sc = LocalScale.current
     val feed = m.form == "feed"
@@ -474,6 +508,9 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
                                 due(d) -> "Due now"
                                 else -> part.name
                             }, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = when { taken(d) -> p.ok; missed(d) -> p.red; due(d) -> p.amber; else -> p.inkSoft })
+                            // the time it was taken can be put right
+                            if (taken(d) && onChangeTime != null) Text("Change the time", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand,
+                                modifier = Modifier.padding(top = 2.dp).clip(RoundedCornerShape(8.dp)).steady("Change the time it was taken") { changing = d }.padding(vertical = 8.dp))
                         }
                         when {
                             taken(d) -> BigButton("Undo", Modifier.width(IntrinsicSize.Max), tone = Tone.SECONDARY, height = 48.dp, onClick = { onUndo(d) })
