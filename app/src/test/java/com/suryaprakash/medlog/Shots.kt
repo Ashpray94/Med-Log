@@ -102,6 +102,7 @@ class Shots {
 
     private fun seed(app: MedLogApp, role: String) = runBlocking {
         app.settings.update { it.copy(onboarded = true, role = role) }
+        if (System.getProperty("shots.big") != null) app.settings.update { it.copy(bigMode = true) }
         System.getProperty("shots.lang")?.let { l -> app.settings.update { it.copy(languages = listOf(l)) }; com.suryaprakash.medlog.speech.I18n.use(app, l) }
         if (role == "helper") {
             // a helper's phone: one person looked after, their records in its copy, and a message waiting

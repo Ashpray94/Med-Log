@@ -388,11 +388,12 @@ private fun HistoryGroup(title: String, sub: String, icon: @Composable () -> Uni
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title. $sub", onClick = onToggle).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             icon()
             Spacer(Modifier.width(14.dp))
+            // the "Watch" mark sits under the name, so it never squeezes it
             Column(Modifier.weight(1f)) {
-                Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1)
+                Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink)
                 Text(sub, fontSize = sc.small, color = p.inkSoft)
+                if (level != "GREEN") Box(Modifier.padding(top = 6.dp)) { LevelMark(level, withWord = false) }
             }
-            if (level != "GREEN") { Spacer(Modifier.width(8.dp)); LevelMark(level, withWord = false) }
             val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(260), label = "chevron")
             if (expandable) Icon(Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.size(26.dp).graphicsLayer { rotationZ = turn })
         }

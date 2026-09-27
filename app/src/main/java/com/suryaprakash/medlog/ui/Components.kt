@@ -258,9 +258,11 @@ fun Screen(
             // a fixed row (Back or a greeting on the left, Read on the right), a one-line title, and a line for the subtitle
             val header: @Composable ColumnScope.() -> Unit = {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (onBack != null) BackLink(onBack)
-                    else if (!eyebrow.isNullOrBlank()) Text(tr(eyebrow).uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp)
-                    Spacer(Modifier.weight(1f))
+                    if (onBack != null) { BackLink(onBack); Spacer(Modifier.weight(1f)) }
+                    // the greeting takes what the buttons leave, and wraps; the buttons are never squeezed
+                    else if (!eyebrow.isNullOrBlank()) Text(tr(eyebrow).uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp))
+                    else Spacer(Modifier.weight(1f))
                     // on a page with a greeting (Home), its one extra button sits up here, level with the greeting
                     val up = !eyebrow.isNullOrBlank() && trailing != null
                     if (up) { trailing?.invoke(); Spacer(Modifier.width(10.dp)) }
@@ -792,7 +794,11 @@ fun PicTile(label: String, modifier: Modifier, picture: Dp, selected: Boolean = 
     LocalTileNeed.current?.let { need ->
         val m = androidx.compose.ui.text.rememberTextMeasurer()
         val style = androidx.compose.ui.text.TextStyle(fontSize = sc.small, fontWeight = FontWeight.SemiBold)
-        val px = remember(label, sc.small) { label.split(' ', '\n').maxOfOrNull { w -> m.measure(w, style).size.width } ?: 0 }
+        // the label as shown (translated), in the script's own font where it has one
+        val shown = tr(label)
+        val script = LocalScript.current
+        val st = if (script.indic) style.copy(fontFamily = script.family) else style
+        val px = remember(shown, sc.small) { shown.split(' ', '\n').maxOfOrNull { w -> m.measure(w, st).size.width } ?: 0 }
         val pad = with(androidx.compose.ui.platform.LocalDensity.current) { (TILE_PAD * 2 + 4.dp).roundToPx() }
         need.widest = maxOf(need.widest, px + pad)
     }

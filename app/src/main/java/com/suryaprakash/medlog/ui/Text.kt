@@ -1,6 +1,8 @@
 package com.suryaprakash.medlog.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
@@ -46,15 +48,36 @@ fun Text(
     val script = LocalScript.current
     val shown = I18n.tr(text)
     // Hindi and Tamil have marks above and below the letters: never set their lines tighter than the script needs
-    val size = if (fontSize.isSp) fontSize else style.fontSize
-    val lh = if (script.indic && size.isSp && (!lineHeight.isSp || lineHeight.value < size.value * script.lines)) size * script.lines else lineHeight
+    // a word is never split across lines ("Bleedin / g"): if one doesn't fit, the words get a little smaller
+    // (5% at a time, to 70% at most) until it does; a one-line label that runs past its space does the same.
+    // Most text never needs it, so this costs nothing there.
+    var shrink by androidx.compose.runtime.remember(shown) { androidx.compose.runtime.mutableFloatStateOf(1f) }
+    val base = if (fontSize.isSp) fontSize else style.fontSize
+    val size = if (base.isSp) base * shrink else base
+    val lhBase = if (lineHeight.isSp) lineHeight * shrink else lineHeight
+    val lh = if (script.indic && size.isSp && (!lhBase.isSp || lhBase.value < size.value * script.lines)) size * script.lines else lhBase
+    val layout: (TextLayoutResult) -> Unit = { r ->
+        if (shrink > 0.71f && ((softWrap && splitsWord(r, shown)) || (!softWrap || maxLines == 1) && r.hasVisualOverflow)) shrink -= 0.05f
+        onTextLayout?.invoke(r)
+    }
     // the phone's font was asked for by name: use the script's own, so it matches the rest of the page
     val family = if (fontFamily == AppFont) null else fontFamily
     // marked with its language, so TalkBack reads it in a Hindi or Tamil voice, not an English one
     val marked = if (script.indic && shown != text) AnnotatedString(shown, listOf(AnnotatedString.Range(androidx.compose.ui.text.SpanStyle(localeList = script.locale), 0, shown.length)))
         else AnnotatedString(shown)
-    M3Text(marked, modifier, color, fontSize, fontStyle, fontWeight, family, letterSpacing, textDecoration, textAlign, lh,
-        overflow, softWrap, maxLines, minLines, emptyMap(), onTextLayout ?: {}, style)
+    M3Text(marked, modifier, color, size, fontStyle, fontWeight, family, letterSpacing, textDecoration, textAlign, lh,
+        overflow, softWrap, maxLines, minLines, emptyMap(), layout, style)
+}
+
+/** True when a line ends in the middle of a word: letters (or vowel marks) on both sides of the break. */
+private fun splitsWord(r: TextLayoutResult, text: String): Boolean {
+    for (i in 0 until r.lineCount - 1) {
+        val end = r.getLineEnd(i)
+        if (end <= 0 || end >= text.length) continue
+        val a = text[end - 1]; val b = text[end]
+        if (!a.isWhitespace() && !b.isWhitespace() && a !in "-/,.·–" && b != '\n') return true
+    }
+    return false
 }
 
 @Composable

@@ -445,7 +445,7 @@ private fun TimeStrip(sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dos
     val style = androidx.compose.ui.text.TextStyle(fontSize = sc.small, fontWeight = FontWeight.SemiBold)
     fun textW(t: String) = with(density) { measurer.measure(t, style).size.width.toDp() }
     val chrome = 18.dp + 5.dp + 16.dp + 2.dp
-    val moreW = remember(sc.small, sorted.size) { textW("+${sorted.size} more") + 22.dp }
+    val moreW = remember(sc.small, sorted.size, com.suryaprakash.medlog.speech.I18n.lang) { textW(com.suryaprakash.medlog.ui.tr("+${sorted.size} more")) + 22.dp }
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
         val gap = 8.dp
         // start from the first time not yet answered, so what's coming is what shows

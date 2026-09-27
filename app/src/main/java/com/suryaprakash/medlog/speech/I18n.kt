@@ -58,7 +58,7 @@ object I18n {
         val rx = buildString {
             append('^')
             // a slot right after a letter is a plural ending ("item{1}" → "item" / "items"), so it may be empty
-            parts.forEachIndexed { i, p -> append(Regex.escape(p)); if (i < order.size) append(if (p.lastOrNull()?.isLetter() == true) "(.*?)" else "(.+?)") }
+            parts.forEachIndexed { i, p -> append(Regex.escape(p)); if (i < order.size) append(if (p.lastOrNull()?.isLetter() == true) "(s|es|)" else "(.+?)") }
             append('$')
         }
         Triple(Regex(rx, RegexOption.DOT_MATCHES_ALL), tr, order) to parts.sumOf { it.length }
