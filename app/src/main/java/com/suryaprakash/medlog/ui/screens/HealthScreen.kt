@@ -170,7 +170,7 @@ fun ReportsScreen(nav: Nav) {
         val bs = if (metric.bars) bars(metric.key) else emptyList()
         val (headline, caption) = summaryOf(metric, inSpan, bs, days)
         val csh = RoundedCornerShape(sc.radius)
-        Column(Modifier.fillMaxWidth().clip(csh).background(p.card).border(1.dp, p.line, csh).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.fillMaxWidth().clip(csh).background(p.card).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OptionIcon(metric.icon, tint, 44.dp)
                 Spacer(Modifier.width(12.dp))

@@ -126,7 +126,7 @@ fun FoodScreen(nav: Nav) {
             0 -> {
                 com.suryaprakash.medlog.ui.SectionHeader("Water", "Goal: ${s.waterGoal} glasses a day", "Change goal") { goalSheet = true }
                 val wsh = RoundedCornerShape(sc.radius)
-                Column(Modifier.fillMaxWidth().clip(wsh).background(p.card).border(1.dp, p.line, wsh).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
+                Column(Modifier.fillMaxWidth().clip(wsh).background(p.card).padding(20.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         WaterGlass(water, s.waterGoal, Modifier.width(96.dp).height(136.dp))
                         Spacer(Modifier.width(22.dp))
@@ -147,12 +147,9 @@ fun FoodScreen(nav: Nav) {
                 val glasses by app.viewDb.notes().kindSinceFlow(Kind.WATER, start).collectAsState(emptyList())
                 var editing by remember { mutableStateOf<com.suryaprakash.medlog.data.Note?>(null) }
                 if (glasses.isNotEmpty()) com.suryaprakash.medlog.ui.SectionHeader("Each glass", "Tap one to change its time", null)
-                if (glasses.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
-                    glasses.sortedByDescending { it.occurredAt }.forEachIndexed { i, n ->
-                        if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                        com.suryaprakash.medlog.ui.ValueRow(timeLabel(n.occurredAt), "${n.count ?: 1} glass") { editing = n }
-                    }
-                }
+                if (glasses.isNotEmpty()) com.suryaprakash.medlog.ui.Timeline(glasses.sortedByDescending { it.occurredAt }.map { n ->
+                    com.suryaprakash.medlog.ui.TimelineItem(timeLabel(n.occurredAt), "${n.count ?: 1} glass${if ((n.count ?: 1) > 1) "es" else ""} of water", onClick = { editing = n })
+                })
                 editing?.let { n ->
                     GlassSheet(n.occurredAt, onTime = { t -> editing = null; scope.launch { app.viewRepo.setOccurred(n.id, t ?: System.currentTimeMillis()); water = app.viewRepo.waterToday() } },
                         onRemove = { editing = null; scope.launch { app.viewRepo.remove(listOf(n.id)); water = app.viewRepo.waterToday()
@@ -247,7 +244,7 @@ private fun MealCard(n: com.suryaprakash.medlog.data.Note, onChange: () -> Unit,
     val kcal = o?.optInt("kcal", -1) ?: -1
     val protein = o?.optDouble("protein")?.takeIf { !it.isNaN() }
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).steady("$title. Tap to change or delete") { menu = true }.padding(18.dp),
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).steady("$title. Tap to change or delete") { menu = true }.padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FoodPicture(main?.optString("name")?.let { nm -> com.suryaprakash.medlog.nutrition.Foods.all.firstOrNull { it.name == nm } }, 72.dp)
@@ -351,7 +348,7 @@ fun FeedNewScreen(nav: Nav) {
                 listOf(Triple("By mouth", Icons.Rounded.LocalDrink, p.tintBlue), Triple("By tube", Icons.Rounded.Medication, p.tintPurple)).forEachIndexed { i, (label, icon, tint) ->
                     val on = tube == i
                     val sh = RoundedCornerShape(sc.radius)
-                    Column(Modifier.weight(1f).clip(sh).background(if (on) tint.copy(alpha = 0.12f) else p.paper).border(if (on) 2.5.dp else 1.dp, if (on) tint else p.line, sh)
+                    Column(Modifier.weight(1f).clip(sh).background(if (on) tint.copy(alpha = 0.12f) else p.paper).then(if (on) Modifier.border(2.5.dp, tint, sh) else Modifier)
                         .steady(label + if (on) ", chosen" else "") { tube = i; open = 1 }.padding(vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         com.suryaprakash.medlog.ui.OptionIcon(icon, tint, 52.dp)
                         Spacer(Modifier.height(10.dp))
@@ -539,7 +536,7 @@ fun ReadingsScreen(nav: Nav) {
             val last = latest[k]
             val value = last?.text?.substringAfter(" ")?.ifBlank { null }
             val sh = RoundedCornerShape(sc.radius)
-            Column(mod.clip(sh).background(p.card).border(1.dp, p.line, sh).steady("$label. ${value ?: "No reading"}. Tap to add") { type = k; result = null; v1 = ""; v2 = "" }.padding(14.dp),
+            Column(mod.clip(sh).background(p.card).steady("$label. ${value ?: "No reading"}. Tap to add") { type = k; result = null; v1 = ""; v2 = "" }.padding(14.dp),
                 verticalArrangement = Arrangement.SpaceBetween) {
                 com.suryaprakash.medlog.ui.OptionIcon(look.first, look.second, 40.dp)
                 Column {
@@ -570,8 +567,11 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             last?.let { n ->
-                com.suryaprakash.medlog.ui.Group {
-                    com.suryaprakash.medlog.ui.ValueRow(n.text ?: "", "Delete", sub = "Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}", valueColor = p.red) { onDelete(n) }
+                // the last one noted, with a plain way to remove it (a button, not a row that looks like a setting)
+                com.suryaprakash.medlog.ui.Card(border = p.line) {
+                    Text("Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+                    Text(n.text ?: "", fontSize = sc.body, fontWeight = FontWeight.Medium, color = p.ink)
+                    BigButton("Remove", tone = Tone.SECONDARY, height = 48.dp, onClick = { onDelete(n) })
                 }
             }
             com.suryaprakash.medlog.ui.WhenRow(at) { at = it }
@@ -627,7 +627,7 @@ private fun ScaleCard(onSave: (Double) -> Unit) {
         onDispose { com.suryaprakash.medlog.help.Scale.stop(ctx) }
     }
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (live?.steady == true) 2.dp else 1.dp, if (live?.steady == true) p.ok else p.line, sh).padding(20.dp),
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).then(if (live?.steady == true) Modifier.border(2.dp, p.ok, sh) else Modifier).padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.MonitorWeight, p.tintPurple, 56.dp)
         val w = live

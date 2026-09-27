@@ -310,8 +310,8 @@ fun OnboardingScreen(nav: Nav) {
                         val sh = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
                         Column(
                             Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 16.dp).clip(sh)
-                                .background(if (on) androidx.compose.ui.graphics.Color(0xFFBFE0DA) else p.card)
-                                .border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, sh)
+                                .background(if (on) p.brandSoft else p.card)
+                                .then(if (on) Modifier.border(3.dp, p.brand, sh) else Modifier)
                                 .steady(l.name + if (on) ", chosen" else ", not chosen") {
                                     app.settings.update { st -> val list = if (on) st.languages - l.tag else st.languages + l.tag; st.copy(languages = list.ifEmpty { listOf("en-IN") }) }
                                 }.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -624,7 +624,7 @@ private fun HelpSteps(emergency: String) {
             Icon(Icons.Rounded.ArrowDownward, null, tint = p.inkSoft.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
         }
         val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
-        Row(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(horizontal = 18.dp, vertical = 16.dp),
+        Row(Modifier.fillMaxWidth().clip(sh).background(p.card).padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
             com.suryaprakash.medlog.ui.OptionIcon(icon, tint, 64.dp)
             Spacer(Modifier.width(16.dp))
@@ -656,7 +656,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
     val sh = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
     val order = listOf("first", "second", "third", "fourth", "fifth")[i.coerceAtMost(4)]
     val before = all.getOrNull(i - 1)?.name?.substringBefore(" ")
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh)) {
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card)) {
         Column(Modifier.fillMaxWidth().padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(76.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(21.dp)).background(p.fill), contentAlignment = Alignment.Center) {
@@ -885,7 +885,7 @@ private fun FactTile(label: String, value: String, icon: androidx.compose.ui.gra
     val p = LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
-    Row(modifier.clip(sh).background(p.card).border(1.dp, p.line, sh).padding(horizontal = 14.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.clip(sh).background(p.card).padding(horizontal = 14.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         com.suryaprakash.medlog.ui.OptionIcon(icon, tint, 40.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -1061,8 +1061,8 @@ private fun AccessRow(title: String, icon: androidx.compose.ui.graphics.vector.I
                 val csh = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
                 Row(
                     Modifier.fillMaxWidth().clip(csh)
-                        .background(if (c.on) androidx.compose.ui.graphics.Color(0xFFBFE0DA) else p.card)
-                        .border(if (c.on) 3.dp else 1.dp, if (c.on) p.brand else p.line, csh)
+                        .background(if (c.on) p.brandSoft else p.card)
+                        .then(if (c.on) Modifier.border(3.dp, p.brand, csh) else Modifier)
                         .steady(c.title + ". " + c.sub + if (c.on) ", chosen" else ", not chosen", onClick = c.toggle)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,

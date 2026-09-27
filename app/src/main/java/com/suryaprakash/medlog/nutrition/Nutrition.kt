@@ -24,6 +24,7 @@ object Nutrition {
     const val KCAL_PER_KG = 30.0
     const val PROTEIN_PER_KG = 1.0
 
+    data class FeedLine(val name: String, val detail: String, val since: String?)
     data class Day(val date: LocalDate, val kcal: Double, val protein: Double, val water: Int, val items: List<String>, val logged: Boolean)
     data class Finding(val text: String, val level: String)   // RED, AMBER, GREEN
     data class Missed(val at: Long, val feed: String, val ml: Double)
@@ -35,6 +36,8 @@ object Nutrition {
         val headline: Finding, val findings: List<Finding>,
         val missed: List<Missed>, val changes: List<String>, val observed: List<String>,
         val feeds: List<String>, val loggedDays: Int,
+        /** each feed given now, short: its name, how much and how often, and when it started or changed (if lately) */
+        val feedLines: List<FeedLine> = emptyList(),
     ) {
         val kcalPct get() = kcalTarget?.let { (100 * avgKcal / it).roundToInt() }
         val proteinPct get() = proteinTarget?.let { (100 * avgProtein / it).roundToInt() }
@@ -154,7 +157,12 @@ object Nutrition {
             "${m.name}, ${m.amount} × ${m.times.split(",").count { it.isNotBlank() }} a day" + if (info?.tube == true) " by tube" else " by mouth"
         }
 
+        val feedLines = meds.values.filter { it.active }.map { m ->
+            val info = Feeds.infoOf(m, infoJson)
+            FeedLine(m.name, "${m.amount} · ${m.times.split(",").count { it.isNotBlank() }} a day" + if (info?.tube == true) " · by tube" else "",
+                when { m.startDate >= from -> "Started ${d(m.startDate)}"; m.changedAt >= from -> "${m.changeNote.ifBlank { "Changed" }} ${d(m.changedAt)}"; else -> null })
+        }
         val headline = sorted.firstOrNull() ?: Finding("Nothing logged yet", "AMBER")
-        return Report(dayList, kTarget, pTarget, docK != null, avgKcal, avgProtein, weights, weightChange, weightDays, headline, sorted, missed, changes, observed, feeds, logged.size)
+        return Report(dayList, kTarget, pTarget, docK != null, avgKcal, avgProtein, weights, weightChange, weightDays, headline, sorted, missed, changes, observed, feeds, logged.size, feedLines)
     }
 }

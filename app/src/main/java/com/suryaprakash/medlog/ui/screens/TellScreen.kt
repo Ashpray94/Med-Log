@@ -454,7 +454,7 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
                 (0..10).chunked(6).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         row.forEach { n ->
-                            Box(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(14.dp)).background(p.paper).border(1.5.dp, p.line, RoundedCornerShape(14.dp)).steady("$n out of 10") { onAnswer(n, "$n out of 10") },
+                            Box(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(14.dp)).background(p.fill).steady("$n out of 10") { onAnswer(n, "$n out of 10") },
                                 contentAlignment = Alignment.Center) { Text("$n", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink) }
                         }
                         repeat(6 - row.size) { Spacer(Modifier.weight(1f)) }
@@ -575,7 +575,7 @@ fun NumberPad(unit: String, allowDecimal: Boolean, range: ClosedFloatingPointRan
     val v = text.toDoubleOrNull()
     val ok = v != null && v in range
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.fillMaxWidth().heightIn(min = sc.target * 1.2f).clip(RoundedCornerShape(sc.radius)).background(p.paper).border(2.dp, p.line, RoundedCornerShape(sc.radius)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().heightIn(min = sc.target * 1.2f).clip(RoundedCornerShape(sc.radius)).background(p.fill), contentAlignment = Alignment.Center) {
             Text(if (text.isEmpty()) "–" else "$text $unit".trim(), fontSize = sc.huge, fontWeight = FontWeight.Bold, color = p.ink)
         }
         val keys = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf(if (allowDecimal) "." else "", "0", "⌫"))

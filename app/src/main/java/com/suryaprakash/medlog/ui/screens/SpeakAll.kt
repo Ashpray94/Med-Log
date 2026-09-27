@@ -237,7 +237,7 @@ fun SpokenResults(r: SpeakSort.Result, nav: Nav, onAgain: () -> Unit) {
     r.saved.sortedBy { order.indexOf(it.kind) }.forEach { s ->
         val (icon, tint) = kindLook(s.kind, p)
         val sh = RoundedCornerShape(sc.radius)
-        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(sh).background(p.card).border(1.dp, p.line, sh)
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).clip(sh).background(p.card)
             .steady("${s.title}. Tap to change") { s.route?.let { nav.go(it) } }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             if (s.kind == Kind.SYMPTOM) (s.route as? Route.Tell)?.problemId?.let { SpriteIcon(it, 48.dp) } ?: OptionIcon(icon, tint, 48.dp) else OptionIcon(icon, tint, 48.dp)
             Spacer(Modifier.width(14.dp))

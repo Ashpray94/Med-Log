@@ -202,7 +202,7 @@ private fun FilterChip(text: String, on: Boolean, trailing: Boolean = false, onC
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(50)
-    Row(Modifier.heightIn(min = 48.dp).clip(sh).background(if (on) p.brandSoft else p.card).border(if (on) 2.dp else 1.dp, if (on) p.brand else p.line, sh)
+    Row(Modifier.heightIn(min = 48.dp).clip(sh).background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(2.dp, p.brand, sh) else Modifier)
         .steady(text, onClick = onClick).padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(text, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (on) p.brand else p.ink, maxLines = 1)
         if (trailing) Icon(Icons.Rounded.ExpandMore, null, tint = if (on) p.brand else p.inkSoft, modifier = Modifier.padding(start = 4.dp).size(20.dp))
@@ -227,7 +227,7 @@ private fun DishRow(f: Foods.Food, qty: Double, size: String, onSize: (String) -
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
     val now = if (qty > 0) Foods.Portion(f, qty, size) else Foods.Portion(f, f.start)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (qty > 0) 2.dp else 1.dp, if (qty > 0) p.brand else p.line, sh).padding(16.dp),
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).then(if (qty > 0) Modifier.border(2.dp, p.brand, sh) else Modifier).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -250,7 +250,7 @@ private fun DishRow(f: Foods.Food, qty: Double, size: String, onSize: (String) -
                     val q = basket[sd.name] ?: 0.0
                     val on = q > 0
                     val psh = RoundedCornerShape(50)
-                    Row(Modifier.heightIn(min = 48.dp).clip(psh).background(if (on) p.brandSoft else p.card).border(if (on) 2.dp else 1.dp, if (on) p.brand else p.line, psh)
+                    Row(Modifier.heightIn(min = 48.dp).clip(psh).background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(2.dp, p.brand, psh) else Modifier)
                         .steady("${sd.name}${if (on) ", " + Foods.Portion(sd, q).words else ""}. Tap to choose how much") { onSides?.invoke() }.padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Text(sd.name.replaceFirstChar(Char::uppercase) + if (on) " · ${Foods.Portion(sd, q).words}" else "", fontSize = sc.small, fontWeight = FontWeight.SemiBold,
@@ -273,8 +273,8 @@ private fun AddButton(qty: Double, f: Foods.Food, onAdd: () -> Unit, onRemove: (
     val sc = LocalScale.current
     val sh = RoundedCornerShape(12.dp)
     if (qty <= 0.0) {
-        Box(Modifier.width(112.dp).height(44.dp).clip(sh).background(p.card).border(1.5.dp, p.brand, sh).steady("Add ${f.name}", onClick = onAdd), contentAlignment = Alignment.Center) {
-            Text("ADD", fontSize = sc.small, fontWeight = FontWeight.ExtraBold, color = p.brand)
+        Box(Modifier.width(112.dp).height(44.dp).clip(sh).background(p.fill).steady("Add ${f.name}", onClick = onAdd), contentAlignment = Alignment.Center) {
+            Text("Add", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
         }
     } else {
         Row(Modifier.width(112.dp).height(44.dp).offset(0.dp, 0.dp).clip(sh).background(p.brand), verticalAlignment = Alignment.CenterVertically) {

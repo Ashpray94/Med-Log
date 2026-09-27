@@ -86,7 +86,7 @@ fun SettingsScreen(nav: Nav) {
     LaunchedEffect(Unit) { profile = app.repo.profile() }
 
     if (locked) {
-        Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }) {
             BigButton("Easy mode and reading aloud", icon = Icons.Rounded.TextFields, onClick = { nav.go(Route.EasySettings) })
             Card {
                 Body("Helper PIN", bold = true)
@@ -174,7 +174,7 @@ fun SettingsScreen(nav: Nav) {
             }
         }
         "doctors" -> DoctorsSection(onBack = { section = null })
-        else -> Screen("Settings", "Choose what to change.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        else -> Screen("Settings", "Choose what to change.", onHome = { nav.home() }) {
             val helpers by app.db.helpers().flow().collectAsState(emptyList())
             val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
             fun langs() = s.languages.joinToString(", ") { t -> com.suryaprakash.medlog.clinical.Lang.ALL.firstOrNull { it.tag == t }?.name ?: t }
@@ -227,7 +227,7 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
             }
-            Hint("MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
+            Hint("Version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
         }
     }
 }

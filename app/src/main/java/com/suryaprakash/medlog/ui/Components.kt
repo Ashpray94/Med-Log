@@ -253,7 +253,7 @@ fun Screen(
     val full = "$title. $speak"
     // the bottom bar only on the main pages; deeper pages get the room back, with SOS up by Read instead
     val here = nav?.current
-    val topLevel = here == Route.Home || here == Route.Help || here == Route.HelperHome || here == Route.HelperChat
+    val topLevel = here == Route.Home || here == Route.Help || here == Route.HelperHome || here == Route.HelperChat || here == Route.Settings
     val hasNav = nav != null && topLevel
     val sosUp = nav != null && !topLevel && here != Route.Emergency
     val typing = imeShowing()
@@ -275,7 +275,8 @@ fun Screen(
                     val up = !eyebrow.isNullOrBlank() && trailing != null
                     if (up) { trailing?.invoke(); Spacer(Modifier.width(10.dp)) }
                     if (sosUp) { SosPill(); Spacer(Modifier.width(10.dp)) }
-                    ReadToggle()
+                    // the main pages keep their top corner clear: Read is in Settings (and on every other page)
+                    if (!topLevel || nav == null) ReadToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
@@ -323,19 +324,19 @@ fun SosPill() {
 
 /**
  * Me | Helping as two icons beside the name: switches at once, no question. Each side shows its own colour
- * (teal for my health, indigo for helping), the same colour the whole app takes in that mode.
+ * (teal for my health, blue for helping), the same colour the whole app takes in that mode.
  */
 @Composable
 fun ModeSwitch(helping: Boolean, onChange: (Boolean) -> Unit) {
     val p = LocalPalette.current
-    Row(Modifier.clip(RoundedCornerShape(26.dp)).background(p.card).border(1.dp, p.outline, RoundedCornerShape(26.dp)).padding(3.dp)) {
+    Row(Modifier.clip(RoundedCornerShape(26.dp)).background(p.fill).padding(3.dp)) {
         listOf(Triple(false, Icons.Rounded.Person, "My health"), Triple(true, Icons.Rounded.Groups, "Helping someone")).forEach { (h, icon, label) ->
             val on = h == helping
             val tint = if (h) HELPER_BRAND else MY_BRAND
             Box(Modifier.size(48.dp).clip(CircleShape).background(if (on) tint else Color.Transparent)
                 .semantics { role = Role.Tab; selected = on }.steady(label + if (on) ", chosen" else "") { if (!on) onChange(h) },
                 contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = if (on) Color.White else tint, modifier = Modifier.size(24.dp))
+                Icon(icon, null, tint = if (on) Color.White else p.inkSoft, modifier = Modifier.size(24.dp))
             }
         }
     }
@@ -381,7 +382,7 @@ fun ReadToggle(modifier: Modifier = Modifier) {
     val on = s.autoRead
     val sh = RoundedCornerShape(24.dp)
     Row(
-        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card).border(1.5.dp, if (on) p.ok else p.outline, sh)
+        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card)
             .semantics { role = Role.Switch; stateDescription = if (on) "On" else "Off" }
             .steady("Read aloud") {
                 val now = !on
@@ -403,7 +404,7 @@ private fun BackLink(onBack: () -> Unit) {
     val sc = LocalScale.current
     @Suppress("UNUSED_VARIABLE") val unused = sc
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.dp, p.outline, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(48.dp).clip(sh).background(p.card).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
         Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
     }
 }
@@ -427,8 +428,9 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
         val people = if (helper) Route.HelperChat else Route.Help
         val tabs = listOfNotNull(
             Triple("Home", Icons.Rounded.Home, here == home) to { nav.home(home) },
-            Triple("SOS", Icons.Rounded.Sos, here == Route.Emergency) to { if (here != Route.Emergency) nav.go(Route.Emergency) },
             Triple(if (helper) "Helpers" else "Family", Icons.Rounded.Groups, here == people) to { nav.home(home); if (people != home) nav.go(people) },
+            Triple("SOS", Icons.Rounded.Sos, here == Route.Emergency) to { if (here != Route.Emergency) nav.go(Route.Emergency) },
+            Triple("Settings", Icons.Rounded.Settings, here == Route.Settings) to { nav.home(home); nav.go(Route.Settings) },
         )
         val ordered = if (s.leftHand) tabs.reversed() else tabs
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
@@ -447,15 +449,15 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
                     return@forEach
                 }
                 val tint = if (on) p.brand else p.inkSoft
-                // the current place sits on a soft teal square, in teal
+                // the current place: a quiet grey square, the icon in the accent, the word in bold dark
                 Column(
                     Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp))
-                        .background(if (on) p.brandSoft else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
+                        .background(if (on) p.fill else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
                     Spacer(Modifier.height(3.dp))
-                    Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.brand else p.inkSoft, maxLines = 1)
+                    Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.ink else p.inkSoft, maxLines = 1)
                 }
             }
         }
@@ -481,7 +483,7 @@ fun PillButton(text: String, icon: ImageVector?, bg: Color, fg: Color, border: C
 fun RoundIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
-        Modifier.size(48.dp).clip(CircleShape).background(p.card).border(1.dp, p.outline, CircleShape).steady(label, onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).background(p.card).steady(label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = p.inkSoft, modifier = Modifier.size(28.dp)) }
 }
@@ -508,9 +510,9 @@ fun BigButton(
     // both clearly less important, never competing with the accent.
     val (bg, fg) = when (tone) {
         Tone.PRIMARY -> p.brand to p.onBrand
-        Tone.SECONDARY -> p.paper to p.ink
-        Tone.OUTLINE -> Color.Transparent to p.brand
-        Tone.TINT -> p.brandSoft to p.brand
+        Tone.SECONDARY -> p.fill to p.ink
+        Tone.OUTLINE -> p.fill to p.ink
+        Tone.TINT -> p.fill to p.ink
         Tone.DANGER -> p.red to Color.White
         Tone.OK -> p.ok to Color.White
         Tone.AMBER -> p.amberSoft to p.amber
@@ -520,9 +522,8 @@ fun BigButton(
     val left = leading != null || sub != null
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
-            .background(if (enabled) bg else p.card)
-            .then(if (!enabled) Modifier.border(1.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
-            .then(if ((tone == Tone.SECONDARY || tone == Tone.OUTLINE || tone == Tone.QUIET) && enabled) Modifier.border(if (tone == Tone.QUIET) 1.5.dp else 1.dp, p.outline, RoundedCornerShape(16.dp)) else Modifier)
+            .background(if (enabled) bg else p.fill.copy(alpha = 0.5f))
+            
             .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -576,7 +577,7 @@ fun Choice(text: String, selected: Boolean, multi: Boolean = false, sub: String?
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
             .clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.outline, sh)
+            .background(if (selected) p.brandSoft else p.card).then(if (selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(text + if (selected) ", chosen" else ", not chosen", onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -611,10 +612,10 @@ fun SectionHeader(title: String, caption: String, action: String?, actionIcon: I
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.semantics { heading() })
             Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft)
         }
-        if (action != null) Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("$action: $title", onClick = onAction)
+        if (action != null) Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.fill).steady("$action: $title", onClick = onAction)
             .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (actionIcon != null) { Icon(actionIcon, null, tint = p.brand, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)) }
-            Text(action, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.brand)
+            if (actionIcon != null) { Icon(actionIcon, null, tint = p.ink, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)) }
+            Text(action, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink)
         }
     }
 }
@@ -633,10 +634,9 @@ fun Panel(title: String, icon: ImageVector, tint: Color, summary: String, open: 
     // opening: the body grows down from the header, then its contents fade in; closing is the same, reversed and a little quicker
     val ease = androidx.compose.animation.core.FastOutSlowInEasing
     fun <T> t(ms: Int, delay: Int = 0) = androidx.compose.animation.core.tween<T>(if (still) 0 else ms, if (still) 0 else delay, ease)
-    val edge by androidx.compose.animation.animateColorAsState(if (open) p.brand else p.outline, t(240), label = "edge")
     val keep = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
     LaunchedEffect(open) { if (open) { delay(if (still) 0 else 300); keep.bringIntoView() } }
-    Column(Modifier.fillMaxWidth().bringIntoViewRequester(keep).clip(sh).background(p.card).border(if (open) 2.dp else 1.dp, edge, sh)) {
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(keep).clip(sh).background(p.card)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title, $summary. ${if (open) "Close" else "Open"}", onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically) {
             OptionIcon(icon, tint, 44.dp)
@@ -749,7 +749,11 @@ fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = n
         modifier.fillMaxWidth().scale(pressScale(pressed))
             
             .clip(sh).background(color ?: p.card)
-            .then(if (border != null) Modifier.border(2.dp, border, sh) else Modifier)
+            .then(when {
+                border == null -> Modifier
+                border == p.line || border == p.outline -> Modifier
+                else -> Modifier.drawBehind { drawRect(border, size = androidx.compose.ui.geometry.Size(5.dp.toPx(), size.height)) }
+            })
             .then(if (onClick != null) Modifier.steady(label, onPress = { pressed = it }, onClick = onClick) else Modifier)
             .padding(padding),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -888,7 +892,7 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
     val sh = RoundedCornerShape(sc.radius)
     Box(
         modifier.scale(pressScale(pressed)).clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.outline, sh)
+            .background(if (selected) p.brandSoft else color ?: p.card).then(if (selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
         Column(Modifier.fillMaxSize().padding(TILE_PAD), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
@@ -925,8 +929,7 @@ fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick
     val sc = LocalScale.current
     Row(
         modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(26.dp))
-            .background(if (selected) p.brand else p.paper)
-            .then(if (!selected) Modifier.border(1.dp, p.outline, RoundedCornerShape(26.dp)) else Modifier)
+            .background(if (selected) p.brand else p.fill)
             .steady(text + if (selected) ", chosen" else "", onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -962,7 +965,7 @@ fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     // every choice as tall as the tallest: a long label (in Hindi or Tamil, or large words) wraps instead of being cut
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.card).border(1.dp, p.outline, RoundedCornerShape(16.dp)).padding(4.dp)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(16.dp)).background(p.fill).padding(4.dp)) {
         options.forEachIndexed { i, o ->
             Box(
                 Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent)
@@ -1069,7 +1072,7 @@ fun FlowActions(primary: String?, primaryEnabled: Boolean, onPrimary: () -> Unit
         if (secondary != null) {
             Text(secondary, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, maxLines = 1,
                 modifier = Modifier.heightIn(min = sc.target).clip(RoundedCornerShape(16.dp))
-                    .border(1.5.dp, p.inkSoft.copy(alpha = 0.45f), RoundedCornerShape(16.dp)).steady(secondary, onClick = onSecondary)
+                    .background(p.fill).steady(secondary, onClick = onSecondary)
                     .padding(horizontal = 20.dp).wrapContentHeight(Alignment.CenterVertically))
             if (primary != null) Spacer(Modifier.width(20.dp))
         }
@@ -1128,8 +1131,8 @@ private fun BigOptionCard(o: BigOption, modifier: Modifier) {
     Box(
         modifier.heightIn(min = if (sc.big) 230.dp else 200.dp).scale(pressScale(pressed))
             
-            .clip(sh).background(if (o.selected) Color(0xFFBFE0DA) else p.card)
-            .border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.outline, sh)
+            .clip(sh).background(if (o.selected) p.brandSoft else p.card)
+            .then(if (o.selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick),
         contentAlignment = Alignment.Center,          // the picture and words sit in the middle of the card
     ) {
@@ -1158,7 +1161,7 @@ fun ChoiceGrid(items: List<String>, isOn: (String) -> Boolean, onToggle: (String
                     val sh = RoundedCornerShape(18.dp)
                     Box(
                         Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(sh)
-                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.outline, sh)
+                            .background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(3.dp, p.brand, sh) else Modifier)
                             .steady(item + if (on) ", chosen" else ", not chosen") { onToggle(item) }.padding(horizontal = 16.dp, vertical = 12.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) { Text(item, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink) }
@@ -1216,7 +1219,7 @@ private fun BigOptionRow(o: BigOption) {
     var pressed by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().heightIn(min = if (sc.big) 132.dp else 116.dp).scale(pressScale(pressed)).clip(sh)
-            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.outline, sh)
+            .background(if (o.selected) p.brandSoft else p.card).then(if (o.selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1272,29 +1275,83 @@ fun Group(content: @Composable ColumnScope.() -> Unit) {
 fun GroupLine() = Box(Modifier.padding(start = 18.dp).fillMaxWidth().height(1.dp).background(LocalPalette.current.line))
 
 /**
- * One fact in a [Group]: what it is on the left, its value on the right ("Doctor — Dr. Rao, Heart"). Tappable
- * rows end in a chevron; an empty value shows a quiet "Add".
+ * One short fact in a [Group], as a key and its value side by side ("Calories a day  1,600 kcal"). Only for
+ * summaries: when either side is long they stack (the key small on top, the value under it), so nothing is squeezed.
+ * A row you can tap is never a key-value row: it becomes a [NavRow].
  */
 @Composable
 fun ValueRow(label: String, value: String?, sub: String? = null, valueColor: Color? = null, onClick: (() -> Unit)? = null) {
+    if (onClick != null) { NavRow(label, value, sub, valueColor, onClick); return }
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = sc.target + 4.dp)
-            .then(if (onClick != null) Modifier.steady(label + ": " + (value ?: "not added"), onClick = onClick) else Modifier)
-            .padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // the name and the value share the row (the name a little more), so neither squeezes the other into broken words
-        Column(Modifier.weight(1.2f)) {
+    val v = value?.ifBlank { null } ?: "–"
+    val side = label.length <= 24 && v.length <= 16
+    if (side) Row(Modifier.fillMaxWidth().heightIn(min = sc.target + 4.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
             Text(label, fontSize = sc.body, color = p.ink, fontWeight = FontWeight.Medium)
             if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
         }
         Spacer(Modifier.width(12.dp))
-        Text(value?.ifBlank { null } ?: if (onClick != null) "Add" else "–", fontSize = sc.body, fontWeight = FontWeight.SemiBold,
-            color = when { value.isNullOrBlank() && onClick != null -> p.brand; else -> valueColor ?: p.inkSoft },
-            textAlign = TextAlign.End, modifier = Modifier.weight(1f, fill = false))
-        if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
+        Text(v, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = valueColor ?: p.ink, textAlign = TextAlign.End)
+    } else Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+        Text(label, fontSize = sc.small, color = p.inkSoft, fontWeight = FontWeight.Medium)
+        Text(v, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = valueColor ?: p.ink)
+        if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
+    }
+}
+
+/**
+ * A row that opens something, in a [Group]: its name, what it's set to on the line under it (never squeezed into a
+ * second column), and a chevron.
+ */
+@Composable
+fun NavRow(title: String, value: String? = null, sub: String? = null, valueColor: Color? = null, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = sc.target + 4.dp).steady(title + ": " + (value ?: sub ?: ""), onClick = onClick).padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = sc.body, color = p.ink, fontWeight = FontWeight.Medium)
+            value?.ifBlank { null }?.let { Text(it, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = valueColor ?: p.inkSoft) }
+            if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
+    }
+}
+
+/** One entry on a [Timeline]: when, what (any length), an optional line under it, and a dot colour only when it matters. */
+data class TimelineItem(val time: String, val text: String, val sub: String? = null, val mark: Color? = null, val onClick: (() -> Unit)? = null)
+
+/**
+ * Things that happened, newest first, down a thin line: the time small on top, the words under it at full width,
+ * so a long message reads as easily as a short one. For history only; facts go in [ValueRow].
+ */
+@Composable
+fun Timeline(items: List<TimelineItem>) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(sc.radius)
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 4.dp)) {
+        items.forEachIndexed { i, it ->
+            val last = i == items.lastIndex
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+                .then(if (it.onClick != null) Modifier.clip(RoundedCornerShape(12.dp)).steady("${it.time}. ${it.text}", onClick = it.onClick) else Modifier)) {
+                Column(Modifier.width(18.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(it.mark ?: p.outline))
+                    if (!last) Box(Modifier.padding(top = 4.dp).width(2.dp).weight(1f).background(p.line))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f).padding(bottom = 14.dp)) {
+                    Text(it.time, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+                    Text(it.text, fontSize = sc.body, color = it.mark?.takeIf { m -> m == p.red } ?: p.ink, fontWeight = FontWeight.Medium)
+                    if (it.sub != null) Text(it.sub, fontSize = sc.small, color = p.inkSoft)
+                }
+                if (it.onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.padding(top = 10.dp).size(24.dp))
+            }
+        }
     }
 }
 

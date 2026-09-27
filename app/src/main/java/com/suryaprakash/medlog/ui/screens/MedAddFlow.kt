@@ -309,7 +309,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                     row.forEach { (k, c) ->
                         val on = m.color.ifBlank { "white" } == k
                         Box(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(16.dp)).background(Color(c))
-                            .border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, RoundedCornerShape(16.dp))
+                            .then(if (on) Modifier.border(3.dp, p.brand, RoundedCornerShape(16.dp)) else Modifier)
                             .steady(k.replaceFirstChar(Char::uppercase) + if (on) ", chosen" else "") { m = m.copy(color = k) })
                     }
                 }
@@ -443,7 +443,7 @@ private fun TimeCard(t: String, amount: String, onOpen: () -> Unit, onRemove: ()
     val hour = t.substringBefore(":").toIntOrNull() ?: 8
     val (icon, tint, part) = com.suryaprakash.medlog.ui.dayPart(hour)
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh)
+    Box(Modifier.fillMaxWidth().clip(sh).background(p.card)
         .steady("$part, ${timeWords(t)}, $amount. Tap to change", onClick = onOpen), contentAlignment = Alignment.CenterStart) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             OptionIcon(icon, tint, 64.dp)
@@ -584,7 +584,7 @@ private fun LookTile(label: String, on: Boolean, modifier: Modifier, onClick: ()
     val p = LocalPalette.current
     val sc = LocalScale.current
     Box(modifier.fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(RoundedCornerShape(18.dp))
-        .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, RoundedCornerShape(18.dp))
+        .background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(3.dp, p.brand, RoundedCornerShape(18.dp)) else Modifier)
         .steady(label + if (on) ", chosen" else "", onClick = onClick).padding(10.dp), contentAlignment = Alignment.Center) {
         Text(label, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
     }
@@ -738,7 +738,8 @@ fun MedicinePicture(m: Medicine, size: Dp) {
 
 /** How much one dose is, in words: "1 tablet", "2 puffs", "10 ml". */
 fun doseWords(m: Medicine): String {
-    if (m.form == "feed") return m.amount
+    // an amount already in words ("2 puffs", "18 units") is used as it is
+    if (m.form == "feed" || m.amount.any { it.isLetter() }) return m.amount
     val unit = when (m.form) { "syrup", "drops" -> "ml"; "cream" -> "use"; "inhaler" -> "puff"; "injection" -> "dose"; else -> m.form }
     return amountWords(m.amount, unit)
 }
@@ -752,8 +753,8 @@ fun MedicineCard(m: Medicine, onClick: () -> Unit) {
     val unit = when (m.form) { "syrup", "drops" -> "ml"; "cream" -> "use"; "inhaler" -> "puff"; "injection" -> "dose"; else -> m.form }
     val whenWords = if (m.asNeeded || times.isEmpty()) "When needed" else
         (if (times.size == 1) timeWords(times[0]) else times.dropLast(1).joinToString(", ") { timeWords(it) } + " and " + timeWords(times.last())) +
-            " · " + amountWords(m.amount, unit)
-    Row(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh)
+            " · " + doseWords(m)
+    Row(Modifier.fillMaxWidth().clip(sh).background(p.card)
         .steady("${m.name} ${m.strength}. $whenWords. Tap to change", onClick = onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         MedicinePicture(m, 64.dp)
         Spacer(Modifier.width(14.dp))

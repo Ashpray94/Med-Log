@@ -31,8 +31,8 @@ android {
         applicationId = "com.suryaprakash.medlog"
         minSdk = 23
         targetSdk = 35
-        versionCode = 2102
-        versionName = "2.10.2"
+        versionCode = 2103
+        versionName = "2.10.3"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -79,7 +79,7 @@ android {
         unitTests.isIncludeAndroidResources = true
         // scripts/shots.sh passes which screens to draw
         unitTests.all { t ->
-            listOf("shots", "shots.role", "shots.tall", "shots.lang", "shots.big").forEach { k -> System.getProperty(k)?.let { t.systemProperty(k, it) } }
+            listOf("shots", "shots.role", "shots.tall", "shots.lang", "shots.big", "shots.answered", "shots.worst", "shots.long").forEach { k -> System.getProperty(k)?.let { t.systemProperty(k, it) } }
             t.systemProperty("shots.dir", layout.buildDirectory.dir("shots").get().asFile.absolutePath)
             t.maxHeapSize = "3g"
             // screenshots load Robolectric's native graphics; only when asked for, never in ordinary test runs

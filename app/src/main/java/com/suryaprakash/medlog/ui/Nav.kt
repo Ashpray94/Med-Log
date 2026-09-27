@@ -19,6 +19,8 @@ sealed interface Route {
     data object DidITake : Route
     /** From the widget: which medicine you're noting as taken, one tap each. */
     data object TookNow : Route
+    /** Every medicine for today (and feeds, on a helper's phone), from "See all". */
+    data class TodayMeds(val feeds: Boolean = false) : Route
     data object Food : Route
     data class SpeakAll(val text: String? = null) : Route
     data class Output(val tab: Int = -1) : Route

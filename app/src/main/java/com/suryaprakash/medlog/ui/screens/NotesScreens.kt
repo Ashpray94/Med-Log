@@ -384,7 +384,7 @@ private fun HistoryGroup(title: String, sub: String, icon: @Composable () -> Uni
     val p = LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(if (open) 2.dp else 1.dp, if (open) p.brand else p.line, sh)) {
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).then(if (open) Modifier.border(2.dp, p.brand, sh) else Modifier)) {
         Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title. $sub", onClick = onToggle).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             icon()
             Spacer(Modifier.width(14.dp))

@@ -248,7 +248,7 @@ fun NumberWheel(values: List<Int>, selected: Int, onSelected: (Int) -> Unit, mod
     androidx.compose.runtime.LaunchedEffect(centre) { if (list.isScrollInProgress || centre == start) values.getOrNull(centre)?.let(onSelected) else if (list.firstVisibleItemIndex != 0 || start == 0) values.getOrNull(centre)?.let(onSelected) }
     Box(modifier.fillMaxWidth().height(rowH * 5)) {
         // the chosen row
-        Box(Modifier.align(Alignment.Center).fillMaxWidth().height(rowH).clip(RoundedCornerShape(16.dp)).background(Color(0xFFBFE0DA)))
+        Box(Modifier.align(Alignment.Center).fillMaxWidth().height(rowH).clip(RoundedCornerShape(16.dp)).background(p.brandSoft))
         androidx.compose.foundation.lazy.LazyColumn(state = list, flingBehavior = snap, modifier = Modifier.fillMaxSize(),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = rowH * 2)) {
             items(values.size) { i ->

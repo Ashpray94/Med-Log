@@ -146,7 +146,7 @@ fun OutputScreen(nav: Nav, start: Int = -1) {
             val pics = listOf("loose_motions", "frequent_urine", "vomiting")
             order.forEach { i ->
                 val sh = RoundedCornerShape(sc.radius)
-                Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).clip(sh).background(p.card).border(1.dp, p.outline, sh)
+                Row(Modifier.fillMaxWidth().heightIn(min = 88.dp).clip(sh).background(p.card)
                     .steady(names[i]) { tab = i; reset(); picking = false }.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     com.suryaprakash.medlog.pictogram.SpriteIcon(pics[i], 56.dp)
                     Spacer(Modifier.width(16.dp))
@@ -179,7 +179,7 @@ fun OutputScreen(nav: Nav, start: Int = -1) {
                 TileGrid((1..7).toList(), 2, aspect = 1.25f) { n, mod ->
                     val on = form == n
                     val sh = RoundedCornerShape(sc.radius)
-                    Column(mod.clip(sh).background(if (on) p.brandSoft else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.outline, sh)
+                    Column(mod.clip(sh).background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(3.dp, p.brand, sh) else Modifier)
                         .steady("Type $n, ${Output.STOOL[n - 1]}" + if (on) ", chosen" else "") { form = n }.padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                         StoolPicture(n, Modifier.fillMaxWidth().height(48.dp))
