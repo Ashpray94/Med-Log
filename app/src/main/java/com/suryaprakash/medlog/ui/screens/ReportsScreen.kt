@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.planned
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -80,7 +81,7 @@ suspend fun buildStats(ctx: android.content.Context, days: Int): Pair<List<Probl
     }.sortedByDescending { it.total }
     // medicines
     val meds = app.viewDb.medicines().all().associateBy { it.id }
-    val doses = app.viewDb.doses().between(start, minOf(end, System.currentTimeMillis()))
+    val doses = app.viewDb.doses().between(start, minOf(end, System.currentTimeMillis())).planned()
     val medLines = ArrayList<String>()
     if (doses.isNotEmpty()) {
         val taken = doses.count { it.status == DoseStatus.TAKEN }

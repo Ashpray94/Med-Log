@@ -1,4 +1,5 @@
 package com.suryaprakash.medlog.ui.screens
+import com.suryaprakash.medlog.data.planned
 import androidx.compose.material.icons.rounded.Wc
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.ColumnScope
@@ -189,7 +190,7 @@ fun NotesScreen(nav: Nav) {
         if (!byProblem) {
             DayNavigator(day, onPrev = { day = day.minusDays(1) }, onNext = { if (day.isBefore(LocalDate.now())) day = day.plusDays(1) })
             WeekStrip(day, daysWith) { day = it }
-            DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, feedDoses.count { it.status == DoseStatus.TAKEN }, feedDoses.size, onNote = { nav.go(Route.NoteDetail(it)) },
+            DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, feedDoses.planned().count { it.status == DoseStatus.TAKEN }, feedDoses.planned().size, onNote = { nav.go(Route.NoteDetail(it)) },
                 medsLate = late(doses), feedsLate = late(feedDoses), medDoses = doses.mapNotNull { d -> medForms.firstOrNull { it.id == d.medicineId }?.let { it.name to d } },
                 onGo = { nav.go(it) })
         } else {
@@ -318,7 +319,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
             val status = when (d.status) {
                 DoseStatus.TAKEN -> "Taken" + (d.actedAt?.let { " at ${timeLabel(it)}" } ?: "")
                 DoseStatus.MISSED -> "Missed"
-                DoseStatus.SKIPPED -> if (d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) "Food instead" else "Skipped"
+                DoseStatus.SKIPPED -> if (d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS else "Skipped"
                 else -> if (d.scheduledAt > System.currentTimeMillis()) "Later today" else "Not taken yet"
             }
             com.suryaprakash.medlog.ui.TimelineRow(com.suryaprakash.medlog.ui.TimelineItem(timeLabel(d.scheduledAt), name, status,

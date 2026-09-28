@@ -102,6 +102,8 @@ class Describe(private val cat: Catalogue) {
             "depth" -> "$v"
             "site" -> "$v".lowercase()
             "started" -> "started ${"$v".lowercase()}"
+            "often" -> "$v"
+            "diagnosed" -> if (v == "not yet") "not seen a doctor for it yet" else "known to a doctor for ${"$v".replace("under a month", "less than a month").replace("over a year", "more than a year")}"
             else -> "${cat.field(key)?.label ?: key}: $v"
         }
     }

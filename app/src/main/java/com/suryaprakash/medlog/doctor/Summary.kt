@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.doctor
 
+import com.suryaprakash.medlog.data.planned
 import com.suryaprakash.medlog.clinical.Catalogue
 import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Describe
@@ -101,7 +102,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val missed = md.count { it.status == DoseStatus.MISSED || it.status == DoseStatus.SKIPPED }
             if (md.isNotEmpty() && missed > 0 && (missed * 5 >= md.size || m.critical)) {
-                val why = md.mapNotNull { it.reason }.groupingBy { it }.eachCount().entries.joinToString { "${it.key} ×${it.value}" }
+                val why = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key} ×${it.value}" }
                 concerns += (if (m.critical) 2500 else 1500) to Summary.Concern(if (m.critical) "AMBER" else "GREEN", "Missed ${m.name}: $missed of ${md.size} doses${if (why.isNotBlank()) " ($why)" else ""}", emptyList())
             }
         }
@@ -142,7 +143,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
 
         // ── medicines ──
         val medRows = meds.filter { it.active || it.changedAt >= from }.map { m ->
-            val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
+            val md = doses.planned().filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val taken = md.count { it.status == DoseStatus.TAKEN }
             val prn = notes.count { it.kind == Kind.MED_TAKEN && runCatching { JSONObject(it.details).optString("name") }.getOrNull() == m.name }
             val times = m.times.split(",").count { it.isNotBlank() }
@@ -155,7 +156,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
                     m.changeNote.takeIf { it.isNotBlank() && it != "started" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,
                     if (!m.active) "stopped" else null,
-                    md.mapNotNull { it.reason }.distinct().takeIf { it.isNotEmpty() }?.joinToString(prefix = "skipped: "),
+                    md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.distinct().takeIf { it.isNotEmpty() }?.joinToString(prefix = "skipped: "),
                 ).joinToString("; "),
             )
         } + notes.filter { it.kind == Kind.MED_TAKEN }.mapNotNull { runCatching { JSONObject(it.details).optString("name") }.getOrNull() }

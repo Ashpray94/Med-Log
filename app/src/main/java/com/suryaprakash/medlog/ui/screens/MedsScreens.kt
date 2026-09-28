@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.planned
 import android.graphics.BitmapFactory
 import com.suryaprakash.medlog.ui.steady
 import androidx.compose.foundation.layout.padding
@@ -85,7 +86,7 @@ fun MedPhoto(path: String?, sizeMul: Float = 1.2f) {
 
 private fun statusWord(d: Dose, now: Long) = when (d.status) {
     DoseStatus.TAKEN -> "✓ Taken ${d.actedAt?.let { DoseActivity.time(it) } ?: ""}"
-    DoseStatus.SKIPPED -> "Skipped" + (d.reason?.let { ": $it" } ?: "")
+    DoseStatus.SKIPPED -> if (d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS else "Skipped" + (d.reason?.let { ": $it" } ?: "")
     DoseStatus.MISSED -> "Missed"
     DoseStatus.SNOOZED -> "Later: ${d.snoozeUntil?.let { DoseActivity.time(it) } ?: ""}"
     else -> if (d.scheduledAt <= now) "Due now" else "Later today"
@@ -134,8 +135,8 @@ fun MedsScreen(nav: Nav) {
     Screen("Medicines", speak, onHome = { nav.home() }, onBack = { nav.back() }, subtitle = "What to take, and when") {
         // today, dose by dose, the same cards as Home
         if (doses.isNotEmpty()) {
-            val taken = doses.count { it.status == DoseStatus.TAKEN }
-            com.suryaprakash.medlog.ui.SectionHeader("Today", if (taken == doses.size) "All ${doses.size} taken" else "$taken of ${doses.size} taken", null)
+            val taken = doses.planned().count { it.status == DoseStatus.TAKEN }
+            com.suryaprakash.medlog.ui.SectionHeader("Today", if (taken == doses.planned().size) "All ${doses.planned().size} taken" else "$taken of ${doses.planned().size} taken", null)
             doses.groupBy { it.medicineId }.forEach { (id, g) ->
                 val m = byId[id] ?: return@forEach
                 DayCard(m, g, onOpen = { nav.go(Route.MedEdit(m.id)) },

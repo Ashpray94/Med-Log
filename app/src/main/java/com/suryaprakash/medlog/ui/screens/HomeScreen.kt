@@ -95,6 +95,9 @@ import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.savedFeedback
 import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.launch
+import com.suryaprakash.medlog.data.planned
+import com.suryaprakash.medlog.data.extra
+import com.suryaprakash.medlog.data.removed
 import java.text.SimpleDateFormat
 import java.time.LocalTime
 import java.util.Date
@@ -330,15 +333,25 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
  */
 @Composable
 fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)? = null,
-            onTakenAt: ((Dose, Long) -> Unit)? = null, who: String? = null, modifier: Modifier = Modifier, onAteInstead: ((Dose) -> Unit)? = null) {
+            onTakenAt: ((Dose, Long) -> Unit)? = null, who: String? = null, modifier: Modifier = Modifier, onAteInstead: ((Dose) -> Unit)? = null,
+            mirror: String? = null) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val now = System.currentTimeMillis()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    // an extra feed, for hunger between the set times: on this phone, or on the person's records from a helper's phone
+    fun onRecords(block: suspend () -> Unit) = scope.launch {
+        val before = com.suryaprakash.medlog.data.Viewing.pairId.value
+        if (mirror != null) com.suryaprakash.medlog.data.Viewing.pairId.value = mirror
+        try { block() } finally { if (mirror != null) com.suryaprakash.medlog.data.Viewing.pairId.value = before }
+    }
+    val extras = doses.filter { it.extra && !it.removed }.sortedBy { it.actedAt ?: it.scheduledAt }
     // one meaning for every dose (data/DoseOutcome.kt): food in place of a feed is done, never missed
     fun taken(d: Dose) = d.outcome(now).covered
     fun missed(d: Dose) = d.outcome(now) == com.suryaprakash.medlog.data.Outcome.MISSED
     fun due(d: Dose) = d.outcome(now) == com.suryaprakash.medlog.data.Outcome.DUE
-    val sorted = doses.sortedBy { it.scheduledAt }
+    val sorted = doses.planned().sortedBy { it.scheduledAt }
     // the dose that needs an answer on the card: one due now, else the latest missed one (to note it late)
     val next = sorted.firstOrNull(::due) ?: sorted.lastOrNull(::missed)
     val feed = m.form == "feed"
@@ -369,6 +382,8 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
                         Text(if (sorted.size == 1) "${chipTime(sorted[0].scheduledAt)} every day"
                             else sorted.take(3).joinToString(", ") { chipTime(it.scheduledAt) } + if (sorted.size > 3) " +${sorted.size - 3} more" else "",
                             fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        if (extras.isNotEmpty()) Text("+ ${extras.size} extra feed${if (extras.size == 1) "" else "s"} · ${chipTime(extras.last().actedAt ?: extras.last().scheduledAt)}",
+                            fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
                 }
                 // Details always on the left; the answer, when one is needed, on the right. With large words or in
@@ -394,7 +409,9 @@ fun DayCard(m: Medicine, doses: List<Dose>, onOpen: () -> Unit, onTaken: (Dose) 
         StatusBanner(sorted, feed, ::taken, ::due)
     }
     if (sheet) DaySheet(m, name, sorted, ::taken, ::missed, ::due, onOpen = { sheet = false; onOpen() }, onTaken = answer, onUndo = onUndo, onNotGiven = onNotGiven,
-        onChangeTime = onTakenAt, onDismiss = { sheet = false })
+        onChangeTime = onTakenAt, onDismiss = { sheet = false },
+        extras = extras, onExtra = if (feed) { at -> onRecords { com.suryaprakash.medlog.data.Doses.extra(ctx, m.id, at ?: System.currentTimeMillis()) } } else null,
+        onUnextra = { d -> onRecords { com.suryaprakash.medlog.data.Doses.unextra(ctx, d.id) } })
     asking?.let { d -> TakenWhenSheet(d, feed, who = who, onPick = { at -> asking = null; if (at == null) onTaken(d) else onTakenAt?.invoke(d, at) ?: onTaken(d) },
         onDismiss = { asking = null }, onAteInstead = onAteInstead?.let { f -> { asking = null; f(d) } }, onNotGiven = onNotGiven?.let { f -> { asking = null; f(d) } }) }
 }
@@ -421,8 +438,8 @@ private fun StatusBanner(sorted: List<Dose>, feed: Boolean, taken: (Dose) -> Boo
         missed.isNotEmpty() -> B(Icons.Rounded.Cancel, "Missed · " + chipTime(missed.last().scheduledAt) + if (missed.size > 1) " and ${missed.size - 1} more" else "", p.red, p.redSoft)
         nowDue != null -> B(Icons.Rounded.Schedule, "Due now · ${chipTime(nowDue.scheduledAt)}", p.amber, p.amberSoft)
         done == sorted.size -> B(Icons.Rounded.CheckCircle, when {
-            food > 0 && food == sorted.size -> "Food instead, all ${sorted.size} times"
-            food > 0 -> "Done for today · $food with food instead"
+            food > 0 && food == sorted.size -> "Food taken instead of feed, all ${sorted.size} times"
+            food > 0 -> "Done for today · food taken instead of feed ×$food"
             sorted.size == 1 -> "${gave.replaceFirstChar(Char::uppercase)} at ${chipTime(sorted[0].actedAt ?: sorted[0].scheduledAt)}"
             else -> "All ${sorted.size} $gave"
         }, p.ok, p.okSoft)
@@ -458,7 +475,7 @@ fun TakenWhenSheet(d: Dose, feed: Boolean, who: String? = null, onPick: (Long?) 
             if (onDay == java.time.LocalDate.now()) BigButton("Just now", tone = Tone.TINT, onClick = { onPick(null) })
             BigButton("Another time", tone = Tone.SECONDARY, onClick = { other = true })
             // a feed can be replaced by ordinary food: note that instead, then what was eaten
-            if (feed && onAteInstead != null) BigButton(com.suryaprakash.medlog.data.FOOD_INSTEAD, tone = Tone.SECONDARY, icon = Icons.Rounded.Restaurant, onClick = onAteInstead)
+            if (feed && onAteInstead != null) BigButton(com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS, tone = Tone.SECONDARY, icon = Icons.Rounded.Restaurant, onClick = onAteInstead)
             if (feed && onNotGiven != null) BigButton("Not given", tone = Tone.SECONDARY, onClick = onNotGiven)
         }
     }
@@ -488,8 +505,11 @@ fun chipTime(at: Long): String {
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose) -> Boolean, missed: (Dose) -> Boolean, due: (Dose) -> Boolean,
-                     onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?, onChangeTime: ((Dose, Long) -> Unit)? = null, onDismiss: () -> Unit) {
+                     onOpen: () -> Unit, onTaken: (Dose) -> Unit, onUndo: (Dose) -> Unit, onNotGiven: ((Dose) -> Unit)?, onChangeTime: ((Dose, Long) -> Unit)? = null, onDismiss: () -> Unit,
+                     extras: List<Dose> = emptyList(), onExtra: ((Long?) -> Unit)? = null, onUnextra: (Dose) -> Unit = {}) {
     var changing by remember { mutableStateOf<Dose?>(null) }
+    var extraWhen by remember { mutableStateOf(false) }
+    if (extraWhen) { com.suryaprakash.medlog.ui.WhenSheet(System.currentTimeMillis(), onDone = { t -> extraWhen = false; onExtra?.invoke(t) }, onDismiss = { extraWhen = false }); return }
     changing?.let { d -> com.suryaprakash.medlog.ui.WhenSheet(d.actedAt ?: d.scheduledAt, onDone = { t -> changing = null; onChangeTime?.invoke(d, t ?: System.currentTimeMillis()) }, onDismiss = { changing = null }); return }
     val p = LocalPalette.current
     val sc = LocalScale.current
@@ -522,7 +542,7 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
                             val o = d.outcome()
                             Text(when (o) {
                                 com.suryaprakash.medlog.data.Outcome.GIVEN -> "${if (feed) "Given" else "Taken"} at ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}"
-                                com.suryaprakash.medlog.data.Outcome.FOOD_INSTEAD -> "Food instead"
+                                com.suryaprakash.medlog.data.Outcome.FOOD_INSTEAD -> com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS
                                 com.suryaprakash.medlog.data.Outcome.NOT_GIVEN -> if (feed) "Not given" else "Skipped"
                                 com.suryaprakash.medlog.data.Outcome.MISSED -> "Missed"
                                 com.suryaprakash.medlog.data.Outcome.DUE -> "Due now"
@@ -539,6 +559,28 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
                             else -> BigButton(if (feed) "Given" else if (missed(d)) "Took it late" else "Took it", Modifier.width(IntrinsicSize.Max), tone = if (due(d)) Tone.OK else Tone.TINT, height = 48.dp, onClick = { onTaken(d) })
                         }
                     }
+                }
+            }
+            // extra feeds: given outside the set times, for hunger in between; under the same feed, not counted against the plan
+            if (onExtra != null) {
+                com.suryaprakash.medlog.ui.SectionHeader("Extra feeds", if (extras.isEmpty()) "Hungry between feeds? Note it here." else "${extras.size} today, besides the set times", null)
+                if (extras.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
+                    extras.forEachIndexed { i, d ->
+                        if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.CheckCircle, null, tint = p.ok, modifier = Modifier.size(26.dp))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(DoseActivity.time(d.actedAt ?: d.scheduledAt), fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
+                                Text("Extra feed given", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ok)
+                            }
+                            BigButton("Undo", Modifier.width(IntrinsicSize.Max), tone = Tone.SECONDARY, height = 48.dp, onClick = { onUnextra(d) })
+                        }
+                    }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    BigButton("Extra feed now", Modifier.weight(1.3f), Tone.SECONDARY, icon = Icons.Rounded.Add, height = 52.dp, onClick = { onExtra(null) })
+                    BigButton("Earlier", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { extraWhen = true })
                 }
             }
             BigButton(if (feed) "See all feeds" else "See all medicines", tone = Tone.OUTLINE, height = 52.dp, onClick = onOpen)

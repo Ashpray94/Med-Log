@@ -42,6 +42,22 @@ object Interview {
 
     val WHERE = Ask("where", "site", "Show me where it is.", Kind.BODY)
 
+    /** For something that keeps coming back (a cough, breathlessness, headaches): how long it has been known, and how often. */
+    val DIAGNOSED = Ask("diagnosed", "diagnosed", "How long ago did a doctor say what it is?", Kind.CHOICE, listOf(
+        Choice("not yet", "Not seen a doctor yet", listOf("not yet", "no doctor", "not seen", "abhi nahi", "illai", "illa")),
+        Choice("under a month", "Less than a month", listOf("this month", "weeks", "few weeks", "is mahine", "indha maasam")),
+        Choice("1 to 6 months", "1 to 6 months", listOf("months", "few months", "kuch mahine", "konja maasam")),
+        Choice("6 to 12 months", "6 months to a year", listOf("six months", "half year", "chhe mahine", "aaru maasam")),
+        Choice("over a year", "More than a year", listOf("year", "years", "long time", "saal", "varusham", "romba naal")),
+    ))
+    val OFTEN = Ask("often", "often", "How often does it happen?", Kind.CHOICE, listOf(
+        Choice("all the time", "All the time", listOf("all the time", "always", "constant", "hamesha", "eppavum")),
+        Choice("many times a day", "Many times a day", listOf("many times", "again and again", "baar baar", "adikkadi")),
+        Choice("once or twice a day", "Once or twice a day", listOf("once a day", "twice a day", "daily", "every day", "roz", "dinamum")),
+        Choice("a few times a week", "A few times a week", listOf("week", "few times a week", "hafte", "vaaram")),
+        Choice("now and then", "Now and then", listOf("sometimes", "rarely", "now and then", "kabhi kabhi", "appappo")),
+    ))
+
     val DEPTH = Ask("depth", "depth", "How deep does it feel?", Kind.CHOICE, listOf(
         Choice("on the skin", "On the skin", listOf("skin", "surface", "outside", "upar", "mele", "tolu", "charma"), "depth_skin"),
         Choice("just under the skin", "Just under the skin", listOf("under the skin", "below the skin", "just under", "andar thoda"), "depth_under"),
@@ -129,6 +145,12 @@ object Interview {
     private val NO_SEVERITY = setOf("fainted", "fits", "fall", "near_fall", "choking", "sneeze", "burp", "hiccup", "black_stool", "blood_stool",
         "blood_urine", "high_bp", "low_bp", "low_sugar", "high_sugar", "low_oxygen", "self_harm", "confusion", "memory")
 
+    /** Things that often last or keep coming back, where the doctor wants to know since when and how often. */
+    private val LASTING = setOf("cough", "breathless", "wheeze", "headache", "migraine", "acidity", "constipation", "loose_motions", "dizzy",
+        "palpitations", "cant_sleep", "back_pain", "neck_pain", "hip_pain", "knee_pain", "shoulder_pain", "leg_pain", "foot_pain", "body_ache", "itching", "rash", "hives", "tremor", "numbness", "tingling", "foot_numb",
+        "frequent_urine", "leaking_urine", "low_mood", "anxious", "snoring", "hoarse", "runny_nose", "blocked_nose", "sneeze", "nausea", "tired", "weakness")
+    fun lasting(p: Problem) = p.id in LASTING
+
     private val BURNS = setOf("burn", "sunburn")
     private val ITCHY = setOf("itching", "itchy_eyes", "hives", "fungal", "rash")
     private val SENSATIONS = setOf("tingling", "numbness", "foot_numb", "nausea", "dizzy", "palpitations", "breathless", "anxious", "tired", "weakness", "chills", "hot_flush")
@@ -157,6 +179,9 @@ object Interview {
         if (locatable(p)) add(WHERE)
         if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
         if (p.id !in NO_SEVERITY) add(scaleFor(p))
+        // something that keeps coming back: how often, and since when a doctor has known; danger signs always come first,
+        // and whatever doesn't fit in the first few questions is asked with the rest
+        if (lasting(p)) listOf(OFTEN, DIAGNOSED).forEach { if (out.size < 6) add(it) }
         return out
     }
 
@@ -164,6 +189,7 @@ object Interview {
     fun extended(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field) && out.none { it.field == a.field }) out += a.copy(core = false) }
+        if (lasting(p)) core(cat, p, emptyMap()).map { it.field }.let { asked -> listOf(OFTEN, DIAGNOSED).filter { it.field !in asked }.forEach(::add) }
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
         dangerQuestions(cat, p).drop(2).forEach(::add)
@@ -178,7 +204,7 @@ object Interview {
                 else -> {}
             }
         }
-        if (locatable(p) || "pattern" in p.fields || p.region == "whole") add(PATTERN)
+        if (!lasting(p) && (locatable(p) || "pattern" in p.fields || p.region == "whole")) add(PATTERN)
         if (locatable(p)) { add(WORSE); add(BETTER) }
         add(TOOK_MED)
         add(ANYTHING)

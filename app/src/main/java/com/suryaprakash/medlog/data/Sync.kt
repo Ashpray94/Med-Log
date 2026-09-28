@@ -325,6 +325,17 @@ object Doses {
         val db = ctx.medlog.viewDb
         db.doses().get(id)?.let { db.doses().update(it.copy(status = DoseStatus.DUE, actedAt = null)) }
     }
+    /** An extra feed, outside the feed's times: given now or at [at]. */
+    suspend fun extra(ctx: Context, medicineId: Long, at: Long = System.currentTimeMillis()) {
+        val db = ctx.medlog.viewDb
+        db.doses().insert(Dose(medicineId = medicineId, scheduledAt = at, status = DoseStatus.TAKEN, actedAt = at, reason = EXTRA_FEED))
+        if (mirror() == null) ctx.medlog.refreshWidgets()
+    }
+    /** Takes back an extra feed noted by mistake. */
+    suspend fun unextra(ctx: Context, id: Long) {
+        val db = ctx.medlog.viewDb
+        db.doses().get(id)?.let { db.doses().update(it.copy(status = DoseStatus.SKIPPED, reason = EXTRA_REMOVED)) }
+    }
     suspend fun skip(ctx: Context, id: Long, reason: String) {
         if (mirror() == null) { com.suryaprakash.medlog.meds.Scheduler.skip(ctx, id, reason); return }
         val db = ctx.medlog.viewDb

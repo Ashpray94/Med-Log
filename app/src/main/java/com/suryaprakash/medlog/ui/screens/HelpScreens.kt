@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.planned
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.MonitorHeart
@@ -7,6 +8,7 @@ import androidx.compose.material.icons.rounded.History
 import com.suryaprakash.medlog.ui.cardTitle
 import android.content.Context
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -521,10 +523,10 @@ fun HelperHomeScreen(nav: Nav) {
                 val part = today.filter { (byId[it.medicineId]?.form == "feed") == feedPart }
                 if (part.isEmpty()) return@forEach
                 // for feeds, food given instead counts as done
-                val taken = part.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (feedPart && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD && it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) }
+                val taken = part.planned().count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (feedPart && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD && it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) }
                 val days = part.groupBy { it.medicineId }.map { (id, g) -> byId[id]!! to g }
                 com.suryaprakash.medlog.ui.SectionHeader(if (feedPart) "Their feeds today" else "Their medicines today",
-                    "$taken of ${part.size} ${if (feedPart) "done" else "taken"}", "See all ${days.size}") { view(Route.TodayMeds(feeds = feedPart)) }
+                    "$taken of ${part.planned().size} ${if (feedPart) "done" else "taken"}", "See all ${days.size}") { view(Route.TodayMeds(feeds = feedPart)) }
                 TodayMedsPreview(days) { (m, g), mod ->
                     DayCard(m, g, onOpen = { view(Route.Meds) },
                         onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Viewing.pairId.value = pp.pairId; com.suryaprakash.medlog.data.Doses.take(ctx, d.id); com.suryaprakash.medlog.data.Viewing.pairId.value = null } },
@@ -586,6 +588,9 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
     latest ?: return
     val ctx = LocalContext.current
     val app = ctx.medlog
+    // put away by the helper: gone from the top until something new comes
+    var hidden by remember(latest.id) { mutableStateOf(app.settings.getString("hidden_msg") == latest.id.toString()) }
+    if (hidden) return
     val p = LocalPalette.current
     val sc = LocalScale.current
     val urgent = latest.kind in setOf("SOS", "DANGER", "FALL")
@@ -642,9 +647,9 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
                             BigButton("I'll call", Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Call, onClick = { reply("call") })
                             BigButton("Already handled", Modifier.weight(1f), Tone.SECONDARY, onClick = { reply("got") })
                         }
-                        Text("Dismiss", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Dismiss") { dismiss() }.padding(vertical = 12.dp))
                     }
+                    // every alert can be put away without answering
+                    BigButton("Dismiss", tone = Tone.SECONDARY, icon = Icons.Rounded.Close, height = 52.dp, onClick = { dismiss() })
                 }
             }
         }
@@ -657,7 +662,11 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
                 Icon(if (coming || said == "got") Icons.Rounded.CheckCircle else Icons.AutoMirrored.Rounded.Reply, null, tint = if (coming) p.ok else p.inkSoft, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
                 Text(when (said) { null -> "Answered"; "got" -> "Marked as handled"; "dismiss" -> "Dismissed"; else -> "You answered: ${Nearby.replyWords(said)}" },
-                    fontSize = sc.small, fontWeight = FontWeight.Bold, color = if (coming) p.ok else p.ink)
+                    fontSize = sc.small, fontWeight = FontWeight.Bold, color = if (coming) p.ok else p.ink, modifier = Modifier.weight(1f))
+                // answered: take the card off the top
+                Text("Dismiss", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft,
+                    modifier = Modifier.heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .steady("Dismiss") { app.settings.putString("hidden_msg", latest.id.toString()); hidden = true }.padding(horizontal = 12.dp, vertical = 14.dp))
             }
         }
     }
@@ -677,7 +686,6 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
                     BigButton("Ask $n to go", tone = Tone.SECONDARY, onClick = { more = false; person?.let { Nearby.askOther(ctx, it.pairId, pid, latest.text) }; reply("call") })
                 }
                 BigButton("Already handled", tone = Tone.SECONDARY, onClick = { more = false; reply("got") })
-                BigButton("Dismiss", tone = Tone.SECONDARY, onClick = { more = false; dismiss() })
             }
         }
     }

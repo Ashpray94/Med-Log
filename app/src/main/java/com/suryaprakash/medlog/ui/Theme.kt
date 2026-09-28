@@ -154,12 +154,14 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val weight = if (settings.boldText) FontWeight.Medium else FontWeight.Normal
     val script = scriptFor(settings.languages.firstOrNull())
-    val base = TextStyle(fontFamily = script.family, fontWeight = weight, color = palette.ink, fontSize = scale.body, lineHeight = scale.body * script.lines,
+    // no colour in the style: words take the colour of what they sit on (white on a blue button, ink on a card)
+    val base = TextStyle(fontFamily = script.family, fontWeight = weight, fontSize = scale.body, lineHeight = scale.body * script.lines,
         localeList = script.locale)
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = palette.brand, onPrimary = palette.onBrand, background = palette.paper, surface = palette.card,
-            onBackground = palette.ink, onSurface = palette.ink, error = palette.red, outline = palette.line,
+            onBackground = palette.ink, onSurface = palette.ink, error = palette.red, outline = palette.line, onSurfaceVariant = palette.inkSoft,
+            surfaceContainerHigh = palette.card, surfaceContainerLow = palette.card, secondaryContainer = palette.brandSoft, onSecondaryContainer = palette.ink,
         ),
         typography = MaterialTheme.typography.copy(
             bodyLarge = base, bodyMedium = base, bodySmall = base.copy(fontSize = scale.small),
@@ -169,7 +171,7 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
     ) {
         CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings, LocalScript provides script,
             androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * zoom, density.fontScale * script.size)) {
-            androidx.compose.material3.ProvideTextStyle(base, content)
+            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides palette.ink) { androidx.compose.material3.ProvideTextStyle(base, content) }
         }
     }
 }

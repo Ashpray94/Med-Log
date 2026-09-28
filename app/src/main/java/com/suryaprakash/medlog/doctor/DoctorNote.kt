@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.doctor
 
+import com.suryaprakash.medlog.data.planned
 import com.suryaprakash.medlog.clinical.Catalogue
 import com.suryaprakash.medlog.clinical.Describe
 import com.suryaprakash.medlog.data.DAY
@@ -153,7 +154,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         }
         for (r in rows) if (concerns.size < 3 && r.urgent == "GREEN" && concerns.add("${r.name}: " + (if (r.total > 1) "${r.total} times in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else "once") + " (${r.whenText.substringAfter("(").substringBefore(")")})")) levels += "GREEN"
         for (m in active) {
-            val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
+            val md = doses.planned().filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val missed = md.count { it.status == DoseStatus.MISSED || it.status == DoseStatus.SKIPPED }
             if (md.size >= 3 && missed * 4 >= md.size && concerns.size < 3 && concerns.add("Missed ${m.name}: $missed of ${md.size} doses")) levels += "AMBER"
         }
@@ -164,7 +165,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val taken = md.count { it.status == DoseStatus.TAKEN }
             val prn = notes.count { it.kind == Kind.MED_TAKEN && runCatching { JSONObject(it.details).optString("name") }.getOrNull() == m.name }
-            val skipped = md.mapNotNull { it.reason }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.lowercase()} ×${it.value}" }
+            val skipped = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.lowercase()} ×${it.value}" }
             DoctorNote.Med(
                 m.name, "${m.strength} ${freq(m)}".trim(),
                 when { m.asNeeded -> if (prn > 0) "used ${prn}×" else "not used"; md.isEmpty() -> "–"; else -> "$taken/${md.size}" },

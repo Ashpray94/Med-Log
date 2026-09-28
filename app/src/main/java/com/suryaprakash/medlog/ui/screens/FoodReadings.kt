@@ -1,4 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
+import com.suryaprakash.medlog.data.planned
+import com.suryaprakash.medlog.data.extra
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material.icons.rounded.Cancel
@@ -172,8 +174,9 @@ fun FoodScreen(nav: Nav) {
             }
             else -> {
                 val feedDoses = doses.filter { d -> feeds.any { it.id == d.medicineId } }
+                val planned = feedDoses.planned()
                 com.suryaprakash.medlog.ui.SectionHeader("Today's feeds",
-                    if (feeds.isEmpty()) "None set up" else if (feedDoses.isEmpty()) "None due today" else "${feedDoses.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) }} of ${feedDoses.size} done",
+                    if (feeds.isEmpty()) "None set up" else if (feedDoses.isEmpty()) "None due today" else "${planned.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) }} of ${planned.size} done",
                     if (feeds.isNotEmpty()) "Add feed" else null, Icons.Rounded.Add) { feedSheet = true }
                 if (feeds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Set up a feed") { feedSheet = true }
                 // feeds set up but not due today still show, so they can be changed or stopped
@@ -593,6 +596,7 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
                 else -> {
                     val (unit, range) = when (type) { "sugar" -> "mg/dL" to 20.0..600.0; "spo2" -> "%" to 50.0..100.0; "temp" -> "°F" to 93.0..110.0; else -> "per minute" to 30.0..220.0 }
                     com.suryaprakash.medlog.ui.SectionHeader(label, unit, null)
+                    if (type == "temp") TempQuick { v1 = if (it == 98.6) "98.6" else it.toInt().toString() }
                     BigField(label, v1, { v1 = it.filter { c -> c.isDigit() || (type == "temp" && c == '.') }.take(5) },
                         keyboard = if (type == "temp") androidx.compose.ui.text.input.KeyboardType.Decimal else androidx.compose.ui.text.input.KeyboardType.Number)
                     val v = v1.toDoubleOrNull()
@@ -666,7 +670,7 @@ private fun FeedHistory(feeds: List<com.suryaprakash.medlog.data.Medicine>) {
     val doses by app.viewDb.doses().betweenFlow(from, start + com.suryaprakash.medlog.data.DAY).collectAsState(emptyList())
     val byId = feeds.associateBy { it.id }
     val zone = java.time.ZoneId.systemDefault()
-    val days = doses.filter { it.medicineId in byId && (it.scheduledAt <= now || it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) }.groupBy { java.time.Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalDate() }.toSortedMap(compareByDescending { it })
+    val days = doses.filter { !(it.extra && it.status != com.suryaprakash.medlog.data.DoseStatus.TAKEN) }.filter { it.medicineId in byId && (it.scheduledAt <= now || it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED) }.groupBy { java.time.Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalDate() }.toSortedMap(compareByDescending { it })
     com.suryaprakash.medlog.ui.SectionHeader("Feed history", "The last 7 days", null)
     if (days.isEmpty()) { com.suryaprakash.medlog.ui.Hint("Nothing yet. Each feed you note shows here, day by day."); return }
     val S = com.suryaprakash.medlog.data.DoseStatus
@@ -681,8 +685,9 @@ private fun FeedHistory(feeds: List<com.suryaprakash.medlog.data.Medicine>) {
         }
         com.suryaprakash.medlog.ui.Timeline(ds.sortedByDescending { it.scheduledAt }.map { d ->
             val (what, mark) = when {
+                d.extra -> "Extra feed given" to p.ok
                 d.status == S.TAKEN -> "Given" to p.ok
-                d.status == S.SKIPPED && d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD -> "Food instead" to p.inkSoft
+                d.status == S.SKIPPED && d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD -> com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS to p.inkSoft
                 d.status == S.SKIPPED -> "Not given" to p.inkSoft
                 else -> "Missed" to p.red
             }

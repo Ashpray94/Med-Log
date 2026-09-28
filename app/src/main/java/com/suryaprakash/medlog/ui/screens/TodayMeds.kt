@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.planned
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -100,9 +101,9 @@ fun TodayMedsScreen(nav: Nav, feeds: Boolean) {
         else -> 2
     }
     val parts = ranked.groupBy(::part)
-    val taken = doses.count { (it.status == DoseStatus.TAKEN || (feeds && it.status == DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD)) &&
+    val taken = doses.planned().count { (it.status == DoseStatus.TAKEN || (feeds && it.status == DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD)) &&
         byId[it.medicineId]?.let { m -> (m.form == "feed") == feeds } == true }
-    val total = days.sumOf { it.second.size }
+    val total = days.sumOf { it.second.planned().size }
     val viewing = com.suryaprakash.medlog.data.Viewing.pairId.value
     val who = viewing?.let { id -> com.suryaprakash.medlog.data.People.all(ctx).firstOrNull { it.pairId == id }?.name?.substringBefore(' ')?.ifBlank { null } ?: "They" }
     val title = when { feeds && viewing != null -> "Their feeds today"; feeds -> "Today's feeds"; viewing != null -> "Their medicines today"; else -> "Today's medicines" }

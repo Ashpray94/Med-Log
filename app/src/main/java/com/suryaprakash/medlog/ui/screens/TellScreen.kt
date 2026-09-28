@@ -481,7 +481,10 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
                 Tile(c.label, m, onClick = { onAnswer(c.value.toInt(), c.label) }) { Text(label(c.label), fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, textAlign = TextAlign.Center) }
             } else NumberPad(unit = "", allowDecimal = false, range = 0.0..999.0) { onAnswer(it.toInt(), "${it.toInt()}") }
         }
-        Kind.TEMP -> NumberPad(unit = "°F", allowDecimal = true, range = 93.0..110.0) { onAnswer(it, "$it °F") }
+        Kind.TEMP -> {
+            TempQuick { onAnswer(it, "$it °F") }
+            NumberPad(unit = "°F", allowDecimal = true, range = 93.0..110.0) { onAnswer(it, "$it °F") }
+        }
         Kind.BODY -> {
             var back by remember { mutableStateOf(false) }
             val close = com.suryaprakash.medlog.pictogram.viewFor(region)
@@ -593,4 +596,15 @@ fun NumberPad(unit: String, allowDecimal: Boolean, range: ClosedFloatingPointRan
         if (text.isNotEmpty() && !ok) Hint("That number looks wrong. Please check.")
         BigButton("Done", tone = Tone.PRIMARY, enabled = ok, icon = Icons.Rounded.Check, onClick = { v?.let(onDone) })
     }
+}
+
+/** The usual temperatures in one tap: normal first, then each degree of fever. Anything else is typed below. */
+@Composable
+fun TempQuick(onPick: (Double) -> Unit) {
+    val sc = LocalScale.current
+    BigButton("Normal · 98.6 °F", tone = Tone.SECONDARY, icon = Icons.Rounded.Check, height = 56.dp, onClick = { onPick(98.6) })
+    com.suryaprakash.medlog.ui.FlowRowOf {
+        listOf(99.0, 100.0, 101.0, 102.0, 103.0, 104.0).forEach { t -> com.suryaprakash.medlog.ui.Chip("${t.toInt()} °F", false) { onPick(t) } }
+    }
+    Text("Or type it:", fontSize = sc.small, color = LocalPalette.current.inkSoft)
 }
