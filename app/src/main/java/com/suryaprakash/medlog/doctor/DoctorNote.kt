@@ -73,7 +73,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         val patient = listOfNotNull(profile.name.ifBlank { null }, age?.let { "$it y" }, when (profile.sex) { "F" -> "female"; "M" -> "male"; else -> null },
             profile.hospitalId.ifBlank { null }?.let { "ID $it" }).joinToString(", ")
         val active = meds.filter { it.active }
-        val currentMeds = active.joinToString("; ") { m -> "${m.name} ${m.strength}".trim() + " " + freq(m) }.ifBlank { "None recorded" }
+        val currentMeds = active.joinToString("; ") { m -> "${m.name} ${m.strength}".trim() + " " + freq(m) }
 
         // ── symptom rows ──
         val rows = ArrayList<DoctorNote.Row>()
@@ -94,7 +94,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             }
             val sites = fs.mapNotNull { it["site"]?.value?.toString()?.lowercase() }.distinct()
             val depths = fs.mapNotNull { it["depth"]?.value?.toString() }.distinct()
-            val where = (sites + depths).joinToString(", ").ifBlank { fs.firstNotNullOfOrNull { it["side"]?.value?.toString() }?.let { "$it side" } ?: "–" }
+            val where = (sites + depths).joinToString(", ").ifBlank { fs.firstNotNullOfOrNull { it["side"]?.value?.toString() }?.let { "$it side" } ?: "" }
             val sev = fs.mapNotNull { (it["severity"]?.value as? Number)?.toInt() }
             val chars = fs.flatMap { (it["character"]?.value as? List<*>)?.map { c -> c.toString() } ?: emptyList() }.distinct()
             val nature = listOfNotNull(
@@ -102,7 +102,9 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
                 sev.takeIf { it.isNotEmpty() }?.let { s -> if (s.min() == s.max()) "${s.max()}/10" else "${s.min()}–${s.max()}/10" },
                 fs.firstNotNullOfOrNull { it["pattern"]?.value?.toString() },
                 fs.firstNotNullOfOrNull { f -> (f["colour"]?.value as? String)?.let { "colour $it" } },
-            ).joinToString("; ").ifBlank { "–" }
+                fs.firstNotNullOfOrNull { f -> f["often"]?.let { describe.fact("often", it) } },
+                fs.firstNotNullOfOrNull { f -> f["diagnosed"]?.let { describe.fact("diagnosed", it) } },
+            ).joinToString("; ")
             val key = LinkedHashSet<String>()
             val latest = LinkedHashMap<String, Fact>().apply { fs.forEach { putAll(it) } }   // newest answer per question
             for ((k, v) in latest) {
@@ -130,7 +132,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             latest["burnDepth"]?.let { flags += "Burn: ${it.value}" }
             latest["burnSize"]?.let { flags += "Size: ${it.value}" }
             val sevAll = fs.mapNotNull { (it["severity"]?.value as? Number)?.toInt() }
-            rows += DoctorNote.Row(n, cat.problem(pid)?.label ?: pid, urgent, whenText, where, nature, key.take(4).joinToString("; ").ifBlank { "–" },
+            rows += DoctorNote.Row(n, cat.problem(pid)?.label ?: pid, urgent, whenText, where, nature, key.take(4).joinToString("; "),
                 problemId = pid, total = total, daysWith = days, sevLow = sevAll.minOrNull(), sevHigh = sevAll.maxOrNull(), sevLast = sevAll.lastOrNull(),
                 daily = periodDays.map { perDay[it] ?: 0 }, trend = trend(list) ?: if (fs.any { it["better"]?.value == true }) "better" else null,
                 began = started?.let { com.suryaprakash.medlog.ui.screens.startedWords(it, first, alwaysDate = true) },
@@ -165,15 +167,15 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val taken = md.count { it.status == DoseStatus.TAKEN }
             val prn = notes.count { it.kind == Kind.MED_TAKEN && runCatching { JSONObject(it.details).optString("name") }.getOrNull() == m.name }
-            val skipped = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.lowercase()} ×${it.value}" }
+            val skipped = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.lowercase()} (${it.value} time${if (it.value == 1) "" else "s"})" }
             DoctorNote.Med(
                 m.name, "${m.strength} ${freq(m)}".trim(),
-                when { m.asNeeded -> if (prn > 0) "used ${prn}×" else "not used"; md.isEmpty() -> "–"; else -> "$taken/${md.size}" },
+                when { m.asNeeded -> if (prn > 0) "used $prn time${if (prn == 1) "" else "s"}" else ""; md.isEmpty() -> ""; else -> "$taken of ${md.size} doses taken" },
                 listOfNotNull(
                     if (!m.active) "stopped ${d(m.changedAt)}" else null,
                     m.changeNote.takeIf { it.isNotBlank() && it != "started" && it != "stopped" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,
-                    skipped.ifBlank { null }?.let { "skipped: $it" },
+                    skipped.ifBlank { null }?.let { "not taken: $it" },
                 ).joinToString("; "),
                 done = taken, due = md.size, asNeeded = m.asNeeded,
             )
@@ -210,8 +212,8 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         return DoctorNote(
             period = "${d(from)} – ${d(to - 1)} ${day(to - 1).year}",
             patient = patient.ifBlank { "Patient" },
-            allergies = profile.allergies.ifBlank { "None known" },
-            conditions = profile.conditions.ifBlank { "None recorded" } + if (profile.onBloodThinner || active.any { it.bloodThinner }) "; on a blood thinner" else "",
+            allergies = profile.allergies,
+            conditions = listOfNotNull(profile.conditions.ifBlank { null }, if (profile.onBloodThinner || active.any { it.bloodThinner }) "on a blood thinner" else null).joinToString("; "),
             currentMeds = currentMeds,
             concerns = concerns.take(3).toList(),
             symptoms = rows,

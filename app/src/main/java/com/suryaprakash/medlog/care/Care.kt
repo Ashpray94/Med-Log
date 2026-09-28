@@ -180,9 +180,11 @@ private fun kotlinx.coroutines.CoroutineScope.launchIo(block: suspend () -> Unit
  * A helper's phone reminds the helper too, from its copy of each person's medicines and feeds: a quiet
  * notification when something's due, and, for a medicine still not marked taken 15 minutes later, a loud one that
  * keeps ringing until answered or swiped (a swipe silences it). Feeds only ever get quiet reminders.
+ * Each reminder answers itself: Given, Snooze 5 min, or More (ask another helper, give it in a few minutes, not given).
  */
 object HelperCare {
     private const val LATE = 15 * 60_000L
+    const val SNOOZE_MIN = 5
 
     private suspend fun due(ctx: Context, now: Long): List<Triple<com.suryaprakash.medlog.data.CaredFor, com.suryaprakash.medlog.data.Dose, com.suryaprakash.medlog.data.Medicine>> {
         val out = ArrayList<Triple<com.suryaprakash.medlog.data.CaredFor, com.suryaprakash.medlog.data.Dose, com.suryaprakash.medlog.data.Medicine>>()
@@ -195,38 +197,142 @@ object HelperCare {
         return out
     }
 
+    /** Put off by this helper until then (Snooze, or "I'll give it in 20 minutes"); 0 when not. */
+    fun snoozedUntil(ctx: Context, uid: String) = ctx.medlog.settings.getLong("hsnz_$uid")
+
     suspend fun nextWake(ctx: Context, now: Long): Long? {
         val st = ctx.medlog.settings
-        return due(ctx, now).flatMap { (_, d, m) -> listOfNotNull(d.scheduledAt, (d.scheduledAt + LATE).takeIf { m.form != "feed" }) }
+        return due(ctx, now).flatMap { (_, d, m) -> listOfNotNull(d.scheduledAt, (d.scheduledAt + LATE).takeIf { m.form != "feed" }, snoozedUntil(ctx, d.uid).takeIf { it > 0 }) }
             .filter { it > now + 1000 && st.getLong("hfired_$it") == 0L }.minOrNull()
     }
+
+    fun notificationId(d: com.suryaprakash.medlog.data.Dose) = 8800 + (d.id % 100).toInt()
 
     suspend fun tick(ctx: Context, now: Long) {
         val st = ctx.medlog.settings
         for ((p, d, m) in due(ctx, now)) {
-            val who = p.name.ifBlank { "Your person" }
-            val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
             val key = "hfired_${d.uid}"
+            val until = snoozedUntil(ctx, d.uid)
+            if (until > now) continue
+            if (until > 0) {
+                // the snooze is over: remind again, loud for a medicine, quiet for a feed
+                st.putLong("hsnz_${d.uid}", 0)
+                show(ctx, p, d, m, loud = m.form != "feed", again = true)
+                st.putString(key, "loud")
+                continue
+            }
             if (now >= d.scheduledAt && now - d.scheduledAt < 2 * HOUR && st.getString(key) == null) {
                 st.putString(key, "quiet")
-                Care.notify(ctx, 8800 + (d.id % 100).toInt(), if (m.form == "feed") "$who: time for the feed" else "$who: time for ${m.name}",
-                    "$time · ${m.amount}", "medlog://helper")
+                show(ctx, p, d, m, loud = false)
             }
             if (m.form != "feed" && now >= d.scheduledAt + LATE && now - d.scheduledAt < 3 * HOUR && st.getString(key) != "loud") {
                 st.putString(key, "loud")
-                val title = "$who hasn't taken ${m.name}"
-                val open = android.app.PendingIntent.getActivity(ctx, 8900, Intent(ctx, MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")),
-                    android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-                val id = 8900 + (d.id % 100).toInt()
-                val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
-                    .setContentTitle(title).setContentText("Due at $time. Please check on them.")
-                    .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
-                    .setContentIntent(open).setAutoCancel(true)
-                    .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, id, title, "Due at $time. Tap to open.", open, keep = false))
-                    .build()
-                runCatching { NotificationManagerCompat.from(ctx).notify(id, n) }
-                com.suryaprakash.medlog.help.AlertSound.start(ctx, urgent = false)
+                show(ctx, p, d, m, loud = true)
             }
+        }
+    }
+
+    private fun show(ctx: Context, p: com.suryaprakash.medlog.data.CaredFor, d: com.suryaprakash.medlog.data.Dose, m: com.suryaprakash.medlog.data.Medicine, loud: Boolean, again: Boolean = false) {
+        val who = p.name.ifBlank { "Your person" }
+        val feed = m.form == "feed"
+        val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
+        val id = notificationId(d)
+        val title = when {
+            loud && !again -> "$who hasn't taken ${m.name}"
+            feed -> "$who: time for the feed"
+            else -> "$who: time for ${m.name}"
+        }
+        val text = if (loud && !again) "Due at $time. Please check on them." else "$time · ${if (feed) m.name + ", " else ""}${m.amount}"
+        val more = PendingIntent.getActivity(ctx, id, Intent(ctx, MainActivity::class.java)
+            .setData(android.net.Uri.parse("medlog://dose?pair=${android.net.Uri.encode(p.pairId)}&uid=${android.net.Uri.encode(d.uid)}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        fun action(kind: String) = PendingIntent.getBroadcast(ctx, id * 10 + kind.length, Intent(ctx, HelperDoseReceiver::class.java)
+            .putExtra("kind", kind).putExtra("pair", p.pairId).putExtra("uid", d.uid).putExtra("nid", id),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val b = NotificationCompat.Builder(ctx, if (loud) MedLogApp.CH_ALERT else MedLogApp.CH_CARE).setSmallIcon(R.drawable.ic_stat)
+            .setContentTitle(com.suryaprakash.medlog.ui.tr(title)).setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(if (loud) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
+            .setCategory(if (loud) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
+            .setContentIntent(more).setAutoCancel(true)
+            .addAction(0, com.suryaprakash.medlog.ui.tr("Given"), action("give"))
+            .addAction(0, com.suryaprakash.medlog.ui.tr("Snooze $SNOOZE_MIN min"), action("snooze"))
+            .addAction(0, com.suryaprakash.medlog.ui.tr("More"), more)
+        if (loud) b.setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, id, title, "Due at $time. Tap to open.", more, keep = false))
+        runCatching { NotificationManagerCompat.from(ctx).notify(id, b.build()) }
+        if (loud) com.suryaprakash.medlog.help.AlertSound.start(ctx, urgent = false)
+    }
+}
+
+/** What a helper can do about one of the person's doses, from a reminder or from the app: the same rules everywhere. */
+object HelperDose {
+    suspend fun find(ctx: Context, pairId: String, uid: String): Pair<com.suryaprakash.medlog.data.Dose, com.suryaprakash.medlog.data.Medicine>? {
+        val db = com.suryaprakash.medlog.data.Mirror.db(ctx, pairId)
+        val d = db.doses().byUid(uid) ?: return null
+        val m = db.medicines().get(d.medicineId) ?: return null
+        return d to m
+    }
+
+    private suspend fun done(ctx: Context, d: com.suryaprakash.medlog.data.Dose) {
+        ctx.medlog.settings.putLong("hsnz_${d.uid}", 0)
+        NotificationManagerCompat.from(ctx).cancel(HelperCare.notificationId(d))
+        com.suryaprakash.medlog.help.AlertSound.stop()
+        com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
+    }
+
+    /** Given, now or at [at]. The change goes back to the person's phone. */
+    suspend fun give(ctx: Context, pairId: String, uid: String, at: Long? = null) {
+        val db = com.suryaprakash.medlog.data.Mirror.db(ctx, pairId)
+        val d = db.doses().byUid(uid) ?: return
+        db.doses().update(d.copy(status = com.suryaprakash.medlog.data.DoseStatus.TAKEN, actedAt = at ?: System.currentTimeMillis(), snoozeUntil = null))
+        done(ctx, d)
+    }
+
+    /** Not given, and why (or food taken in place of a feed). */
+    suspend fun notGiven(ctx: Context, pairId: String, uid: String, reason: String) {
+        val db = com.suryaprakash.medlog.data.Mirror.db(ctx, pairId)
+        val d = db.doses().byUid(uid) ?: return
+        db.doses().update(d.copy(status = com.suryaprakash.medlog.data.DoseStatus.SKIPPED, actedAt = System.currentTimeMillis(), reason = reason, snoozeUntil = null))
+        done(ctx, d)
+    }
+
+    /** Remind this phone again in [minutes]; with [tell], the other helpers hear who is giving it and when. */
+    suspend fun later(ctx: Context, pairId: String, uid: String, minutes: Int, tell: Boolean = false) {
+        val (d, m) = find(ctx, pairId, uid) ?: return
+        ctx.medlog.settings.putLong("hsnz_$uid", System.currentTimeMillis() + minutes * 60_000L)
+        NotificationManagerCompat.from(ctx).cancel(HelperCare.notificationId(d))
+        com.suryaprakash.medlog.help.AlertSound.stop()
+        if (tell) com.suryaprakash.medlog.data.People.byPairId(ctx, pairId)?.let { p ->
+            com.suryaprakash.medlog.help.FamilyChat.send(ctx, "I'll give ${p.name.ifBlank { "them" }} ${if (m.form == "feed") "the feed" else m.name} in $minutes min", p)
+        }
+        com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
+    }
+
+    /** Ask another helper to give it: their phone rings, through the person's phone. */
+    suspend fun askOther(ctx: Context, pairId: String, uid: String, toPairId: String) {
+        val (d, m) = find(ctx, pairId, uid) ?: return
+        val who = com.suryaprakash.medlog.data.People.byPairId(ctx, pairId)?.name?.ifBlank { null } ?: "them"
+        val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
+        com.suryaprakash.medlog.help.Nearby.askOther(ctx, pairId, toPairId, "Please give $who ${if (m.form == "feed") "the $time feed" else "the $time ${m.name}"}")
+        NotificationManagerCompat.from(ctx).cancel(HelperCare.notificationId(d))
+        com.suryaprakash.medlog.help.AlertSound.stop()
+    }
+}
+
+/** Given and Snooze, straight from a helper's reminder. */
+class HelperDoseReceiver : android.content.BroadcastReceiver() {
+    override fun onReceive(ctx: Context, intent: Intent) {
+        val pair = intent.getStringExtra("pair") ?: return
+        val uid = intent.getStringExtra("uid") ?: return
+        val pending = goAsync()
+        ctx.medlog.scope.launch {
+            try {
+                when (intent.getStringExtra("kind")) {
+                    "give" -> HelperDose.give(ctx, pair, uid)
+                    "snooze" -> HelperDose.later(ctx, pair, uid, HelperCare.SNOOZE_MIN)
+                }
+                NotificationManagerCompat.from(ctx).cancel(intent.getIntExtra("nid", 0))
+            } finally { pending.finish() }
         }
     }
 }

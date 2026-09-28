@@ -70,7 +70,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             profile.conditions.takeIf { it.isNotBlank() }?.let { "Conditions: $it" },
             if (profile.onBloodThinner || meds.any { it.bloodThinner && it.active }) "On a blood thinner" else null,
         )
-        val alertLine = "ALLERGIES: " + profile.allergies.ifBlank { "none recorded" }
+        val alertLine = profile.allergies.takeIf { it.isNotBlank() }?.let { "ALLERGIES: $it" }.orEmpty()
 
         // ── concerns, ranked ──
         val concerns = ArrayList<Pair<Int, Summary.Concern>>()
@@ -137,7 +137,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             if (afterMeals > 0) parts += "after meals ($afterMeals/${list.size})" else if (context.isNotEmpty()) parts += context.distinct().take(3).joinToString(", ")
             val quote = list.mapNotNull { it.transcript }.filter { it.split(" ").size >= 4 }.maxByOrNull { it.length }?.let { "“${it.take(110)}”" }
             val linked = list.mapNotNull { it.groupId }.flatMap { g -> symptoms.filter { it.groupId == g && it.problemId != pid } }.mapNotNull { cat.problem(it.problemId)?.label }.distinct()
-            (cat.problem(pid)?.label ?: pid) + ": " + (parts.joinToString("; ").ifBlank { "no further details" }) +
+            (cat.problem(pid)?.label ?: pid) + (if (parts.isNotEmpty()) ": " + parts.joinToString("; ") else "") +
                 (if (linked.isNotEmpty()) "; with ${linked.joinToString(", ")}" else "") + (quote?.let { " $it" } ?: "")
         }
 
@@ -151,7 +151,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             Summary.MedRow(
                 "${m.name}${if (m.critical) " *" else ""}",
                 "${m.strength} ${m.amount} $freq".trim(),
-                if (m.asNeeded) "taken ${prn}×" else if (md.isEmpty()) "–" else "$taken/${md.size} (${taken * 100 / md.size}%)",
+                if (m.asNeeded) (if (prn > 0) "taken $prn time${if (prn == 1) "" else "s"}" else "") else if (md.isEmpty()) "" else "$taken/${md.size} (${taken * 100 / md.size}%)",
                 listOfNotNull(
                     m.changeNote.takeIf { it.isNotBlank() && it != "started" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,

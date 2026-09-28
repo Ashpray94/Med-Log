@@ -48,7 +48,7 @@ data class Settings(
     val whatsappGroupLink: String = "",
     val sosCallTimeoutSec: Int = 25,
     // ── reminders ──
-    val snoozeMinutes: Int = 10,
+    val snoozeMinutes: Int = 5,
     val escalateMinutes: Int = 30,
     val escalateCriticalMinutes: Int = 15,
     val useMeetingTimer: Boolean = false,

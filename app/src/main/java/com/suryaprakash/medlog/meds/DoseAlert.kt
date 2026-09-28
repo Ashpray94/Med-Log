@@ -44,7 +44,9 @@ object DoseAlert {
             .setAutoCancel(false)
             .setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, BASE_ID, com.suryaprakash.medlog.ui.tr(title), "Not taken yet. Tap to open.", full))
             .addAction(0, if (meds.size == 1) "I took it" else "I took them", action("take"))
-            .addAction(0, "In ${app.settings.value.snoozeMinutes} min", action("snooze"))
+            .addAction(0, "Snooze ${app.settings.value.snoozeMinutes} min", action("snooze"))
+            // skip with a reason, or anything else: the full reminder screen
+            .addAction(0, "More", full)
             .build()
         runCatching { NotificationManagerCompat.from(ctx).notify(BASE_ID, n) }
         // Also start the screen directly: on older phones and when the phone is unlocked
@@ -62,7 +64,7 @@ object DoseAlert {
             .setContentTitle(com.suryaprakash.medlog.ui.tr("Time to give the feed"))
             .setContentText(feeds.joinToString(", ") { (_, m) -> "${m.name}, ${m.amount}" })
             .setOnlyAlertOnce(true).setContentIntent(open).setAutoCancel(true)
-            .addAction(0, "Given", action("take")).addAction(0, "Not given", action("skip"))
+            .addAction(0, "Given", action("take")).addAction(0, "Not given", action("skip")).addAction(0, "More", open)
             .build()
         runCatching { NotificationManagerCompat.from(ctx).notify(FEED_ID, n) }
     }

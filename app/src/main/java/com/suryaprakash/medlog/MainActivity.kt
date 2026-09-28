@@ -137,6 +137,7 @@ class MainActivity : ComponentActivity() {
             }
             "output" -> Route.Output(uri.getQueryParameter("tab")?.toIntOrNull()?.coerceIn(0, 2) ?: 0)
             "helper" -> Route.HelperHome
+            "dose" -> { val pr = uri.getQueryParameter("pair"); val u = uri.getQueryParameter("uid"); if (pr != null && u != null) Route.DoseChoices(pr, u) else Route.HelperHome }
             "history" -> Route.Notes
             "checkin" -> Route.Home
             "feature" -> when (uri.getQueryParameter("feature")?.lowercase()?.trim()) {
@@ -238,6 +239,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Backup -> BackupScreen(nav)
             Route.Privacy -> PrivacyScreen(nav)
             Route.HelperLock -> HelperLockScreen(nav)
+            is Route.DoseChoices -> com.suryaprakash.medlog.ui.screens.DoseChoicesScreen(nav, r.pairId, r.uid)
             Route.Onboarding -> OnboardingScreen(nav)
             Route.Import -> ImportScreen(nav)
             Route.Devices -> DevicesScreen(nav)

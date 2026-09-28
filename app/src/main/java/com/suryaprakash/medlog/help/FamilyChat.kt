@@ -75,30 +75,39 @@ object FamilyChat {
         Relay.reconnect()
     }
 
-    /** Sends [text] to the other helpers, and keeps it in this phone's chat. */
-    fun send(ctx: Context, text: String, p: com.suryaprakash.medlog.data.CaredFor? = null, answered: String? = null) {
+    /**
+     * Sends [text] to the other helpers, and keeps it in this phone's chat. With [to] (a helper's pairing id), only
+     * that helper's phone shows it: a message from one helper to another.
+     */
+    fun send(ctx: Context, text: String, p: com.suryaprakash.medlog.data.CaredFor? = null, answered: String? = null, to: String? = null, toName: String? = null) {
         val app = ctx.medlog
         val key = key(ctx, p) ?: return
         val me = myName(ctx).ifBlank { "Helper" }
         app.scope.launch {
-            app.db.inbox().insert(InboxItem(fromName = "You", text = text, kind = KIND, acked = true))
+            app.db.inbox().insert(InboxItem(fromName = if (to != null) "You to ${toName ?: "them"}" else "You", text = text, kind = KIND, acked = true))
             Relay.post(ctx, key, DIR, JSONObject().put("from", me).put("text", text).put("at", System.currentTimeMillis())
-                .put("mid", Keys.randomB64(9)).put("dev", device(ctx)).apply { answered?.let { put("answered", it) } })
+                .put("mid", Keys.randomB64(9)).put("dev", device(ctx)).apply { answered?.let { put("answered", it) }; to?.let { put("to", it); put("toName", toName ?: "") } })
         }
     }
 
     /** Another helper wrote. A quiet notification, not an alarm. */
     fun received(ctx: Context, o: JSONObject) {
         if (o.optString("dev") == device(ctx)) return
+        // a message for one helper: only that helper's phone shows it
+        val to = o.optString("to")
+        val forMe = to.isEmpty() || com.suryaprakash.medlog.data.People.all(ctx).any { it.pairId == to } ||
+            (o.optString("toName").isNotBlank() && o.optString("toName").equals(myName(ctx), true))
+        if (!forMe) return
+        val direct = to.isNotEmpty()
         val app = ctx.medlog
         // another helper answered the person: the alarm for that message stops here too
         o.optString("answered").takeIf { it.isNotEmpty() }?.let { Loud.answeredElsewhere(ctx, it) }
         app.scope.launch {
-            val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from", "Helper"), text = o.optString("text"), kind = KIND,
+            val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from", "Helper") + if (direct) " to you" else "", text = o.optString("text"), kind = KIND,
                 at = o.optLong("at", System.currentTimeMillis()), acked = true))
             val pi = PendingIntent.getActivity(ctx, 6000 + (id % 500).toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
             val n = NotificationCompat.Builder(ctx, MedLogApp.CH_CARE).setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle(com.suryaprakash.medlog.ui.tr("Family") + ": " + o.optString("from", "Helper"))
+                .setContentTitle(if (direct) com.suryaprakash.medlog.ui.tr("Message from") + " " + o.optString("from", "Helper") else com.suryaprakash.medlog.ui.tr("Family") + ": " + o.optString("from", "Helper"))
                 .setContentText(o.optString("text"))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT).setCategory(NotificationCompat.CATEGORY_MESSAGE)
                 .setContentIntent(pi).setAutoCancel(true).build()

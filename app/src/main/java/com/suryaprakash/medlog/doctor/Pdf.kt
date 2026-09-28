@@ -42,65 +42,82 @@ object Pdf {
         val w = Writer(doc)
         w.page()
 
-        // ── heading ──
-        w.pair("Patient-reported symptoms", n.period, 15f)
+        // ── heading: who, and what they're known to have; only what was recorded ──
+        w.pair("Health summary", n.period, 15f)
         w.text(n.patient, 11f, bold = true)
-        w.kv("Allergies", n.allergies, if (n.allergies != "None known") RED else INK)
-        w.kv("Conditions", n.conditions)
-        w.kv("Medicines", n.currentMeds)
+        if (n.allergies.isNotBlank()) w.kv("Allergies", n.allergies, RED)
+        if (n.conditions.isNotBlank()) w.kv("Conditions", n.conditions)
+        if (n.currentMeds.isNotBlank()) w.kv("Medicines", n.currentMeds)
         w.rule()
 
         // ── main concerns, with the body diagram beside them ──
         val diagramW = 150f
         val top = w.y
-        w.section("Main concerns", right = diagramW + 12f)
-        if (n.concerns.isEmpty()) w.text("No concerning findings reported.", 10f, right = diagramW + 12f)
-        n.concerns.forEachIndexed { i, c -> w.text("${i + 1}.  $c", 10.5f, bold = i == 0, right = diagramW + 12f) }
+        if (n.concerns.isNotEmpty()) {
+            w.section("Main concerns", right = diagramW + 12f)
+            n.concerns.forEachIndexed { i, c -> w.text("${i + 1}.  $c", 10.5f, bold = i == 0, right = diagramW + 12f) }
+        }
         if (n.pins.isNotEmpty()) {
             w.bodyDiagram(W - M - diagramW, top + 2f, diagramW, n.pins) { back -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 400) }
             w.y = maxOf(w.y, top + diagramW * 1.05f)
         }
         w.gap(4f)
 
-        // ── symptoms table ──
+        // ── symptoms: one short entry each, in plain words; a line only where something was noted ──
         if (n.symptoms.isNotEmpty()) {
-            w.section("Symptoms")
-            w.table(
-                listOf("#", "Symptom", "When", "Where", "Character", "Notes"),
-                floatArrayOf(0.04f, 0.15f, 0.22f, 0.17f, 0.17f, 0.25f),
-                n.symptoms.map { r -> listOf("${r.n}", r.name, r.whenText, r.where, r.nature, r.notes) to (if (r.urgent == "RED") RED else if (r.urgent == "AMBER") AMBER else INK) },
-            )
+            w.section("Symptoms reported")
+            n.symptoms.forEach { r ->
+                val tag = when (r.urgent) { "RED" -> "  (urgent)"; "AMBER" -> "  (to watch)"; else -> "" }
+                w.text("${r.n}.  ${r.name}$tag", 11f, bold = true, color = if (r.urgent == "RED") RED else if (r.urgent == "AMBER") AMBER else INK)
+                w.kv("When", r.whenText, indent = 16f)
+                if (r.where.isNotBlank()) w.kv("Where", r.where.replaceFirstChar(Char::uppercase), indent = 16f)
+                if (r.nature.isNotBlank()) w.kv("Details", r.nature.replaceFirstChar(Char::uppercase), indent = 16f)
+                if (r.notes.isNotBlank()) w.kv("Also", r.notes.replaceFirstChar(Char::uppercase), indent = 16f)
+                w.gap(3f)
+            }
         }
+        // ── medicines: each as a sentence; how many were taken only where doses were due ──
         if (n.medicines.isNotEmpty()) {
             w.section("Medicines in this period")
-            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.26f, 0.2f, 0.14f, 0.4f), n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change.ifBlank { "–" }) to INK })
+            n.medicines.forEach { m ->
+                w.text("${m.name}${if (m.dose.isNotBlank()) "  ·  ${m.dose}" else ""}", 10.5f, bold = true)
+                val line = listOf(m.taken, m.change).filter { it.isNotBlank() }.joinToString("; ")
+                if (line.isNotBlank()) w.text(line.replaceFirstChar(Char::uppercase), 10f, color = SOFT, indent = 16f)
+            }
         }
         if (n.readings.isNotEmpty()) { w.section("Readings"); n.readings.forEach { w.text(it, 10f) } }
         if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text(it, 10f, color = SOFT) } }
         if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
         w.footer(n.footer)
-        // ── nutrition: its own page, verdict first, detail after ──
-        nut?.let { r ->
+        // ── nutrition: its own page, only when food or feeds were logged; days with nothing logged are left out ──
+        nut?.takeIf { r -> r.days.any { it.logged } || r.feeds.isNotEmpty() || r.missed.isNotEmpty() }?.let { r ->
             w.page()
             w.pair("Nutrition and weight", n.period, 15f)
-            w.text(r.headline.text, 12.5f, bold = true, color = if (r.headline.level == "RED") RED else if (r.headline.level == "AMBER") AMBER else INK)
-            r.findings.drop(1).forEach { f -> w.text("•  ${f.text}", 10.5f, color = if (f.level == "RED") RED else if (f.level == "AMBER") AMBER else INK) }
+            val found = (listOf(r.headline) + r.findings.drop(1)).filter { !it.text.startsWith("Nothing logged") }
+            found.firstOrNull()?.let { h -> w.text(h.text, 12.5f, bold = true, color = if (h.level == "RED") RED else if (h.level == "AMBER") AMBER else INK) }
+            found.drop(1).forEach { f -> w.text("•  ${f.text}", 10.5f, color = if (f.level == "RED") RED else if (f.level == "AMBER") AMBER else INK) }
             w.gap(4f)
-            w.kv("Calories", r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
-            w.kv("Protein", r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
-            w.kv("Weight", r.weightChange?.let { "${"%.1f".format(r.weights.first().second)} → ${"%.1f".format(r.weights.last().second)} kg in ${r.weightDays} days" } ?: "Not enough readings")
-            w.kv("Targets", if (r.targetsFromDoctor) "Set by the doctor" else "30 kcal and 1 g protein per kg (to be confirmed)")
+            val logged = r.days.filter { it.logged }
+            if (logged.isNotEmpty()) {
+                w.kv("Calories", r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
+                w.kv("Protein", r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
+                w.kv("Averaged over", "${logged.size} day${if (logged.size == 1) "" else "s"} with food logged")
+            }
+            r.weightChange?.let { w.kv("Weight", "${"%.1f".format(r.weights.first().second)} → ${"%.1f".format(r.weights.last().second)} kg in ${r.weightDays} days") }
+            if (logged.isNotEmpty()) w.kv("Targets", if (r.targetsFromDoctor) "Set by the doctor" else "30 kcal and 1 g protein per kg (to be confirmed)")
             if (r.feeds.isNotEmpty()) w.kv("Feeds", r.feeds.joinToString("; "))
             w.rule()
-            w.section("Day by day")
-            w.table(listOf("Day", "kcal", "Protein", "Water", "What went in"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
-                r.days.reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), if (d.logged) "${d.kcal.toInt()}" else "–",
-                    if (d.logged) "${d.protein.toInt()} g" else "–", "${d.water}", if (d.logged) d.items.joinToString(", ") else "Nothing logged") to
-                    (r.kcalTarget?.let { t -> if (d.logged && d.kcal < t * 0.6) RED else if (d.logged && d.kcal < t * 0.85) AMBER else INK } ?: INK) })
+            if (logged.isNotEmpty()) {
+                w.section("Day by day")
+                w.table(listOf("Day", "kcal", "Protein", "Water", "What was eaten or given"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
+                    logged.reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), "${d.kcal.toInt()}",
+                        "${d.protein.toInt()} g", if (d.water > 0) "${d.water}" else "", d.items.joinToString(", ")) to
+                        (r.kcalTarget?.let { t -> if (d.kcal < t * 0.6) RED else if (d.kcal < t * 0.85) AMBER else INK } ?: INK) })
+            }
             if (r.missed.isNotEmpty()) { w.section("Missed feeds"); r.missed.sortedBy { it.at }.forEach { m -> w.text("${java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.ENGLISH).format(java.util.Date(m.at))}  ·  ${m.feed} ${m.ml.toInt()} ml", 10f) } }
             if (r.changes.isNotEmpty()) { w.section("What changed"); r.changes.forEach { w.text("•  $it", 10f) } }
             if (r.observed.isNotEmpty()) { w.section("Also noticed"); r.observed.forEach { w.text("•  $it", 10f) } }
-            w.text("Food values are estimates for home cooking.", 9f, color = SOFT)
+            if (logged.isNotEmpty()) w.text("Food values are estimates for home cooking.", 9f, color = SOFT)
             w.footer(n.footer)
         }
         w.finish()
@@ -132,10 +149,10 @@ object Pdf {
             return StaticLayout.Builder.obtain(s, 0, s.length, TextPaint(tp), width).setAlignment(Layout.Alignment.ALIGN_NORMAL).setLineSpacing(1f, 1.08f).build()
         }
 
-        fun text(s: String, size: Float, bold: Boolean = false, color: Int = INK, right: Float = 0f) {
-            val l = layout(s, size, if (bold) this.bold else regular, color, (W - 2 * M - right).toInt())
+        fun text(s: String, size: Float, bold: Boolean = false, color: Int = INK, right: Float = 0f, indent: Float = 0f) {
+            val l = layout(s, size, if (bold) this.bold else regular, color, (W - 2 * M - right - indent).toInt())
             ensure(l.height.toFloat())
-            c.save(); c.translate(M, y); l.draw(c); c.restore()
+            c.save(); c.translate(M + indent, y); l.draw(c); c.restore()
             y += l.height + 3f
         }
 
@@ -147,12 +164,12 @@ object Pdf {
             y += size + 10f
         }
 
-        fun kv(k: String, v: String, color: Int = INK) {
+        fun kv(k: String, v: String, color: Int = INK, indent: Float = 0f) {
             val kl = layout(k, 9.5f, medium, SOFT, 70)
-            val vl = layout(v, 10f, if (color == RED) bold else regular, color, (W - 2 * M - 76).toInt())
+            val vl = layout(v, 10f, if (color == RED) bold else regular, color, (W - 2 * M - 76 - indent).toInt())
             ensure(vl.height.toFloat())
-            c.save(); c.translate(M, y + 0.5f); kl.draw(c); c.restore()
-            c.save(); c.translate(M + 76, y); vl.draw(c); c.restore()
+            c.save(); c.translate(M + indent, y + 0.5f); kl.draw(c); c.restore()
+            c.save(); c.translate(M + indent + 76, y); vl.draw(c); c.restore()
             y += maxOf(kl.height, vl.height) + 3f
         }
 

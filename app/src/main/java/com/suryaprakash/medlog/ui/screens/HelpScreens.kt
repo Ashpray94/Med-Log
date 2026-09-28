@@ -408,7 +408,7 @@ fun PairScreen(nav: Nav) {
     val st by Nearby.pair.collectAsState()
     var allowed by remember { mutableStateOf(Nearby.allowed(ctx)) }
     val ask = rememberPermissionAsker { allowed = Nearby.allowed(ctx) }
-    var myName by remember { mutableStateOf("") }
+    var myName by remember { mutableStateOf(app.settings.getString("my_name").orEmpty()) }
     var chosen by remember { mutableStateOf<Pair<String, String>?>(null) }
     var phone by remember { mutableStateOf("") }
     var started by remember { mutableStateOf(false) }
@@ -429,35 +429,58 @@ fun PairScreen(nav: Nav) {
                 Hint("Check both phones show the same number:")
                 Text(d, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = p.ink)
             }
-            BigButton("They match", tone = Tone.OK, onClick = { Nearby.confirmDigits(ctx) })
-            BigButton("They don't match – stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
-            return@Screen
+            // connecting goes on by itself; a different number means the wrong phone, so it can be stopped here
+            if (st.incoming == null) {
+                Body("Connecting… This takes a few seconds.")
+                BigButton("The numbers don't match – stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
+                return@Screen
+            }
         }
         if (s.role != "helper" && !started) com.suryaprakash.medlog.ui.Segmented(listOf("My helper's phone", "Someone I help"), if (helperSide) 1 else 0) { helperSide = it == 1 }
+        st.connecting?.let { Body("Connecting to $it… Keep both phones close together.", bold = true) }
         if (helperSide) {
             BigField("Your name", myName, { myName = it }, hint = "The other phone will see this")
-            if (!started) BigButton("Start pairing", enabled = myName.isNotBlank(), onClick = { started = true; Nearby.pairAsHelper(ctx, myName.trim()) })
-            else Body("Waiting for the other phone… Keep both phones close together.")
+            if (!started) BigButton("Look for phones nearby", enabled = myName.isNotBlank(), icon = Icons.Rounded.Bluetooth, onClick = { started = true; Nearby.pairAsHelper(ctx, myName.trim()) })
+            else if (st.connecting == null) {
+                // every phone nearby that's looking for a helper; pick the right one (the other phone can also pick this one)
+                com.suryaprakash.medlog.ui.SectionHeader("Phones nearby", if (st.found.isEmpty()) "Looking…" else "Tap the one to connect", null)
+                if (st.found.isEmpty()) Hint("On their phone: Family → Connect phones → My helper's phone → Look for my helper's phone. This phone shows as \"$myName\" there.")
+                st.found.forEach { (eid, name) -> BigButton("$name's phone", tone = Tone.SECONDARY, icon = Icons.Rounded.Bluetooth, onClick = { Nearby.requestPerson(ctx, eid, myName.trim()) }) }
+            }
         } else {
-            if (!started) BigButton("Look for my helper's phone", onClick = { started = true; Nearby.findHelpers(ctx) })
-            if (started && st.found.isEmpty()) Body("Looking… On your helper's phone: open the app → I'm a helper → Start pairing.")
-            if (chosen == null) st.found.forEach { (eid, name) -> BigButton(name, tone = Tone.SECONDARY, onClick = { chosen = eid to name; phone = "" }) }
-            chosen?.let { (eid, name) ->
-                // the helper is already in the list (with their number): link to them, never ask for the number again
-                val helpers by app.db.helpers().flow().collectAsState(emptyList())
-                val match = helpers.firstOrNull { it.name.trim().equals(name.trim(), true) } ?: helpers.firstOrNull { it.name.substringBefore(" ").equals(name.substringBefore(" "), true) }
-                var pick by remember(eid) { mutableStateOf(match?.id) }
-                var newOne by remember(eid) { mutableStateOf(helpers.isEmpty()) }
-                com.suryaprakash.medlog.ui.Question("Which of your helpers is $name?")
-                helpers.forEach { h -> com.suryaprakash.medlog.ui.Choice(h.name, pick == h.id && !newOne, sub = h.relation.ifBlank { null }) { pick = h.id; newOne = false } }
-                com.suryaprakash.medlog.ui.Choice("Someone not in my list", newOne) { newOne = true; pick = null }
-                if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For a text message if the internet can't reach")
-                val h = helpers.firstOrNull { it.id == pick }
-                BigButton("Connect $name's phone", enabled = (h != null && !newOne) || phone.count(Char::isDigit) >= 6,
-                    onClick = { if (h != null && !newOne) Nearby.pairWith(ctx, eid, h.name, h.phone) else Nearby.pairWith(ctx, eid, name, phone) })
+            val helpers by app.db.helpers().flow().collectAsState(emptyList())
+            if (!started) BigButton("Look for my helper's phone", icon = Icons.Rounded.Bluetooth, onClick = { started = true; Nearby.findHelpers(ctx) })
+            // a helper's phone picked this one: say which helper it is, then connect
+            val incoming = st.incoming
+            if (incoming != null) {
+                WhichHelper(incoming.second, helpers, onConnect = { name, number, id -> Nearby.acceptIncoming(ctx, name, number, id) }, onStop = { Nearby.cancelPairing(ctx); started = false })
+            } else if (started && chosen == null && st.connecting == null) {
+                com.suryaprakash.medlog.ui.SectionHeader("Helper phones nearby", if (st.found.isEmpty()) "Looking…" else "Tap the one to connect", null)
+                if (st.found.isEmpty()) Hint("On your helper's phone: open the app → I'm a helper → Connect → Look for phones nearby.")
+                st.found.forEach { (eid, name) -> BigButton("$name's phone", tone = Tone.SECONDARY, icon = Icons.Rounded.Bluetooth, onClick = { chosen = eid to name; phone = "" }) }
+            }
+            chosen?.takeIf { st.connecting == null }?.let { (eid, name) ->
+                WhichHelper(name, helpers, onConnect = { n, number, id -> Nearby.pairWith(ctx, eid, n, number, id) }, onStop = { chosen = null })
             }
         }
     }
+}
+
+/** "Which of your helpers is Ravi?": link to someone already in the list (never asking for their number again), or add them. */
+@Composable
+private fun WhichHelper(name: String, helpers: List<com.suryaprakash.medlog.data.Helper>, onConnect: (String, String, Long?) -> Unit, onStop: () -> Unit) {
+    val match = helpers.firstOrNull { it.name.trim().equals(name.trim(), true) } ?: helpers.firstOrNull { it.name.substringBefore(" ").equals(name.substringBefore(" "), true) }
+    var pick by remember(name) { mutableStateOf(match?.id) }
+    var newOne by remember(name) { mutableStateOf(helpers.isEmpty()) }
+    var phone by remember(name) { mutableStateOf("") }
+    com.suryaprakash.medlog.ui.Question("Which of your helpers is $name?")
+    helpers.forEach { h -> com.suryaprakash.medlog.ui.Choice(h.name, pick == h.id && !newOne, sub = h.relation.ifBlank { null }) { pick = h.id; newOne = false } }
+    com.suryaprakash.medlog.ui.Choice("Someone not in my list", newOne) { newOne = true; pick = null }
+    if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For a text message if the internet can't reach")
+    val h = helpers.firstOrNull { it.id == pick }
+    BigButton("Connect $name's phone", enabled = (h != null && !newOne) || phone.count(Char::isDigit) >= 6,
+        onClick = { if (h != null && !newOne) onConnect(h.name, h.phone, h.id) else onConnect(name, phone, null) })
+    BigButton("Not this phone", tone = Tone.SECONDARY, onClick = onStop)
 }
 
 /**
@@ -562,6 +585,13 @@ fun HelperHomeScreen(nav: Nav) {
                     a.got -> "Waiting…"
                     else -> "Sending…"
                 }, valueColor = if (a.answer != null) p.ok else null)
+            }
+        }
+        // ── who else helps: one tap to call or message them ──
+        person?.let { pp ->
+            val others = remember(pp.pairId) { otherHelpersFull(ctx, pp.pairId) }
+            if (others.isNotEmpty()) com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.NavRow("Other helpers", sub = others.joinToString(", ") { it.name } + " · call or message") { nav.go(Route.HelperChat) }
             }
         }
         // ── earlier ──
@@ -749,40 +779,106 @@ fun SharingSettings() {
     })
 }
 
-/** The helpers' own page (bottom bar): quick messages between helpers; the person doesn't see them. */
+/**
+ * The helpers' own page (bottom bar): who else helps, each with Call and Message; then messages to all the helpers.
+ * The person doesn't see any of it.
+ */
 @Composable
 fun HelperChatScreen(nav: Nav) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val inbox by app.db.inbox().flow().collectAsState(emptyList())
-    val who = remember { com.suryaprakash.medlog.data.People.all(ctx).firstOrNull()?.name?.ifBlank { null } ?: "them" }
-    Screen("Helpers", "Messages between you and the other helpers. $who doesn't see them.", onHome = null, subtitle = "Only helpers see this") {
-        FamilyChatSection(who, inbox.filter { it.kind == com.suryaprakash.medlog.help.FamilyChat.KIND })
+    val people = remember { com.suryaprakash.medlog.data.People.all(ctx) }
+    val who = people.firstOrNull()?.name?.ifBlank { null } ?: "them"
+    Screen("Helpers", "The other helpers, and messages between you. $who doesn't see them.", onHome = null, subtitle = "Only helpers see this") {
+        FamilyChatSection(who, people, inbox.filter { it.kind == com.suryaprakash.medlog.help.FamilyChat.KIND })
     }
 }
 
-/** Quick messages between helpers; the person doesn't see them. */
+/** Who else helps, one card each (call or message them); then quick messages to all of them; then what was said. */
 @Composable
-private fun FamilyChatSection(who: String, chat: List<com.suryaprakash.medlog.data.InboxItem>) {
+private fun FamilyChatSection(who: String, people: List<com.suryaprakash.medlog.data.CaredFor>, chat: List<com.suryaprakash.medlog.data.InboxItem>) {
     val ctx = LocalContext.current
     val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
     var name by remember { mutableStateOf(com.suryaprakash.medlog.help.FamilyChat.myName(ctx)) }
     val ready = com.suryaprakash.medlog.help.FamilyChat.key(ctx) != null
-    com.suryaprakash.medlog.ui.Section("Other helpers")
-    if (!ready) { Hint("Starts once $who's phone has the new version and is online. Only helpers see this."); return }
+    var writingTo by remember { mutableStateOf<Pair<com.suryaprakash.medlog.data.CaredFor, OtherHelper?>?>(null) }
     if (com.suryaprakash.medlog.help.FamilyChat.myName(ctx).isBlank()) {
-        BigField("Your name", name, { name = it }, hint = "The other helpers will see this")
+        com.suryaprakash.medlog.ui.Question("What's your name?", "The other helpers will see it")
+        BigField("Your name", name, { name = it })
         BigButton("Done", tone = Tone.SECONDARY, enabled = name.isNotBlank(), onClick = { app.settings.putString("my_name", name.trim()) })
     }
+    // ── who else helps ──
+    people.forEach { person ->
+        val others = remember(person.pairId) { otherHelpersFull(ctx, person.pairId) }
+        com.suryaprakash.medlog.ui.SectionHeader(if (people.size > 1) "Also helping ${person.name}" else "Other helpers",
+            if (others.isEmpty()) "None yet" else "${others.size} other${if (others.size == 1) "" else "s"}", null)
+        if (others.isEmpty()) Hint("Other helpers show here once ${person.name.ifBlank { "their" }}'s phone shares them. It does this on its next update.")
+        others.forEach { o ->
+            val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
+            Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(48.dp).clip(CircleShape).background(p.brandSoft), contentAlignment = Alignment.Center) {
+                        Text(o.name.take(1).uppercase(), fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.brand)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(o.name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                        Text(listOf(o.relation, if (o.pairId.isBlank()) "Doesn't have the app yet" else "").filter { it.isNotBlank() }.joinToString(" · ").ifBlank { "Helps ${person.name.ifBlank { "them" }}" },
+                            fontSize = sc.small, color = p.inkSoft)
+                    }
+                }
+                androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalOnCard provides true) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        if (o.phone.isNotBlank()) BigButton("Call", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Call, height = 52.dp,
+                            onClick = { com.suryaprakash.medlog.help.Calls.call(ctx, o.phone) })
+                        if (o.pairId.isNotBlank() && ready) BigButton("Message", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.ChatBubble, height = 52.dp,
+                            onClick = { writingTo = person to o })
+                    }
+                }
+            }
+        }
+    }
+    // ── to all the helpers ──
+    com.suryaprakash.medlog.ui.SectionHeader("Message all helpers", "$who doesn't see these", null)
+    if (!ready) { Hint("Starts once $who's phone has the new version and is online. Only helpers see this."); return }
     com.suryaprakash.medlog.ui.FlowRowOf {
         listOf("I'm going there now", "Can someone check on $who?", "I'll call $who", "I can't go today").forEach { q ->
             com.suryaprakash.medlog.ui.Chip(q, false) { com.suryaprakash.medlog.help.FamilyChat.send(ctx, q) }
         }
     }
+    BigButton("Write a message", tone = Tone.SECONDARY, icon = Icons.Rounded.Send, height = 52.dp, onClick = { people.firstOrNull()?.let { writingTo = it to null } })
     val recent = chat.sortedByDescending { it.at }.take(20)
-    if (recent.isNotEmpty()) com.suryaprakash.medlog.ui.Timeline(recent.map { m ->
-        com.suryaprakash.medlog.ui.TimelineItem("${dayLabel(m.at)} ${timeLabel(m.at)}".trim(), m.text, sub = m.fromName.ifBlank { null })
-    })
+    if (recent.isNotEmpty()) {
+        com.suryaprakash.medlog.ui.Section("Messages")
+        com.suryaprakash.medlog.ui.Timeline(recent.map { m ->
+            com.suryaprakash.medlog.ui.TimelineItem("${dayLabel(m.at)} ${timeLabel(m.at)}".trim(), m.text, sub = m.fromName.ifBlank { null })
+        })
+    }
+    writingTo?.let { (person, o) -> WriteToHelper(person, o, who) { writingTo = null } }
+}
+
+/** A message to one helper ([to]), or to all of them: a few ready lines, or your own words. */
+@Composable
+private fun WriteToHelper(person: com.suryaprakash.medlog.data.CaredFor, to: OtherHelper?, who: String, onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    val sc = LocalScale.current
+    var text by remember { mutableStateOf("") }
+    fun send(t: String) { com.suryaprakash.medlog.help.FamilyChat.send(ctx, t, person, to = to?.pairId, toName = to?.name); onDone() }
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDone) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.suryaprakash.medlog.ui.SectionHeader(if (to != null) "Message ${to.name}" else "Message all helpers",
+                if (to != null) "Only ${to.name} sees this" else "$who doesn't see this", null)
+            com.suryaprakash.medlog.ui.FlowRowOf {
+                (if (to != null) listOf("Can you go to $who now?", "Can you give the medicine?", "I'm on my way", "Call me when you can")
+                 else listOf("I'm going there now", "Can someone check on $who?")).forEach { q -> com.suryaprakash.medlog.ui.Chip(q, false) { send(q) } }
+            }
+            BigField("Your message", text, { text = it }, lines = 3)
+            BigButton("Send", icon = Icons.Rounded.Send, enabled = text.isNotBlank(), onClick = { send(text.trim()) })
+        }
+    }
 }
 
 /**

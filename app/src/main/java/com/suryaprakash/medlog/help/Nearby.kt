@@ -434,88 +434,162 @@ object Nearby {
 
     // ───────────────────── pairing, face to face ─────────────────────
 
-    data class PairState(val found: List<Pair<String, String>> = emptyList(), val digits: String? = null, val done: String? = null, val error: String? = null)
+    /**
+     * Pairing, face to face. Both phones look and can be found at once: each lists the MedLog phones nearby by name,
+     * and either person picks the one to connect. Both then see the same 4 digits. Connecting again (a reset or new
+     * phone) replaces the old link on both phones rather than adding a second one.
+     * [found]: nearby phones (endpoint id, name). [incoming]: a helper's phone asking the person's phone to connect.
+     */
+    data class PairState(val found: List<Pair<String, String>> = emptyList(), val digits: String? = null, val done: String? = null, val error: String? = null,
+                         val incoming: Pair<String, String>? = null, val connecting: String? = null)
     val pair = MutableStateFlow(PairState())
     private var pendingPair: String? = null
 
-    /** Helper's phone: be findable for pairing, showing [myName]. */
+    // ── the helper's phone ──
+
+    /** Helper's phone: be findable as [myName], and list the phones nearby of people looking for a helper. */
     fun pairAsHelper(ctx: Context, myName: String) {
         val c = client(ctx)
         pair.value = PairState()
-        c.stopAdvertising()
-        c.startAdvertising("P|$myName", SERVICE, object : ConnectionLifecycleCallback() {
-            override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
-                pendingPair = id
-                pair.value = pair.value.copy(digits = info.authenticationDigits)
-                c.acceptConnection(id, object : PayloadCallback() {
-                    override fun onPayloadReceived(eid: String, p: Payload) {
-                        val o = JSONObject(String(p.asBytes() ?: return))
-                        val s = ctx.medlog.settings
-                        People.put(ctx, CaredFor(o.getString("pairId"), o.getString("key"), o.optString("name"), o.optString("family")))
-                        s.putString("my_name", myName)
-                        // use the same relay as the person's phone, so internet alerts meet in the same mailbox
-                        s.update { it.copy(pairedWith = People.names(ctx), role = it.role, onboarded = if (it.role == "helper") true else it.onboarded,
-                            relayUrl = o.optString("relay"), internetLink = o.optBoolean("internet", true)) }
-                        pair.value = pair.value.copy(done = o.optString("name"))
-                        c.stopAdvertising(); c.disconnectFromEndpoint(eid)
-                        Relay.stop()
-                        startListening(ctx)
-                    }
-                    override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
-                })
-            }
-            override fun onConnectionResult(id: String, r: ConnectionResolution) { if (!r.status.isSuccess) pair.value = pair.value.copy(error = "Pairing did not finish. Try again.") }
-            override fun onDisconnected(id: String) {}
-        }, AdvertisingOptions.Builder().setStrategy(STRATEGY).build()).addOnFailureListener { pair.value = pair.value.copy(error = "Bluetooth is off or not allowed.") }
+        c.stopAdvertising(); c.stopDiscovery()
+        c.startAdvertising("P|$myName", SERVICE, helperSide(ctx, myName), AdvertisingOptions.Builder().setStrategy(STRATEGY).build())
+            .addOnFailureListener { pair.value = pair.value.copy(error = "Bluetooth is off or not allowed.") }
+        c.startDiscovery(SERVICE, finder("Q|"), DiscoveryOptions.Builder().setStrategy(STRATEGY).build())
     }
 
-    /** The person's phone: look for helper phones that are in pairing mode. */
+    /** Helper's phone: connect to the person's phone the helper picked from the list. */
+    fun requestPerson(ctx: Context, endpointId: String, myName: String) {
+        val name = pair.value.found.firstOrNull { it.first == endpointId }?.second
+        pair.value = pair.value.copy(connecting = name, error = null)
+        client(ctx).requestConnection("PH|$myName", endpointId, helperSide(ctx, myName))
+            .addOnFailureListener { pair.value = pair.value.copy(connecting = null, error = "Could not reach that phone. Bring them closer.") }
+    }
+
+    /** What the helper's phone does with a connection, whichever side started it: accept, then take the pairing it's sent. */
+    private fun helperSide(ctx: Context, myName: String) = object : ConnectionLifecycleCallback() {
+        override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
+            val c = client(ctx)
+            pendingPair = id
+            pair.value = pair.value.copy(digits = info.authenticationDigits)
+            c.acceptConnection(id, object : PayloadCallback() {
+                override fun onPayloadReceived(eid: String, p: Payload) {
+                    val o = JSONObject(String(p.asBytes() ?: return))
+                    val s = ctx.medlog.settings
+                    // connecting again: the old link to the same phone goes, so the person isn't listed twice
+                    o.optString("replaces").takeIf { it.isNotBlank() && it != o.getString("pairId") }?.let { People.remove(ctx, it) }
+                    People.put(ctx, CaredFor(o.getString("pairId"), o.getString("key"), o.optString("name"), o.optString("family")))
+                    s.putString("my_name", myName)
+                    // use the same relay as the person's phone, so internet alerts meet in the same mailbox
+                    s.update { it.copy(pairedWith = People.names(ctx), role = it.role, onboarded = if (it.role == "helper") true else it.onboarded,
+                        relayUrl = o.optString("relay"), internetLink = o.optBoolean("internet", true)) }
+                    pair.value = pair.value.copy(done = o.optString("name"), connecting = null)
+                    c.stopAdvertising(); c.stopDiscovery(); c.disconnectFromEndpoint(eid)
+                    Relay.stop()
+                    startListening(ctx)
+                }
+                override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
+            })
+        }
+        override fun onConnectionResult(id: String, r: ConnectionResolution) {
+            if (!r.status.isSuccess) pair.value = pair.value.copy(digits = null, connecting = null, error = "Pairing did not finish. Try again.")
+        }
+        override fun onDisconnected(id: String) {}
+    }
+
+    // ── the person's phone ──
+
+    /** The person's phone: list helper phones nearby that are ready to pair, and be findable by them too. */
     fun findHelpers(ctx: Context) {
+        val app = ctx.medlog
         val c = client(ctx)
         pair.value = PairState()
-        c.stopDiscovery()
-        c.startDiscovery(SERVICE, object : EndpointDiscoveryCallback() {
-            override fun onEndpointFound(id: String, info: DiscoveredEndpointInfo) {
-                if (info.endpointName.startsWith("P|")) pair.value = pair.value.copy(found = (pair.value.found + (id to info.endpointName.removePrefix("P|"))).distinctBy { it.first })
-            }
-            override fun onEndpointLost(id: String) { pair.value = pair.value.copy(found = pair.value.found.filter { it.first != id }) }
-        }, DiscoveryOptions.Builder().setStrategy(STRATEGY).build()).addOnFailureListener { pair.value = pair.value.copy(error = "Bluetooth is off or not allowed.") }
+        c.stopDiscovery(); c.stopAdvertising()
+        c.startDiscovery(SERVICE, finder("P|"), DiscoveryOptions.Builder().setStrategy(STRATEGY).build())
+            .addOnFailureListener { pair.value = pair.value.copy(error = "Bluetooth is off or not allowed.") }
+        app.scope.launch {
+            val me = app.repo.profile().name.ifBlank { "MedLog" }
+            c.startAdvertising("Q|$me", SERVICE, personSide(ctx), AdvertisingOptions.Builder().setStrategy(STRATEGY).build())
+        }
     }
 
-    /** The person's phone: connect to a found helper; both screens then show the same 4 digits. */
-    fun pairWith(ctx: Context, endpointId: String, helperName: String, helperPhone: String) {
+    private fun finder(prefix: String) = object : EndpointDiscoveryCallback() {
+        override fun onEndpointFound(id: String, info: DiscoveredEndpointInfo) {
+            if (info.endpointName.startsWith(prefix)) pair.value = pair.value.copy(found = (pair.value.found + (id to info.endpointName.removePrefix(prefix))).distinctBy { it.first })
+        }
+        override fun onEndpointLost(id: String) { pair.value = pair.value.copy(found = pair.value.found.filter { it.first != id }) }
+    }
+
+    /** Which helper the person's phone is connecting, once chosen: name, number, and the list entry it replaces. */
+    private data class Chosen(val name: String, val phone: String, val helperId: Long?)
+    private var chosen: Chosen? = null
+
+    /** The person's phone connects to a helper phone it found; both screens then show the same 4 digits. */
+    fun pairWith(ctx: Context, endpointId: String, helperName: String, helperPhone: String, helperId: Long? = null) {
+        val app = ctx.medlog
+        chosen = Chosen(helperName, helperPhone, helperId)
+        pair.value = pair.value.copy(connecting = helperName, error = null)
+        app.scope.launch {
+            val me = app.repo.profile().name.ifBlank { "MedLog" }
+            client(ctx).requestConnection("PU|$me", endpointId, personSide(ctx))
+                .addOnFailureListener { pair.value = pair.value.copy(connecting = null, error = "Could not reach that phone. Bring them closer.") }
+        }
+    }
+
+    /** A helper's phone asked this phone to connect; the person said which helper it is. */
+    fun acceptIncoming(ctx: Context, helperName: String, helperPhone: String, helperId: Long?) {
+        val (id, _) = pair.value.incoming ?: return
+        chosen = Chosen(helperName, helperPhone, helperId)
+        pair.value = pair.value.copy(connecting = helperName)
+        client(ctx).acceptConnection(id, object : PayloadCallback() {
+            override fun onPayloadReceived(eid: String, p: Payload) {}
+            override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
+        })
+    }
+
+    /** What the person's phone does with a connection: accept its own request, and once through, send the pairing. */
+    private fun personSide(ctx: Context) = object : ConnectionLifecycleCallback() {
+        override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
+            pendingPair = id
+            if (info.endpointName.startsWith("PH|")) {
+                // a helper picked this phone: the person says who it is before anything is sent
+                pair.value = pair.value.copy(incoming = id to info.endpointName.removePrefix("PH|"), digits = info.authenticationDigits)
+                return
+            }
+            pair.value = pair.value.copy(digits = info.authenticationDigits)
+            client(ctx).acceptConnection(id, object : PayloadCallback() {
+                override fun onPayloadReceived(eid: String, p: Payload) {}
+                override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
+            })
+        }
+        override fun onConnectionResult(id: String, r: ConnectionResolution) {
+            if (!r.status.isSuccess) { pair.value = pair.value.copy(digits = null, incoming = null, connecting = null, error = "Pairing did not finish. Try again."); return }
+            val who = chosen ?: return
+            sendPairing(ctx, id, who)
+        }
+        override fun onDisconnected(id: String) {}
+    }
+
+    private fun sendPairing(ctx: Context, endpointId: String, who: Chosen) {
         val app = ctx.medlog
         val c = client(ctx)
         app.scope.launch {
             val me = app.repo.profile().name.ifBlank { "MedLog" }
             val pairId = Keys.randomB64(9).replace('/', '_').replace('+', '-')
             val key = Keys.randomB64(32)
-            c.requestConnection("PU|$me", endpointId, object : ConnectionLifecycleCallback() {
-                override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
-                    pendingPair = id
-                    pair.value = pair.value.copy(digits = info.authenticationDigits)
-                    c.acceptConnection(id, object : PayloadCallback() {
-                        override fun onPayloadReceived(eid: String, p: Payload) {}
-                        override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
-                    })
-                }
-                override fun onConnectionResult(id: String, r: ConnectionResolution) {
-                    if (!r.status.isSuccess) { pair.value = pair.value.copy(error = "Pairing did not finish. Try again."); return }
-                    c.sendPayload(id, Payload.fromBytes(JSONObject().put("pairId", pairId).put("key", key).put("name", me)
-                        .put("relay", app.settings.value.relayUrl).put("internet", app.settings.value.internetLink)
-                        .put("family", FamilyChat.familyKey(ctx)).toString().toByteArray()))
-                    app.scope.launch {
-                        val existing = app.db.helpers().all().firstOrNull { it.phone.filter(Char::isDigit).takeLast(10) == helperPhone.filter(Char::isDigit).takeLast(10) && helperPhone.isNotBlank() }
-                        com.suryaprakash.medlog.data.Sync.forget(ctx, pairId)
-                        if (existing != null) app.db.helpers().update(existing.copy(pairId = pairId, pairKey = key))
-                        else app.db.helpers().insert(Helper(name = helperName, phone = helperPhone, pairId = pairId, pairKey = key))
-                        pair.value = pair.value.copy(done = helperName)
-                        startListening(ctx); Relay.reconnect()
-                        delay(2000); c.disconnectFromEndpoint(id); c.stopDiscovery()
-                    }
-                }
-                override fun onDisconnected(id: String) {}
-            }).addOnFailureListener { pair.value = pair.value.copy(error = "Could not reach that phone. Bring them closer.") }
+            val helpers = app.db.helpers().all()
+            val existing = helpers.firstOrNull { it.id == who.helperId }
+                ?: helpers.firstOrNull { who.phone.isNotBlank() && it.phone.filter(Char::isDigit).takeLast(10) == who.phone.filter(Char::isDigit).takeLast(10) }
+            c.sendPayload(endpointId, Payload.fromBytes(JSONObject().put("pairId", pairId).put("key", key).put("name", me)
+                .put("relay", app.settings.value.relayUrl).put("internet", app.settings.value.internetLink)
+                .put("replaces", existing?.pairId ?: "")
+                .put("family", FamilyChat.familyKey(ctx)).toString().toByteArray()))
+            com.suryaprakash.medlog.data.Sync.forget(ctx, pairId)
+            if (existing != null) app.db.helpers().update(existing.copy(pairId = pairId, pairKey = key))
+            else app.db.helpers().insert(Helper(name = who.name, phone = who.phone, pairId = pairId, pairKey = key))
+            pair.value = pair.value.copy(done = who.name, connecting = null, incoming = null)
+            chosen = null
+            startListening(ctx); Relay.reconnect()
+            delay(2000); c.disconnectFromEndpoint(endpointId); c.stopDiscovery(); c.stopAdvertising()
         }
     }
 

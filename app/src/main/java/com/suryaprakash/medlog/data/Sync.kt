@@ -147,7 +147,7 @@ object Sync {
         profile?.let { o.put("profile", profileJson(it)) }
         if (p.dir == Relay.DOWN) {
             // the helpers' names, so one helper can hand a message to another
-            o.put("helpers", JSONArray(ctx.medlog.db.helpers().all().map { JSONObject().put("name", it.name).put("pairId", it.pairId ?: "") }))
+            o.put("helpers", JSONArray(ctx.medlog.db.helpers().all().map { JSONObject().put("name", it.name).put("pairId", it.pairId ?: "").put("phone", it.phone).put("relation", it.relation) }))
         }
         val body = JSONObject().put("sync", 1).put("from", since).put("to", to).put("z", zip(o.toString()))
         return body to to

@@ -138,6 +138,7 @@
         <receiver android:name=".meds.AlarmReceiver" android:exported="false" />
         <receiver android:name=".UpdateReceiver" android:exported="false" />
         <receiver android:name=".meds.DoseActionReceiver" android:exported="false" />
+        <receiver android:name=".care.HelperDoseReceiver" android:exported="false" />
         <receiver android:name=".help.SilenceReceiver" android:exported="false" />
         <receiver android:name=".help.AlertReplyReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">
