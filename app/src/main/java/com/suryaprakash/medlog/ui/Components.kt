@@ -229,7 +229,7 @@ fun UndoBar(modifier: Modifier = Modifier) {
             Box(
                 Modifier.heightIn(min = sc.target - 8.dp).clip(RoundedCornerShape(12.dp)).steady("Undo") { UndoHost.action?.invoke(); UndoHost.clear() }.padding(horizontal = 18.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("Undo", color = Color(0xFF7DD3C8), fontWeight = FontWeight.SemiBold, fontSize = sc.button) }
+            ) { Text("Undo", color = p.brandSoft, fontWeight = FontWeight.SemiBold, fontSize = sc.button) }
         }
     }
 }
@@ -427,7 +427,7 @@ fun ReadToggle(modifier: Modifier = Modifier) {
     val on = s.autoRead
     val sh = RoundedCornerShape(24.dp)
     Row(
-        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card)
+        modifier.height(48.dp).clip(sh).background(if (on) p.brand else p.card)
             .semantics { role = Role.Switch; stateDescription = if (on) "On" else "Off" }
             .steady("Read aloud") {
                 val now = !on
@@ -591,7 +591,7 @@ fun BigButton(
 fun YesNo(yes: String = "Yes", no: String = "No", onYes: () -> Unit, onNo: () -> Unit) {
     val sc = LocalScale.current
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        BigButton(yes, Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.4f, onClick = onYes)
+        BigButton(yes, Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.4f, onClick = onYes)
         BigButton(no, Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.4f, onClick = onNo)
     }
 }

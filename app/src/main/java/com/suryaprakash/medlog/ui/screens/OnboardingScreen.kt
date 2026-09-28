@@ -223,7 +223,7 @@ fun OnboardingScreen(nav: Nav) {
                 val p = com.suryaprakash.medlog.ui.LocalPalette.current
                 com.suryaprakash.medlog.ui.ChoicePair(
                     com.suryaprakash.medlog.ui.BigOption("My health", "Track how I feel and my medicines", own, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Person, p.tintBlue, 60.dp) }) { own = !own },
-                    com.suryaprakash.medlog.ui.BigOption("I help someone", "Get their alerts and messages", helps, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, p.tintGreen, 60.dp) }) { helps = !helps },
+                    com.suryaprakash.medlog.ui.BigOption("I help someone", "Get their alerts and messages", helps, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, com.suryaprakash.medlog.ui.HELPER_BRAND, 60.dp) }) { helps = !helps },
                     vertical = true,
                 )
                 Hint("Setting this up for a parent? Choose My health.")
@@ -238,7 +238,7 @@ fun OnboardingScreen(nav: Nav) {
                     com.suryaprakash.medlog.ui.BigOption("Mine first", "My health, then connect to them", false, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Person, p.tintBlue, 60.dp) }) {
                         Onboard.alsoHelps = true; go(S.SIZE)
                     },
-                    com.suryaprakash.medlog.ui.BigOption("Theirs first", "Connect to their phone, then my health", false, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, p.tintGreen, 60.dp) }) {
+                    com.suryaprakash.medlog.ui.BigOption("Theirs first", "Connect to their phone, then my health", false, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, com.suryaprakash.medlog.ui.HELPER_BRAND, 60.dp) }) {
                         Onboard.alsoHelps = false; go(S.SIZE); PairMode.helping = true; nav.go(Route.Pair)
                     },
                     vertical = true,
@@ -444,7 +444,7 @@ fun OnboardingScreen(nav: Nav) {
                 primary = "Next", primaryEnabled = has == false || (has == true && pr.allergies.isNotBlank()), onPrimary = { next() }) {
                 val p = com.suryaprakash.medlog.ui.LocalPalette.current
                 com.suryaprakash.medlog.ui.AnswerCards(listOf(
-                    com.suryaprakash.medlog.ui.Answer("I have no allergies", "Not that I know of", Icons.Rounded.CheckCircle, p.ok, has == false) {
+                    com.suryaprakash.medlog.ui.Answer("I have no allergies", "Not that I know of", Icons.Rounded.CheckCircle, p.brand, has == false) {
                         has = false; update { cur -> cur.copy(allergies = "") }; next() },
                     com.suryaprakash.medlog.ui.Answer("I'm allergic to something", "You'll tell us what next", Icons.Rounded.Warning, p.amber, has == true) {
                         has = true; writing = true },
@@ -617,7 +617,7 @@ private fun HelpSteps(emergency: String) {
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val steps = listOf(
         Triple(Icons.Rounded.Sms, p.tintBlue, "A text with where you are" to "The moment you ask for help"),
-        Triple(Icons.Rounded.Call, p.tintGreen, "A call, one person at a time" to "Until someone answers"),
+        Triple(Icons.Rounded.Call, p.brand, "A call, one person at a time" to "Until someone answers"),
         Triple(Icons.Rounded.LocalHospital, p.red, "Then $emergency" to "If nobody answers"),
     )
     steps.forEachIndexed { i, (icon, tint, words) ->
@@ -738,7 +738,7 @@ private fun PermissionsStep(n: Int?, total: Int, onBack: () -> Unit, next: () ->
     val runtime = listOf(
         Triple("Reminders", Icons.Rounded.Notifications to pal.tintOrange, Perms.NOTIFY),
         Triple("Texts", Icons.Rounded.Sms to pal.tintBlue, Perms.SMS),
-        Triple("Calls", Icons.Rounded.Call to pal.tintGreen, Perms.CALL),
+        Triple("Calls", Icons.Rounded.Call to pal.brand, Perms.CALL),
         Triple("Location", Icons.Rounded.LocationOn to pal.tintPink, Perms.LOCATION),
     )
     val missing = runtime.filter { !Perms.has(ctx, *it.third) }

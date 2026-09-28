@@ -1,6 +1,7 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
+- **Colours hold to one rule:** green only means something is done. Buttons use the mode's colour: blue when helping, teal for your own health. There are no stray teal or green touches in helper mode. This covers Read aloud, Undo, call icons, date pickers and Food & water, which is now a warm brown.
 - **Medicine reminders on a helper's phone** now have Given, Snooze 5 min and More. More opens a page where you can give it in a few minutes (the other helpers are told), ask another helper to give it (their phone rings), or say it wasn't given and why.
 - **See the other helpers** on the Helpers tab, with Call and Message for each. A message to one helper goes only to them.
 - **Connecting phones:** both phones now search and show the phones nearby by name. Pick the right one on either phone. Connecting again replaces the old link, so no one is listed twice.

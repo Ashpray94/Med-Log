@@ -141,19 +141,19 @@ class AlertActivity : ComponentActivity() {
                     BigButton("Don't wait – start now", tone = Tone.DANGER, onClick = { Sos.answer.value = "go" })
                 }
                 is Sos.Phase.Answered -> {
-                    BigButton("Yes, help is coming", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = { Sos.helpComing() })
+                    BigButton("Yes, help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = { Sos.helpComing() })
                     BigButton("No, call the next person", tone = Tone.DANGER, icon = Icons.Rounded.Call, onClick = { Sos.next() })
                 }
                 is Sos.Phase.WhatsApp -> {
-                    if (ph.started) BigButton("Help is coming", tone = Tone.OK, icon = Icons.Rounded.Check, onClick = { Sos.helpComing() })
+                    if (ph.started) BigButton("Help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, onClick = { Sos.helpComing() })
                     BigButton("Call helpers one by one", tone = Tone.DANGER, icon = Icons.Rounded.Call, onClick = { Sos.next() })
                 }
                 is Sos.Phase.EmergencyCountdown -> {
                     BigButton("Call ${ph.number} now", tone = Tone.DANGER, icon = Icons.Rounded.Call, height = sc.target * 1.5f, onClick = { Sos.answer.value = "go" })
-                    BigButton("Help is already coming", tone = Tone.OK, onClick = { Sos.helpComing() })
+                    BigButton("Help is already coming", tone = Tone.PRIMARY, onClick = { Sos.helpComing() })
                 }
-                Sos.Phase.HelpComing, Sos.Phase.Cancelled, Sos.Phase.Idle -> BigButton("Close", tone = Tone.OK, height = sc.target * 1.3f, onClick = onClose)
-                else -> BigButton("Help is coming – stop calling", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
+                Sos.Phase.HelpComing, Sos.Phase.Cancelled, Sos.Phase.Idle -> BigButton("Close", tone = Tone.PRIMARY, height = sc.target * 1.3f, onClick = onClose)
+                else -> BigButton("Help is coming – stop calling", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
             }
             // if there's time: what happened, in pictures. Helpers get it straight away. Nothing waits for it.
             if (!calm || phase is Sos.Phase.HelpComing) {
@@ -218,7 +218,7 @@ class AlertActivity : ComponentActivity() {
         }
         Screen("Did you fall?", "Did you fall? Are you OK?", onHome = null, background = p.redSoft) {
             Text("$left", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = p.red)
-            BigButton("I'm OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
+            BigButton("I'm OK", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
                 done = true; medlog.scope.launch { medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
             })
             BigButton("I fell – I need help", tone = Tone.DANGER, height = sc.target * 1.5f, onClick = { done = true; Sos.start(this@AlertActivity, "I fell", countdown = false); onClose() })
@@ -241,7 +241,7 @@ class AlertActivity : ComponentActivity() {
                 savedFeedback(this@AlertActivity)
                 if (route != null) openApp(route) else { medlog.speaker.say("Thank you. Have a good day."); onClose() }
             }
-            BigButton("😊  Good", tone = Tone.OK, height = sc.target * 1.5f, onClick = { answer("good", null) })
+            BigButton("😊  Good", tone = Tone.PRIMARY, height = sc.target * 1.5f, onClick = { answer("good", null) })
             BigButton("😐  OK", tone = Tone.QUIET, height = sc.target * 1.5f, onClick = { answer("ok", null) })
             BigButton("😟  Not well", tone = Tone.AMBER, height = sc.target * 1.5f, onClick = { answer("not well", "tell") })
             BigButton("Tell how I feel", tone = Tone.SECONDARY, onClick = { answer("told", "tell") })
@@ -340,7 +340,7 @@ class AlertActivity : ComponentActivity() {
                     else -> { medlog.speaker.say("Thank you. I told $from."); onClose() }
                 }
             }
-            BigButton("😊  I'm good", tone = Tone.OK, height = sc.target * 1.5f, onClick = { answer("good") })
+            BigButton("😊  I'm good", tone = Tone.PRIMARY, height = sc.target * 1.5f, onClick = { answer("good") })
             BigButton("😐  I'm OK", tone = Tone.QUIET, height = sc.target * 1.5f, onClick = { answer("ok") })
             BigButton("😟  Not so well", tone = Tone.AMBER, height = sc.target * 1.5f, onClick = { answer("notwell") })
             BigButton("Please call me", tone = Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { answer("call") })

@@ -50,7 +50,7 @@ data class Palette(
  * 60 / 30 / 10 (docs/DESIGN.md).
  * 60 — white and greys: a light grey page, white cards lifted by a soft shadow, near-black text.
  * 30 — the primary teal: the one main action on a page, the hero card, chosen things and the current tab.
- * 10 — accents: each feature's own icon colour (Medicines orange, Food green, Readings pink, Doctor blue,
+ * 10 — accents: each feature's own icon colour (Medicines orange, Food cocoa brown (green means only "done"), Readings pink, Doctor blue,
  *      My health purple, History teal) and the status colours (red urgent/SOS, amber watch, green OK).
  */
 val Warm = Palette(
@@ -58,7 +58,7 @@ val Warm = Palette(
     line = Color(0xFFDDDDD8), fill = Color(0xFFE3E3DD), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
     ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE2F2E6), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF0D6),
     red = Color(0xFFC0271F), redSoft = Color(0xFFFCE8E5), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFFFFFFF),
-    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFC4600A), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
+    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF8A5A44), tintOrange = Color(0xFFC4600A), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
 )
 
 /**
@@ -67,7 +67,8 @@ val Warm = Palette(
  */
 val MY_BRAND = Color(0xFF0A6B63)
 val HELPER_BRAND = Color(0xFF33589E)
-val HelperMode = Warm.copy(brand = HELPER_BRAND, brandSoft = Color(0xFFE7EDF7))
+// no teal anywhere in helping: the teal feature colour becomes a slate blue-grey, so the only accent is the helper blue
+val HelperMode = Warm.copy(brand = HELPER_BRAND, brandSoft = Color(0xFFE7EDF7), tintTeal = Color(0xFF52667A), focus = HELPER_BRAND)
 
 val HighContrast = Warm.copy(
     paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, outline = Color.Black, fill = Color(0xFFE0E0E0),
@@ -142,7 +143,7 @@ val LocalSettings = staticCompositionLocalOf { Settings() }
 fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
     val helping = settings.role == "helper"
     val palette = when {
-        settings.highContrast -> if (helping) HighContrast.copy(brand = Color(0xFF1F3C73), brandSoft = Color(0xFFDCE4F2)) else HighContrast
+        settings.highContrast -> if (helping) HighContrast.copy(brand = Color(0xFF1F3C73), brandSoft = Color(0xFFDCE4F2), tintTeal = Color(0xFF3A4D60)) else HighContrast
         helping -> HelperMode
         else -> Warm
     }
@@ -160,7 +161,9 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = palette.brand, onPrimary = palette.onBrand, background = palette.paper, surface = palette.card,
-            onBackground = palette.ink, onSurface = palette.ink, error = palette.red, outline = palette.line, onSurfaceVariant = palette.inkSoft,
+            onBackground = palette.ink, onSurface = palette.ink, error = palette.red, outline = palette.line, onSurfaceVariant = palette.inkSoft, primaryContainer = palette.brandSoft, onPrimaryContainer = palette.ink,
+            secondary = palette.brand, onSecondary = palette.onBrand, tertiary = palette.brand, onTertiary = palette.onBrand, tertiaryContainer = palette.brandSoft,
+            surfaceVariant = palette.fill, surfaceTint = palette.card, inversePrimary = palette.brandSoft,
             surfaceContainerHigh = palette.card, surfaceContainerLow = palette.card, secondaryContainer = palette.brandSoft, onSecondaryContainer = palette.ink,
         ),
         typography = MaterialTheme.typography.copy(

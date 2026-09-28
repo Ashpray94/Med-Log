@@ -269,7 +269,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
         Toggle("This is a blood thinner", m.bloodThinner) { m = m.copy(bloodThinner = it) }
         val valid = m.name.isNotBlank() && (m.asNeeded || times.isNotEmpty())
         if (!valid) Hint(if (m.name.isBlank()) "Please add the name." else "Please choose when to take it.")
-        BigButton("Done", tone = Tone.OK, enabled = valid, height = sc.target * 1.3f, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, enabled = valid, height = sc.target * 1.3f, onClick = {
             scope.launch {
                 val now = System.currentTimeMillis()
                 val change = original?.let { o ->
@@ -333,7 +333,7 @@ fun DidITakeScreen(nav: Nav) {
     Screen("Did I take my medicines?", say, onHome = { nav.home() }, onBack = { nav.back() }) {
         Card(border = if (pending.isEmpty()) p.ok else p.amber) { Text(say, fontSize = sc.body * 1.05f, color = p.ink, fontWeight = FontWeight.Bold) }
         taken.forEach { d -> byId[d.medicineId]?.let { m -> Row(verticalAlignment = Alignment.CenterVertically) { MedPhoto(m.photoPath); Spacer(Modifier.width(12.dp)); Body("✓ ${m.name} · ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}", bold = true) } } }
-        if (pending.isNotEmpty()) BigButton("Take them now", tone = Tone.OK, onClick = { nav.replace(Route.Meds) })
+        if (pending.isNotEmpty()) BigButton("Take them now", tone = Tone.PRIMARY, onClick = { nav.replace(Route.Meds) })
         Spacer(Modifier.height(4.dp))
     }
 }

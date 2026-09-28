@@ -133,9 +133,9 @@ class DoseActivity : ComponentActivity() {
                         }
                     }
                     if (m.form == "feed") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        BigButton("Given", Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.take(this@DoseActivity, d.id); savedFeedback(this@DoseActivity); version++ } })
+                        BigButton("Given", Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.take(this@DoseActivity, d.id); savedFeedback(this@DoseActivity); version++ } })
                         BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.skip(this@DoseActivity, d.id, "Not given"); version++ } })
-                    } else BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = {
+                    } else BigButton("I took it", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = {
                         scope.launch {
                             val r = Scheduler.take(this@DoseActivity, d.id)
                             if (r == Scheduler.Taken.ALREADY) confirmDouble = medlog.db.doses().get(d.id) else { savedFeedback(this@DoseActivity); medlog.speaker.say("Well done."); version++ }
@@ -147,7 +147,7 @@ class DoseActivity : ComponentActivity() {
                     }
                 }
             }
-            if (due.size > 1) BigButton("I took them all", tone = Tone.OK, onClick = {
+            if (due.size > 1) BigButton("I took them all", tone = Tone.PRIMARY, onClick = {
                 scope.launch { due.forEach { Scheduler.take(this@DoseActivity, it.first.id) }; savedFeedback(this@DoseActivity); version++ }
             })
         }

@@ -106,7 +106,7 @@ fun VisitScreen(nav: Nav) {
         BigField("What is it for?", f.medicineFor, { f = f.copy(medicineFor = it) })
         BigField("Next appointment", f.nextText, { f = f.copy(nextText = it) }, hint = f.nextAt?.let { "Understood as ${dayLabel(it)} ${timeLabel(it)}" } ?: "For example: in 2 weeks")
         BigField("Notes or questions for next time", f.notes, { f = f.copy(notes = it) }, lines = 2)
-        BigButton("Done", tone = Tone.OK, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, onClick = {
             scope.launch {
                 val o = JSONObject().put("doctor", f.doctor).put("with", f.accompanied).put("reason", f.reason).put("happened", f.happened)
                     .put("referral", f.referral).put("referTo", f.referTo).put("referFor", f.referFor).put("referNumber", f.referNumber)
@@ -193,14 +193,15 @@ fun AppointmentsScreen(nav: Nav) {
             listOf("Tomorrow" to now.plusDays(1), "In 1 week" to now.plusWeeks(1), "In 1 month" to now.plusMonths(1)).forEach { (l, d) -> Chip(l, date?.toLocalDate() == d.toLocalDate()) { date = d.withHour(10).withMinute(0) } }
             Chip("Pick a date", false) {
                 val n = LocalDate.now()
-                DatePickerDialog(ctx, { _, y, m, d -> TimePickerDialog(ctx, { _, h, mi -> date = LocalDateTime.of(y, m + 1, d, h, mi) }, 10, 0, false).show() }, n.year, n.monthValue - 1, n.dayOfMonth).show()
+                val pick = if (ctx.medlog.settings.value.role == "helper") com.suryaprakash.medlog.R.style.Picker_Helping else com.suryaprakash.medlog.R.style.Picker_Mine
+                DatePickerDialog(ctx, pick, { _, y, m, d -> TimePickerDialog(ctx, pick, { _, h, mi -> date = LocalDateTime.of(y, m + 1, d, h, mi) }, 10, 0, false).show() }, n.year, n.monthValue - 1, n.dayOfMonth).show()
             }
         }
         date?.let { Body("${dayLabel(it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())} at ${timeLabel(it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())}", bold = true) }
         BigField("Doctor", doctor, { doctor = it })
         BigField("Place", place, { place = it })
         BigField("For what", purpose, { purpose = it })
-        BigButton("Done", tone = Tone.OK, icon = Icons.Rounded.Add, enabled = date != null, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, icon = Icons.Rounded.Add, enabled = date != null, onClick = {
             scope.launch {
                 val at = date!!.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val a = Appointment(at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())

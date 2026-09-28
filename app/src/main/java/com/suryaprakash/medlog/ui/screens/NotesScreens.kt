@@ -675,7 +675,7 @@ private fun DoseAfterSheet(name: String, d: com.suryaprakash.medlog.data.Dose, o
     com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(name, "The $t dose, ${dayLabel(d.scheduledAt).lowercase()}", null)
-            BigButton("Taken on time · $t", tone = com.suryaprakash.medlog.ui.Tone.OK, onClick = { done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, d.scheduledAt) } })
+            BigButton("Taken on time · $t", tone = com.suryaprakash.medlog.ui.Tone.PRIMARY, onClick = { done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, d.scheduledAt) } })
             BigButton("Taken at another time", tone = com.suryaprakash.medlog.ui.Tone.TINT, onClick = { other = true })
             if (d.status == DoseStatus.TAKEN) BigButton("Not taken", tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, onClick = { done { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } })
             if (d.status != DoseStatus.SKIPPED) BigButton("Skipped on purpose", tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, onClick = { done { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Skipped") } })

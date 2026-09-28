@@ -31,8 +31,8 @@ android {
         applicationId = "com.suryaprakash.medlog"
         minSdk = 23
         targetSdk = 35
-        versionCode = 2120
-        versionName = "2.12.0"
+        versionCode = 2121
+        versionName = "2.12.1"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -208,7 +208,7 @@ fun CallOnePerson(people: List<Person>, onAdd: () -> Unit) {
                         Box(Modifier.size(62.dp).clip(CircleShape).background(tints[i % tints.size].copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                             Text(who.name.take(1).uppercase(), color = tints[i % tints.size], fontSize = sc.title * 0.8f, fontWeight = FontWeight.Bold)
                         }
-                        Box(Modifier.size(24.dp).clip(CircleShape).background(p.ok), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(24.dp).clip(CircleShape).background(p.brand), contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Call, null, tint = Color.White, modifier = Modifier.size(14.dp))
                         }
                     }

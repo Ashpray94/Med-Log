@@ -272,8 +272,8 @@ private fun MessageStatus(st: HelpMessages.Status, acks: List<Nearby.Ack>, reach
     val answered = acks.firstOrNull()
     val (icon, tint, headline) = when {
         answered != null -> Triple(Icons.Rounded.CheckCircle, p.ok, "${answered.name} answered")
-        st.stage == "sending" -> Triple(Icons.Rounded.Schedule, p.tintBlue, "Sending…")
-        st.stage == "sent" -> Triple(Icons.Rounded.Schedule, p.tintBlue, "Waiting for an answer")
+        st.stage == "sending" -> Triple(Icons.Rounded.Schedule, p.inkSoft, "Sending…")
+        st.stage == "sent" -> Triple(Icons.Rounded.Schedule, p.inkSoft, "Waiting for an answer")
         st.stage == "noanswer" -> Triple(Icons.Rounded.Warning, p.amber, "Nobody has answered yet")
         else -> Triple(Icons.Rounded.Warning, p.red, "Couldn't send it")
     }
@@ -384,7 +384,7 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
         Toggle("Call and message in an SOS", h.sos) { h = h.copy(sos = it) }
         Toggle("Tell them about missed medicines", h.alerts) { h = h.copy(alerts = it) }
         Toggle("Let them see my notes", h.canSeeNotes, "Only used when you share your doctor page with them") { h = h.copy(canSeeNotes = it) }
-        BigButton("Done", tone = Tone.OK, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
             scope.launch { if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h); app.refreshWidgets(); nav.back() }
         })
         if (id != null) {
@@ -420,7 +420,7 @@ fun PairScreen(nav: Nav) {
         if (!allowed) { Body("Bluetooth and nearby devices are needed to connect."); BigButton("Allow", onClick = { ask(Perms.NEARBY + Perms.NOTIFY) }); return@Screen }
         st.done?.let { name ->
             Card(border = p.ok) { Body(if (helperSide) "Paired with $name. You'll be alerted when $name needs you." else "$name's phone is paired.", bold = true) }
-            BigButton("Done", tone = Tone.OK, onClick = { if (!s.onboarded) nav.back() else nav.home(if (s.role == "helper") Route.HelperHome else Route.Home) })
+            BigButton("Done", tone = Tone.PRIMARY, onClick = { if (!s.onboarded) nav.back() else nav.home(if (s.role == "helper") Route.HelperHome else Route.Home) })
             return@Screen
         }
         st.error?.let { Card(border = p.amber) { Body(it) } }

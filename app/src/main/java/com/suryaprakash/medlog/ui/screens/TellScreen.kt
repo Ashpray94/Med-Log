@@ -423,7 +423,7 @@ private fun YesNoBig(onYes: () -> Unit, onNo: () -> Unit) {
     val sc = LocalScale.current
     val lang = LocalSettings.current.languages.firstOrNull() ?: "en-IN"
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        BigButton(Localize.of("Yes", lang)?.let { "Yes · $it" } ?: "Yes", Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = onYes)
+        BigButton(Localize.of("Yes", lang)?.let { "Yes · $it" } ?: "Yes", Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = onYes)
         BigButton(Localize.of("No", lang)?.let { "No · $it" } ?: "No", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.5f, onClick = onNo)
     }
 }

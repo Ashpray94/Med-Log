@@ -438,7 +438,7 @@ fun UpdateCard(auto: Boolean = false) {
             if (!canInstall) {
                 Body("First, allow updates to install. Turn on the switch, then come back.")
                 BigButton("Allow updates", tone = Tone.QUIET, onClick = { com.suryaprakash.medlog.Updater.openInstallPermission(ctx) })
-            } else BigButton("Update now", tone = Tone.OK, onClick = { scope.launch { com.suryaprakash.medlog.Updater.install(ctx, s.release) } })
+            } else BigButton("Update now", tone = Tone.PRIMARY, onClick = { scope.launch { com.suryaprakash.medlog.Updater.install(ctx, s.release) } })
             Hint("Your notes and settings stay. Android will ask you to confirm.")
         }
         is com.suryaprakash.medlog.Updater.State.Downloading -> Card() { Body("Downloading… ${s.percent}%", bold = true) }
@@ -484,7 +484,7 @@ fun PrivacyScreen(nav: Nav) {
                     nav.home(Route.Onboarding)
                 }
             })
-            BigButton("No, keep it", tone = Tone.OK, onClick = { confirm = false })
+            BigButton("No, keep it", tone = Tone.PRIMARY, onClick = { confirm = false })
         }
     }
 }

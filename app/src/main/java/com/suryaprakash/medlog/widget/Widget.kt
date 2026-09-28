@@ -150,7 +150,7 @@ class MedLogWidget : GlanceAppWidget() {
         val size = LocalSize.current
         val ink = ColorProvider(Color(0xFF18181B))
         val soft = ColorProvider(Color(0xFF52525B))
-        val accent = ColorProvider(Color(0xFF0B6E66))
+        val accent = ColorProvider(if (ctx.medlog.settings.value.role == "helper") com.suryaprakash.medlog.ui.HELPER_BRAND else com.suryaprakash.medlog.ui.MY_BRAND)
         val white = ColorProvider(Color.White)
         if (ask != null || noted != null) { Pending(ctx, ask, noted); return }
         val w = size.width.value - 16f

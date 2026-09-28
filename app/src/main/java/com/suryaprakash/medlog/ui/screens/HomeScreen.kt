@@ -320,9 +320,9 @@ fun DoseCard(d: Dose, m: Medicine, onOpen: () -> Unit, onTaken: () -> Unit, onUn
             Text("Undo", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft,
                 modifier = Modifier.clip(RoundedCornerShape(12.dp)).steady("Undo taken", onClick = onUndo).padding(horizontal = 12.dp, vertical = 10.dp))
         } else if (m.form == "feed" && !missed && onNotGiven != null) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            BigButton("Given", Modifier.weight(1f), if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
+            BigButton("Given", Modifier.weight(1f), if (dueNow) Tone.PRIMARY else Tone.TINT, height = 52.dp, onClick = onTaken)
             BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = onNotGiven)
-        } else BigButton(if (m.form == "feed") (if (missed) "Given late" else "Given") else if (missed) "I took it late" else "I took it", tone = if (dueNow) Tone.OK else Tone.TINT, height = 52.dp, onClick = onTaken)
+        } else BigButton(if (m.form == "feed") (if (missed) "Given late" else "Given") else if (missed) "I took it late" else "I took it", tone = if (dueNow) Tone.PRIMARY else Tone.TINT, height = 52.dp, onClick = onTaken)
     }
 }
 
@@ -471,7 +471,7 @@ fun TakenWhenSheet(d: Dose, feed: Boolean, who: String? = null, onPick: (Long?) 
     com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(if (feed) "When was it given?" else if (who != null) "When did they take it?" else "When did you take it?", "The ${chipTime(d.scheduledAt)} ${if (feed) "feed" else "dose"}$day", null)
-            BigButton("On time · ${chipTime(d.scheduledAt)}$day", tone = Tone.OK, icon = Icons.Rounded.CheckCircle, onClick = { onPick(d.scheduledAt) })
+            BigButton("On time · ${chipTime(d.scheduledAt)}$day", tone = Tone.PRIMARY, icon = Icons.Rounded.CheckCircle, onClick = { onPick(d.scheduledAt) })
             if (onDay == java.time.LocalDate.now()) BigButton("Just now", tone = Tone.TINT, onClick = { onPick(null) })
             BigButton("Another time", tone = Tone.SECONDARY, onClick = { other = true })
             // a feed can be replaced by ordinary food: note that instead, then what was eaten
@@ -556,7 +556,7 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
                         when {
                             taken(d) -> BigButton("Undo", Modifier.width(IntrinsicSize.Max), tone = Tone.SECONDARY, height = 48.dp, onClick = { onUndo(d) })
                             d.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED -> BigButton(if (feed) "Given" else "Took it", Modifier.width(IntrinsicSize.Max), tone = Tone.TINT, height = 48.dp, onClick = { onTaken(d) })
-                            else -> BigButton(if (feed) "Given" else if (missed(d)) "Took it late" else "Took it", Modifier.width(IntrinsicSize.Max), tone = if (due(d)) Tone.OK else Tone.TINT, height = 48.dp, onClick = { onTaken(d) })
+                            else -> BigButton(if (feed) "Given" else if (missed(d)) "Took it late" else "Took it", Modifier.width(IntrinsicSize.Max), tone = if (due(d)) Tone.PRIMARY else Tone.TINT, height = 48.dp, onClick = { onTaken(d) })
                         }
                     }
                 }
