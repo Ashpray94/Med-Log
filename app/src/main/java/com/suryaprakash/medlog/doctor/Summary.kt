@@ -59,7 +59,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
     fun build(profile: Profile, from: Long, to: Long, notes: List<Note>, meds: List<Medicine>, doses: List<Dose>, waterGoal: Int, now: Long = System.currentTimeMillis()): Summary {
         val symptoms = notes.filter { it.kind == Kind.SYMPTOM && it.problemId != null }
         val facts = symptoms.associate { it.id to factsFromJson(it.details) }
-        val byProblem = symptoms.groupBy { it.problemId!! }
+        val byProblem = symptoms.groupBy { it.problemId!! }.filterValues { com.suryaprakash.medlog.data.Occurrences.total(it) > 0 }
         val days = generateSequence(day(from)) { it.plusDays(1) }.takeWhile { !it.isAfter(day(to - 1)) }.toList().takeLast(14)
 
         // ── header ──
@@ -76,9 +76,9 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
         val concerns = ArrayList<Pair<Int, Summary.Concern>>()
         for ((pid, list) in byProblem) {
             val label = cat.problem(pid)?.label ?: pid
-            val total = list.sumOf { it.count ?: 1 }
+            val total = com.suryaprakash.medlog.data.Occurrences.total(list)
             val level = when { list.any { it.triage == "RED" } -> "RED"; list.any { it.triage == "AMBER" } -> "AMBER"; else -> "GREEN" }
-            val perDay = days.map { dd -> list.filter { day(it.occurredAt) == dd }.sumOf { it.count ?: 1 } }
+            val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list).let { m -> days.map { dd -> m[dd] ?: 0 } }
             val active = perDay.filter { it > 0 }
             val trend = if (active.size >= 3 && active.last() > active.first()) ", increasing (${active.first()}→${active.last()}/day)" else if (active.size >= 3 && active.last() < active.first()) ", decreasing (${active.first()}→${active.last()}/day)" else ""
             val span = "${d(list.minOf { it.occurredAt })}–${d(list.maxOf { it.occurredAt })}"
@@ -117,10 +117,10 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
         Patterns.find(cat, symptoms, facts, meds, doses, notes, days, zone).forEach { concerns += 1800 to Summary.Concern("PATTERN", "◇ $it", emptyList()) }
 
         // ── timeline ──
-        val timeline = byProblem.entries.sortedByDescending { e -> e.value.sumOf { it.count ?: 1 } }.take(8).map { (pid, list) ->
+        val timeline = byProblem.entries.sortedByDescending { e -> com.suryaprakash.medlog.data.Occurrences.total(e.value) }.take(8).map { (pid, list) ->
             Summary.TimelineRow(cat.problem(pid)?.label ?: pid, days.map { dd ->
                 val on = list.filter { day(it.occurredAt) == dd }
-                val c = on.sumOf { it.count ?: 1 }
+                val c = com.suryaprakash.medlog.data.Occurrences.total(on)
                 val sev = on.mapNotNull { it.severity }.maxOrNull() ?: 0
                 val lvl = when { on.any { it.triage == "RED" } || sev >= 8 -> "RED"; on.any { it.triage == "AMBER" } || sev >= 5 -> "AMBER"; c > 0 -> "GREEN"; else -> "" }
                 c to lvl

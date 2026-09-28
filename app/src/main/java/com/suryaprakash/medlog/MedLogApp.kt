@@ -48,6 +48,9 @@ class MedLogApp : Application() {
             runCatching { Updater.dailyCheck(this@MedLogApp) }
             catalogue
             runCatching { repo.purgeRemoved() }
+            // copies made by an earlier bug (a link acted on again when the app reopened) go to Removed
+            // once: from now on, the same thing noted within 10 minutes is asked about instead
+            if (settings.getString("dedupe_v1") == null) runCatching { repo.removeDuplicates(); settings.putString("dedupe_v1", "done") }
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }
             refreshWidgets()

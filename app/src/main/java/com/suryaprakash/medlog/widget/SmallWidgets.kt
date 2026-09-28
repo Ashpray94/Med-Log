@@ -61,6 +61,7 @@ internal fun Confirm(ctx: Context, src: String, ask: String) {
     val (title, sub, done) = when (kind) {
         "message" -> Triple("Send \"$label\"?", "To your family", "Send")
         "water" -> Triple("Add $label?", "Saved with the time", "Done")
+        "again" -> Triple("${label.substringBefore('|')} was noted at ${label.substringAfterLast('|')}", "Did it happen again?", "Again")
         else -> Triple("Note $label?", "Saved with the time. We'll ask for more in 30 minutes.", "Done")
     }
     val tall = LocalSize.current.height.value >= 180f
@@ -74,7 +75,17 @@ internal fun Confirm(ctx: Context, src: String, ask: String) {
         Text(tr(title), style = TextStyle(color = INK, fontSize = 22.sp, fontWeight = FontWeight.Bold), maxLines = 3)
         if (tall) Text(tr(sub), style = TextStyle(color = SOFT, fontSize = 15.sp), maxLines = 2)
         Spacer(GlanceModifier.defaultWeight())
-        if (kind == "problem") {
+        if (kind == "again") {
+            // noted a few minutes ago: again (a new note), or add details to that one
+            Row(GlanceModifier.fillMaxWidth().height(48.dp)) { Btn(done, R.drawable.widget_brand, WHITE, act(true)) }
+            Spacer(GlanceModifier.height(8.dp))
+            Row(GlanceModifier.fillMaxWidth().height(48.dp)) {
+                val parts = label.split("|")
+                Btn("Add details", R.drawable.widget_tile, INK, actionStartActivity(MedLogWidget.link(ctx, "tell?note=${parts.getOrElse(1) { "" }}&problem=$value&clear=$src")))
+                Spacer(GlanceModifier.width(8.dp))
+                Btn("Cancel", R.drawable.widget_soft, INK, act(false))
+            }
+        } else if (kind == "problem") {
             // nothing is noted until Done; Add details opens the questions for it in the app
             Row(GlanceModifier.fillMaxWidth().height(48.dp)) { Btn(done, R.drawable.widget_brand, WHITE, act(true)) }
             Spacer(GlanceModifier.height(8.dp))

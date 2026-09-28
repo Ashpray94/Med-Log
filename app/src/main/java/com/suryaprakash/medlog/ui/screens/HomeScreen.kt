@@ -171,10 +171,15 @@ fun HomeScreen(nav: Nav) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     BigButton("Better", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { scope.launch { app.repo.markBetter(pid); app.settings.putString("asked_better_$pid", java.time.LocalDate.now().toString()); app.refreshWidgets(); version++ } })
-                    BigButton("Still there", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = { app.settings.putString("asked_better_$pid", java.time.LocalDate.now().toString()); nav.go(Route.Tell(pid)) })
+                    BigButton("Still there", Modifier.weight(1f), Tone.SECONDARY, height = 52.dp, onClick = {
+                        // still there is an answer, not another time it happened: nothing new is counted
+                        app.settings.putString("asked_better_$pid", java.time.LocalDate.now().toString()); version++ })
                 }
             }
         }
+
+        // ── notes waiting for their details (a quick tap on the widget or Home, or "later"): one tap to finish ──
+        PendingDetails(nav, version)
 
         // ── next medicine ──
         if ("meds" !in s.hidden) {
@@ -590,3 +595,48 @@ private fun DaySheet(m: Medicine, name: String, sorted: List<Dose>, taken: (Dose
 
 @Suppress("unused") private val keepHint: @Composable () -> Unit = { Hint("") }
 @Suppress("unused") private val keepPad = Modifier.padding(0.dp)
+
+/**
+ * Notes from the last day that are still waiting for details: noted with one tap, or "tell me more later". Each opens
+ * its questions; "Not needed" leaves it as it is. Nothing here is counted again.
+ */
+@Composable
+private fun PendingDetails(nav: com.suryaprakash.medlog.ui.Nav, version: Int) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    var tick by remember { mutableStateOf(0) }
+    var waiting by remember { mutableStateOf<List<com.suryaprakash.medlog.data.Note>>(emptyList()) }
+    LaunchedEffect(version, tick) {
+        val later = com.suryaprakash.medlog.care.FollowUp.pending(ctx).map { it.first }.toSet()
+        val skipped = app.settings.getString("details_skipped").orEmpty().split(",").mapNotNull { it.toLongOrNull() }.toSet()
+        waiting = app.viewDb.notes().symptomsSince(System.currentTimeMillis() - com.suryaprakash.medlog.data.DAY)
+            .filter { com.suryaprakash.medlog.data.Occurrences.isOccurrence(it) && it.id !in skipped }
+            .filter { it.id in later || com.suryaprakash.medlog.nlu.factsFromJson(it.details).keys.none { k -> k != "pin" } }
+            .sortedByDescending { it.occurredAt }.take(3)
+    }
+    if (waiting.isEmpty()) return
+    com.suryaprakash.medlog.ui.SectionHeader("Add details", if (waiting.size == 1) "One note is waiting" else "${waiting.size} notes are waiting", null)
+    com.suryaprakash.medlog.ui.Group {
+        waiting.forEachIndexed { i, n ->
+            if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
+            val label = app.catalogue.problem(n.problemId)?.label ?: n.text
+            Row(Modifier.fillMaxWidth().steady("$label, noted at ${chipTime(n.occurredAt)}. Add details.") { nav.go(Route.Tell(problemId = n.problemId, noteId = n.id)) }
+                .padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                SpriteIcon(n.problemId ?: "", 44.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(label, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("Noted at ${chipTime(n.occurredAt)} · no details yet", fontSize = sc.small, color = p.inkSoft)
+                }
+                Text("Not needed", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft,
+                    modifier = Modifier.clip(RoundedCornerShape(10.dp)).steady("Not needed") {
+                        com.suryaprakash.medlog.care.FollowUp.remove(ctx, n.id)
+                        app.settings.putString("details_skipped", (app.settings.getString("details_skipped").orEmpty().split(",").filter { it.isNotBlank() }.takeLast(50) + n.id.toString()).joinToString(","))
+                        tick++
+                    }.padding(horizontal = 10.dp, vertical = 12.dp))
+            }
+        }
+    }
+}

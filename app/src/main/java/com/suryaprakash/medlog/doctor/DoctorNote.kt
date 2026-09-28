@@ -65,8 +65,8 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
     fun build(profile: Profile, from: Long, to: Long, notes: List<Note>, meds: List<Medicine>, doses: List<Dose>, translit: (String) -> String = { it }, now: Long = System.currentTimeMillis()): DoctorNote {
         val symptoms = notes.filter { it.kind == Kind.SYMPTOM && it.problemId != null }
         val facts = symptoms.associate { it.id to factsFromJson(it.details) }
-        val byProblem = symptoms.groupBy { it.problemId!! }
-            .entries.sortedWith(compareByDescending<Map.Entry<String, List<Note>>> { e -> e.value.maxOf { rank(it.triage) } }.thenByDescending { e -> e.value.sumOf { it.count ?: 1 } })
+        val byProblem = symptoms.groupBy { it.problemId!! }.filterValues { com.suryaprakash.medlog.data.Occurrences.total(it) > 0 }
+            .entries.sortedWith(compareByDescending<Map.Entry<String, List<Note>>> { e -> e.value.maxOf { rank(it.triage) } }.thenByDescending { e -> com.suryaprakash.medlog.data.Occurrences.total(e.value) })
 
         // ── patient ──
         val age = com.suryaprakash.medlog.data.Repo.ageFromDob(profile.dob)
@@ -81,9 +81,9 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         byProblem.forEachIndexed { i, (pid, list) ->
             val n = i + 1
             val fs = list.sortedBy { it.occurredAt }.map { facts.getValue(it.id) }
-            val total = list.sumOf { it.count ?: 1 }
+            val total = com.suryaprakash.medlog.data.Occurrences.total(list)
             val first = list.minOf { it.occurredAt }; val last = list.maxOf { it.occurredAt }
-            val days = list.map { day(it.occurredAt) }.distinct().size
+            val days = com.suryaprakash.medlog.data.Occurrences.perDayOf(list, zone).size.coerceAtLeast(1)
             val started = fs.firstNotNullOfOrNull { it["started"]?.value as? String }
             val whenText = buildString {
                 append(if (total > 1) "$total times in $days day${if (days == 1) "" else "s"}" else "Once")
@@ -123,7 +123,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             fs.firstNotNullOfOrNull { it["note"]?.value?.toString() }?.let { key += "“${translit(it).take(80)}”" }
             val urgent = list.maxByOrNull { rank(it.triage) }?.triage ?: "GREEN"
             val periodDays = generateSequence(day(from)) { it.plusDays(1) }.takeWhile { !it.isAfter(day(to - 1)) }.toList()
-            val perDay = list.groupBy { day(it.occurredAt) }.mapValues { (_, l) -> l.sumOf { it.count ?: 1 } }
+            val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list, zone)
             val flags = LinkedHashSet<String>()
             for ((k, v) in latest) {
                 val field = cat.field(k) ?: continue
@@ -237,7 +237,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
     }
 
     private fun trend(list: List<Note>): String? {
-        val perDay = list.groupBy { day(it.occurredAt) }.toSortedMap().values.map { l -> l.sumOf { it.count ?: 1 } }
+        val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list, zone).toSortedMap().values.toList()
         if (perDay.size < 3) return null
         return when {
             perDay.last() > perDay.first() -> "increasing"

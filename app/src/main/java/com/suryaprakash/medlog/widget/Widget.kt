@@ -295,23 +295,35 @@ class AskFirst : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val s = context.medlog.settings
         val src = parameters[MedLogWidget.SRC] ?: MedLogWidget.MAIN
-        s.putString("${src}_ask", parameters[MedLogWidget.ASK] ?: return)
+        var ask = parameters[MedLogWidget.ASK] ?: return
+        // the same problem noted in the last 10 minutes: ask whether it happened again, or it's that one
+        if (ask.startsWith("problem|")) {
+            val pid = ask.split("|")[1]
+            context.medlog.repo.db.notes().symptomsSince(System.currentTimeMillis() - 10 * 60_000L)
+                .firstOrNull { it.problemId == pid && com.suryaprakash.medlog.data.Occurrences.isOccurrence(it) }?.let { n ->
+                    val time = java.text.SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(java.util.Date(n.occurredAt))
+                    ask = "again|$pid|${ask.split("|", limit = 3).getOrElse(2) { "" }}|${n.id}|$time"
+                }
+        }
+        s.putString("${src}_ask", ask)
         s.putLong("${src}_ask_at", System.currentTimeMillis())
         MedLogWidget.refresh(context)
     }
 }
+
+private val askLock = Any()
 
 /** Yes: do what was asked. Cancel: forget it. */
 class AnswerAsk : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         val s = context.medlog.settings
         val src = parameters[MedLogWidget.SRC] ?: MedLogWidget.MAIN
-        val ask = s.getString("${src}_ask")
-        s.putString("${src}_ask", null)
+        // taken once: a second quick tap finds nothing left to do, so nothing is saved twice
+        val ask = synchronized(askLock) { s.getString("${src}_ask").also { s.putString("${src}_ask", null) } }
         if (parameters[MedLogWidget.YES] == true && ask != null) {
             val (kind, value) = ask.split("|", limit = 3).let { it[0] to it.getOrElse(1) { "" } }
             when (kind) {
-                "problem" -> NoteProblem.note(context, value, src, followUp = true)
+                "problem", "again" -> NoteProblem.note(context, value, src, followUp = true)
                 "message" -> SendMessage.send(context, value)
                 "dose" -> value.toLongOrNull()?.let { Scheduler.take(context, it) }
                 "water" -> {

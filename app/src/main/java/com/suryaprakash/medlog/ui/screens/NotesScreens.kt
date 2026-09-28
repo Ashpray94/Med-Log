@@ -194,11 +194,11 @@ fun NotesScreen(nav: Nav) {
                 medsLate = late(doses), feedsLate = late(feedDoses), medDoses = doses.mapNotNull { d -> medForms.firstOrNull { it.id == d.medicineId }?.let { it.name to d } },
                 onGo = { nav.go(it) })
         } else {
-            val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
+            val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.filterValues { com.suryaprakash.medlog.data.Occurrences.total(it) > 0 }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
             if (grouped.isEmpty()) Empty("Nothing noted in the last 3 months.")
             grouped.forEach { (pid, list) ->
                 val label = app.catalogue.problem(pid)?.label ?: pid
-                val times = list.sumOf { it.count ?: 1 }
+                val times = com.suryaprakash.medlog.data.Occurrences.total(list)
                 HistoryRow(
                     icon = { SpriteIcon(pid, 48.dp) },
                     title = label,
@@ -461,8 +461,9 @@ fun ProblemHistoryScreen(nav: Nav, problemId: String) {
     val list = all.filter { it.problemId == problemId }.sortedByDescending { it.occurredAt }
     val label = app.catalogue.problem(problemId)?.label ?: problemId
     val days = (13 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
-    val counts = days.map { d -> list.filter { localDate(it.occurredAt) == d }.sumOf { it.count ?: 1 } }
-    val total = list.sumOf { it.count ?: 1 }
+    val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list)
+    val counts = days.map { d -> perDay[d] ?: 0 }
+    val total = com.suryaprakash.medlog.data.Occurrences.total(list)
     Screen(label, "$label: noted $total times in the last 3 months.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {

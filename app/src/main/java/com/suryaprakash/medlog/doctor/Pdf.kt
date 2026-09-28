@@ -110,7 +110,10 @@ object Pdf {
         }
         w.finish()
 
-        val f = File(File(ctx.cacheDir, "share").apply { mkdirs() }, "Symptom-summary.pdf")
+        // a new name each time, so a viewer never shows a copy it kept from before; older ones are cleared
+        val dir = File(ctx.cacheDir, "share").apply { mkdirs() }
+        dir.listFiles { x -> x.name.startsWith("Symptom-summary") || x.name.startsWith("Health-summary") }?.forEach { it.delete() }
+        val f = File(dir, "Health-summary-${java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.ENGLISH).format(java.util.Date())}.pdf")
         FileOutputStream(f).use { doc.writeTo(it) }
         doc.close()
         return f
@@ -249,7 +252,9 @@ object Pdf {
         val pm = ctx.getSystemService(PrintManager::class.java) ?: return
         pm.print("Symptom summary", object : PrintDocumentAdapter() {
             override fun onLayout(old: PrintAttributes?, new: PrintAttributes?, cancel: CancellationSignal?, cb: LayoutResultCallback, extras: Bundle?) {
-                cb.onLayoutFinished(PrintDocumentInfo.Builder("Symptom-summary.pdf").setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).build(), true)
+                // the real number of pages: some phones' print preview shows only the first page when it isn't given
+                val pages = runCatching { android.graphics.pdf.PdfRenderer(ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)).use { it.pageCount } }.getOrDefault(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
+                cb.onLayoutFinished(PrintDocumentInfo.Builder("Symptom-summary.pdf").setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(pages).build(), true)
             }
             override fun onWrite(pages: Array<out PageRange>?, dest: ParcelFileDescriptor, cancel: CancellationSignal?, cb: WriteResultCallback) {
                 runCatching { f.inputStream().use { input -> FileOutputStream(dest.fileDescriptor).use { input.copyTo(it) } }; cb.onWriteFinished(arrayOf(PageRange.ALL_PAGES)) }

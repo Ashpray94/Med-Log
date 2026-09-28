@@ -37,8 +37,9 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
 
     // ───────── symptoms ─────────
 
-    suspend fun recentForRules(days: Int = 3): List<RecentNote> =
-        db.notes().symptomsSince(System.currentTimeMillis() - days * DAY).map {
+    /** The last few days' symptoms for the danger rules; [exclude] is the note being written, which the rules count from its own answers. */
+    suspend fun recentForRules(days: Int = 3, exclude: Long? = null): List<RecentNote> =
+        db.notes().symptomsSince(System.currentTimeMillis() - days * DAY).filter { it.id != exclude && Occurrences.isOccurrence(it) }.map {
             RecentNote(it.problemId, it.occurredAt, factsFromJson(it.details), it.count)
         }
 
@@ -145,6 +146,14 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     suspend fun restore(ids: List<Long>) = ids.forEach { db.notes().restore(it) }
     suspend fun purgeRemoved() = db.notes().purge(System.currentTimeMillis() - 30 * DAY)
 
+    /**
+     * Copies made by mistake (a link acted on twice, a double tap): the same kind of note, the same problem, exactly
+     * the same details, within 2 minutes of each other. The first stays; the others go to Removed, where they can be
+     * put back. Returns how many were moved.
+     */
+    suspend fun removeDuplicates(days: Int = 120): Int = Duplicates.find(db.notes().between(System.currentTimeMillis() - days * DAY, Long.MAX_VALUE))
+        .onEach { db.notes().remove(it) }.size
+
     // ───────── widget / home: which problems to show (plan 6.2) ─────────
 
     data class Recent(val problemId: String, val todayCount: Int, val lastAt: Long, val ongoing: Boolean)
@@ -160,7 +169,7 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
             val better = list.filter { factsFromJson(it.details)["better"]?.value == true }.maxOfOrNull { it.occurredAt } ?: 0
             val ongoing = now - last < 2 * DAY && better < last
             Triple(pid, score + (if (ongoing) 100.0 else 0.0) + (if (pid in watch) 50.0 else 0.0),
-                Recent(pid, list.filter { it.occurredAt >= todayStart }.sumOf { it.count ?: 1 }, last, ongoing))
+                Recent(pid, com.suryaprakash.medlog.data.Occurrences.total(list.filter { it.occurredAt >= todayStart }), last, ongoing))
         }.sortedByDescending { it.second }.map { it.third }
         // only what the person actually noted: nothing suggested or filled in, so recents never mislead
         return scored.take(limit)

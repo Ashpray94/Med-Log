@@ -62,9 +62,9 @@ suspend fun buildStats(ctx: android.content.Context, days: Int): Pair<List<Probl
     val buckets = if (days <= 31) days else 12
     val bucketMs = (end - start) / buckets
     val stats = cur.filter { it.kind == Kind.SYMPTOM && it.problemId != null && factsFromJson(it.details)["better"] == null }.groupBy { it.problemId!! }.map { (pid, list) ->
-        val counts = (0 until buckets).map { b -> list.filter { ((it.occurredAt - start) / bucketMs).toInt() == b }.sumOf { it.count ?: 1 } }
-        val total = list.sumOf { it.count ?: 1 }
-        val before = prev.filter { it.problemId == pid }.sumOf { it.count ?: 1 }
+        val counts = (0 until buckets).map { b -> com.suryaprakash.medlog.data.Occurrences.total(list.filter { ((it.occurredAt - start) / bucketMs).toInt() == b }) }
+        val total = com.suryaprakash.medlog.data.Occurrences.total(list)
+        val before = com.suryaprakash.medlog.data.Occurrences.total(prev.filter { it.problemId == pid })
         val caption = when {
             before == 0 -> "New in this period."
             total < before -> "Less often than before ($total, was $before)."

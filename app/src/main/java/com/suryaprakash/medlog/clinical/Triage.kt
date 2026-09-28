@@ -167,7 +167,8 @@ object DangerRules {
         // ── fluids: vomiting / loose motions ──
         val day = 24 * 3600_000L
         if (problemId in setOf("vomiting", "loose_motions")) {
-            val last24 = recent.filter { it.problemId == problemId && now - it.at <= day }.sumOf { it.count ?: 1 } + ((num(facts, "count") ?: 1.0).toInt())
+            // "how many times today" is a running total, so the notes are counted the one way (data/Occurrences.kt)
+            val last24 = com.suryaprakash.medlog.data.Occurrences.total(recent.filter { it.problemId == problemId && now - it.at <= day }.map { com.suryaprakash.medlog.data.Occurrences.E(it.at, it.count) } + com.suryaprakash.medlog.data.Occurrences.E(now, num(facts, "count")?.toInt()))
             if (last24 >= 6) amber += "${if (problemId == "vomiting") "Vomiting" else "Loose motions"} $last24 times in 24 hours"
             if (no(facts, "keepWater")) amber += "Cannot keep water down"
             if (no(facts, "urineToday")) amber += "No urine for 8 hours or more"

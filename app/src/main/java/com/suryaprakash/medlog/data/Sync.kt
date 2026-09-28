@@ -142,7 +142,10 @@ object Sync {
         val medUid = db.medicines().all().associate { it.id to it.uid }
         val o = JSONObject()
             .put("medicines", JSONArray(meds.filter { it.updatedAt <= to }.map { medJson(it) }))
-            .put("notes", JSONArray(notes.filter { it.updatedAt <= to }.map { noteJson(it) }))
+            .put("notes", JSONArray(notes.filter { it.updatedAt <= to }.map { n ->
+                // the group as the shared id of its first note: local row numbers differ from phone to phone
+                noteJson(n).put("gu", n.groupId?.let { g -> if (g == n.id) n.uid else p.db.notes().get(g)?.uid }.orEmpty())
+            }))
             .put("doses", JSONArray(doses.filter { it.updatedAt <= to }.mapNotNull { d -> medUid[d.medicineId]?.let { doseJson(d, it) } }))
         profile?.let { o.put("profile", profileJson(it)) }
         if (p.dir == Relay.DOWN) {
@@ -229,11 +232,20 @@ object Sync {
             }
         }
         o.optJSONArray("notes")?.let { a ->
+            val groups = ArrayList<Pair<String, String>>()   // note uid to its group's uid
             for (i in 0 until a.length()) {
-                val n = noteFrom(a.getJSONObject(i))
+                val j = a.getJSONObject(i)
+                // groups are linked by shared id; an older phone sends only its own row number, which means nothing here
+                val n = noteFrom(j).copy(groupId = null)
+                j.optString("gu").takeIf { it.isNotBlank() }?.let { groups += n.uid to it }
                 val old = db.notes().byUid(n.uid)
                 if (old == null) db.notes().insert(n.copy(id = 0, updatedAt = t(n.updatedAt)))
-                else if (n.updatedAt > old.updatedAt) db.notes().update(n.copy(id = old.id, audioPath = old.audioPath, photoPath = old.photoPath, updatedAt = t(n.updatedAt)))
+                else if (n.updatedAt > old.updatedAt) db.notes().update(n.copy(id = old.id, groupId = old.groupId, audioPath = old.audioPath, photoPath = old.photoPath, updatedAt = t(n.updatedAt)))
+            }
+            for ((uid, gu) in groups) {
+                val n = db.notes().byUid(uid) ?: continue
+                val g = db.notes().byUid(gu)?.id ?: continue
+                if (n.groupId != g) db.notes().update(n.copy(groupId = g))
             }
         }
         o.optJSONObject("profile")?.let { j ->

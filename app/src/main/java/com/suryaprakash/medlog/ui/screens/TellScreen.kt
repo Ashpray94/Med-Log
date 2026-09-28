@@ -105,7 +105,7 @@ import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private enum class Phase { CONFIRM, PICK, ASK, SUMMARY, DANGER }
+private enum class Phase { CONFIRM, PICK, SAME, ASK, SUMMARY, DANGER }
 
 /**
  * "Tell how you feel", tap first: choose the problem (suggestions and search), then one short question at a
@@ -133,12 +133,17 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     var parsed by remember { mutableStateOf<Parsed?>(null) }
     var pins by remember { mutableStateOf<List<Pin>>(emptyList()) }
     var reAsk by remember { mutableStateOf(false) }
+    // one note per start, however fast the taps come
+    val starting = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+    // the same problem noted a few minutes ago: asked whether this is that one or another time
+    var sameAs by remember { mutableStateOf<com.suryaprakash.medlog.data.Note?>(null) }
+    var pendingStart by remember { mutableStateOf<Triple<String, Map<String, Fact>, Pair<List<Mention>, String?>>?>(null) }
 
     DisposableEffect(Unit) { onDispose { app.speaker.stop() } }
 
     suspend fun evaluate(): Triage {
         val p = problem ?: return Triage.OK
-        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.viewRepo.recentForRules(), app.viewRepo.person())
+        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.viewRepo.recentForRules(exclude = noteId), app.viewRepo.person())
     }
 
     /** Saves progress: the note exists from the start, so nothing is ever lost. */
@@ -189,13 +194,30 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         scope.launch { persist(); if (phase == Phase.ASK) { delay(450); advance() } }
     }
 
-    /** Starts the conversation about [pid]: the note is created straight away. */
-    fun begin(pid: String, known: Map<String, Fact> = emptyMap(), others: List<Mention> = emptyList(), transcript: String? = null) {
+    /** Carries on with a note already made: its answers so far, then the questions not yet answered. */
+    fun continueNote(n: com.suryaprakash.medlog.data.Note) {
+        val p = cat.problem(n.problemId) ?: return
+        FollowUp.remove(ctx, n.id)
+        noteId = n.id; problem = p; facts.clear(); facts.putAll(factsFromJson(n.details))
+        queue.clear(); queue.addAll(Interview.core(cat, p, facts)); index = 0
+        if (queue.isEmpty()) { offeredMore = true; queue.addAll(Interview.extended(cat, p, facts)); toldMore = true }
+        phase = if (queue.isEmpty()) Phase.SUMMARY else Phase.ASK
+    }
+
+    /** Starts the conversation about [pid]: the note is created straight away. [again]: already asked, it's a new time. */
+    fun begin(pid: String, known: Map<String, Fact> = emptyMap(), others: List<Mention> = emptyList(), transcript: String? = null, again: Boolean = false) {
         val p = cat.problem(pid) ?: return
+        if (noteId == null && !starting.compareAndSet(false, true)) return
         scope.launch {
+            val id = noteId
+            if (id == null && !again) {
+                // noted in the last 10 minutes: probably the same one, so ask before making another
+                val recent = app.viewDb.notes().symptomsSince(System.currentTimeMillis() - 10 * 60_000L)
+                    .firstOrNull { it.problemId == pid && com.suryaprakash.medlog.data.Occurrences.isOccurrence(it) }
+                if (recent != null) { sameAs = recent; pendingStart = Triple(pid, known, others to transcript); problem = p; phase = Phase.SAME; starting.set(false); return@launch }
+            }
             problem = p
             facts.putAll(known)
-            val id = noteId
             if (id == null) {
                 val at = parsed?.occurredAt ?: System.currentTimeMillis()
                 noteId = app.viewRepo.saveTold(listOf(Mention(pid, facts = facts.toMutableMap())) + others, transcript, at, Triage.OK,
@@ -353,6 +375,26 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         }
 
         Phase.DANGER -> DangerScreen(nav, triage, onChange = { phase = Phase.SUMMARY })
+
+        // ───────────── noted a few minutes ago: the same one, or again? ─────────────
+        Phase.SAME -> {
+            val n = sameAs ?: return
+            val pr = problem ?: return
+            val q = "You noted ${pr.label.lowercase()} at ${timeLabel(n.occurredAt)}. Is this the same one, or did it happen again?"
+            LaunchedEffect(q) { if (s.autoRead && s.readAloud) speak(app, q, lang) }
+            Screen(pr.label, q, onHome = { nav.home() }, onBack = { nav.back() }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SpriteIcon(pr.id, 64.dp); Spacer(Modifier.width(14.dp))
+                    Text("Noted at ${timeLabel(n.occurredAt)}", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                }
+                com.suryaprakash.medlog.ui.Question("Is this the same one, or did it happen again?")
+                BigButton("The same one · add details", tone = Tone.PRIMARY, onClick = { sameAs = null; continueNote(n) })
+                BigButton("It happened again", tone = Tone.SECONDARY, onClick = {
+                    val st = pendingStart; sameAs = null
+                    if (st != null) begin(st.first, st.second, st.third.first, st.third.second, again = true)
+                })
+            }
+        }
     }
 }
 

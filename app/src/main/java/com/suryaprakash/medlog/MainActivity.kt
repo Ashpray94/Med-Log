@@ -39,7 +39,11 @@ class MainActivity : ComponentActivity() {
         val s = medlog.settings.value
         val root = rootRoute()
         nav = Nav(root).also { n -> n.setupRunning = { !medlog.settings.value.onboarded && medlog.settings.value.role != "helper" } }
-        handle(intent)
+        // a link is acted on once: not again when the screen is rebuilt (turning the phone, dark mode, text size) or the
+        // app is reopened from Recents, which hands back the same link. Acting on it again made a second, empty note.
+        val fromRecents = ((intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
+        if (savedInstanceState == null && !fromRecents) handle(intent)
+        consume()
         setContent {
             val settings by medlog.settings.flow.collectAsState()
             MedTheme(settings) { App(nav) }
@@ -65,7 +69,11 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         handle(intent)
+        consume()
     }
+
+    /** Forgets the link once it has been acted on. */
+    private fun consume() { intent?.let { setIntent(Intent(it).setData(null)) } }
 
     /** medlog://tell?problem=vomiting&text=..., medlog://meds, medlog://help, medlog://doctor, medlog://feature?feature=... */
     private fun handle(i: Intent?) {

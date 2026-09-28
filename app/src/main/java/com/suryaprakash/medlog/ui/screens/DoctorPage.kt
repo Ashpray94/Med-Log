@@ -108,7 +108,16 @@ fun DoctorScreen(nav: Nav) {
     val nutShown = nut?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }
     val n = note
     val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share to send it, or Print."
-    fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!, nutShown) }; busy = false; then(f) } }
+    // the PDF waits for everything: the nutrition page takes a few seconds longer than the rest, and a quick tap on
+    // Share used to make a PDF without it (only the first page)
+    fun pdf(then: (java.io.File) -> Unit) { scope.launch {
+        busy = true
+        val f = withContext(Dispatchers.IO) {
+            val r = nut ?: com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)).also { nut = it }
+            Pdf.write(ctx, n!!, r.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() })
+        }
+        busy = false; then(f)
+    } }
 
     var doctors by remember { mutableStateOf<List<com.suryaprakash.medlog.data.CarePlan.Doctor>>(emptyList()) }
     LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.viewRepo.profile().plan).doctors }
