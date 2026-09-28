@@ -447,7 +447,7 @@ private fun MedRow(m: DoctorNote.Med) {
                 Text(plainDose(m.dose), fontSize = sc.small, color = p.inkSoft)
             }
             Spacer(Modifier.width(12.dp))
-            Text(if (m.asNeeded || m.due == 0) m.taken.replaceFirstChar(Char::uppercase).ifBlank { if (m.asNeeded) "Not used" else "None due yet" } else "${m.done} of ${m.due} taken", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = if (low) p.amber else p.ink)
+            Text(if (m.asNeeded || m.due == 0) m.taken.replaceFirstChar(Char::uppercase) else "${m.done} of ${m.due} taken", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = if (low) p.amber else p.ink)
         }
         if (!m.asNeeded && m.due > 0) {
             val f = (m.done.toFloat() / m.due).coerceIn(0f, 1f)

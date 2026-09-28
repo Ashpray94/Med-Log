@@ -11,6 +11,6 @@ Updates straight over 2.10 and keeps your data.
 - **Temperature:** "Normal · 98.6 °F" in one tap, plus quick fever values.
 - **"Food taken instead of feed"** is said the same way everywhere.
 - **Extra feeds:** note a feed between the set times, for in-between hunger, under the same feed. It doesn't change the "given" count.
-- **Doctor PDF:** only what was logged, in plain lines. No dashes and no "not recorded" rows.
+- **Doctor PDF:** the same layout and tables as before, now without clutter. It drops "none recorded" rows, dashes, days with nothing logged, the list of feeds not given, and columns with nothing in them.
 
 Install **MedLog-VERSION-arm64.apk** on most phones.

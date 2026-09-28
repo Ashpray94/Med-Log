@@ -151,7 +151,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             Summary.MedRow(
                 "${m.name}${if (m.critical) " *" else ""}",
                 "${m.strength} ${m.amount} $freq".trim(),
-                if (m.asNeeded) (if (prn > 0) "taken $prn time${if (prn == 1) "" else "s"}" else "") else if (md.isEmpty()) "" else "$taken/${md.size} (${taken * 100 / md.size}%)",
+                if (m.asNeeded) (if (prn > 0) "taken ${prn}×" else "") else if (md.isEmpty()) "" else "$taken/${md.size} (${taken * 100 / md.size}%)",
                 listOfNotNull(
                     m.changeNote.takeIf { it.isNotBlank() && it != "started" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,

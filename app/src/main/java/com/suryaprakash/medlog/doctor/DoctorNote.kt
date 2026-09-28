@@ -167,15 +167,15 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val taken = md.count { it.status == DoseStatus.TAKEN }
             val prn = notes.count { it.kind == Kind.MED_TAKEN && runCatching { JSONObject(it.details).optString("name") }.getOrNull() == m.name }
-            val skipped = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.lowercase()} (${it.value} time${if (it.value == 1) "" else "s"})" }
+            val skipped = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason)?.takeIf { r -> !r.equals("Not given", true) } }.groupingBy { it }.eachCount().entries.joinToString { "${it.key.lowercase()} ×${it.value}" }
             DoctorNote.Med(
                 m.name, "${m.strength} ${freq(m)}".trim(),
-                when { m.asNeeded -> if (prn > 0) "used $prn time${if (prn == 1) "" else "s"}" else ""; md.isEmpty() -> ""; else -> "$taken of ${md.size} doses taken" },
+                when { m.asNeeded -> if (prn > 0) "used ${prn}×" else ""; md.isEmpty() -> ""; else -> "$taken/${md.size}" },
                 listOfNotNull(
                     if (!m.active) "stopped ${d(m.changedAt)}" else null,
                     m.changeNote.takeIf { it.isNotBlank() && it != "started" && it != "stopped" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,
-                    skipped.ifBlank { null }?.let { "not taken: $it" },
+                    skipped.ifBlank { null }?.let { "skipped: $it" },
                 ).joinToString("; "),
                 done = taken, due = md.size, asNeeded = m.asNeeded,
             )
