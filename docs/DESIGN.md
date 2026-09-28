@@ -37,7 +37,7 @@ Don't reuse one pattern everywhere. Choose by what the person is doing:
   one line of meaning ("Normal", "Higher than usual").
 - **Explaining something new → points (`Point`).** An icon, a bold line and one quiet line under it. Use at
   most four.
-- **Yes / No → `YesNo`.** Yes is green with ✓ and No is white with ✗. They are the same size and never look alike.
+- **Yes / No → `YesNo`.** Yes is the accent with ✓ and No is white with ✗. They are the same size and never look alike.
 
 ## 3. Simple, but detailed on request
 
@@ -49,7 +49,8 @@ more cards on the same screen. A row says "Headache · 3 today"; tapping it show
 - **60% white:** the screen background.
 - **30% greys:** surfaces, borders, secondary text.
 - **10% one accent (teal):** the main action, "chosen" and the current tab.
-- **Red** means danger or SOS only. **Green** means Yes, OK or taken only. **Amber** means "watch" only.
+- **Red** means danger or SOS only. **Green** means done (given, taken) only, never a button. **Amber** means "watch" only.
+- The up-to-date rules the owner has set since are in `docs/context/UI_RULES.md`; where they differ, that file wins.
 - Icons are grey (ink). A colour must mean something.
 
 ## 5. Type: a clear hierarchy
