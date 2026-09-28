@@ -50,6 +50,14 @@ class MedLogApp : Application() {
             runCatching { repo.purgeRemoved() }
             // copies made by an earlier bug (a link acted on again when the app reopened) go to Removed
             // once: from now on, the same thing noted within 10 minutes is asked about instead
+            // once: helper copies ask the person's phone for everything again, after rows that had lost their id were dropped
+            if (settings.getString("resync_v1") == null) runCatching {
+                com.suryaprakash.medlog.data.People.all(this@MedLogApp).forEach { pp ->
+                    com.suryaprakash.medlog.data.Mirror.db(this@MedLogApp, pp.pairId)   // opening it puts its rows right
+                    settings.putLong("sync_got_${pp.pairId}", 0); com.suryaprakash.medlog.data.Sync.askSince(this@MedLogApp, pp.pairId)
+                }
+                settings.putString("resync_v1", "done")
+            }
             if (settings.getString("dedupe_v1") == null) runCatching { repo.removeDuplicates(); settings.putString("dedupe_v1", "done") }
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }

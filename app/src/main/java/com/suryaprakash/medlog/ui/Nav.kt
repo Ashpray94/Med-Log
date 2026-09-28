@@ -37,6 +37,8 @@ sealed interface Route {
     data object Visit : Route
     data object Appointments : Route
     data object Reports : Route
+    /** One measure from My health: its chart and every entry. */
+    data class Measure(val key: String) : Route
     data object Nutrition : Route
     data object Settings : Route
     data object EasySettings : Route

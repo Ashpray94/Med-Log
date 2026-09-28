@@ -137,7 +137,12 @@ fun DoctorScreen(nav: Nav) {
 
         if (n.concerns.isNotEmpty()) {
             Section("Most important")
-            Group { n.concerns.forEachIndexed { i, c -> if (i > 0) Line(); ConcernRow(c, n.concernLevels.getOrElse(i) { "GREEN" }) } }
+            // each opens its own history: a symptom's every entry, a medicine's page
+            Group { n.concerns.forEachIndexed { i, c ->
+                if (i > 0) Line()
+                val pid = n.symptoms.firstOrNull { it.name == c.substringBefore(":") }?.problemId
+                ConcernRow(c, n.concernLevels.getOrElse(i) { "GREEN" }) { if (pid != null) nav.go(Route.ProblemHistory(pid)) else nav.go(Route.Meds) }
+            } }
         }
 
         if (n.pins.isNotEmpty()) {
@@ -147,7 +152,7 @@ fun DoctorScreen(nav: Nav) {
 
         Section("Symptoms")
         if (n.symptoms.isEmpty()) Group { Plain("No symptoms noted in this time.") }
-        n.symptoms.forEach { SymptomCard(it, n.days) }
+        n.symptoms.forEach { r -> SymptomCard(r, n.days) { nav.go(Route.ProblemHistory(r.problemId)) } }
 
         if (n.medicines.isNotEmpty()) {
             Section("Medicines")
@@ -158,14 +163,17 @@ fun DoctorScreen(nav: Nav) {
                 if (due > 0) Text("$done of $due doses taken in ${n.days} days (${done * 100 / due}%)", fontSize = LocalScale.current.body,
                     color = if (done * 100 / due < 80) LocalPalette.current.amber else LocalPalette.current.inkSoft, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
             }
-            Group { n.medicines.forEachIndexed { i, m -> if (i > 0) Line(); MedRow(m) } }
+            Group { n.medicines.forEachIndexed { i, m -> if (i > 0) Line(); MedRow(m) { nav.go(Route.Meds) } } }
         }
 
         if (n.tiles.isNotEmpty()) {
             Section("Readings")
             n.tiles.chunked(2).forEach { row ->
                 Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { ReadingCard(it, Modifier.weight(1f).fillMaxHeight()) }
+                    row.forEach { r -> ReadingCard(r, Modifier.weight(1f).fillMaxHeight()) {
+                        val key = mapOf("BP" to "bp", "Blood sugar" to "sugar", "SpO₂" to "spo2", "Temperature" to "temp", "Pulse" to "pulse", "Weight" to "weight")[r.name]
+                        nav.go(if (key != null) Route.Measure(key) else Route.Readings)
+                    } }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
@@ -295,7 +303,7 @@ private fun RowScope.StatCard(value: String, label: String, fg: Color, bg: Color
 }
 
 @Composable
-private fun ConcernRow(text: String, level: String) {
+private fun ConcernRow(text: String, level: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val title = text.substringBefore(":")
@@ -303,7 +311,7 @@ private fun ConcernRow(text: String, level: String) {
     val date = Regex("""\(([^()]*)\)$""").find(rest)?.groupValues?.get(1)
     val what = rest.removeSuffix(date?.let { "($it)" } ?: "").trim()
     // the level is said by its tag beside the name; no bar down the side
-    Row(Modifier.fillMaxWidth().padding(start = 4.dp)) {
+    Row(Modifier.fillMaxWidth().steady("$title. Opens its history.", onClick = onClick).padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(title, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
@@ -312,6 +320,7 @@ private fun ConcernRow(text: String, level: String) {
             if (what.isNotEmpty()) Text(what.replaceFirstChar(Char::uppercase), fontSize = sc.body, color = p.ink)
             date?.let { Text(it, fontSize = sc.small, color = p.inkSoft) }
         }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.padding(end = 12.dp).size(24.dp))
     }
 }
 
@@ -366,12 +375,12 @@ private fun BodyPins(n: DoctorNote) {
 
 /** One symptom: its name, two numbers as cards, when it happened, then plain facts. */
 @Composable
-private fun SymptomCard(r: DoctorNote.Row, days: Int) {
+private fun SymptomCard(r: DoctorNote.Row, days: Int, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val tone = levelColor(r.urgent, p)
     Group {
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().steady("${r.name}. Opens every time it was noted.", onClick = onClick).padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("${r.n}", fontSize = sc.small, fontWeight = FontWeight.Bold, color = Color.White,
                 modifier = Modifier.size(28.dp).clip(CircleShape).background(tone).wrapContentSize(Alignment.Center))
             Spacer(Modifier.width(12.dp))
@@ -445,11 +454,11 @@ private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
 // ───────────────────────── medicines & readings ─────────────────────────
 
 @Composable
-private fun MedRow(m: DoctorNote.Med) {
+private fun MedRow(m: DoctorNote.Med, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val low = m.due > 0 && m.done * 100 / m.due < 80
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().steady("${m.name}. Opens Medicines.", onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
@@ -473,10 +482,10 @@ private fun plainDose(d: String) = d.replace(" OD", ", once a day").replace(" BD
     .replace(" QID", ", 4 times a day").replace("as needed", "when needed").trim().trimStart(',').trim()
 
 @Composable
-private fun ReadingCard(r: DoctorNote.Reading, modifier: Modifier) {
+private fun ReadingCard(r: DoctorNote.Reading, modifier: Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(p.card).steady("${r.name} ${r.latest}. Opens its chart.", onClick = onClick).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(r.name, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (r.off) p.red else p.inkSoft)
         Text(r.latest, fontSize = sc.title, fontWeight = FontWeight.Bold, color = if (r.off) p.red else p.ink, maxLines = 1)
         Text(r.unit, fontSize = sc.small, color = p.inkSoft)

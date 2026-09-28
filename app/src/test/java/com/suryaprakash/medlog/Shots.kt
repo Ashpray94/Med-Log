@@ -47,7 +47,7 @@ class Shots {
         "helper" to Route.HelperHome, "doctor" to Route.Doctor, "reports" to Route.Reports, "settings" to Route.Settings,
         "onboarding" to Route.Onboarding, "speakall" to Route.SpeakAll(), "feednew" to Route.FeedNew, "foodpick" to Route.FoodPick(),
         "helpers" to Route.Helpers, "visit" to Route.Visit, "permissions" to Route.Permissions, "took" to Route.TookNow, "today" to Route.TodayMeds(), "helperchat" to Route.HelperChat, "messages" to Route.Messages, "notesremoved" to Route.Removed,
-        "nutrition" to Route.Nutrition, "easy" to Route.EasySettings, "backup" to Route.Backup,
+        "nutrition" to Route.Nutrition, "easy" to Route.EasySettings, "backup" to Route.Backup, "measure" to Route.Measure("bp"), "measureweight" to Route.Measure("weight"), "measuresymptoms" to Route.Measure("symptoms"),
     )
 
     /** Phone-sized pictures. A name like "history@Food" opens History, then taps "Food". */

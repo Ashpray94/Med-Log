@@ -128,7 +128,7 @@ object Sync {
     }
 
     /** The changes after [since] as one sealed-ready note, and the latest change time it covers; null when nothing changed. */
-    private suspend fun pack(ctx: Context, p: Peer, since: Long): Pair<JSONObject, Long>? {
+    internal suspend fun pack(ctx: Context, p: Peer, since: Long): Pair<JSONObject, Long>? {
         val db = p.db
         val meds = db.medicines().changedSince(since, BATCH)
         val notes = db.notes().changedSince(since, BATCH)
@@ -207,7 +207,7 @@ object Sync {
     fun heardAt(ctx: Context, peerId: String): Long = lastHeard.value[peerId] ?: ctx.medlog.settings.getLong("sync_heard_$peerId")
 
     /** Newer copies replace older ones; new entries are added. Their change times are kept, so they aren't sent back. */
-    private suspend fun apply(db: MedDb, o: JSONObject, hub: Boolean) {
+    internal suspend fun apply(db: MedDb, o: JSONObject, hub: Boolean) {
         // the person's phone is the hub: what it takes in is stamped with its own time too, so it reaches every other
         // helper; helpers keep the time as sent, so nothing bounces back and forth
         val now = System.currentTimeMillis()
@@ -292,7 +292,7 @@ object Sync {
         GZIPOutputStream(out).use { it.write(s.toByteArray()) }
         return Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
     }
-    private fun unzip(s: String): String = GZIPInputStream(Base64.decode(s, Base64.NO_WRAP).inputStream()).bufferedReader().readText()
+    internal fun unzip(s: String): String = GZIPInputStream(Base64.decode(s, Base64.NO_WRAP).inputStream()).bufferedReader().readText()
 }
 
 /** A helper's phone keeps one copy of each person's records, in its own encrypted file. */

@@ -75,7 +75,9 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
                 text = describe.line(m.problemId, facts),
             )
             val id = db.notes().insert(note)
-            if (group == null) { group = id; db.notes().update(note.copy(id = id, groupId = id)) }
+            // from the saved row, which now has its shared id and time: the unsaved copy has neither, and writing it back
+            // blanked them (the note then never reached the other phone properly)
+            if (group == null) { group = id; db.notes().get(id)?.let { db.notes().update(it.copy(groupId = id)) } }
             ids += id
         }
         for (r in readings) ids += addReading(r, transcript = null, at = occurredAt, group = group)

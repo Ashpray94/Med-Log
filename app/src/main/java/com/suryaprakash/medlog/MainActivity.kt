@@ -240,6 +240,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Visit -> VisitScreen(nav)
             Route.Appointments -> AppointmentsScreen(nav)
             Route.Reports -> ReportsScreen(nav)
+            is Route.Measure -> com.suryaprakash.medlog.ui.screens.MeasureScreen(nav, r.key)
             Route.Nutrition -> NutritionScreen(nav)
             Route.Settings -> if (com.suryaprakash.medlog.ui.LocalSettings.current.role == "helper") com.suryaprakash.medlog.ui.screens.HelperSettingsScreen(nav) else SettingsScreen(nav)
             Route.EasySettings -> EasySettingsScreen(nav)

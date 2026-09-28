@@ -302,7 +302,7 @@ abstract class MedDb : RoomDatabase() {
             // screenshot tests on the computer: a plain in-memory database (SQLCipher is phone-only native code)
             if (android.os.Build.FINGERPRINT == "robolectric")
                 return Room.inMemoryDatabaseBuilder(ctx, MedDb::class.java).allowMainThreadQueries()
-                    .addCallback(object : Callback() { override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db) }).build()
+                    .addCallback(object : Callback() { override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, mirror = false) }).build()
             System.loadLibrary("sqlcipher")
             val key = Keys.databaseKey(ctx)
             return Room.databaseBuilder(ctx, MedDb::class.java, file)
@@ -310,9 +310,9 @@ abstract class MedDb : RoomDatabase() {
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 .addMigrations(M1_2, M2_3, M3_4)
                 .addCallback(object : Callback() {
-                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db)
-                    // every open: the stamps are always the current version
-                    override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db)
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
+                    // every open: the stamps are always the current version, and any row missing its id is put right
+                    override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
                 })
                 .build()
         }
@@ -324,9 +324,9 @@ abstract class MedDb : RoomDatabase() {
          * remember: new rows are stamped when they're added, and changed rows when they change. A change that
          * already carries its own time (one arriving from the other phone) is left as it is.
          */
-        private fun stamps(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+        private fun stamps(db: androidx.sqlite.db.SupportSQLiteDatabase, mirror: Boolean = false) {
             for (t in listOf("notes", "medicines", "doses")) {
-                for (old in listOf("uid", "new", "changed", "stamp")) db.execSQL("DROP TRIGGER IF EXISTS ${t}_$old")
+                for (old in listOf("uid", "new", "changed", "stamp", "keep")) db.execSQL("DROP TRIGGER IF EXISTS ${t}_$old")
                 // a new row: give it an id and a time, in one step (rows arriving from the other phone already have both)
                 db.execSQL("CREATE TRIGGER ${t}_new AFTER INSERT ON $t WHEN NEW.uid = '' OR NEW.updatedAt = 0 BEGIN " +
                     "UPDATE $t SET uid = CASE WHEN uid = '' THEN lower(hex(randomblob(16))) ELSE uid END, " +
@@ -334,6 +334,15 @@ abstract class MedDb : RoomDatabase() {
                 // a changed row: its time always moves forward, even twice in one millisecond, so this can never repeat itself
                 db.execSQL("CREATE TRIGGER ${t}_changed AFTER UPDATE ON $t WHEN NEW.updatedAt = OLD.updatedAt BEGIN " +
                     "UPDATE $t SET updatedAt = MAX($NOW_MS, OLD.updatedAt + 1) WHERE id = NEW.id; END")
+                // a change written from a copy made before the row was saved: it keeps its id and gets a time, never a blank one
+                db.execSQL("CREATE TRIGGER ${t}_keep AFTER UPDATE ON $t WHEN NEW.uid = '' OR NEW.updatedAt = 0 BEGIN " +
+                    "UPDATE $t SET uid = CASE WHEN NEW.uid != '' THEN NEW.uid WHEN OLD.uid != '' THEN OLD.uid ELSE lower(hex(randomblob(16))) END, " +
+                    "updatedAt = CASE WHEN NEW.updatedAt = 0 THEN MAX($NOW_MS, OLD.updatedAt + 1) ELSE NEW.updatedAt END WHERE id = NEW.id; END")
+                // rows that lost their id before this was fixed. On this phone's own records: a new id, sent again.
+                // In a helper's copy they were mixed-up merges of different entries: dropped, and the person's phone sends them again.
+                if (mirror) db.execSQL("DELETE FROM $t WHERE uid = ''")
+                else db.execSQL("UPDATE $t SET uid = lower(hex(randomblob(16))), updatedAt = $NOW_MS WHERE uid = ''")
+                db.execSQL("UPDATE $t SET updatedAt = $NOW_MS WHERE updatedAt = 0")
             }
             for (old in listOf("new", "changed")) db.execSQL("DROP TRIGGER IF EXISTS profile_$old")
             db.execSQL("CREATE TRIGGER profile_new AFTER INSERT ON profile BEGIN UPDATE profile SET updatedAt = MAX($NOW_MS, NEW.updatedAt + 1) WHERE id = NEW.id; END")
