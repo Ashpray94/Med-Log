@@ -150,3 +150,20 @@ Has 10 minutes per patient and reads the printout or the phone.
 5. Widget: the question sits at the top, the buttons at the bottom; the status line goes after 10 seconds;
    Messages opens Family.
 6. Updates: open the app → a new version appears on Home within a moment; Settings → Updates checks again.
+
+## Colour audit (28 September, after 2.12.0)
+
+Missed in the first review: it compared layouts and wording, but never checked each mode's colours against its own accent.
+Found and fixed in 2.12.1:
+
+| Leak | Where | Now |
+|---|---|---|
+| Green action buttons (about 30) | Given, Took it, Done, Yes, Update now, alert screens | The mode's accent (teal for my health, blue for helping) |
+| Black text on blue | Selected tabs, chips, segmented choices | White, from the button's own content colour |
+| Teal in helper mode | History and Toilet icons, Undo bar, date and time pickers, widget | Slate in helper mode; pickers and widget follow the mode |
+| Green that wasn't "done" | Read aloud toggle, Food & water icon, call icons, "I have no allergies" | Accent, or a warm brown for food |
+| Blue for waiting | "Sending…", "Waiting for an answer" | Grey |
+| Android default purple | Unset Material colour slots | Mapped to the palette |
+
+Rule, now checked by `ColourRulesTest` on every build: green only means done; actions take the mode's accent; mode
+colours are never typed in outside `ui/Theme.kt`.
