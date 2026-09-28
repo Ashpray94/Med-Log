@@ -236,5 +236,42 @@ class DataIntegrityTest {
         assertEquals(before.uid, after.uid); assertTrue(after.updatedAt > 0); assertEquals("changed", after.text)
     }
 
+    // ── copies from before 2.13: one entry under a different id on each phone, sent back and forth ──
+
+    @Test fun copiesUnderDifferentIdsBecomeOneOnEveryPhone() = runBlocking {
+        val person = fresh("person"); val helper1 = fresh("helper1"); val helper2 = fresh("helper2")
+        val at = System.currentTimeMillis() - 3600_000L; val made = at + 5_000
+        fun cough(uid: String) = symptom("cough", at, facts = mapOf("severity" to Fact(4, Source.ASKED))).copy(uid = uid, createdAt = made, updatedAt = at + 10_000)
+        // what the old bug left: the same cough under a different id on each phone
+        person.notes().insert(cough("b")); helper1.notes().insert(cough("c")); helper2.notes().insert(cough("a"))
+        suspend fun send(from: MedDb, to: MedDb) {
+            val (body, _) = Sync.pack(ctx, Sync.Peer("x", ByteArray(32), from, "down", "X"), 0) ?: return
+            Sync.apply(to, JSONObject(Sync.unzip(body.getString("z"))), hub = false)
+            app.repoFor(to).mergeCopies()
+        }
+        // every way round, twice
+        repeat(2) { send(helper1, person); send(helper2, person); send(person, helper1); send(person, helper2); send(helper1, helper2) }
+        for ((name, db) in listOf("person" to person, "helper 1" to helper1, "helper 2" to helper2)) {
+            val live = db.notes().between(0, Long.MAX_VALUE).filter { it.problemId == "cough" }
+            assertEquals("$name has the cough once", 1, live.size)
+            assertEquals("$name counts it once", 1, Occurrences.total(live))
+            assertEquals("$name settled on the same id", "a", live.single().uid)
+        }
+    }
+
+    @Test fun copiesAlreadyOnAPhoneAreMergedAndRealRepeatsAreNot() = runBlocking {
+        val db = fresh("merge"); val repo = app.repoFor(db)
+        val at = System.currentTimeMillis() - 3600_000L
+        listOf("z", "y", "x").forEach { db.notes().insert(symptom("vomiting", at, count = 3).copy(uid = it, createdAt = at + 1)) }
+        // vomiting again 2 minutes later, made separately: a real second time
+        db.notes().insert(symptom("vomiting", at + 120_000, count = 3).copy(createdAt = at + 120_001))
+        assertEquals(2, repo.mergeCopies())
+        val live = db.notes().between(0, Long.MAX_VALUE)
+        assertEquals(2, live.size)
+        assertTrue("the smallest id is kept", live.any { it.uid == "x" })
+        assertEquals("two notes, each saying 3 times today: 3", 3, Occurrences.total(live))
+        assertEquals("nothing more to merge", 0, repo.mergeCopies())
+    }
+
     @Suppress("unused") private val keepMed = Medicine(name = "x")
 }

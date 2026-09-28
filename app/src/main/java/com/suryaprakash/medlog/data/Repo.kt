@@ -153,6 +153,23 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
      * the same details, within 2 minutes of each other. The first stays; the others go to Removed, where they can be
      * put back. Returns how many were moved.
      */
+    /**
+     * The same entry held more than once under different ids (sent back by another phone before ids were kept; see
+     * DATA_RULES.md): same kind, problem, time it happened, time it was made and words. One stays, with the smallest id,
+     * so every phone keeps the same one; the others go to Removed. The one kept is sent again so the other phones match.
+     * Safe to run any time: two different entries never share the moment they were made. Returns how many were merged.
+     */
+    suspend fun mergeCopies(): Int {
+        var merged = 0
+        db.notes().between(0, Long.MAX_VALUE).groupBy { listOf(it.kind, it.problemId.orEmpty(), it.occurredAt, it.createdAt, it.text) }.values
+            .filter { it.size > 1 }.forEach { same ->
+                val keep = same.minBy { it.uid }
+                same.filter { it.id != keep.id }.forEach { db.notes().remove(it.id); merged++ }
+                db.notes().get(keep.id)?.let { db.notes().update(it) }   // a new time, so it's sent again after the removals
+            }
+        return merged
+    }
+
     suspend fun removeDuplicates(days: Int = 120): Int = Duplicates.find(db.notes().between(System.currentTimeMillis() - days * DAY, Long.MAX_VALUE))
         .onEach { db.notes().remove(it) }.size
 

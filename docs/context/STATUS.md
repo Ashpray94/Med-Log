@@ -3,10 +3,13 @@
 Update this at the end of every chat: what changed, what's open, what wasn't verified.
 
 ## Now
-- Released: **2.13.0** (versionCode 2130), branch `main-mxp0m4`, draft PR #1.
+- Released: **2.13.1** (versionCode 2131), branch `main-mxp0m4`, draft PR #1.
 - Best version before the 2.11 review: 2.10.9 (commit `36b7755`).
 
 ## Recently changed (2.11 – 2.13)
+- 2.13.1: copies that came back from helper phones (each entry 2–3 times, from notes saved without a shared id before
+  2.13) are recognised by content in sync (`sameEntry`), merged (`Repo.mergeCopies`, at every start and after every sync),
+  and every phone settles on the smallest id. Tests: `copiesUnderDifferentIdsBecomeOneOnEveryPhone`, `copiesAlreadyOnAPhoneAreMerged…`.
 - 2.13.0: duplicates fixed at the root (links acted on once, one note per start, widget saves once); counts as running
   totals everywhere; shared ids kept (they were being blanked) and repaired; group links by id; copies moved to
   Removed once; "same one or again?" within 10 minutes; pending details on Home; My health → one page per measure;
@@ -19,7 +22,9 @@ Update this at the end of every chat: what changed, what's open, what wasn't ver
 - 2.11.0: alert titles; food-instead outcome; Material 3 components; persona review (`docs/REVIEW.md`).
 
 ## Waiting on the owner's phone (can't be checked in the cloud)
-1. After 2.13.0: History shows each entry once; vomiting count is right; copies are in Removed.
+1. After 2.13.1 on the person's phone AND every helper phone: History shows each entry once (the 3× cough and vomiting
+   of 28 Sept become one each); vomiting reads 3, not 6; the extras are in Removed. Update all phones: a phone still
+   on an older version keeps sending its copies back.
 2. Doctor page → Share/Print: the PDF has its second page (nutrition).
 3. Helper reminders: Given and Snooze from the notification; More opens the choices page; "Ask Meena" rings her phone.
 4. Pairing: both phones list each other; connecting again doesn't list the person twice.

@@ -50,6 +50,9 @@ class MedLogApp : Application() {
             runCatching { repo.purgeRemoved() }
             // copies made by an earlier bug (a link acted on again when the app reopened) go to Removed
             // once: from now on, the same thing noted within 10 minutes is asked about instead
+            // copies of one entry under different ids, on this phone and in each copy of a person helped: made one again
+            runCatching { repo.mergeCopies() }
+            runCatching { com.suryaprakash.medlog.data.People.all(this@MedLogApp).forEach { pp -> repoFor(com.suryaprakash.medlog.data.Mirror.db(this@MedLogApp, pp.pairId)).mergeCopies() } }
             // once: helper copies ask the person's phone for everything again, after rows that had lost their id were dropped
             if (settings.getString("resync_v1") == null) runCatching {
                 com.suryaprakash.medlog.data.People.all(this@MedLogApp).forEach { pp ->

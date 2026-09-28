@@ -29,6 +29,9 @@ Real health records for a real person. A counting or sync mistake here reaches a
 ## Sharing between phones (`data/Sync.kt`)
 - The person's phone and each helper's copy (`mirror_<pairId>.db`) send what changed since last time, sealed, through
   the relay (or Bluetooth nearby). Rows match by `uid`; newer `updatedAt` wins.
+- If no row has the incoming uid, the **same entry** (kind, problem, occurredAt, createdAt, text: `sameEntry`) is
+  matched instead, and both phones settle on the smaller uid. Removals match by uid only. `Repo.mergeCopies` merges
+  copies already on a phone (at start and after each sync).
 - Grouped notes are linked by the **uid** of the group's first note (`gu`), never by row number.
 - A helper's actions on the person's records write to the mirror and sync back (`Doses`, `HelperDose`).
 - Tests: `DataIntegrityTest` covers round trips, sending twice, deletions and ids. Add to it for any change here.

@@ -175,6 +175,8 @@ object Sync {
         val data = JSONObject(unzip(o.getString("z")))
         Log.d(TAG, "got $peerId ${o.optLong("from")}..${o.optLong("to")}: ${data.optJSONArray("medicines")?.length()} meds, ${data.optJSONArray("notes")?.length()} notes, ${data.optJSONArray("doses")?.length()} doses")
         apply(p.db, data, hub = p.dir == Relay.DOWN)
+        // copies of one entry under different ids (from before ids were kept) become one
+        runCatching { ctx.medlog.repoFor(p.db).mergeCopies() }
         if (p.dir == Relay.UP) data.optJSONArray("helpers")?.let { st.putString("helpers_of_$peerId", it.toString()) }
         st.putLong("sync_got_$peerId", maxOf(heard, o.optLong("to")))
         val now = System.currentTimeMillis()
@@ -226,24 +228,30 @@ object Sync {
                 val j = a.getJSONObject(i)
                 val mid = medId[j.optString("med")] ?: continue
                 val d = doseFrom(j, mid)
-                val old = db.doses().byUid(d.uid)
+                // by id; else the same dose (medicine and time) kept under another id: both phones settle on the smaller id
+                val old = db.doses().byUid(d.uid) ?: db.doses().at(mid, d.scheduledAt)
                 if (old == null) runCatching { db.doses().insert(d.copy(id = 0, updatedAt = t(d.updatedAt))) }
-                else if (d.updatedAt > old.updatedAt) db.doses().update(d.copy(id = old.id, updatedAt = t(d.updatedAt)))
+                else if (d.updatedAt > old.updatedAt) db.doses().update(d.copy(id = old.id, uid = minOf(old.uid, d.uid), updatedAt = t(d.updatedAt)))
+                else if (d.uid < old.uid) db.doses().update(old.copy(uid = d.uid))
             }
         }
         o.optJSONArray("notes")?.let { a ->
-            val groups = ArrayList<Pair<String, String>>()   // note uid to its group's uid
+            val groups = ArrayList<Pair<Long, String>>()   // the note here to its group's uid
             for (i in 0 until a.length()) {
                 val j = a.getJSONObject(i)
                 // groups are linked by shared id; an older phone sends only its own row number, which means nothing here
                 val n = noteFrom(j).copy(groupId = null)
-                j.optString("gu").takeIf { it.isNotBlank() }?.let { groups += n.uid to it }
-                val old = db.notes().byUid(n.uid)
-                if (old == null) db.notes().insert(n.copy(id = 0, updatedAt = t(n.updatedAt)))
-                else if (n.updatedAt > old.updatedAt) db.notes().update(n.copy(id = old.id, groupId = old.groupId, audioPath = old.audioPath, photoPath = old.photoPath, updatedAt = t(n.updatedAt)))
+                // by id; else the same entry kept here under another id (entries that lost their id before 2.13 were given a
+                // new one on each phone, and came back as copies): both phones settle on the smaller id. Removals match by id only.
+                val old = db.notes().byUid(n.uid) ?: if (n.deletedAt != null) null else db.notes().sameEntry(n.kind, n.problemId.orEmpty(), n.occurredAt, n.createdAt, n.text)
+                val here = old?.id ?: db.notes().insert(n.copy(id = 0, updatedAt = t(n.updatedAt)))
+                j.optString("gu").takeIf { it.isNotBlank() }?.let { groups += here to it }
+                if (old == null) Unit
+                else if (n.updatedAt > old.updatedAt) db.notes().update(n.copy(id = old.id, uid = minOf(old.uid, n.uid), groupId = old.groupId, audioPath = old.audioPath, photoPath = old.photoPath, updatedAt = t(n.updatedAt)))
+                else if (n.uid < old.uid) db.notes().update(old.copy(uid = n.uid))
             }
-            for ((uid, gu) in groups) {
-                val n = db.notes().byUid(uid) ?: continue
+            for ((here, gu) in groups) {
+                val n = db.notes().get(here) ?: continue
                 val g = db.notes().byUid(gu)?.id ?: continue
                 if (n.groupId != g) db.notes().update(n.copy(groupId = g))
             }

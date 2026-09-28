@@ -204,6 +204,9 @@ interface HelperDao {
 interface NoteDao {
     @Query("SELECT * FROM notes WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Note>
     @Query("SELECT * FROM notes WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Note?
+    /** The same entry by what it is, whatever its id: kind, problem, when it happened and when it was made (never shared by two different entries). */
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND kind = :kind AND IFNULL(problemId, '') = :problemId AND occurredAt = :at AND createdAt = :created AND text = :text LIMIT 1")
+    suspend fun sameEntry(kind: String, problemId: String, at: Long, created: Long, text: String): Note?
     @Query("SELECT MAX(updatedAt) FROM notes") suspend fun lastChange(): Long?
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL ORDER BY occurredAt DESC LIMIT :limit") fun recentFlow(limit: Int = 500): Flow<List<Note>>
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to ORDER BY occurredAt") suspend fun between(from: Long, to: Long): List<Note>
@@ -242,6 +245,7 @@ interface MedicineDao {
 interface DoseDao {
     @Query("SELECT * FROM doses WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Dose>
     @Query("SELECT * FROM doses WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Dose?
+    @Query("SELECT * FROM doses WHERE medicineId = :med AND scheduledAt = :at LIMIT 1") suspend fun at(med: Long, at: Long): Dose?
     @Query("SELECT MAX(updatedAt) FROM doses") suspend fun lastChange(): Long?
     @Query("SELECT * FROM doses WHERE scheduledAt >= :from AND scheduledAt < :to ORDER BY scheduledAt") fun betweenFlow(from: Long, to: Long): Flow<List<Dose>>
     @Query("SELECT * FROM doses WHERE scheduledAt >= :from AND scheduledAt < :to ORDER BY scheduledAt") suspend fun between(from: Long, to: Long): List<Dose>
