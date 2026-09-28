@@ -1,15 +1,15 @@
 Updates straight over 2.10 and keeps your data.
 
 ## What's new
-- **"Ate food instead" is its own status.** It counts as done, never as missed, and shows in grey in Details and history.
-- **Helper alerts have a proper title** ("Message from Lakshmi", "A medicine isn't marked as taken") with the message under it.
-- **Fewer choices on alerts:** I'm coming, I'll call and More (in 5 minutes, ask someone else, already handled, dismiss). App notices get I'll call, Already handled and Dismiss.
-- **Medicine cards:** a bigger picture, and the times on one line ("+3 more" for the rest).
-- **Android's own buttons, tabs, chips and choices** throughout, so they behave like the rest of your phone.
-- **Large text, Tamil and Hindi:** buttons stack instead of splitting words.
-- **No blank pages:** "Getting it ready…" while a page loads.
-- **Welcome** is one page, not a sliding carousel; food filters wrap instead of scrolling sideways.
-- **Doctor page:** urgent notes always come first.
-- **Updates:** the app checks when you open it, and the Updates page checks every time you visit.
+- **Medicine reminders on a helper's phone** now have Given, Snooze 5 min and More. More opens a page where you can give it in a few minutes (the other helpers are told), ask another helper to give it (their phone rings), or say it wasn't given and why.
+- **See the other helpers** on the Helpers tab, with Call and Message for each. A message to one helper goes only to them.
+- **Connecting phones:** both phones now search and show the phones nearby by name. Pick the right one on either phone. Connecting again replaces the old link, so no one is listed twice.
+- **Every message card has Dismiss**, including answered ones.
+- **Readable buttons:** words on blue buttons, tabs and chips are white again.
+- **Cough and other long-running problems** also ask how often it happens and how long ago a doctor diagnosed it.
+- **Temperature:** "Normal · 98.6 °F" in one tap, plus quick fever values.
+- **"Food taken instead of feed"** is said the same way everywhere.
+- **Extra feeds:** note a feed between the set times, for in-between hunger, under the same feed. It doesn't change the "given" count.
+- **Doctor PDF:** only what was logged, in plain lines. No dashes and no "not recorded" rows.
 
 Install **MedLog-VERSION-arm64.apk** on most phones.

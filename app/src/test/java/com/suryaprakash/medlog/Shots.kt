@@ -72,7 +72,9 @@ class Shots {
         }
         for (full in names) {
             val n = full.substringBefore('@')
-            val r = routes[n] ?: continue
+            val r = (if (n == "dosechoices") runBlocking {
+                com.suryaprakash.medlog.data.Mirror.db(app, "amma").doses().between(0, Long.MAX_VALUE).firstOrNull { it.status == "DUE" }?.uid?.let { Route.DoseChoices("amma", it) }
+            } else routes[n]) ?: continue
             if (n == "onboarding") app.settings.update { it.copy(onboarded = false) }
             // on a helper's phone, the person's pages show the person's records (as when opened from the helper's home)
             val helperView = System.getProperty("shots.role") == "helper" && n !in setOf("helper", "helperchat", "settings", "onboarding")
@@ -140,6 +142,14 @@ class Shots {
                 app.db.inbox().insert(com.suryaprakash.medlog.data.InboxItem(fromName = "Lakshmi", text = "MedLog: Lakshmi hasn't marked the 11:00 AM medicine (Amlodipine) as taken yet. A quick call may help.", kind = "MESSAGE", at = now - 600_000, acked = true))
             } else app.db.inbox().insert(com.suryaprakash.medlog.data.InboxItem(fromName = "Lakshmi", text = "Please come", kind = "MESSAGE", at = now - 120_000))
             fill(com.suryaprakash.medlog.data.Mirror.db(app, "amma"))
+            // the other helpers, as the person's phone shares them, and this helper's own name
+            app.settings.putString("my_name", "Ravi")
+            app.settings.putString("helpers_of_amma", org.json.JSONArray(listOf(
+                org.json.JSONObject().put("name", "Ravi").put("pairId", "amma").put("phone", "+91 98450 12345").put("relation", "Son"),
+                org.json.JSONObject().put("name", "Meena").put("pairId", "meena1").put("phone", "+91 94440 67890").put("relation", "Daughter-in-law"),
+                org.json.JSONObject().put("name", "Kalyan").put("pairId", "").put("phone", "+91 99000 11122").put("relation", "Neighbour"),
+            )).toString())
+            com.suryaprakash.medlog.data.People.put(app, com.suryaprakash.medlog.data.CaredFor("amma", com.suryaprakash.medlog.data.Keys.randomB64(32), "Lakshmi", com.suryaprakash.medlog.data.Keys.randomB64(32)))
             if (System.getProperty("shots.worst") != null) worstHelper(app)
             return@runBlocking
         }

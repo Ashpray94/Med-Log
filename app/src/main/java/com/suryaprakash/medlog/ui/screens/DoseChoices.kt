@@ -100,11 +100,13 @@ fun DoseChoicesScreen(nav: Nav, pairId: String, uid: String) {
         com.suryaprakash.medlog.ui.SectionHeader("Not given", "Say why, for the doctor", null)
         val reasons = (if (feed) listOf(com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS) else emptyList()) +
             listOf("Refused", "Asleep", "Vomited", "Feeling sick", "Ran out", "Doctor said stop", "Other reason")
-        reasons.forEach { r ->
-            BigButton(r, tone = Tone.SECONDARY, height = 52.dp, onClick = {
-                val stored = if (r == com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS) com.suryaprakash.medlog.data.FOOD_INSTEAD else if (r == "Other reason") "Not given" else r
-                act(com.suryaprakash.medlog.data.reasonWords(stored) ?: r) { HelperDose.notGiven(ctx, pairId, uid, stored) }
-            })
+        com.suryaprakash.medlog.ui.FlowRowOf {
+            reasons.forEach { r ->
+                com.suryaprakash.medlog.ui.Chip(r, false) {
+                    val stored = if (r == com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS) com.suryaprakash.medlog.data.FOOD_INSTEAD else if (r == "Other reason") "Not given" else r
+                    act(com.suryaprakash.medlog.data.reasonWords(stored) ?: r) { HelperDose.notGiven(ctx, pairId, uid, stored) }
+                }
+            }
         }
         @Suppress("UNUSED_EXPRESSION") app
     }
