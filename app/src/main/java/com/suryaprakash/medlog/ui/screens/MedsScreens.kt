@@ -122,7 +122,7 @@ fun MedsScreen(nav: Nav) {
             Body("You already took ${m.name}${at?.let { " at ${DoseActivity.time(it)}" } ?: ""}.", bold = true)
             Body("It is safest to wait ${m.minGapHours} hours between doses. Take again?")
             YesNo(yes = "Yes, again", no = "No, wait", onYes = {
-                if (doseId != null) scope.launch { Scheduler.take(ctx, doseId, force = true); confirmDouble = null } else takeAsNeeded(m, true)
+                if (doseId != null) scope.launch { Scheduler.take(ctx, doseId, force = true, db = app.db); confirmDouble = null } else takeAsNeeded(m, true)
             }, onNo = { confirmDouble = null })
         }
         return
@@ -138,8 +138,8 @@ fun MedsScreen(nav: Nav) {
             doses.forEach { d ->
                 val m = byId[d.medicineId] ?: return@forEach
                 DoseCard(d, m, onOpen = { nav.go(Route.MedEdit(m.id)) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id) } })
+                    onTaken = { scope.launch { Scheduler.take(ctx, d.id, db = app.db); savedFeedback(ctx); app.speaker.say("Well done.") } },
+                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id, db = app.db) } })
             }
         }
         // taken only when needed

@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Build
 import android.telephony.SmsManager
 import android.util.Log
+import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.ui.Perms
 
 /** Phone calls and SMS. These use the mobile network, never the internet. */
@@ -20,6 +21,17 @@ object Calls {
         runCatching { ctx.startActivity(i) }.onFailure { Log.w("Calls", "call failed", it) }
         if (speaker && direct) Speakerphone.turnOnSoon(ctx)
     }
+
+    /** Opens the dialer with the number ready; the person presses call themselves. */
+    fun dial(ctx: Context, number: String) {
+        val clean = number.filter { it.isDigit() || it == '+' }
+        if (clean.isEmpty()) return
+        runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$clean")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure { Log.w("Calls", "dial failed", it) }
+    }
+
+    /** For buttons on pages: while another person's MedLog is open, only the dialer opens (a helper calls the doctor themselves, nothing rings on its own). */
+    fun ui(ctx: Context, number: String, speaker: Boolean = false) =
+        if (ctx.medlog.viewing.active) dial(ctx, number) else call(ctx, number, speaker)
 
     /** Sends a text. Returns false if SMS isn't allowed or the phone can't send. */
     fun sms(ctx: Context, number: String, text: String): Boolean {

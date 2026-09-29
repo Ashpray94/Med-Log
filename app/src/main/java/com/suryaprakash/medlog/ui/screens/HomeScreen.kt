@@ -109,7 +109,7 @@ fun HomeScreen(nav: Nav) {
     LaunchedEffect(version) {
         name = app.repo.profile().name
         recent = app.repo.recentProblems(3)
-        next = Scheduler.nextDose(ctx)
+        next = Scheduler.nextDose(ctx, app.db)
         val (from, to) = Scheduler.today()
         val meds = app.db.medicines().all().associateBy { it.id }
         todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.takeIf { it.active || d.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }?.let { d to it } }
@@ -163,8 +163,8 @@ fun HomeScreen(nav: Nav) {
             if (todays.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
             todays.forEach { (d, m) ->
                 DoseCard(d, m, onOpen = { nav.go(Route.Meds) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); version++ } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id); version++ } })
+                    onTaken = { scope.launch { Scheduler.take(ctx, d.id, db = app.db); savedFeedback(ctx); version++ } },
+                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id, db = app.db); version++ } })
             }
         }
 

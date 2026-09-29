@@ -158,14 +158,14 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         app.repo.updateTriage(id, t)
         app.refreshWidgets()
         // AMBER: only the helpers the person opted in are told, once per note (B59)
-        if (t.level == Level.AMBER) Alerts.tellOnce(ctx, id, problem?.label.orEmpty(), t)
+        if (t.level == Level.AMBER && !app.viewing.active) Alerts.tellOnce(ctx, id, problem?.label.orEmpty(), t)
         if (t.level == Level.RED && phase != Phase.DANGER && phase != Phase.COUNTDOWN) {
             savedFeedback(ctx)
             val told = Told.level(factsFromJson(app.db.notes().get(id)?.details)) == Level.RED
             val plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan)
             val anyone = app.db.helpers().all().any { it.alerts || it.sos }
             phase = when {
-                declined || told -> Phase.DANGER
+                declined || told || app.viewing.active -> Phase.DANGER   // a replica: this runs on the person's phone, no countdown, no texts
                 t.mentalHealth -> { Alerts.tellOnce(ctx, id, problem?.label.orEmpty(), t); Phase.DANGER }   // the calm page comes first, no countdown
                 problem?.id in plan.emergencies -> { countdown = Countdown.PLAN; Phase.COUNTDOWN }
                 !anyone -> Phase.DANGER

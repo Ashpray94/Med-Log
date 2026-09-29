@@ -181,7 +181,7 @@ fun DoctorScreen(nav: Nav) {
                 doctors.forEachIndexed { i, d ->
                     if (i > 0) Line()
                     com.suryaprakash.medlog.ui.ValueRow(d.name, if (d.phone.isNotBlank()) "Call" else null, sub = d.speciality,
-                        onClick = if (d.phone.isNotBlank()) ({ com.suryaprakash.medlog.help.Calls.call(ctx, d.phone) }) else null)
+                        onClick = if (d.phone.isNotBlank()) ({ com.suryaprakash.medlog.help.Calls.ui(ctx, d.phone) }) else null)
                 }
             }
         }

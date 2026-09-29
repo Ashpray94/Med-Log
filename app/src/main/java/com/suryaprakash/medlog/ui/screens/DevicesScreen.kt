@@ -57,7 +57,7 @@ fun DevicesScreen(nav: Nav) {
                         savedFeedback(ctx)
                         val t = DangerRules.evaluate(null, emptyMap(), listOf(r), emptyList(), app.repo.person())
                         app.speaker.say("Saved. ${r.label()}. " + if (t.level != Level.GREEN) t.say else "")
-                        if (t.level == Level.RED) { Alerts.dangerToHelpers(ctx, r.label(), t); danger = t }
+                        if (t.level == Level.RED) { if (!app.viewing.active) Alerts.dangerToHelpers(ctx, r.label(), t); danger = t }
                     }
                 }
             })

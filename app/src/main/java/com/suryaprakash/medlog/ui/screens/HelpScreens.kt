@@ -185,6 +185,7 @@ fun HelpScreen(nav: Nav) {
     val sc = LocalScale.current
     val s = LocalSettings.current
     val scope = rememberCoroutineScope()
+    app.viewing.notice()?.let { n -> Screen("Family", n, onHome = { nav.home() }) { com.suryaprakash.medlog.ui.Card { Body(n, bold = true) } }; return }
     val helpers by app.db.helpers().flow().collectAsState(emptyList())
     val acks by Nearby.acks.collectAsState()
     val reached by Nearby.reached.collectAsState()
@@ -271,7 +272,7 @@ fun HelpScreen(nav: Nav) {
             com.suryaprakash.medlog.ui.Group {
                 helpers.forEachIndexed { i, h ->
                     if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                    Row(Modifier.fillMaxWidth().steady("Call ${h.name}") { Calls.call(ctx, h.phone) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                    Row(Modifier.fillMaxWidth().steady("Call ${h.name}") { Calls.ui(ctx, h.phone) }.padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(52.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(15.dp)).background(p.fill), contentAlignment = Alignment.Center) {
                             Text(h.name.trim().take(1).uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = p.inkSoft)
@@ -334,7 +335,7 @@ private fun MessageStatus(st: HelpMessages.Status, acks: List<Nearby.Ack>, reach
             }
         }
         if ((st.stage == "noanswer" || st.stage == "failed") && answered == null && first != null)
-            BigButton("Call ${first.name}", icon = Icons.Rounded.Call, height = 52.dp, onClick = { Calls.call(ctx, first.phone) })
+            BigButton("Call ${first.name}", icon = Icons.Rounded.Call, height = 52.dp, onClick = { Calls.ui(ctx, first.phone) })
     }
 }
 

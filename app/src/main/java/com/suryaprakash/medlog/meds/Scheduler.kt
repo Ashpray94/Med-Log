@@ -13,6 +13,7 @@ import com.suryaprakash.medlog.data.DAY
 import com.suryaprakash.medlog.data.Dose
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.HOUR
+import com.suryaprakash.medlog.data.MedDb
 import com.suryaprakash.medlog.data.Medicine
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
@@ -155,10 +156,11 @@ object Scheduler {
     }
 
     /** A medicine was stopped: its open doses are skipped ("Stopped"), so nothing rings or alerts for them. */
-    suspend fun stopMedicine(ctx: Context, m: Medicine) {
+    suspend fun stopMedicine(ctx: Context, m: Medicine, db: MedDb = ctx.medlog.ownDb) {
         val app = ctx.medlog
-        val open = app.ownDb.doses().open().filter { it.medicineId == m.id }
-        app.ownDb.doses().skipOpen(m.id, "Stopped", System.currentTimeMillis())
+        val open = db.doses().open().filter { it.medicineId == m.id }
+        db.doses().skipOpen(m.id, "Stopped", System.currentTimeMillis())
+        if (db !== app.ownDb) return
         open.forEach { DoseAlert.cancel(ctx, it.id) }
         app.refreshWidgets()
         reschedule(ctx)
@@ -177,34 +179,37 @@ object Scheduler {
 
     enum class Taken { OK, ALREADY }
 
-    /** Marks a dose taken. Returns ALREADY if it was already taken (the double-dose guard asks first). */
-    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false): Taken {
+    /**
+     * Marks a dose taken. Returns ALREADY if it was already taken (the double-dose guard asks first).
+     * [db]: the database the dose id belongs to. Screens pass the one they show; a replica's change is sent to the person's phone, which
+     * rings, texts and counts pills itself, so here only the own database counts down, alerts and cancels an alarm.
+     */
+    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false, db: MedDb = ctx.medlog.ownDb): Taken {
         val app = ctx.medlog
-        val d = app.ownDb.doses().get(doseId) ?: return Taken.OK
+        val own = db === app.ownDb
+        val d = db.doses().get(doseId) ?: return Taken.OK
         if (d.status == DoseStatus.TAKEN && !force) return Taken.ALREADY
-        app.ownDb.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
-        app.ownDb.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
-        if (force && d.status == DoseStatus.TAKEN) {
-            val m = app.ownDb.medicines().get(d.medicineId)
+        db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
+        if (own) db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
+        else db.medicines().get(d.medicineId)?.let { m -> m.pillsLeft?.let { left -> db.medicines().update(m.copy(pillsLeft = (left - (m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0)).coerceAtLeast(0.0))) } }
+        if (own && force && d.status == DoseStatus.TAKEN) {
+            val m = db.medicines().get(d.medicineId)
             Alerts.send(ctx, Alerts.Type.MESSAGE, com.suryaprakash.medlog.help.Wording.takenTwice(app.ownRepo.profile().name, m?.name ?: "a medicine"))
         }
-        DoseAlert.cancel(ctx, doseId)
-        app.refreshWidgets()
-        reschedule(ctx)
+        if (own) { DoseAlert.cancel(ctx, doseId); app.refreshWidgets(); reschedule(ctx) }
         return Taken.OK
     }
 
     /** Takes back a "taken" tapped by mistake: the dose is open again and the pill count goes back up. */
-    suspend fun untake(ctx: Context, doseId: Long) {
+    suspend fun untake(ctx: Context, doseId: Long, db: MedDb = ctx.medlog.ownDb) {
         val app = ctx.medlog
-        val d = app.ownDb.doses().get(doseId) ?: return
+        val d = db.doses().get(doseId) ?: return
         if (d.status != DoseStatus.TAKEN) return
-        app.ownDb.doses().update(d.copy(status = DoseStatus.DUE, actedAt = null))
-        app.ownDb.medicines().get(d.medicineId)?.let { m ->
-            m.pillsLeft?.let { left -> app.ownDb.medicines().update(m.copy(pillsLeft = left + (m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0))) }
+        db.doses().update(d.copy(status = DoseStatus.DUE, actedAt = null))
+        db.medicines().get(d.medicineId)?.let { m ->
+            m.pillsLeft?.let { left -> db.medicines().update(m.copy(pillsLeft = left + (m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0))) }
         }
-        app.refreshWidgets()
-        reschedule(ctx)
+        if (db === app.ownDb) { app.refreshWidgets(); reschedule(ctx) }
     }
 
     suspend fun snooze(ctx: Context, doseId: Long) {
@@ -215,13 +220,11 @@ object Scheduler {
         reschedule(ctx)
     }
 
-    suspend fun skip(ctx: Context, doseId: Long, reason: String) {
+    suspend fun skip(ctx: Context, doseId: Long, reason: String, db: MedDb = ctx.medlog.ownDb) {
         val app = ctx.medlog
-        val d = app.ownDb.doses().get(doseId) ?: return
-        app.ownDb.doses().update(d.copy(status = DoseStatus.SKIPPED, actedAt = System.currentTimeMillis(), reason = reason, snoozeUntil = null))
-        DoseAlert.cancel(ctx, doseId)
-        app.refreshWidgets()
-        reschedule(ctx)
+        val d = db.doses().get(doseId) ?: return
+        db.doses().update(d.copy(status = DoseStatus.SKIPPED, actedAt = System.currentTimeMillis(), reason = reason, snoozeUntil = null))
+        if (db === app.ownDb) { DoseAlert.cancel(ctx, doseId); app.refreshWidgets(); reschedule(ctx) }
     }
 
     /** Pill count and refill warning (plan 12.1). */
@@ -236,11 +239,10 @@ object Scheduler {
     }
 
     /** Next dose (for the home screen and widget). */
-    suspend fun nextDose(ctx: Context): Pair<Dose, Medicine>? {
-        val app = ctx.medlog
+    suspend fun nextDose(ctx: Context, db: MedDb = ctx.medlog.ownDb): Pair<Dose, Medicine>? {
         val now = System.currentTimeMillis()
-        val meds = app.ownDb.medicines().all().associateBy { it.id }
-        return app.ownDb.doses().between(now - 3 * HOUR, now + 2 * DAY)
+        val meds = db.medicines().all().associateBy { it.id }
+        return db.doses().between(now - 3 * HOUR, now + 2 * DAY)
             .filter { it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED }
             .sortedBy { it.scheduledAt }
             .firstNotNullOfOrNull { d -> meds[d.medicineId]?.takeIf { it.active }?.let { d to it } }

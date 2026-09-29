@@ -51,10 +51,12 @@ object CalendarSync {
     private fun calId(ctx: Context): Long? = ctx.medlog.settings.value.calendarId.takeIf { it > 0 && Perms.has(ctx, *Perms.CALENDAR) }
 
     /** Creates or updates one daily recurring event per medicine time. */
-    suspend fun syncMedicine(ctx: Context, m: Medicine) {
+    suspend fun syncMedicine(ctx: Context, m: Medicine) { if (!ctx.medlog.viewing.active) sync(ctx, m) }
+
+    private suspend fun sync(ctx: Context, m: Medicine) {
         val cal = calId(ctx) ?: return
         val app = ctx.medlog
-        removeMedicine(ctx, m)
+        remove(ctx, m)
         if (!m.active || m.asNeeded || m.times.isBlank()) return
         val neutral = app.settings.value.calendarNeutralTitles
         val zone = ZoneId.systemDefault()
@@ -82,17 +84,23 @@ object CalendarSync {
         app.settings.putString("cal_med_${m.id}", ids.joinToString(","))
     }
 
-    fun removeMedicine(ctx: Context, m: Medicine) {
+    /** Events are kept by medicine id in this phone's settings, so a replica's medicines (other ids) never touch them. */
+    fun removeMedicine(ctx: Context, m: Medicine) { if (!ctx.medlog.viewing.active) remove(ctx, m) }
+
+    private fun remove(ctx: Context, m: Medicine) {
         if (!Perms.has(ctx, *Perms.CALENDAR)) return
         val ids = ctx.medlog.settings.getString("cal_med_${m.id}")?.split(",")?.mapNotNull { it.toLongOrNull() } ?: return
         for (id in ids) runCatching { ctx.contentResolver.delete(android.content.ContentUris.withAppendedId(CalendarContract.Events.CONTENT_URI, id), null, null) }
         ctx.medlog.settings.putString("cal_med_${m.id}", null)
     }
 
-    suspend fun syncAll(ctx: Context) { for (m in ctx.medlog.ownDb.medicines().all()) syncMedicine(ctx, m) }
+    suspend fun syncAll(ctx: Context) { for (m in ctx.medlog.ownDb.medicines().all()) sync(ctx, m) }
+
+    suspend fun removeAll(ctx: Context) { for (m in ctx.medlog.ownDb.medicines().all()) remove(ctx, m) }
 
     /** A doctor visit: normal event, so Meeting Timer reminds like any appointment. */
     fun addAppointment(ctx: Context, a: Appointment): Long? {
+        if (ctx.medlog.viewing.active) return null
         val cal = calId(ctx) ?: return null
         val v = ContentValues().apply {
             put(CalendarContract.Events.CALENDAR_ID, cal)
