@@ -521,9 +521,8 @@ fun HelperHomeScreen(nav: Nav) {
         side = { PersonaSwitch(nav) }) {
         // ── the latest from them, before anything else: the one thing a helper must see ──
         if (paired) LatestMessage(fromPerson.firstOrNull(), who, person, scope)
-        // a new version, found when the app came to the front
-        val update by com.suryaprakash.medlog.Updater.state.collectAsState()
-        if (update is com.suryaprakash.medlog.Updater.State.Available || update is com.suryaprakash.medlog.Updater.State.Downloading || update is com.suryaprakash.medlog.Updater.State.Installing) UpdateCard()
+        // a new version: a sheet once in the phone's lifetime, then only in Settings → Updates
+        UpdateSheetOnce()
         PermissionListCompact()
         if (!paired) {
             com.suryaprakash.medlog.ui.Question("Connect to their phone", "Hold both phones close. It takes a minute, once.")
@@ -724,16 +723,12 @@ private fun LatestMessage(latest: com.suryaprakash.medlog.data.InboxItem?, who: 
 /** Messages written by the app for texts (they start with its name, so the text app shows who sent them); on screen, just the words. */
 private fun shown(t: String) = t.removePrefix("MedLog: ")
 
-/** Settings on a helper's phone, from the bottom bar. */
+/** How this phone reaches the other phones: nearby, far away, and connecting again. Part of the one Settings page, in both modes. */
 @Composable
-fun HelperSettingsScreen(nav: Nav) = HelperSettings(nav, onBack = null)
-
-/** The helper's settings: the link, pairing, and whose phone this is. */
-@Composable
-private fun HelperSettings(nav: Nav, onBack: (() -> Unit)?) {
+fun ConnectionSettings(nav: Nav) {
     val s = LocalSettings.current
     val link by Relay.link.collectAsState()
-    Screen("Settings", "How this phone hears ${s.pairedWith.ifBlank { "them" }}.", onHome = null, onBack = onBack) {
+    run {
         com.suryaprakash.medlog.ui.Section("Connection")
         com.suryaprakash.medlog.ui.Group {
             com.suryaprakash.medlog.ui.ValueRow("Nearby", "Bluetooth", sub = "Works without internet")
@@ -747,7 +742,6 @@ private fun HelperSettings(nav: Nav, onBack: (() -> Unit)?) {
             com.suryaprakash.medlog.ui.GroupLine()
             com.suryaprakash.medlog.ui.ValueRow("Connect again", null, sub = "If the other phone was reset") { nav.go(Route.Pair) }
         }
-        SharingSettings()
     }
 }
 

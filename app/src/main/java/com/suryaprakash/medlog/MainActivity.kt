@@ -242,7 +242,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Reports -> ReportsScreen(nav)
             is Route.Measure -> com.suryaprakash.medlog.ui.screens.MeasureScreen(nav, r.key)
             Route.Nutrition -> NutritionScreen(nav)
-            Route.Settings -> if (com.suryaprakash.medlog.ui.LocalSettings.current.role == "helper") com.suryaprakash.medlog.ui.screens.HelperSettingsScreen(nav) else SettingsScreen(nav)
+            Route.Settings -> SettingsScreen(nav)   // one Settings page for both modes (owner: "Settings page should never change")
             Route.EasySettings -> EasySettingsScreen(nav)
             Route.Permissions -> PermissionsScreen(nav)
             Route.Backup -> BackupScreen(nav)

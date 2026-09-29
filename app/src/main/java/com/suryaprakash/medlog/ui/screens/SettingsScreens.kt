@@ -204,6 +204,7 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("SOS", "Calls ${s.emergencyNumber} last") { section = "sos" }
             }
+            ConnectionSettings(nav)
             SharingSettings()
             com.suryaprakash.medlog.ui.Section("This phone")
             com.suryaprakash.medlog.ui.Group {
@@ -419,6 +420,37 @@ fun BackupScreen(nav: Nav) {
 }
 
 /** New version: check, download, install. On Settings → Updates, and on the home screen when one is ready. */
+/**
+ * Tells about a new version once in the phone's lifetime (owner: "once in lifetime for a user, never shown again"), as a
+ * bottom sheet on Home. After that, new versions are only under Settings → Updates.
+ */
+@Composable
+fun UpdateSheetOnce() {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val update by com.suryaprakash.medlog.Updater.state.collectAsState()
+    var seen by remember { mutableStateOf(UpdateSheet.seen(app.settings.getString(UpdateSheet.KEY))) }
+    val show = !seen && update is com.suryaprakash.medlog.Updater.State.Available
+    LaunchedEffect(show) { if (show) app.settings.putString(UpdateSheet.KEY, "1") }   // shown = never again, whatever is tapped
+    if (!show) return
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = { seen = true }, containerColor = p.paper) {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("A new version is ready", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+            UpdateCard()
+            Hint("From now on, new versions wait in Settings → Updates.")
+            BigButton("Later", tone = Tone.SECONDARY, onClick = { seen = true })
+        }
+    }
+}
+
+/** The once-in-a-lifetime rule for the update sheet, kept pure for its test. */
+object UpdateSheet {
+    const val KEY = "update_sheet_seen"
+    fun seen(stored: String?) = stored == "1"
+}
+
 @Composable
 fun UpdateCard(auto: Boolean = false) {
     val ctx = LocalContext.current

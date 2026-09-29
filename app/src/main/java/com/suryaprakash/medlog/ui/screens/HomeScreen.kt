@@ -151,9 +151,8 @@ fun HomeScreen(nav: Nav) {
         // ── the one main action ──
         HeroTell(onChoose = { nav.go(Route.Tell()) }, onSpeak = { nav.go(Route.Tell(speak = true)) })
 
-        // a new version, found by the daily check
-        val update by com.suryaprakash.medlog.Updater.state.collectAsState()
-        if (update !is com.suryaprakash.medlog.Updater.State.Idle && update !is com.suryaprakash.medlog.Updater.State.UpToDate && update !is com.suryaprakash.medlog.Updater.State.Checking) UpdateCard()
+        // a new version: a sheet once in the phone's lifetime, then only in Settings → Updates
+        UpdateSheetOnce()
 
         if (remindersBlocked) Card(border = p.amber, onClick = { nav.go(Route.Permissions) }, label = "Reminders are off. Tap to fix.") {
             Row(verticalAlignment = Alignment.CenterVertically) {
