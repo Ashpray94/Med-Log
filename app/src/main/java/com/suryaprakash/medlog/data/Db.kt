@@ -252,6 +252,7 @@ interface MedicineDao {
     @Query("SELECT * FROM medicines WHERE active = 1 ORDER BY name") suspend fun active(): List<Medicine>
     @Query("SELECT * FROM medicines ORDER BY active DESC, name") suspend fun all(): List<Medicine>
     @Query("SELECT * FROM medicines WHERE id = :id") suspend fun get(id: Long): Medicine?
+    @Query("SELECT * FROM medicines WHERE uid = :uid") suspend fun byUid(uid: String): Medicine?
     @Insert suspend fun insert(m: Medicine): Long
     @Update suspend fun update(m: Medicine)
 }
@@ -263,6 +264,8 @@ interface DoseDao {
     @Query("SELECT * FROM doses WHERE status IN ('DUE','SNOOZED') ORDER BY scheduledAt") suspend fun open(): List<Dose>
     @Query("SELECT * FROM doses WHERE medicineId = :med ORDER BY scheduledAt DESC LIMIT :n") suspend fun lastFor(med: Long, n: Int): List<Dose>
     @Query("SELECT * FROM doses WHERE id = :id") suspend fun get(id: Long): Dose?
+    @Query("SELECT * FROM doses WHERE uid = :uid") suspend fun byUid(uid: String): Dose?
+    @Query("DELETE FROM doses WHERE id = :id") suspend fun delete(id: Long)
     @Query("SELECT * FROM doses") suspend fun everything(): List<Dose>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(d: Dose): Long
     @Update suspend fun update(d: Dose)

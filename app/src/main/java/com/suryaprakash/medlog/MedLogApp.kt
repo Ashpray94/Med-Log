@@ -30,6 +30,7 @@ class MedLogApp : Application() {
     val describe by lazy { Describe(catalogue) }
     val db by lazy { MedDb.open(this) }
     val repo by lazy { Repo(db, catalogue, describe) }
+    val sync by lazy { com.suryaprakash.medlog.sync.SyncHub(this) }
     val speaker by lazy { Speaker(this) { settings.value.speechRate } }
     override fun onCreate() {
         super.onCreate()

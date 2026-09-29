@@ -275,7 +275,9 @@ object Nearby {
     /** Mailboxes this phone listens to: its person's (helper) or every paired helper's reply mailbox (person). */
     internal suspend fun listenTopics(ctx: Context): Map<String, ByteArray> {
         val app = ctx.medlog
+        app.sync.refreshOwn(ctx)
         return buildMap {
+            putAll(app.sync.topics())
             for (p in People.all(ctx)) {
                 put(Relay.topic(p.keyBytes, Relay.DOWN), p.keyBytes)
                 p.familyBytes?.let { put(Relay.topic(it, "family"), it) }
@@ -287,6 +289,7 @@ object Nearby {
 
     internal suspend fun onRelayNote(ctx: Context, topic: String, o: JSONObject) {
         val app = ctx.medlog
+        if (app.sync.onNote(topic, o)) return
         for (p in People.all(ctx)) {
             if (topic == Relay.topic(p.keyBytes, Relay.DOWN)) { received(ctx, o, viaNearby = false, pairId = p.pairId); return }
             if (p.familyBytes?.let { Relay.topic(it, "family") } == topic) { FamilyChat.received(ctx, o); return }

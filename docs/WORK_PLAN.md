@@ -254,6 +254,14 @@ sealed with the family key, which only paired family phones hold. Say it in plai
 - **B-c (wiring, after B-a and B-b):** the relay mailbox, the listener, replica databases, `ownDb`, "Open Amma's
   MedLog", the person-phone reactions and the Privacy text.
 
+**B-c1 decisions (transport and the person's phone, done):**
+- `sync/SyncRunner.kt` (pure, tested) and `sync/SyncHub.kt` (Android glue). `SyncHub.attach(name, key, db, effects)` runs one shared database over the mailbox `Relay.topic(key, "sync")`; the person's phone attaches its own database (`refreshOwn`), a helper phone attaches one per replica later. `Nearby.listenTopics` returns `app.sync.topics()`, and `Nearby.onRelayNote` hands sync notes to the hub first.
+- Large batches (up to 200 KB) are posted as ordinary sealed relay messages; ntfy turns anything over 4 KB into an attachment, which `Relay.parse` already follows. ntfy.sh keeps attachments only about 3 hours; a phone that misses one asks again with HELLO.
+- Bluetooth for sync is not done: Nearby connects for one minute during an alert and only from person to helper, so sync would need a long-lived connection and helper-side replicas first. The relay carries everything.
+- A wipe (`SyncSql.wipe`, via `SyncHub.wipeAll`) first detaches the channels, forgets the family key and pairings, then empties the tables with `applying = '1'` (no deletes go out) and reseeds a new device id. Other phones keep their copies.
+- A restore of this app's own backup keeps the row versions but the phone becomes a NEW device (the backup's id goes into `sync_have`); the restore then merges with the family: rows edited on other phones after the backup come back and win by time. A backup from before sharing (version 3) gets new uids, so it is refused while the phone is paired (it would show every row twice on the other phones); unpair first.
+- Clock skew: local edits are stamped `MAX(now, highest edit time received + 1)` (`sync_state.hlc`, in the triggers and `SqlSyncStore.apply`); an op dated more than 10 minutes ahead is written as it is and logged.
+
 Acceptance: the B-a tests prove convergence. B-b's migration compiles and its SQL is checked against a real SQLite
 file in a JVM test (`sqlite-jdbc`, test only). B-c builds. The lead then reviews each part as with Phase A.
 

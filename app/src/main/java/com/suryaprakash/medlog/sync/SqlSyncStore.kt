@@ -85,19 +85,24 @@ open class SqlSyncStore(private val db: SqlDb) : SyncStore {
         return db.transaction {
             db.exec("UPDATE sync_state SET v = '1' WHERE k = 'applying'")
             var applied = 0; var skipped = 0
-            val tables = LinkedHashSet<String>()
+            val tables = LinkedHashSet<String>(); val written = ArrayList<Op>()
             for (o in ops) {
+                raiseClock(o.at)
                 val spec = SyncSql.spec(o.tbl)
                 val cur = version(o.tbl, o.uid)
                 if (spec == null || (cur != null && !(o.version > cur)) || !write(spec, o)) { skipped++; continue }
                 db.exec("INSERT OR REPLACE INTO sync_rows(tbl, uid, origin, oseq, at, `by`, del) VALUES(?, ?, ?, ?, ?, ?, ?)",
                     listOf(o.tbl, o.uid, o.origin, o.oseq, o.at, o.by, if (o.del) 1L else 0L))
-                applied++; tables += o.tbl
+                applied++; tables += o.tbl; written += o
             }
             db.exec("UPDATE sync_state SET v = '0' WHERE k = 'applying'")
-            Applied(applied, skipped, 0, tables)
+            Applied(applied, skipped, 0, tables, written)
         }
     }
+
+    /** The highest edit time seen from any phone; a local edit is stamped above it (see [SyncSql.STAMP]), so a phone whose clock ran ahead can't keep winning. */
+    private fun raiseClock(at: Long) =
+        db.exec("INSERT INTO sync_state(k, v) VALUES('hlc', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v WHERE CAST(excluded.v AS INTEGER) > CAST(sync_state.v AS INTEGER)", listOf(at.toString()))
 
     /** Writes one op into its table. False = could not (the row's parent is missing, or the dose clashes with another), nothing written. */
     private fun write(s: TableSpec, o: Op): Boolean {

@@ -33,9 +33,12 @@ data class Op(
 }
 
 /** What happened to a batch: written, ignored because the phone already had the same or a newer version, or waiting for a parent row. */
-data class Applied(val applied: Int, val skipped: Int, val parked: Int, val tables: Set<String> = emptySet()) {
-    /** [tables] are the tables whose rows were really written (so the phone can, for example, plan alarms again after "medicines" or "doses"). */
-    operator fun plus(o: Applied) = Applied(applied + o.applied, skipped + o.skipped, parked + o.parked, tables + o.tables)
+data class Applied(val applied: Int, val skipped: Int, val parked: Int, val tables: Set<String> = emptySet(), val written: List<Op> = emptyList()) {
+    /**
+     * [tables] are the tables whose rows were really written (so the phone can, for example, plan alarms again after "medicines" or "doses").
+     * [written] are those ops themselves, so the phone can look at the new state of each row (a dose now TAKEN, a medicine now inactive).
+     */
+    operator fun plus(o: Applied) = Applied(applied + o.applied, skipped + o.skipped, parked + o.parked, tables + o.tables, written + o.written)
     companion object { val NONE = Applied(0, 0, 0) }
 }
 
