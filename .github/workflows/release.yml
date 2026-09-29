@@ -60,6 +60,9 @@ jobs:
             echo "MEDLOG_KEY_PASSWORD=$KP"; echo "PUBLISH=$PUBLISH"; } >> "$GITHUB_ENV"
 
       - name: Test and build
+        env:
+          # lets the app send "Report a problem" to the private feedback repo; empty on forks
+          MEDLOG_FEEDBACK_TOKEN: ${{ secrets.MEDLOG_FEEDBACK_TOKEN }}
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease
 
       - name: Name the files

@@ -224,7 +224,12 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.ValueRow("Helper controls", if (s.helperPin.isNotBlank()) "PIN set" else null, sub = "Hide features, lock settings") { section = "helperlock" }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Report a problem", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("My reports", null) { nav.go(Route.MyReports) }
             }
+            Toggle("Shake to report a problem", s.shakeOn, "Shake the phone twice to report what you see. Can start by accident if your hands shake.") { on -> app.settings.update { it.copy(shakeToReport = on) } }
             Hint("MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
         }
     }

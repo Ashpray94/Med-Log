@@ -4,6 +4,9 @@ import kotlinx.coroutines.launch
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.setValue
@@ -40,6 +43,14 @@ class MainActivity : ComponentActivity() {
         val root = rootRoute()
         nav = Nav(root).also { n -> n.setupRunning = { !medlog.settings.value.onboarded && medlog.settings.value.role != "helper" } }
         handle(intent)
+        com.suryaprakash.medlog.feedback.FeedbackWorker.enqueueIfPending(this)
+        // Shake to report: listen only while this screen is showing, and only if the setting is on.
+        val shake = com.suryaprakash.medlog.feedback.ShakeDetector(this) { com.suryaprakash.medlog.feedback.Capture.openFeedback(this, nav) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                try { medlog.settings.flow.collect { if (it.shakeOn) shake.start() else shake.stop() } } finally { shake.stop() }
+            }
+        }
         setContent {
             val settings by medlog.settings.flow.collectAsState()
             MedTheme(settings) { App(nav) }
@@ -194,6 +205,8 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Onboarding -> OnboardingScreen(nav)
             Route.Import -> ImportScreen(nav)
             Route.Devices -> DevicesScreen(nav)
+            Route.Feedback -> com.suryaprakash.medlog.feedback.FeedbackScreen(nav)
+            Route.MyReports -> com.suryaprakash.medlog.feedback.MyReportsScreen(nav)
         }
     }
 }

@@ -70,7 +70,12 @@ data class Settings(
     val voiceEngine: String = "auto",
     /** let the phone's speech service use the internet when it has no offline pack for a language */
     val voiceOnline: Boolean = true,
+    /** null until the person chooses: then it follows the role (on for a helper's phone, off for the person's, where tremor would trigger it) */
+    val shakeToReport: Boolean? = null,
 ) {
+    /** Whether shaking the phone opens the report page. */
+    val shakeOn: Boolean get() = shakeToReport ?: (role == "helper")
+
     companion object {
         /** Ready-made messages the person can choose from (plan 13.2). */
         val MESSAGE_OPTIONS = listOf(
@@ -147,6 +152,7 @@ class SettingsStore(ctx: Context) {
             languages = p.getString("languages", null)?.split(",")?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: d.languages,
             voiceEngine = p.getString("voiceEngine", d.voiceEngine)!!,
             voiceOnline = p.getBoolean("voiceOnline", d.voiceOnline),
+            shakeToReport = if (p.contains("shakeToReport")) p.getBoolean("shakeToReport", false) else null,
             messages = p.getString("messages", null)?.let { s -> JSONArray(s).let { a -> (0 until a.length()).map { a.getString(it) } } } ?: d.messages,
         )
     }
@@ -174,6 +180,7 @@ class SettingsStore(ctx: Context) {
             putBoolean("internetLink", s.internetLink); putString("relayUrl", s.relayUrl)
             putString("messages", JSONArray(s.messages).toString())
             putString("languages", s.languages.joinToString(",")); putString("voiceEngine", s.voiceEngine); putBoolean("voiceOnline", s.voiceOnline)
+            if (s.shakeToReport == null) remove("shakeToReport") else putBoolean("shakeToReport", s.shakeToReport)
         }.apply()
         _flow.value = s
     }
