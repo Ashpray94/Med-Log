@@ -21,6 +21,22 @@ Update this at the end of every chat: what changed, what's open, what wasn't ver
   without clutter (original layout kept).
 - 2.11.0: alert titles; food-instead outcome; Material 3 components; persona review (`docs/REVIEW.md`).
 
+## Ported from the 2.9.0 side branch (not yet released, version not bumped)
+- Safety: links that call, send SOS or send a message act only when the app made them (`integration/TrustedLinks.kt`);
+  pairing accepts only after "They match" on each phone; stopping a medicine skips its open doses (`Scheduler.stopMedicine`);
+  the privacy wipe runs off the main thread.
+- Clinical: helper-set limits per measure (`clinical/Limits.kt`, `LimitsForm.kt`, Limits page, Helper controls row, setup step),
+  over-55 numbers never assumed, cancer-care rules, absolute temperature rules and degrees C, cancer doctor first on the red page,
+  helpers told once per level (`clinical/Told.kt`), 10-second cancel before helpers are called or told. 2.13's running-total counting
+  (`Occurrences`) was kept for vomiting and loose stools; cough duration stays in days.
+- Bug reporting (`feedback/`): shake to report, page picture, GitHub issues. Needs the `MEDLOG_FEEDBACK_TOKEN` secret in the
+  release workflow (or gradle property `medlog.feedbackToken`); without it reports stay on the phone.
+- Family messages wait 3 seconds and can be cancelled (`SendCountdown`, `PendingSend`).
+- SMS only in an SOS (`SosPlan`): every other alert and help message goes only to the helpers' app.
+- Not ported on purpose: the branch's sync engine and settings-in-profile; the "whose phone" switch stays on Home (2.13's `PersonaSwitch`).
+- Waiting on a phone: pairing with "They match" on both phones; SOS app-first flow and the 90 s / 20 s SMS fallback; shake to report;
+  the Limits page with a real helper; the countdown before a plan emergency.
+
 ## Waiting on the owner's phone (can't be checked in the cloud)
 1. After 2.13.1 on the person's phone AND every helper phone: History shows each entry once (the 3× cough and vomiting
    of 28 Sept become one each); vomiting reads 3, not 6; the extras are in Removed. Update all phones: a phone still

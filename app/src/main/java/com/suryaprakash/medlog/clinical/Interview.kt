@@ -187,9 +187,9 @@ object Interview {
     /** "When did it start?" was answered "a week or more" (the tile's label or value). */
     fun startedWeekOrMore(facts: Map<String, Fact>): Boolean = facts["started"]?.value?.toString()?.trim()?.lowercase() == "a week or more"
 
-    /** For a cough that started a week or more ago: "For how many weeks?" (B54). Nothing is derived otherwise. */
+    /** For a cough that started a week or more ago: "For how many days?" (2.13 asks in days; B54). Nothing is derived otherwise. */
     fun weeksAsk(cat: Catalogue, p: Problem, facts: Map<String, Fact>): Ask? =
-        if (p.id == "cough" && startedWeekOrMore(facts) && !facts.containsKey("weeks")) cat.questions["q_weeks"]?.let { fromQuestion(cat, it) } else null
+        if (p.id == "cough" && startedWeekOrMore(facts) && !facts.containsKey("weeks") && !facts.containsKey("days")) cat.questions["q_weeks"]?.let { fromQuestion(cat, it) } else null
 
     /** The danger questions asked before "tell more": the top two, three for fever and falls (B49, B50). */
     private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> {
