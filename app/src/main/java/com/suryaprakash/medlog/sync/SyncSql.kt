@@ -47,6 +47,11 @@ object SyncSql {
 
     /** Milliseconds since 1970, in SQL. */
     const val NOW = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)"
+    /**
+     * The time a local edit is stamped with: now, but always above the highest edit time received from any phone (sync_state 'hlc',
+     * a hybrid logical clock). A phone whose clock ran far ahead can then win only until someone edits the row again.
+     */
+    const val STAMP = "MAX($NOW, COALESCE(CAST((SELECT v FROM sync_state WHERE k='hlc') AS INTEGER), 0) + 1)"
     const val DEVICE = "(SELECT v FROM sync_state WHERE k='device')"
     const val SEQ = "CAST((SELECT v FROM sync_state WHERE k='seq') AS INTEGER)"
     private const val APPLYING = "(SELECT v FROM sync_state WHERE k='applying')"
@@ -116,16 +121,16 @@ object SyncSql {
         for (s in TABLES) {
             val n = s.name
             if (s.hasUid) {
-                val stampNew = "UPDATE `$n` SET uid = CASE WHEN uid = '' THEN ${uidExpr(s, n)} ELSE uid END, updatedAt = $NOW, updatedBy = $DEVICE WHERE id = NEW.id"
+                val stampNew = "UPDATE `$n` SET uid = CASE WHEN uid = '' THEN ${uidExpr(s, n)} ELSE uid END, updatedAt = $STAMP, updatedBy = $DEVICE WHERE id = NEW.id"
                 add("CREATE TRIGGER IF NOT EXISTS sync_${n}_ai AFTER INSERT ON `$n` $on BEGIN $START_STAMP; $stampNew; $BUMP_SEQ; ${rowsInsert(s)}; $END_STAMP; END")
                 // a screen that saves an old copy of the row may send an empty uid: keep the old one
-                val stampUp = "UPDATE `$n` SET uid = CASE WHEN NEW.uid = '' THEN CASE WHEN OLD.uid = '' THEN ${uidExpr(s, n)} ELSE OLD.uid END ELSE NEW.uid END, updatedAt = $NOW, updatedBy = $DEVICE WHERE id = NEW.id"
+                val stampUp = "UPDATE `$n` SET uid = CASE WHEN NEW.uid = '' THEN CASE WHEN OLD.uid = '' THEN ${uidExpr(s, n)} ELSE OLD.uid END ELSE NEW.uid END, updatedAt = $STAMP, updatedBy = $DEVICE WHERE id = NEW.id"
                 val changed = (listOf("NEW.uid = ''") + s.watched.map { "OLD.`$it` IS NOT NEW.`$it`" }).joinToString(" OR ")
                 add("CREATE TRIGGER IF NOT EXISTS sync_${n}_au AFTER UPDATE ON `$n` $on AND ($changed) BEGIN $START_STAMP; $stampUp; $BUMP_SEQ; ${rowsInsert(s)}; $END_STAMP; END")
                 add("CREATE TRIGGER IF NOT EXISTS sync_${n}_ad AFTER DELETE ON `$n` $on AND OLD.uid <> '' BEGIN $BUMP_SEQ; " +
-                    "INSERT OR REPLACE INTO sync_rows(tbl, uid, origin, oseq, at, `by`, del) VALUES('$n', OLD.uid, $DEVICE, $SEQ, $NOW, $DEVICE, 1); END")
+                    "INSERT OR REPLACE INTO sync_rows(tbl, uid, origin, oseq, at, `by`, del) VALUES('$n', OLD.uid, $DEVICE, $SEQ, $STAMP, $DEVICE, 1); END")
             } else {
-                val rows = "INSERT OR REPLACE INTO sync_rows(tbl, uid, origin, oseq, at, `by`, del) VALUES('profile', 'profile', $DEVICE, $SEQ, $NOW, $DEVICE, 0)"
+                val rows = "INSERT OR REPLACE INTO sync_rows(tbl, uid, origin, oseq, at, `by`, del) VALUES('profile', 'profile', $DEVICE, $SEQ, $STAMP, $DEVICE, 0)"
                 add("CREATE TRIGGER IF NOT EXISTS sync_${n}_ai AFTER INSERT ON `$n` $on BEGIN $BUMP_SEQ; $rows; END")
                 val changed = s.watched.joinToString(" OR ") { "OLD.`$it` IS NOT NEW.`$it`" }
                 add("CREATE TRIGGER IF NOT EXISTS sync_${n}_au AFTER UPDATE ON `$n` $on AND ($changed) BEGIN $BUMP_SEQ; $rows; END")
@@ -133,11 +138,26 @@ object SyncSql {
         }
     }
 
+    /** Removes the triggers, so [triggers] can install changed ones (CREATE TRIGGER IF NOT EXISTS keeps an old body). */
+    fun dropTriggers(): List<String> = TABLES.flatMap { s -> listOf("ai", "au", "ad").map { "DROP TRIGGER IF EXISTS sync_${s.name}_$it" } }
+
+    /**
+     * Erases everything of this phone (Settings, Privacy, Delete everything) WITHOUT sharing it as deletes: "applying" is set while the
+     * tables are emptied, so the triggers stay silent, and Room's clearAllTables is not used because its table order could empty
+     * sync_state first. Afterwards the phone is a new device: a new id, number 0, nothing received, nothing known.
+     */
+    fun wipe(): List<String> = buildList {
+        add("UPDATE sync_state SET v = '1' WHERE k = 'applying'")
+        RestoreSql.DATA_TABLES.forEach { add("DELETE FROM `$it`") }
+        add("DELETE FROM sync_rows"); add("DELETE FROM sync_have"); add("DELETE FROM sync_state")
+        addAll(seedState())
+    }
+
     /** Migration 3 -> 4. */
     fun migration3to4(): List<String> = alterColumns() + CREATE_TABLES + seedState() + backfill() + triggers()
 
     /** Every time the database opens: fill what is missing (a fresh install, or tables wiped) and make sure the triggers exist. */
-    fun onOpen(): List<String> = seedState() + triggers()
+    fun onOpen(): List<String> = seedState() + dropTriggers() + triggers()
 }
 
 /**
@@ -172,12 +192,24 @@ object RestoreSql {
         out += "UPDATE main.sync_state SET v = '1' WHERE k = 'applying'" // the restore is not a change to share
         DATA_TABLES.forEach { out += copy(it) }
         if (hasSync) {
-            // a backup of this app's own kind: the phone keeps the identity and numbers it had when the backup was made
+            // a backup of this app's own kind: the versions of the rows come with it, but the phone becomes a NEW device. The device id
+            // in the backup may belong to a phone that kept running (or this same phone, which made more changes after the backup):
+            // reusing it would hand out numbers other phones already used for different changes. The old id is now just another
+            // phone whose changes this one holds up to the backup's number; the rest arrives from the family on the next HELLO.
             SYNC_TABLES.forEach { out += copy(it) }
+            out += "INSERT OR REPLACE INTO main.sync_have(origin, seq) SELECT d.v, CAST(s.v AS INTEGER) FROM main.sync_state d, main.sync_state s " +
+                "WHERE d.k = 'device' AND s.k = 'seq' AND CAST(s.v AS INTEGER) > 0"
+            out += "UPDATE main.sync_state SET v = '1' WHERE k = 'applying'" // the backup's sync_state has just replaced the flag
+            out += "DELETE FROM main.sync_state WHERE k IN ('device', 'seq')"
             out += SyncSql.seedState()
+            out += SyncSql.backfill()
         } else {
-            // an old backup: the rows have no uids yet. Forget the old versions and share what was restored as new.
+            // an old backup (version 3): the rows have no uids yet, so they get NEW ones. Backup.import refuses this on a phone that
+            // shares with family (the rows would appear twice on the other phones). Here the phone forgets everything it knew.
             out += "DELETE FROM main.sync_rows"
+            out += "DELETE FROM main.sync_have"
+            out += "DELETE FROM main.sync_state WHERE k IN ('device', 'seq', 'hlc')"
+            out += SyncSql.seedState()
             out += SyncSql.backfill()
         }
         out += "UPDATE main.sync_state SET v = '0' WHERE k = 'applying'"

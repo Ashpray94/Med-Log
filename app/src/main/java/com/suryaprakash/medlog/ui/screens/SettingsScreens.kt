@@ -404,7 +404,7 @@ fun BackupScreen(nav: Nav) {
         if (uri != null) scope.launch { status = runCatching { Backup.export(ctx, uri, password); "Backup saved." }.getOrElse { "Backup failed: ${it.message}" } }
     }
     val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) scope.launch { status = runCatching { Backup.import(ctx, uri, password); Scheduler.reschedule(ctx); "Restored. Everything is back." }.getOrElse { "Could not restore. Check the password." } }
+        if (uri != null) scope.launch { status = runCatching { Backup.import(ctx, uri, password); Scheduler.reschedule(ctx); "Restored. Everything is back." }.getOrElse { if (it is Backup.OldBackupWhileSharing) it.message!! else "Could not restore. Check the password." } }
     }
     val saveSetup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri: Uri? ->
         if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.export(ctx, uri); "Setup file saved." }.getOrElse { "Could not save: ${it.message}" } }
@@ -467,13 +467,13 @@ fun PrivacyScreen(nav: Nav) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var confirm by remember { mutableStateOf(false) }
-    Screen("Privacy", "Your notes stay on this phone. MedLog uses the internet only to pass locked alerts to your helpers' phones.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Privacy", "Your notes stay on your phone and your family's phones. MedLog uses the internet only to pass locked messages between them.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Card() {
-            Body("Your notes stay on this phone.", bold = true)
-            Body("MedLog uses the internet for one thing only: passing help alerts to your helpers' phones when they are far away. Each alert is locked with a key only their phone has. You can turn this off in Settings → SOS.")
+            Body("Your notes stay on your phone and the phones of the family you paired.", bold = true)
+            Body("When a helper is paired, your health notes, medicines, doses, appointments, limits and profile are kept the same on every paired phone, so any of you can add, change or delete them. They travel through an internet mailbox (a relay), locked with a key that only the paired family phones have. The relay cannot read them, and it keeps each message for 12 hours only. Photos and voice clips are not sent. You can turn this off in Settings → SOS.")
         }
         Body("Things leave the phone only when you choose:")
-        listOf("SOS and help messages: by SMS and phone calls to your helpers", "Helper phones: by Bluetooth nearby, or the internet far away, locked with a key", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
+        listOf("SOS and help messages: by SMS and phone calls to your helpers", "Helper phones: help alerts by Bluetooth nearby or the internet far away, and your shared health notes over the internet, all locked with a key only your family's phones have", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
         Body("Your notes are locked (encrypted) on the phone. No ads. No tracking.")
         BigButton("Open App info", tone = Tone.SECONDARY, onClick = { Perms.openAppSettings(ctx) })
         if (!confirm) BigButton("Delete everything", tone = Tone.SECONDARY, onClick = { confirm = true })
@@ -482,7 +482,8 @@ fun PrivacyScreen(nav: Nav) {
             BigButton("Yes, delete everything", tone = Tone.DANGER, onClick = {
                 scope.launch {
                     // wiping the database must not run on the main thread
-                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.db.clearAllTables() }
+                    // stop sharing and forget the family first, then erase (as one silent change: nothing is sent as deletes)
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.sync.wipeAll(ctx) }
                     java.io.File(ctx.filesDir, "audio").deleteRecursively(); java.io.File(ctx.filesDir, "photos").deleteRecursively()
                     app.settings.update { com.suryaprakash.medlog.data.Settings() }
                     Scheduler.reschedule(ctx)

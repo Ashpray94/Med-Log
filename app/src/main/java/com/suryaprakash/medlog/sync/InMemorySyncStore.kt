@@ -12,18 +12,20 @@ class InMemorySyncStore(override val device: String, private val now: () -> Long
     private val rows = HashMap<Pair<String, String>, Entry>()
     private val seen = HashMap<String, Long>()
     private var seq = 0L
+    private var hlc = 0L
+    private fun stamp() = maxOf(now(), hlc + 1)
 
     override val localSeq: Long get() = seq
 
     fun localUpsert(tbl: String, uid: String, row: JSONObject) {
-        val t = now(); seq++
+        val t = stamp(); seq++
         rows[tbl to uid] = Entry(Version(t, device, device, seq, false), JSONObject(row.toString()))
         raise(device, seq)
     }
 
     fun localDelete(tbl: String, uid: String) {
         if (rows[tbl to uid]?.version?.del != false) return // nothing live to delete
-        val t = now(); seq++
+        val t = stamp(); seq++
         rows[tbl to uid] = Entry(Version(t, device, device, seq, true), null)
         raise(device, seq)
     }
@@ -46,14 +48,16 @@ class InMemorySyncStore(override val device: String, private val now: () -> Long
 
     override fun apply(ops: List<Op>): Applied {
         var applied = 0; var skipped = 0
+        val tables = LinkedHashSet<String>(); val written = ArrayList<Op>()
         for (o in ops) {
+            hlc = maxOf(hlc, o.at)
             val cur = rows[o.tbl to o.uid]
             if (cur == null || o.version > cur.version) {
                 rows[o.tbl to o.uid] = Entry(o.version, if (o.del) null else o.row?.let { JSONObject(it.toString()) })
-                applied++
+                applied++; tables += o.tbl; written += o
             } else skipped++
         }
-        return Applied(applied, skipped, 0)
+        return Applied(applied, skipped, 0, tables, written)
     }
 
     override fun advanceHave(origin: String, seq: Long) = raise(origin, seq)

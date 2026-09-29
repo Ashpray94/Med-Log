@@ -413,13 +413,16 @@ class SyncDbTest {
         for (s in RestoreSql.statements(cols(c, "main"), bkCols(c))) x(c, s)
         x(c, "DETACH DATABASE bk")
         assertEquals(2L, n(c, "SELECT count(*) FROM notes"))
-        assertEquals("SRC", device(c))
-        assertEquals(2L, seq(c))
+        assertNotEquals("SRC", device(c)) // a restored phone is a new device; the backup's id may belong to a phone that kept running
+        assertNotEquals("NEW", device(c))
+        assertEquals(0L, seq(c))
         assertEquals(2L, rows(c))
+        assertEquals(2L, n(c, "SELECT seq FROM sync_have WHERE origin = 'SRC'")) // what the backup held of the old id counts as received
         assertEquals(0L, n(c, "SELECT count(*) FROM sync_rows WHERE del = 1"))
         assertEquals("0", one(c, "SELECT v FROM sync_state WHERE k='applying'"))
-        addNote(c, "after") // triggers work after the restore
-        assertEquals(3L, seq(c))
+        addNote(c, "after") // triggers work after the restore, under the new id
+        assertEquals(1L, seq(c))
+        assertEquals(1L, n(c, "SELECT count(*) FROM sync_rows WHERE origin = '${device(c)}'"))
         assertFalse(rows(c) == 2L)
     }
 

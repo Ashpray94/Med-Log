@@ -15,14 +15,16 @@ class FakeRelay(private val retentionMs: Long = 12 * 3600_000L, private val rand
     var dropRate = 0.0
     var holdMs = 0L
     private val log = ArrayList<Msg>()
-    private val engines = LinkedHashMap<String, SyncEngine>()
+    private val engines = LinkedHashMap<String, (String) -> Unit>()
     private val online = HashSet<String>()
     private val delivered = HashMap<String, HashSet<Int>>()
     private var nextId = 0
     var sent = 0
         private set
 
-    fun join(device: String, engine: SyncEngine) { engines[device] = engine; online += device; delivered.getOrPut(device) { HashSet() } }
+    fun join(device: String, engine: SyncEngine) = join(device) { engine.onMessage(it) }
+    /** Joins with any receiver (for example a SyncRunner that reacts after each message). */
+    fun join(device: String, onMessage: (String) -> Unit) { engines[device] = onMessage; online += device; delivered.getOrPut(device) { HashSet() } }
     fun sender(device: String) = SyncSender { publish(device, it) }
     fun setOnline(device: String, on: Boolean) { if (on) online += device else online -= device }
 
@@ -46,7 +48,7 @@ class FakeRelay(private val retentionMs: Long = 12 * 3600_000L, private val rand
                 if (m.heldUntil > now) continue
                 for ((dev, eng) in engines) {
                     if (dev == m.from || dev !in online) continue
-                    if (delivered.getValue(dev).add(m.id)) { eng.onMessage(m.text); any = true }
+                    if (delivered.getValue(dev).add(m.id)) { eng(m.text); any = true }
                 }
             }
             if (!any) return

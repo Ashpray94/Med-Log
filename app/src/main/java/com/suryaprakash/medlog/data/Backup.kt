@@ -41,6 +41,9 @@ object Backup {
         tmp.delete()
     }
 
+    /** A backup from before two-way sharing (no row ids) can't be merged into a phone that shares with family: its rows would show up twice on the other phones. */
+    class OldBackupWhileSharing : Exception("This backup is from an older MedLog. To restore it, first remove your helpers (or use a new phone), then restore.")
+
     suspend fun import(ctx: Context, uri: Uri, password: String) = withContext(Dispatchers.IO) {
         val tmp = File(ctx.cacheDir, "restore.tmp").apply { delete() }
         ctx.contentResolver.openInputStream(uri)!!.use { input -> tmp.outputStream().use { input.copyTo(it) } }
@@ -48,12 +51,15 @@ object Backup {
         db.execSQL("ATTACH DATABASE ${q(tmp.absolutePath)} AS bk KEY ${q(password)}")
         try {
             db.query("SELECT count(*) FROM bk.sqlite_master").use { it.moveToFirst() }   // throws if the password is wrong
+            val bk = columns(db, "bk")
+            if ("sync_rows" !in bk && ctx.medlog.sync.sharing(ctx)) throw OldBackupWhileSharing()
             db.beginTransaction()
             try {
                 // columns that exist in both databases only, so a backup from another version restores (B16)
-                for (sql in RestoreSql.statements(columns(db, "main"), columns(db, "bk").mapValues { e -> e.value.map { it.name } })) db.execSQL(sql)
+                for (sql in RestoreSql.statements(columns(db, "main"), bk.mapValues { e -> e.value.map { it.name } })) db.execSQL(sql)
                 db.setTransactionSuccessful()
             } finally { db.endTransaction() }
         } finally { db.execSQL("DETACH DATABASE bk"); tmp.delete() }
+        ctx.medlog.sync.identityChanged(ctx) // the restored phone is a new device: new id, and it says HELLO
     }
 }
