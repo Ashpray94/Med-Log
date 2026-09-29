@@ -295,3 +295,27 @@ cough, and is mildly confused about what to tap. Scenarios:
 6. Walk-through: every page he opens in his first 10 minutes, and what he wouldn't understand.
 
 The tester reports pass/fail per scenario with the test name, and a list of new problems it found, ranked.
+
+---
+
+## Owner decision: SMS only for SOS, as the last resort (not built yet)
+
+> "Do not send SMS for every missed medicines and all. SMS is to be sent only for SOS. That is the final resort if there
+> is no response from any of the helpers. It costs money to send SMS. Do not put people under that pressure."
+
+Today (checked in code): `Alerts.send` texts every helper for every alert type, `Sos.run` texts before anything else,
+and `HelpMessages.send` (HelpScreens.kt ~148) texts helpers whose phone did not confirm a quick message.
+
+Plan, to be built as one change:
+1. Every alert except SOS goes only to the helpers' MedLog app (relay + Bluetooth). No SMS. If no helper phone is
+   paired, log "Not sent: no helper phone is paired". AMBER still goes only to the helpers chosen for it.
+2. Quick messages ("please come", "water", "call me"): app only, no SMS.
+3. SOS: countdown → location → alarm on every helper's app → wait for a person's reply ("coming", "5 min", "call";
+   the automatic "got" does not count) → SMS only if nobody replies → WhatsApp group call, calls, emergency number
+   as today. SMS goes sooner when no helper phone is paired, no phone confirmed within 20 s, or the person taps
+   "Send SMS now". Wait: setting `sosAppWaitSec`, default 90 s (60/90/120/180).
+4. Reword every screen and document that promises text messages (list found: Emergency.kt:147, Perms.kt:43,
+   SettingsScreens.kt:154/479, OnboardingScreen.kt:616/619/629/713, HelpScreens.kt ~218/314/498/612,
+   AndroidManifest.xml:31/161, i18n files, privacy policy, Play notes, audit doc).
+5. The onboarding "Send a text" invite (OnboardingScreen.kt:664) becomes a share menu so WhatsApp can be chosen.
+6. Tests: a pure `SosPlan.decide` with every case, and a guard that only `Sos.kt` can call `Calls.sms`.
