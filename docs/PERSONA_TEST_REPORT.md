@@ -203,3 +203,78 @@ export ANDROID_HOME=/opt/android-sdk; echo "sdk.dir=/opt/android-sdk" > local.pr
 /opt/gradle-8.14.3/bin/gradle --console=plain -q testDebugUnitTest
 ```
 To see a finding fail, delete its `@Ignore("FAILS: ...")` line. After a fix, delete the line and the test should pass. The 6 ignored Kamala tests and 2 pending Ravi tests are: B52, B53, B54, B55, B56, B57 (and W3).
+
+## Round 2: sharing (Kamala's phone, Ravi's replica, the daughter's phone)
+
+Tests: `app/src/test/java/com/suryaprakash/medlog/PersonaSharingTest.kt` (33 tests: 28 pass, 5 `@Ignore` = 4 bugs; real SQLite with the real triggers, `SyncRunner`, `FakeRelay`). Full suite after this round: 255 tests, 0 failed, 5 skipped (all in this file), `assembleDebug` OK.
+The rule tested: "Helper and Self must be a bi-directional CRUD. Nothing should miss on any device." Every scenario checks that the phones end **identical** (`same()` compares every shared row with its winning version), then the specific expectation.
+
+### Scenario results
+
+| # | Scenario | Result | Test (line) |
+|---|---|---|---|
+| 1 | Ravi pairs a day later (relay has forgotten the first message): replica gets 3 medicines, 3 doses, 2 notes, appointment, 2 helpers, lab line, profile with her plan and cancer doctor; pair keys never leave her phone | PASS | `s1_*` (187, 207) |
+| 2 | Ravi sets temp 102, BP 160/100 and 180/110, SpO2 red 88 on his phone: on Kamala's DB `DangerRules` gives 100.2 F GREEN, 102.4 F RED, BP 168/96 AMBER, SpO2 87 RED; her doctor edit reaches Ravi with his limits intact | PASS | `s2_limitsSetOnRavis*` (227), `s2_andBackAgain*` (247) |
+| 2b | Kamala has "My details" open, Ravi sets limits, she taps Save: **limits erased on every phone** | **BUG B75** | `s2_limitsRaviSetWhileKamalaHasMyDetailsOpen*` (261, ignored) |
+| 3 | Ravi adds Ondansetron: her phone gets it, `medicineChanged` + `reschedule` run, her new dose comes back to him | PASS | 289 |
+| 3 | Ravi marks the 8 am dose taken: her phone calls `doseClosed` (alarm cancelled), `reschedule`, widget | PASS | 306 |
+| 3 | Both tap the same dose TAKEN at different times: one dose row, later tap kept on both, pill count 13 (not 12) | PASS | 320 |
+| 3 | Two phones both create the 14:00 dose of one medicine: one row (uid = medicine uid + time) | PASS | 340 |
+| 3 | Ravi changes times and drops future doses; her phone plans again; both end identical | PASS | 352 |
+| 3 | Two different doses taken on two phones at once: 13 pills left instead of 12 | **BUG B76** | 371 (ignored) |
+| 3 | Ravi stops a medicine while her medicine page is open, she taps Save: it is active again | **BUG B76** | 387 (ignored) |
+| 4 | 5 vomits on Kamala's phone while Ravi is offline 48 h (relay keeps 12 h): nothing arrives until he opens the app, then HELLO brings all 5; also 50 % message loss + HELLO | PASS | 406, 420 |
+| 5 | Same field edited on both: identical, later edit wins, either delivery order | PASS | 433 |
+| 5 | Different fields of one medicine edited at once: identical, but only ONE edit survives | identical PASS / both-survive **BUG B76** | 451 / 461 (ignored) |
+| 6 | Ravi removes his wrong note (soft delete `deletedAt`): gone on her phone | PASS | 481 |
+| 6 | She corrected it first, he removed later: the removal wins, her correction is lost, "Bring back" would restore the wrong "5 times" | documented, see "Delete vs edit" | 490 |
+| 6 | He removed first, she edited later without having heard it: her edit brings the note back on both | documented | 501 |
+| 6 | Hard delete of an appointment travels as a tombstone; a later insert brings one back, same on both | PASS | 510 |
+| 7 | Daughter joins after 7 days: all rows and both tombstones (`sync_rows del = 1` = 2), then her edit reaches both phones | PASS | 525 |
+| 7 | Same when Kamala's phone is off: Ravi's replica answers for her origin; when hers comes back it gets what the daughter added | PASS | 545 |
+| 8 | Kamala's wipe: helpers keep every row, no delete is sent, no tombstones on helpers | PASS | 565 |
+| 8 | Restore backup: new device id, catch-up, no duplicate uids, the appointment Ravi removed after the backup stays removed, her own dose change made after the backup comes back, new edits travel under the new id | PASS | 580 |
+| 9 | Ravi's clock +1 h: after he has received from her, her later edit wins (hybrid clock) | PASS | 631 |
+| 9 | Ravi's clock +1 h, concurrent edits: his wins although hers is later in real time | documented limit R1 | 644, 655 |
+| 10 | Gate (code reading below) | no leak found | `s10_*` (745) |
+| - | Fuzz: 3 phones x 6 seeds x 70 random edits (medicine, note soft delete, appointment insert/delete, dose slot, dose taken), message loss, phones going offline, then HELLO: all identical | PASS | 706 |
+
+### New findings (numbering continues; B75-B77 have an ignored test, B78 is code reading only)
+
+| ID | Sev | Finding | Evidence | Suggested fix |
+|---|---|---|---|---|
+| **B75** | 🟠 high | **A helper's limits (and any plan change) are erased by the person's Save in "My details".** The page keeps the profile it loaded (`profile = app.repo.profile()`, refreshed only `if (section == null)`), and Save does `profile().put(profile)` = `INSERT OR REPLACE` of the whole row with the OLD `plan` (limits, doctors, emergencies). It is stamped newest, so it wins and the limits vanish on Ravi's phone as well. Reproduction: Kamala opens My details (Settings > Me); Ravi saves 102 F on his phone; it reaches her phone (100.2 F becomes GREEN); she changes "Illnesses" and taps Save. Expected: conditions saved, limits kept. Actual: conditions saved, `limits.band("temp")` null on both phones, 100.2 F is RED again. | test `s2_limitsRaviSetWhileKamalaHasMyDetailsOpenSurviveHerSave` (261); `ui/screens/SettingsScreens.kt:86-88,114`; `data/Db.kt:214` (`@Insert(REPLACE)`) | On Save write only the fields the page edits (`UPDATE profile SET name=?, ...` without `plan`), or re-read the row inside the save and copy only changed fields. |
+| **B76** | 🟡 medium | **A medicine is one row, last write wins for all columns; screens write every column of a copy loaded earlier.** (a) `pillsLeft` is a counter: two doses taken on two phones together leave 13, not 12 (test 371). (b) Different fields edited together: one edit is lost, e.g. her `purpose` vs his `times` (test 461). (c) The medicine page saves `m.copy(...)` of the copy loaded on open, so a medicine Ravi stopped (`active = 0`) is started again by her Save and alarms again (test 387). Both phones stay identical in all three cases, so nothing looks wrong. | tests at 371, 387, 461; `ui/screens/MedsScreens.kt:196-199,269-285`; `sync/SqlSyncStore.kt` `write` replaces all columns | Save only changed columns (compare with `original`); derive pills from taken doses instead of a stored counter, or merge per column. |
+| **B77** | 🟡 medium | **A feed's contents (parts, kcal, protein, tube flag) are not shared.** They live in phone-wide settings `feed_info`, keyed by the LOCAL medicine id. The feed medicine syncs (name, ml, times, doses) but the other phone has no parts, so the calories/protein of a tube feed are missing on Ravi's phone; on a helper phone the id comes from the replica while the settings are the helper's own (ids start at 1 in every database), so Ravi's own feeds can be read as Kamala's. Reproduction: Kamala saves a feed; open Nutrition on Ravi's replica. Expected: same kcal. Actual: `Feeds.infoFrom(ravisSettings, replicaId)` is null (or Ravi's own feed). | test `s11_aFeedKamalaMadeShowsItsKcalOnRavisPhone_andNotSomeoneElsesFeed` (687, ignored); `ui/screens/FoodReadings.kt:319-321`, `nutrition/Foods.kt:499-509`, `nutrition/Nutrition.kt:70-76` | Store the parts in the medicine row (a `feedInfo` column added to `SyncSql.MEDICINES`), or as a shared doc. |
+| **B78** | 🟠 high | **After the person's phone gets a NEW family key (wipe then restore, or a restore on a new phone), a helper's already-open replica channel stays on the OLD key** until the app process restarts, so Ravi silently stops receiving and sending. Chain: `FamilyChat.familyKey` makes a new key when `own_family_key` was forgotten (`SettingsStore.forgetFamily`, `data/Settings.kt:207-210`); `shareKey` sends it; the helper's `gotKey` stores it (`help/FamilyChat.kt:70-76`) and reconnects; `refreshReplicas` compares channel NAMES only (`SyncHub.kt:105-108`, `ReplicaPlan.diff` `data/Replicas.kt:40`), and the channel `p-<pairId>` is already attached with the old key (`attach` is called only for new names). Expected: helper re-attaches with the new key. Not covered by a JVM test (`SyncHub` needs Android); the sync itself after a restore is tested and passes (test 580). | code reading | Make `diff` take the key (attach again when `Chan.key` differs from `familyBytes`). |
+
+### Delete vs edit (scenario 6) and clocks (scenario 9): the rule and whether it is safe
+
+- The winner is the version with the higher (time, device id). A delete is a version like any other: soft delete (`notes.deletedAt`) is an ordinary edit of the whole row, hard delete (appointments, helpers, planned doses) is a tombstone. Both phones always end identical (tests 490, 501, 510, fuzz).
+- **It never eats a newer edit if the clocks are right**: the later action wins and the earlier is dropped (test 490 shows her earlier correction lost, 501 shows his earlier remove undone). What is lost is invisible: nobody is told, and the loser's data is gone (the "removed" note keeps the old wrong text and count 5, which the rules count as a vomit, `Repo.recentForRules`).
+- **R1 (risk, not counted as a bug, tests 644, 655):** a phone whose clock is ahead wins concurrent edits against the other phone's real-time later edit; a delete from such a phone eats a newer edit (1 h ahead: her correction lost). The plan's hybrid clock (`SyncSql.STAMP`, `SqlSyncStore.raiseClock`) fixes it only AFTER she has received his edit (test 631). The only sign is `Log.w` for ops more than 10 minutes ahead (`sync/SyncRunner.kt:135`); no screen tells Ravi that his phone clock is wrong. Suggest a one-line warning on Helper home when an op is more than 10 minutes ahead or behind.
+
+### Gate check (scenario 10): no helper-side action rings, texts or calls
+
+Read every caller of `Alerts.*`, `Sos.start`, `Calls.*`, `Scheduler.*`, `DoseAlert`, `CalendarSync` in `ui/`: the ones reachable with a replica open are gated.
+- `Alerts.dangerToHelpers` gated: `FoodReadings.kt:478`, `DevicesScreen.kt:60`. `Alerts.tellOnce` for AMBER gated `TellScreen.kt:161`; the RED path goes to `Phase.DANGER` before any countdown when `viewing.active` (`TellScreen.kt:168`), so `Alerts.emergency/tellOnce` at `:382-387` (COUNTDOWN only) are unreachable on a replica. The mental-health `tellOnce` (`:169`) comes after the `viewing.active` branch, so it is unreachable too.
+- `Sos.start` from the danger and emergency pages sits inside `AlertFamilyOrNotice` (`Common.kt:100`, `Emergency.kt:88,134`), which shows "This runs on Kamala's phone." instead.
+- `Calls.ui` only dials on a replica (`help/Calls.kt:34`). `CalendarSync` gated (`integration/CalendarSync.kt:54,88,103`). `Scheduler.take/untake/skip/stopMedicine` take the replica `db` and do not cancel alarms, count down, or send "taken twice" unless `db === ownDb` (`meds/Scheduler.kt:159-165,187-212,223-227`). The tick, missed-dose and check-in alerts run on the own database only (`Scheduler.kt:117-141`, `care/Care.kt:82,112`).
+- Replicas attach with `SyncEffects.NONE` (`SyncHub.kt:108`), so incoming rows ring nothing (test 745).
+- Residual, by design and not a leak: a RED note Ravi enters on the replica syncs to her phone but nobody (not her, not the daughter) is texted, because no code reacts to notes arriving (`SyncRunner.react` handles only medicines and doses). He is with her when he enters it, but the daughter learns only by opening the app. Also `Scheduler.reschedule(ctx)` is called from replica screens (`MedsScreens.kt:107`, `MedAddFlow.kt:344`); it works on the helper's OWN database, so it only re-arms his own alarms.
+
+### Data a user would expect to be shared but is NOT
+
+Shared today (`SyncSql.TABLES`): profile (with the care plan and limits), helpers, medicines, doses, notes (incl. readings, meals, water as notes), appointments, doc_lines. Not shared:
+1. **Feed contents** (B77), `settings feed_info` (`FoodReadings.kt:320`).
+2. **Nutrition targets** `kcal_target`, `protein_target` (`NutritionScreen.kt:132`, read in `Nutrition.kt:43`) and **custom foods** `custom_foods` (`FoodPick.kt:70,167`): phone-wide settings. Ravi sets the doctor's kcal target while viewing Kamala's replica: it is saved on HIS phone, not hers, and a replica reads the helper's own value.
+3. **Photos and voice**: medicine strip photo `photoPath`, note `photoPath`, note `audioPath` (voice); the transcript text does travel (test 669). The replica shows no "Play my voice".
+4. **Calendar links**: `calendarEventId` of medicines and appointments (correctly per phone, the calendar entry is not created on the helper's phone).
+5. **Messages / inbox** (`inbox` table: "I'm coming", replies, helper chat) and the person's **family tiles** (`Settings.messages`).
+6. **Settings** that describe the person, not the phone: `waterGoal`, `diabetic`, `emergencyNumber`, `checkInEnabled/Time`, `snoozeMinutes`, `escalate*`, `sosCountdown`, `keepAudioDays`, `languages`, `helperPin`, easy/big mode (`data/Settings.kt:9-77`).
+7. **Per-note follow-ups and "is it better?" markers** are local: `followups` (`care/Care.kt:129-137`, keyed by local note id) and `asked_better_<id>` (`HomeScreen.kt:121,155`): after "Yes, better" on her phone, Ravi's phone asks again (the note itself syncs, the question marker does not).
+8. **Helper pairing** (`pairId`, `pairKey`) is per phone on purpose (test 207).
+
+### Counts
+
+Round 2 adds 33 tests (28 pass, 5 ignored for B75, B76 x3, B77). New bug ids: B75 to B78 (2 high, 2 medium), risk R1 (low), design notes above. Full suite: 255 run, 0 failed, 5 skipped.
