@@ -72,7 +72,7 @@ class LimitsFormTest {
         assertEquals("Not set", LimitsForm.summary(Limits(mapOf("spo2" to Band()), doctorConfirmed = true)))
         assertEquals("general: 180", LimitsForm.general("bpSys", Line.AMBER_HIGH, 40, false))
         assertEquals("general: none", LimitsForm.general("bpSys", Line.AMBER_HIGH, 70, false))
-        assertEquals("general: 90", LimitsForm.general("spo2", Line.AMBER_LOW, 70, false))
+        assertEquals("general: 89", LimitsForm.general("spo2", Line.AMBER_LOW, 70, false))
         assertEquals("general: 4", LimitsForm.general("vomit", Line.AMBER_HIGH, 50, true))
     }
 

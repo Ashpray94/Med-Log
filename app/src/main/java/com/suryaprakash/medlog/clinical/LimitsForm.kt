@@ -3,6 +3,8 @@ package com.suryaprakash.medlog.clinical
 import java.util.Locale
 import kotlin.math.roundToInt
 
+private val ONE_NUMBER_LABEL = mapOf("temp" to "The doctor's fever limit for this person (°F or °C)")
+
 /** The four lines of a [Band]. */
 enum class Line { AMBER_LOW, RED_LOW, AMBER_HIGH, RED_HIGH;
     fun of(b: Band?): Double? = when (this) { AMBER_LOW -> b?.amberLow; RED_LOW -> b?.redLow; AMBER_HIGH -> b?.amberHigh; RED_HIGH -> b?.redHigh }
@@ -19,7 +21,12 @@ data class MeasureSpec(
     /** the words that match what DangerRules really does: "below" / "at or below", "at or above" / "more than" */
     val lowWord: String = "below", val highWord: String = "at or above",
     val decimals: Boolean = false,
+    /** one number for the whole measure, saved as both the amber and the red high line (fever, B71) */
+    val oneNumber: Boolean = false,
 ) {
+    /** The words above the box: a single question for a one-number measure, else the line's name and unit. */
+    fun fieldLabel(l: Line): String = if (oneNumber) ONE_NUMBER_LABEL.getValue(key) else "${label(l)} ($unit)"
+
     fun label(l: Line): String = when (l) {
         Line.AMBER_LOW -> "Amber $lowWord"; Line.RED_LOW -> "Red $lowWord"
         Line.AMBER_HIGH -> "Amber $highWord"; Line.RED_HIGH -> "Red $highWord"
@@ -34,16 +41,34 @@ object LimitsForm {
     val SPECS: List<MeasureSpec> = listOf(
         MeasureSpec("bpSys", "Blood pressure, top number", "mmHg", Line.entries, 60.0..260.0, "bp", lowWord = "at or below"),
         MeasureSpec("bpDia", "Blood pressure, bottom number", "mmHg", Line.entries, 30.0..160.0, "bp", second = true, lowWord = "at or below"),
-        MeasureSpec("spo2", "Oxygen (SpO₂)", "%", listOf(Line.AMBER_LOW, Line.RED_LOW), 70.0..100.0, "spo2"),
-        MeasureSpec("sugar", "Sugar", "mg/dL", Line.entries, 30.0..600.0, "sugar"),
-        MeasureSpec("temp", "Temperature", "°F", listOf(Line.AMBER_HIGH, Line.RED_HIGH), 93.0..110.0, "temp", decimals = true),
-        MeasureSpec("pulse", "Pulse", "per minute", Line.entries, 20.0..220.0, "pulse"),
+        MeasureSpec("spo2", "Oxygen (SpO₂)", "%", listOf(Line.AMBER_LOW, Line.RED_LOW), 70.0..100.0, "spo2", lowWord = "at or below"),
+        MeasureSpec("sugar", "Sugar", "mg/dL", Line.entries, 30.0..600.0, "sugar", lowWord = "at or below"),
+        MeasureSpec("temp", "Temperature", "°F", listOf(Line.AMBER_HIGH, Line.RED_HIGH), 93.0..110.0, "temp", decimals = true, oneNumber = true),
+        MeasureSpec("pulse", "Pulse", "per minute", Line.entries, 20.0..220.0, "pulse", lowWord = "at or below"),
         MeasureSpec("vomit", "Vomiting a day", "times", listOf(Line.AMBER_HIGH, Line.RED_HIGH), 1.0..30.0, highWord = "more than"),
         MeasureSpec("loose", "Loose stools a day", "times", listOf(Line.AMBER_HIGH, Line.RED_HIGH), 1.0..30.0, highWord = "more than"),
         MeasureSpec("constipationDays", "Days without a motion", "days", listOf(Line.AMBER_HIGH, Line.RED_HIGH), 1.0..30.0, highWord = "more than"),
     )
 
     fun spec(key: String) = SPECS.first { it.key == key }
+
+    /** The texts for the boxes when the page opens. A one-number measure shows one number (the amber line, else the red one) on both lines. */
+    fun initialTexts(spec: MeasureSpec, band: Band?): Map<Line, String> {
+        if (!spec.oneNumber) return spec.lines.associateWith { text(band, it) }
+        val one = (band?.amberHigh ?: band?.redHigh)?.let { fmt(it) }.orEmpty()
+        return spec.lines.associateWith { one }
+    }
+
+    /** [texts] after typing [value] in the box of [line]; a one-number measure keeps both lines equal. */
+    fun typed(spec: MeasureSpec, texts: Map<Line, String>, line: Line, value: String): Map<Line, String> =
+        if (spec.oneNumber) spec.lines.associateWith { value } else texts + (line to value)
+
+    /** The general fever rule the doctor's number replaces, in words. */
+    fun tempRule(ageYears: Int?, cancerCare: Boolean): String {
+        val amber = if ((ageYears ?: 0) >= 65) "100.4" else "102"
+        val red = if (cancerCare) "100" else "104"
+        return "The general rule this replaces: amber at $amber °F, red at $red °F. Your number becomes both the amber and the red line. 104 °F and above is always red."
+    }
 
     /** A number for the box: no ".0". */
     fun fmt(d: Double): String = if (d % 1.0 == 0.0) d.toLong().toString() else String.format(Locale.US, "%.1f", d)
@@ -130,10 +155,11 @@ object LimitsForm {
         val n: String? = when (key) {
             "bpSys" -> when (line) { Line.AMBER_HIGH -> if (over55) null else "180"; Line.AMBER_LOW -> if (over55) null else "89"; else -> null }
             "bpDia" -> if (line == Line.AMBER_HIGH && !over55) "110" else null
-            "spo2" -> when (line) { Line.AMBER_LOW -> if (over55) "90" else "94"; Line.RED_LOW -> if (over55) null else "90"; else -> null }
-            "sugar" -> when (line) { Line.AMBER_LOW -> "70"; Line.RED_LOW -> "54"; Line.AMBER_HIGH -> "300"; Line.RED_HIGH -> "400" }
+            // low lines are "at or below": the general "below 94" is written as 93
+            "spo2" -> when (line) { Line.AMBER_LOW -> if (over55) "89" else "93"; Line.RED_LOW -> if (over55) null else "89"; else -> null }
+            "sugar" -> when (line) { Line.AMBER_LOW -> "69"; Line.RED_LOW -> "53"; Line.AMBER_HIGH -> "300"; Line.RED_HIGH -> "400" }
             "temp" -> when (line) { Line.AMBER_HIGH -> if (elderly) "100.4" else "102"; Line.RED_HIGH -> if (cancerCare) "100" else "104"; else -> null }
-            "pulse" -> when (line) { Line.AMBER_LOW -> "40"; Line.AMBER_HIGH -> "130"; else -> null }
+            "pulse" -> when (line) { Line.AMBER_LOW -> "39"; Line.AMBER_HIGH -> "130"; else -> null }
             "vomit", "loose" -> if (line == Line.AMBER_HIGH) (if (cancerCare) "4" else "5") else null
             "constipationDays" -> if (line == Line.AMBER_HIGH && cancerCare) "2" else null
             else -> null

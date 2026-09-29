@@ -147,11 +147,12 @@ class ClinicalRulesTest {
     @Test fun spo2HelperLinesDecide() {
         val who = person(67, limits = band("spo2" to Band(amberLow = 92.0, redLow = 88.0)))
         val at88 = eval(null, readings = listOf(Reading("spo2", 88.0, unit = "%")), who = who)
-        assertEquals(Level.AMBER, at88.level)                         // "< redLow": 88 is not below 88
+        assertEquals(Level.RED, at88.level)                           // low lines are "at or below" (B55): 88 is on the red line
         assertNull(at88.needsLimit)
         assertEquals(Level.RED, eval(null, readings = listOf(Reading("spo2", 87.0, unit = "%")), who = who).level)
         assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 91.0, unit = "%")), who = who).level)
-        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 92.0, unit = "%")), who = who).level)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 92.0, unit = "%")), who = who).level)   // on the amber line
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 93.0, unit = "%")), who = who).level)
         // a helper's line is used for younger people too
         // (under 55, a helper who sets only the red line keeps the general amber line at 94)
         assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 89.0, unit = "%")), who = person(40, limits = band("spo2" to Band(redLow = 85.0)))).level)
@@ -464,7 +465,8 @@ class ClinicalRulesTest {
         val t = eval(null, readings = listOf(Reading("spo2", 91.0, unit = "%")), who = who)
         assertEquals(Level.AMBER, t.level)
         assertEquals("spo2", t.needsLimit)                    // no red line from the helper yet
-        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 92.0, unit = "%")), who = who).level)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 92.0, unit = "%")), who = who).level)   // "at or below" 92
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 93.0, unit = "%")), who = who).level)
         // very low is still only AMBER for over 55 until the helper sets a red line
         assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 80.0, unit = "%")), who = who).level)
     }

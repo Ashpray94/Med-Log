@@ -3,6 +3,7 @@ package com.suryaprakash.medlog.clinical
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.Mention
 import com.suryaprakash.medlog.nlu.Parsed
+import com.suryaprakash.medlog.nlu.Source
 import com.suryaprakash.medlog.nlu.fmt1
 
 /**
@@ -69,6 +70,7 @@ class Describe(private val cat: Catalogue) {
     /** One fact as words. */
     fun fact(key: String, f: Fact): String? {
         val v = f.value
+        if (key.startsWith("_")) return null      // hidden markers, e.g. _toldLevel
         yesNo[key]?.let { (y, n) -> return if (v == true) y else if (v == false) n else null }
         return when (key) {
             "count" -> null // folded into the headline
@@ -119,8 +121,11 @@ class Describe(private val cat: Catalogue) {
         val p = cat.problem(problemId)
         val count = (facts["count"]?.value as? Number)?.toInt()
         val base = if (count != null) verb[problemId] ?: p?.label ?: problemId else p?.label ?: problemId
-        return if (count != null) "$base $count ${if (count == 1) "time" else "times"}" else base
+        return if (count != null) "$base ${countWords(count, facts["count"]?.source)} ${if (count == 1) "time" else "times"}" else base
     }
+
+    /** The count as words. The "5 or more" tile is stored as 5, so an asked 5 reads "5 or more" (B74). */
+    fun countWords(count: Int, source: Source?): String = if (count == 5 && source == Source.ASKED) "5 or more" else "$count"
 
     /** Full line for one problem: "Vomited 2 times, after lunch, yellow, no blood". */
     fun line(problemId: String, facts: Map<String, Fact>, order: List<String>? = null): String {
@@ -146,7 +151,7 @@ class Describe(private val cat: Catalogue) {
     fun chips(m: Mention): List<Pair<String, String>> {
         val p = cat.problem(m.problemId)
         val keys = (p?.fields ?: emptyList()).let { o -> o + m.facts.keys.filter { it !in o } }
-        return keys.mapNotNull { k -> m.facts[k]?.let { f -> (if (k == "count") "${(f.value as Number).toInt()} times" else fact(k, f))?.let { k to it } } }
+        return keys.mapNotNull { k -> m.facts[k]?.let { f -> (if (k == "count") "${countWords((f.value as Number).toInt(), f.source)} times" else fact(k, f))?.let { k to it } } }
     }
 }
 
