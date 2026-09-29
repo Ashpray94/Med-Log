@@ -471,8 +471,9 @@ fun ReadingsScreen(nav: Nav) {
     fun save(r: Reading) {
         scope.launch {
             app.repo.addReading(r, null)
-            val problem = when (r.type) { "bp" -> if (r.v1 < 100) "low_bp" else "high_bp"; "sugar" -> if (r.v1 < 100) "low_sugar" else "high_sugar"; "spo2" -> "low_oxygen"; "temp" -> "fever"; else -> null }
-            val t = DangerRules.evaluate(problem?.takeIf { r.type != "temp" || r.v1 >= 100.4 }, emptyMap(), listOf(r), emptyList(), app.repo.person())
+            // a plain reading has no problem: naming one (e.g. low BP) made the reason say "with dizziness" that nobody said (B21)
+            val problem = if (r.type == "temp" && r.v1 >= 100.4) "fever" else null
+            val t = DangerRules.evaluate(problem, emptyMap(), listOf(r), emptyList(), app.repo.person())
             savedFeedback(ctx)
             if (t.level == Level.RED) Alerts.dangerToHelpers(ctx, r.label(), t)
             result = t
@@ -547,14 +548,17 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
                     ScaleCard { kg -> onSave(Reading("weight", kg, unit = "kg")) }
                 }
                 else -> {
-                    val (unit, range) = when (type) { "sugar" -> "mg/dL" to 20.0..600.0; "spo2" -> "%" to 50.0..100.0; "temp" -> "°F" to 93.0..110.0; else -> "per minute" to 30.0..220.0 }
+                    val (unit, range) = when (type) { "sugar" -> "mg/dL" to 20.0..600.0; "spo2" -> "%" to 50.0..100.0; "temp" -> "°F or °C" to 34.0..110.0; else -> "per minute" to 30.0..220.0 }
                     com.suryaprakash.medlog.ui.SectionHeader(label, unit, null)
                     BigField(label, v1, { v1 = it.filter { c -> c.isDigit() || (type == "temp" && c == '.') }.take(5) },
                         keyboard = if (type == "temp") androidx.compose.ui.text.input.KeyboardType.Decimal else androidx.compose.ui.text.input.KeyboardType.Number)
                     val v = v1.toDoubleOrNull()
-                    val ok = v != null && v in range
+                    // 34–43 is taken as °C and saved as °F, e.g. 38.5 becomes 101.3 (B22)
+                    val ok = v != null && v in range && (type != "temp" || DangerRules.toFahrenheit(v) in 93.0..110.0)
                     if (v1.isNotEmpty() && !ok) Hint("Please check the number.")
-                    BigButton(if (ok) "Save $v1" else "Save", enabled = ok, onClick = { onSave(Reading(type, v!!, unit = unit)) })
+                    BigButton(if (ok) "Save $v1" else "Save", enabled = ok, onClick = {
+                        if (type == "temp") onSave(Reading(type, DangerRules.toFahrenheit(v!!), unit = "°F")) else onSave(Reading(type, v!!, unit = unit))
+                    })
                 }
             }
         }

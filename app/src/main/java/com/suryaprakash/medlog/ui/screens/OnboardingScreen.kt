@@ -477,8 +477,8 @@ fun OnboardingScreen(nav: Nav) {
 
         // ───────────── helpers ─────────────
         S.HELPERS -> HelpersStep(nav, n, total, first, onBack = { go(S.DOCTORS) }, onEdit = { Onboard.editingHelper = it; go(S.HELPER_FORM) }) {
-            // the first time here, suggest emergencies from what they said
-            if (plan.emergencies.isEmpty()) savePlan { it.copy(emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
+            // the first time here, suggest emergencies from what they said; an empty choice they made is kept (B02)
+            if (!plan.emergenciesAsked && plan.emergencies.isEmpty()) savePlan { it.copy(emergenciesAsked = true, emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
             go(S.EMERGENCIES)
         }
         S.HELPER_FORM -> HelperForm { go(S.HELPERS) }
@@ -488,7 +488,7 @@ fun OnboardingScreen(nav: Nav) {
             hint = "Your helpers are called straight away.",
             step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
             SymptomGrid(CarePlan.EMERGENCIES.filter { app.catalogue.problem(it) != null }, plan.emergencies.toList()) { id ->
-                savePlan { it.copy(emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+                savePlan { it.copy(emergenciesAsked = true, emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
             }
         }
 

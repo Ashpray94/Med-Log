@@ -93,6 +93,13 @@ object Interview {
         Choice("tingling", "Tingling", listOf("tingling", "pins and needles", "numb", "jhanjhanahat", "kooch", "marathu"), "feel_tingling"),
     ))
 
+    /** How long on the floor: asked right after "Could you get up?" is answered no (B50). Values are minutes. */
+    val FLOOR = Ask("q_floor", "timeOnFloor", "How long were you on the floor?", Kind.CHOICE, listOf(
+        Choice("5", "Under 10 minutes", listOf("few minutes", "under 10", "less than 10", "short time", "little while")),
+        Choice("30", "10 to 60 minutes", listOf("half an hour", "30 minutes", "20 minutes", "10 to 60", "some time")),
+        Choice("90", "More than an hour", listOf("more than an hour", "an hour", "hour", "hours", "long time", "all night")),
+    ))
+
     val MORE = Ask("more", "more", "Can you tell me a little more? It helps your doctor.", Kind.YESNO)
 
     val PATTERN = Ask("pattern", "pattern", "Is it there all the time, or does it come and go?", Kind.CHOICE, listOf(
@@ -147,12 +154,24 @@ object Interview {
     fun locatable(p: Problem) = p.id !in NOT_LOCATABLE && p.region !in setOf("whole", "mind")
     fun deepable(p: Problem) = locatable(p) && p.region !in SHALLOW_REGIONS
 
+    /** Danger questions that are always core for a problem, even though their priority is lower (B49, B51). */
+    private val ALWAYS_CORE = mapOf("fever" to listOf("q_temp", "q_stiffneck"), "chills" to listOf("q_temp"))
+
+    /** The danger questions asked before "tell more": the top two, three for fever and falls (B49, B50). */
+    private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> {
+        val must = ALWAYS_CORE[p.id].orEmpty().mapNotNull { cat.questions[it] }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
+        val rest = dangerQuestions(cat, p).filter { d -> must.none { it.field == d.field } }
+        val room = (if (p.id in setOf("fever", "fall")) 3 else 2) - must.size
+        return must + rest.take(room.coerceAtLeast(0))
+    }
+
     /** Core questions for [p], skipping anything already known. */
     fun core(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
-        dangerQuestions(cat, p).take(2).forEach(::add)
+        coreDanger(cat, p).forEach(::add)
+        if (p.id == "fall" && facts["couldGetUp"]?.value == false) add(FLOOR)
         if (p.id in COUNTABLE) add(COUNT)
         if (locatable(p)) add(WHERE)
         if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
@@ -166,8 +185,9 @@ object Interview {
         fun add(a: Ask) { if (!facts.containsKey(a.field) && out.none { it.field == a.field }) out += a.copy(core = false) }
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
-        dangerQuestions(cat, p).drop(2).forEach(::add)
-        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q -> fromQuestion(cat, q)?.let(::add) }
+        val inCore = coreDanger(cat, p).map { it.field }.toSet()
+        dangerQuestions(cat, p).filter { it.field !in inCore }.forEach(::add)
+        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 && it.field !in inCore }.forEach { q -> fromQuestion(cat, q)?.let(::add) }
         // other catalogue fields that have simple answers
         for (f in p.fields) {
             val field = cat.field(f) ?: continue
@@ -241,7 +261,7 @@ object Interview {
             }
             Kind.NUMBER -> Lang.number(t)?.let { Heard.Value(it, "$it") } ?: Heard.Unclear
             Kind.TEMP -> Regex("\\b(\\d{2,3}(?:\\.\\d)?)\\b").find(t)?.groupValues?.get(1)?.toDoubleOrNull()?.let { v ->
-                val f = if (v in 34.0..43.0) Math.round((v * 9 / 5 + 32) * 10) / 10.0 else v
+                val f = DangerRules.toFahrenheit(v)
                 if (f in 93.0..110.0) Heard.Value(f, "$f °F") else null
             } ?: Heard.Unclear
             Kind.FREE -> if (raw.isNotBlank()) Heard.Value(raw.trim(), raw.trim()) else Heard.Unclear
