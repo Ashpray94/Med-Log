@@ -255,9 +255,9 @@ object HelperCare {
             .setPriority(if (loud) NotificationCompat.PRIORITY_MAX else NotificationCompat.PRIORITY_HIGH)
             .setCategory(if (loud) NotificationCompat.CATEGORY_ALARM else NotificationCompat.CATEGORY_REMINDER)
             .setContentIntent(more).setAutoCancel(true)
-            .addAction(0, com.suryaprakash.medlog.ui.tr("Given"), action("give"))
-            .addAction(0, com.suryaprakash.medlog.ui.tr("Snooze $SNOOZE_MIN min"), action("snooze"))
-            .addAction(0, com.suryaprakash.medlog.ui.tr("More"), more)
+        // the same three answers as every helper alert; the notification itself opens the dose page (Given, Given earlier, reasons)
+        val replies = com.suryaprakash.medlog.help.AlertReplies.forType(com.suryaprakash.medlog.help.Alerts.Type.MISSED_DOSE)
+        listOf("willgive", "skip", "ask").forEachIndexed { i, kind -> b.addAction(0, com.suryaprakash.medlog.ui.tr(replies[i].words), action(kind)) }
         if (loud) b.setDeleteIntent(com.suryaprakash.medlog.help.SilenceReceiver.intent(ctx, id, title, "Due at $time. Tap to open.", more, keep = false))
         runCatching { NotificationManagerCompat.from(ctx).notify(id, b.build()) }
         if (loud) com.suryaprakash.medlog.help.AlertSound.start(ctx, urgent = false)
@@ -296,6 +296,33 @@ object HelperDose {
         done(ctx, d)
     }
 
+    /** "I'll give it": the alarm stops and the other helpers hear it; the dose stays open until it is marked given. */
+    suspend fun willGive(ctx: Context, pairId: String, uid: String) {
+        val (d, m) = find(ctx, pairId, uid) ?: return
+        NotificationManagerCompat.from(ctx).cancel(HelperCare.notificationId(d))
+        com.suryaprakash.medlog.help.AlertSound.stop()
+        com.suryaprakash.medlog.data.People.byPairId(ctx, pairId)?.let { p ->
+            com.suryaprakash.medlog.help.FamilyChat.send(ctx, "I'll give ${p.name.ifBlank { "them" }} ${if (m.form == "feed") "the feed" else m.name}", p)
+        }
+    }
+
+    /** "Skip this dose" on a helper's alert or reminder: the same as the helper's own "not given" ([notGiven]). */
+    suspend fun skip(ctx: Context, pairId: String, uid: String) = notGiven(ctx, pairId, uid, "Not given")
+
+    /**
+     * "Skip this dose" on an alert from the person's phone, which names the medicine and time but not the dose:
+     * finds that one dose in this phone's copy and skips it. Nothing is changed when it can't be told for sure.
+     */
+    suspend fun skipFromAlert(ctx: Context, pairId: String, text: String) {
+        val db = com.suryaprakash.medlog.data.Mirror.db(ctx, pairId)
+        val now = System.currentTimeMillis()
+        val meds = db.medicines().all().filter { it.name.isNotBlank() && text.contains("(${it.name})") }.associateBy { it.id }
+        val open = db.doses().between(now - 12 * HOUR, now + HOUR).filter { it.medicineId in meds && it.status in setOf("DUE", "SNOOZED", "MISSED") }
+        val time = { d: com.suryaprakash.medlog.data.Dose -> java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt)) }
+        val pick = open.filter { text.contains(time(it)) }.ifEmpty { open }.singleOrNull() ?: return
+        notGiven(ctx, pairId, pick.uid, "Not given")
+    }
+
     /** Remind this phone again in [minutes]; with [tell], the other helpers hear who is giving it and when. */
     suspend fun later(ctx: Context, pairId: String, uid: String, minutes: Int, tell: Boolean = false) {
         val (d, m) = find(ctx, pairId, uid) ?: return
@@ -330,6 +357,15 @@ class HelperDoseReceiver : android.content.BroadcastReceiver() {
                 when (intent.getStringExtra("kind")) {
                     "give" -> HelperDose.give(ctx, pair, uid)
                     "snooze" -> HelperDose.later(ctx, pair, uid, HelperCare.SNOOZE_MIN)
+                    "willgive" -> HelperDose.willGive(ctx, pair, uid)
+                    "skip" -> HelperDose.skip(ctx, pair, uid)
+                    "ask" -> {
+                        val other = com.suryaprakash.medlog.ui.screens.otherHelpers(ctx, pair).firstOrNull()
+                        if (other != null) HelperDose.askOther(ctx, pair, uid, other.second)
+                        else android.os.Handler(android.os.Looper.getMainLooper()).post {
+                            android.widget.Toast.makeText(ctx, com.suryaprakash.medlog.ui.tr("No other helper is paired"), android.widget.Toast.LENGTH_LONG).show()
+                        }
+                    }
                 }
                 NotificationManagerCompat.from(ctx).cancel(intent.getIntExtra("nid", 0))
             } finally { pending.finish() }

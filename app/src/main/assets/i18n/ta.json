@@ -2700,5 +2700,18 @@
 "Add water": "தண்ணீர் சேர்",
 "The chart appears once there are two or more entries in this time.": "இந்த காலத்தில் இரண்டு அல்லது அதிக பதிவுகள் இருந்தால் வரைபடம் தோன்றும்.",
 "Again": "மீண்டும்",
-"Did it happen again?": "மீண்டும் நடந்ததா?"
+"Did it happen again?": "மீண்டும் நடந்ததா?",
+"Ask another helper": "வேற உதவியாளரைக் கேளுங்க",
+"I'll give it": "நான் கொடுக்கிறேன்",
+"Skip this dose": "இந்த மருந்தை விட்டுடு",
+"I'll handle it": "நான் பார்த்துக்கிறேன்",
+"No other helper is paired": "வேற உதவியாளர் இணைக்கப்படலை",
+"Answer now": "இப்பவே பதில் சொல்லுங்க",
+"Seconds": "நொடிகள்",
+"Minutes late": "நிமிடம் தாமதம்",
+"Seconds late": "நொடி தாமதம்",
+"Asked another helper to go": "வேற உதவியாளரை போகச் சொன்னார்",
+"Skipped this dose": "இந்த மருந்தை விட்டுட்டாங்க",
+"asked {0} to go": "{0}-ஐ போகச் சொன்னார்",
+"Asked {0} to go": "{0}-ஐ போகச் சொன்னேன்"
 }

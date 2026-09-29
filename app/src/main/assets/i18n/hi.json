@@ -2700,5 +2700,18 @@
 "Add water": "पानी जोड़ें",
 "The chart appears once there are two or more entries in this time.": "इस समय में दो या ज़्यादा प्रविष्टियाँ होने पर चार्ट दिखेगा।",
 "Again": "फिर से",
-"Did it happen again?": "क्या फिर से हुआ?"
+"Did it happen again?": "क्या फिर से हुआ?",
+"Ask another helper": "किसी और सहायक से कहें",
+"I'll give it": "मैं दे दूँगा",
+"Skip this dose": "यह खुराक छोड़ें",
+"I'll handle it": "मैं देख लूँगा",
+"No other helper is paired": "कोई और सहायक जुड़ा नहीं है",
+"Answer now": "अभी जवाब दें",
+"Seconds": "सेकंड",
+"Minutes late": "मिनट देरी",
+"Seconds late": "सेकंड देरी",
+"Asked another helper to go": "किसी और सहायक से जाने को कहा",
+"Skipped this dose": "यह खुराक छोड़ी",
+"asked {0} to go": "ने {0} से जाने को कहा",
+"Asked {0} to go": "{0} से जाने को कहा"
 }

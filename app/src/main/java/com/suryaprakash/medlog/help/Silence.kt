@@ -90,20 +90,21 @@ class AlertReplyReceiver : BroadcastReceiver() {
         val reply = intent.getStringExtra("reply") ?: return
         val pairId = intent.getStringExtra("pairId")
         val mid = intent.getStringExtra("mid").orEmpty()
-        Loud.done(ctx, Loud.alertId(inboxId))
         val pending = goAsync()
         ctx.medlog.scope.launch {
             try {
-                if (inboxId > 0) ctx.medlog.db.inbox().ack(inboxId)
-                if (mid.isNotEmpty()) Nearby.reply(ctx, reply, re = mid, pairId = pairId) else Nearby.reply(ctx, reply, pairId = pairId)
+                val say = AlertAnswer.perform(ctx, reply, intent.getStringExtra("kind").orEmpty(), intent.getStringExtra("text").orEmpty(),
+                    intent.getStringExtra("from").orEmpty(), inboxId, mid, pairId)
+                say?.let { s -> android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(ctx, com.suryaprakash.medlog.ui.tr(s), android.widget.Toast.LENGTH_LONG).show() } }
             } finally { pending.finish() }
         }
     }
 
     companion object {
-        fun intent(ctx: Context, inboxId: Long, reply: String, mid: String, pairId: String?): PendingIntent =
-            PendingIntent.getBroadcast(ctx, 95_000 + (inboxId % 1000).toInt() * 4 + reply.length % 4,
-                Intent(ctx, AlertReplyReceiver::class.java).putExtra("id", inboxId).putExtra("reply", reply).putExtra("mid", mid).putExtra("pairId", pairId),
+        fun intent(ctx: Context, inboxId: Long, reply: String, mid: String, pairId: String?, slot: Int = 0, kind: String = "", text: String = "", from: String = ""): PendingIntent =
+            PendingIntent.getBroadcast(ctx, 95_000 + (inboxId % 1000).toInt() * 4 + slot,
+                Intent(ctx, AlertReplyReceiver::class.java).putExtra("id", inboxId).putExtra("reply", reply).putExtra("mid", mid).putExtra("pairId", pairId)
+                    .putExtra("kind", kind).putExtra("text", text).putExtra("from", from),
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     }
 }

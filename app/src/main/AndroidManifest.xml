@@ -141,6 +141,7 @@
         <receiver android:name=".care.HelperDoseReceiver" android:exported="false" />
         <receiver android:name=".help.SilenceReceiver" android:exported="false" />
         <receiver android:name=".help.AlertReplyReceiver" android:exported="false" />
+        <receiver android:name=".help.AlertSnoozeReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
