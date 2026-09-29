@@ -448,6 +448,11 @@
     "about a palm",
     "bigger than a palm"
    ]
+  },
+  "daysNoMotion": {
+   "label": "Days without a motion",
+   "type": "number",
+   "unit": "days"
   }
  },
  "questions": {
@@ -663,7 +668,7 @@
   },
   "q_stiffneck": {
    "field": "stiffNeck",
-   "ask": "Is your neck stiff?",
+   "ask": "Is your neck stiff, or does it hurt to bend your head down?",
    "type": "yesno",
    "priority": 80
   },
@@ -672,6 +677,12 @@
    "ask": "Did you pass out?",
    "type": "yesno",
    "priority": 95
+  },
+  "q_nomotion": {
+   "field": "daysNoMotion",
+   "ask": "How many days since you last passed stool?",
+   "type": "number",
+   "priority": 86
   }
  },
  "problems": [
@@ -712,7 +723,8 @@
    ],
    "fu": [
     "q_confused",
-    "q_temp"
+    "q_temp",
+    "q_stiffneck"
    ]
   },
   {
@@ -983,6 +995,7 @@
    "fu": [
     "q_worst",
     "q_vision",
+    "q_stiffneck",
     "q_severity"
    ]
   },
@@ -2515,12 +2528,15 @@
     "malabandha"
    ],
    "fields": [
+    "daysNoMotion",
     "stoolType",
     "count",
     "painful",
     "blood"
    ],
-   "fu": []
+   "fu": [
+    "q_nomotion"
+   ]
   },
   {
    "id": "blood_stool",

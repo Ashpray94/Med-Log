@@ -35,6 +35,12 @@ android {
         versionName = "2.13.1"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Where "Report a problem" sends reports: a PRIVATE GitHub repo. The token is never committed; it comes from the
+        // gradle property medlog.feedbackToken or the environment variable MEDLOG_FEEDBACK_TOKEN. Empty = reports stay on the phone.
+        val feedbackRepo = (project.findProperty("medlog.feedbackRepo") as String?) ?: "Ashpray94/Med-Log-feedback"
+        val feedbackToken = (project.findProperty("medlog.feedbackToken") as String?) ?: System.getenv("MEDLOG_FEEDBACK_TOKEN") ?: ""
+        buildConfigField("String", "FEEDBACK_REPO", "\"$feedbackRepo\"")
+        buildConfigField("String", "FEEDBACK_TOKEN", "\"$feedbackToken\"")
     }
 
     signingConfigs {

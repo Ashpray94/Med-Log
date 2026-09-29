@@ -143,7 +143,7 @@ fun AlertFamilyCard(helpers: Int, modifier: Modifier = Modifier, onStart: () -> 
     val progress by animateFloatAsState(if (holding) 1f else 0f, tween(if (holding) 2000 else 150), label = "hold") {
         if (it >= 1f && holding) { holding = false; onStart() }
     }
-    val words = if (helpers == 0) "Texts your location. Add family to call them too." else "Texts your location to $helpers, then calls each one"
+    val words = if (helpers == 0) "Add family to alert and call them." else "Alerts your helpers' phones, then calls each one"
     Box(
         modifier.fillMaxWidth().heightIn(min = 112.dp).clip(RoundedCornerShape(sc.radius + 6.dp)).background(Color(0xFF202327))
             .semantics { role = Role.Button; contentDescription = "Alert my family. Hold for 2 seconds. $words"; onClick("Alert my family") { onStart(); true } }

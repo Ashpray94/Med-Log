@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <files-path name="photos" path="photos/" />
+    <files-path name="feedback" path="feedback/" />
     <cache-path name="share" path="share/" />
 </paths>

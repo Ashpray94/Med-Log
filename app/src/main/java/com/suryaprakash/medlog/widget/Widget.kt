@@ -285,7 +285,7 @@ class MedLogWidget : GlanceAppWidget() {
         val DOSE = ActionParameters.Key<Long>("dose")
         val PROBLEM = ActionParameters.Key<String>("problem")
         val TEXT = ActionParameters.Key<String>("text")
-        fun link(ctx: Context, path: String) = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse("medlog://$path")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        fun link(ctx: Context, path: String) = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse("medlog://$path")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra(com.suryaprakash.medlog.integration.TrustedLinks.EXTRA, com.suryaprakash.medlog.integration.TrustedLinks.secret(ctx))
         fun ordinal(n: Int) = "$n" + when { n % 100 in 11..13 -> "th"; n % 10 == 1 -> "st"; n % 10 == 2 -> "nd"; n % 10 == 3 -> "rd"; else -> "th" }
     }
 }

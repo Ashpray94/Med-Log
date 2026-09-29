@@ -77,6 +77,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Helper
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.saveCarePlan
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.help.Calls
 import com.suryaprakash.medlog.help.Nearby
@@ -110,10 +111,26 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
+/** The 3 seconds between tapping a message and it going out, so a slip of the finger can be taken back. */
+object SendCountdown {
+    const val MILLIS = 3000L
+    /** Whole seconds still to wait, 3 down to 0. */
+    fun secondsLeft(startedAt: Long, now: Long): Int = (((startedAt + MILLIS - now).coerceAtLeast(0) + 999) / 1000).toInt()
+    fun due(startedAt: Long, now: Long) = now - startedAt >= MILLIS
+    fun line(text: String, secondsLeft: Int) = "Sending \"$text\" in $secondsLeft\u2026"
+}
+
+/** The one message waiting out its countdown. take() hands it out exactly once, so leaving the page, cancelling and the timer can never send it twice. */
+class PendingSend {
+    private var text: String? = null
+    @Synchronized fun start(t: String) { text = t }
+    @Synchronized fun cancel() { text = null }
+    @Synchronized fun take(): String? { val t = text; text = null; return t }
+}
+
 /**
  * Sending a help message (plan 13.2): straight to paired phones, nearby and over the internet, all at once.
- * Any helper whose phone hasn't said "got it" within 15 seconds is sent a text message too. After 3 minutes
- * with no answer, a phone call is offered.
+ * No SMS (it costs money; only an SOS sends SMS, as the last resort). After 3 minutes with no answer, a phone call is offered.
  */
 object HelpMessages {
     data class Status(val text: String, val stage: String, val at: Long = System.currentTimeMillis(), val texted: List<String> = emptyList())
@@ -124,7 +141,6 @@ object HelpMessages {
         app.scope.launch {
             val helpers = app.db.helpers().all()
             val paired = helpers.filter { it.pairKey != null }
-            val me = app.repo.profile().name
             Nearby.acks.value = emptyList()
             Nearby.reached.value = emptySet()
             app.repo.addEvent(Kind.MESSAGE, "Sent: $text")
@@ -135,10 +151,8 @@ object HelpMessages {
                 // most phones answer "got it" in a second or two; stop waiting once every paired phone has
                 for (t in 0 until 30) { if (paired.all { it.name in Nearby.reached.value }) break; delay(500) }
             }
-            // a text to everyone whose phone didn't get it, including helpers with no paired phone
-            val smsText = Wording.message(me, text, audio != null)
-            val texted = helpers.filter { (it.alerts || it.sos) && it.name !in Nearby.reached.value }.filter { Calls.sms(ctx, it.phone, smsText) }.map { it.name }
-            if (texted.isEmpty() && Nearby.reached.value.isEmpty()) { status.value = Status(text, "failed", started); return@launch }
+            val texted = emptyList<String>()   // never SMS for a help message
+            if (Nearby.reached.value.isEmpty()) { status.value = Status(text, "failed", started); return@launch }
             status.value = Status(text, "sent", started, texted)
             for (t in 0 until 360) { if (Nearby.acks.value.isNotEmpty()) { status.value = Status(text, "answered", started, texted); return@launch }; delay(500) }
             status.value = Status(text, "noanswer", started, texted)
@@ -186,6 +200,20 @@ fun HelpScreen(nav: Nav) {
     var justAllowed by remember { mutableStateOf(false) }
     val smsOk = com.suryaprakash.medlog.ui.rememberAllowed(*Perms.SMS) || justAllowed
     val ask = rememberPermissionAsker { justAllowed = Perms.has(ctx, *Perms.SMS) }
+    // a tapped message waits 3 seconds and can be cancelled: (text, time tapped)
+    var waiting by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    var clock by remember { mutableStateOf(System.currentTimeMillis()) }
+    val pending = remember { PendingSend() }
+    // leaving the page (tab, Back, background) must not lose the message; only Cancel stops it
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { pending.take()?.let { HelpMessages.send(ctx, it) } } }
+    LaunchedEffect(waiting) {
+        val w = waiting ?: return@LaunchedEffect
+        while (true) {
+            clock = System.currentTimeMillis()
+            if (SendCountdown.due(w.second, clock)) { pending.take()?.let { HelpMessages.send(ctx, it) }; waiting = null; return@LaunchedEffect }
+            delay(200)
+        }
+    }
 
     val speak = "Tap a message to send it to your family. For an emergency, tap the red SOS button at the bottom. " + (if (helpers.isEmpty()) "You have no helpers yet. Add one first." else "")
     Screen("Family", speak, onHome = { nav.home() }, subtitle = "Tell your family what you need", eyebrow = "") {
@@ -193,7 +221,7 @@ fun HelpScreen(nav: Nav) {
             Body("Add at least one helper, so we know who to ask.", bold = true)
             BigButton("Add a helper", onClick = { nav.go(Route.HelperEdit(null)) })
         }
-        if (!smsOk) Card(border = p.amber) { Body("Allow text messages, so your messages always get through."); BigButton("Allow", tone = Tone.SECONDARY, onClick = { ask(Perms.SMS + Perms.CALL) }) }
+        if (!smsOk) Card(border = p.amber) { Body("Allow text messages. They are used only in an SOS, and only when no helper answers in the app."); BigButton("Allow", tone = Tone.SECONDARY, onClick = { ask(Perms.SMS + Perms.CALL) }) }
 
         // ── what happened to the last message, person by person ──
         status?.let { st -> MessageStatus(st, acks, reached, helpers.firstOrNull()) }
@@ -216,9 +244,15 @@ fun HelpScreen(nav: Nav) {
             }
         } else {
             com.suryaprakash.medlog.ui.SectionHeader("Send a message", "${msgs.size} message${if (msgs.size == 1) "" else "s"} · tap one to send", "Change") { nav.go(Route.Messages) }
+            waiting?.let { w ->
+                Card(border = p.brand) {
+                    Body(SendCountdown.line(w.first, SendCountdown.secondsLeft(w.second, clock).coerceAtLeast(1)), bold = true)
+                    BigButton("Cancel", tone = Tone.SECONDARY, onClick = { pending.cancel(); waiting = null; app.speaker.say("Cancelled") })
+                }
+            }
             com.suryaprakash.medlog.ui.TileGrid(msgs, 2, aspect = 1.3f) { m, mod ->
                 val key = m.substringBefore('|'); val text = m.substringAfter('|')
-                com.suryaprakash.medlog.ui.PicTile(text, mod, picture = 56.dp, speak = "Send: $text", onClick = { HelpMessages.send(ctx, text); app.speaker.say("Sending: $text") }) {
+                com.suryaprakash.medlog.ui.PicTile(text, mod, picture = 56.dp, speak = "Send: $text", onClick = { pending.take()?.let { HelpMessages.send(ctx, it) }; pending.start(text); waiting = text to System.currentTimeMillis(); clock = System.currentTimeMillis(); app.speaker.say("Sending: $text in 3 seconds. Tap Cancel to stop.") }) {
                     com.suryaprakash.medlog.ui.OptionIcon(HelpMessages.icon(key), HelpMessages.tint(key, p), 56.dp)
                 }
             }
@@ -376,8 +410,14 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
     val scope = rememberCoroutineScope()
     var h by remember { mutableStateOf(Helper(name = "", phone = "")) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // B59: helpers hear about RED notes; only the ones with this switch on also hear "call the doctor today" (kept in the care plan by phone number)
+    var tellAmber by remember { mutableStateOf(false) }
+    var savedPhone by remember { mutableStateOf("") }
     val pick = rememberContactPicker { n, ph -> h = h.copy(name = n, phone = ph) }
-    LaunchedEffect(id) { if (id != null) app.db.helpers().all().firstOrNull { it.id == id }?.let { h = it } }
+    LaunchedEffect(id) {
+        if (id != null) app.db.helpers().all().firstOrNull { it.id == id }?.let { h = it; savedPhone = it.phone }
+        tellAmber = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan).tellsAmber(savedPhone).takeIf { savedPhone.isNotBlank() } ?: false
+    }
     Screen(if (id == null) "Add a helper" else "Change helper", "Their name and phone number.", onHome = { nav.home() }, onBack = { nav.back() }) {
         BigButton("Choose from contacts", tone = Tone.QUIET, icon = Icons.Rounded.Contacts, onClick = pick)
         BigField("Name", h.name, { h = h.copy(name = it) })
@@ -385,15 +425,20 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
         BigField("Relation (optional)", h.relation, { h = h.copy(relation = it) })
         Toggle("Call and message in an SOS", h.sos) { h = h.copy(sos = it) }
         Toggle("Tell them about missed medicines", h.alerts) { h = h.copy(alerts = it) }
+        Toggle("Tell them when the app says 'call the doctor today'", tellAmber, "Off: they are told only about the most serious notes") { tellAmber = it }
         Toggle("Let them see my notes", h.canSeeNotes, "Only used when you share your doctor page with them") { h = h.copy(canSeeNotes = it) }
         BigButton("Done", tone = Tone.PRIMARY, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
-            scope.launch { if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h); app.refreshWidgets(); nav.back() }
+            scope.launch {
+                if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h)
+                app.repo.saveCarePlan { pl -> pl.withAmberHelper(savedPhone, false).withAmberHelper(h.phone, tellAmber) }
+                app.refreshWidgets(); nav.back()
+            }
         })
         if (id != null) {
             if (!confirmDelete) BigButton("Remove this helper", tone = Tone.SECONDARY, icon = Icons.Rounded.Delete, onClick = { confirmDelete = true })
             else Card(border = p.red) {
                 Body("Remove ${h.name}? They won't be called in an SOS.", bold = true)
-                YesNo(yes = "Remove", no = "Keep", onYes = { scope.launch { app.db.helpers().delete(id); nav.back() } }, onNo = { confirmDelete = false })
+                YesNo(yes = "Remove", no = "Keep", onYes = { scope.launch { app.db.helpers().delete(id); app.repo.saveCarePlan { pl -> pl.withAmberHelper(savedPhone, false) }; nav.back() } }, onNo = { confirmDelete = false })
             }
         }
     }
@@ -431,10 +476,15 @@ fun PairScreen(nav: Nav) {
                 Hint("Check both phones show the same number:")
                 Text(d, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = p.ink)
             }
-            // connecting goes on by itself; a different number means the wrong phone, so it can be stopped here
-            if (st.incoming == null) {
-                Body("Connecting… This takes a few seconds.")
+            // nothing is accepted until "They match" is tapped; a different number means the wrong phone
+            if (!st.confirmed) {
+                BigButton("They match", tone = Tone.PRIMARY, onClick = { Nearby.confirmDigits(ctx) })
                 BigButton("The numbers don't match – stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
+                return@Screen
+            }
+            if (st.incoming == null) {
+                Body("Waiting for the other phone… This takes a few seconds.")
+                BigButton("Stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
                 return@Screen
             }
         }
@@ -478,7 +528,7 @@ private fun WhichHelper(name: String, helpers: List<com.suryaprakash.medlog.data
     com.suryaprakash.medlog.ui.Question("Which of your helpers is $name?")
     helpers.forEach { h -> com.suryaprakash.medlog.ui.Choice(h.name, pick == h.id && !newOne, sub = h.relation.ifBlank { null }) { pick = h.id; newOne = false } }
     com.suryaprakash.medlog.ui.Choice("Someone not in my list", newOne) { newOne = true; pick = null }
-    if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For a text message if the internet can't reach")
+    if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For calls, and for an SOS text if nobody answers in the app")
     val h = helpers.firstOrNull { it.id == pick }
     BigButton("Connect $name's phone", enabled = (h != null && !newOne) || phone.count(Char::isDigit) >= 6,
         onClick = { if (h != null && !newOne) onConnect(h.name, h.phone, h.id) else onConnect(name, phone, null) })
@@ -604,6 +654,9 @@ fun HelperHomeScreen(nav: Nav) {
                     sub = if (m.acked) "You answered" else null, mark = if (m.kind in setOf("SOS", "DANGER", "FALL")) p.red else null)
             })
         }
+        com.suryaprakash.medlog.ui.Group {
+            com.suryaprakash.medlog.ui.ValueRow("Report a problem with the app", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+        }
         Text("Help one more person", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 .steady("Help one more person") { PairMode.helping = true; nav.go(Route.Pair) }.padding(vertical = 12.dp))
@@ -699,7 +752,7 @@ fun ConnectionSettings(nav: Nav) {
             com.suryaprakash.medlog.ui.ValueRow("Nearby", "Bluetooth", sub = "Works without internet")
             com.suryaprakash.medlog.ui.GroupLine()
             com.suryaprakash.medlog.ui.ValueRow("Far away", when {
-                !s.internetLink -> "Text messages only"
+                !s.internetLink -> "Nearby phones only (internet link off)"
                 link == Relay.Link.ON -> "Connected"
                 link == Relay.Link.NO_INTERNET -> "No internet"
                 else -> "Connecting…"

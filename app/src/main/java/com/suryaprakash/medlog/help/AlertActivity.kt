@@ -111,6 +111,7 @@ class AlertActivity : ComponentActivity() {
         val (title, say) = when (val ph = phase) {
             is Sos.Phase.Countdown -> "Calling for help in ${ph.seconds}" to "Calling for help in ${ph.seconds} seconds. Tap Cancel to stop."
             Sos.Phase.Messaging -> "Getting help" to "Messaging your helpers."
+            is Sos.Phase.AppAlert -> "Alerting your helpers" to "Your helpers' phones are ringing. Waiting for an answer."
             is Sos.Phase.WhatsApp -> (if (ph.started) "WhatsApp call started" else "Starting WhatsApp call") to "Starting a WhatsApp call with your family."
             is Sos.Phase.Calling -> "Calling ${ph.name}" to "Calling ${ph.name}."
             is Sos.Phase.Answered -> "Did ${ph.name} answer?" to "Did ${ph.name} answer? Is help coming? If you don't tap, I will call the next person."
@@ -122,7 +123,7 @@ class AlertActivity : ComponentActivity() {
         // which step of the three SOS is on: 1 message family, 2 call family, 3 call the ambulance
         val step = when (phase) {
             is Sos.Phase.Countdown -> 0
-            Sos.Phase.Messaging -> 1
+            Sos.Phase.Messaging, is Sos.Phase.AppAlert -> 1
             is Sos.Phase.WhatsApp, is Sos.Phase.Calling, is Sos.Phase.Answered -> 2
             is Sos.Phase.EmergencyCountdown, is Sos.Phase.EmergencyCalling -> 3
             else -> 4
@@ -139,10 +140,11 @@ class AlertActivity : ComponentActivity() {
                     is Sos.Phase.Countdown -> Text("${ph.seconds}", fontSize = sc.huge * 2.2f, fontWeight = FontWeight.Bold, color = fg)
                     is Sos.Phase.EmergencyCountdown -> Text("${ph.seconds}", fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = fg)
                     is Sos.Phase.Answered -> Text("${ph.secondsLeft}", fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = fg)
+                    is Sos.Phase.AppAlert -> Text("${ph.secondsLeft}", fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = fg)
                     else -> androidx.compose.material3.Icon(if (calm) Icons.Rounded.Check else Icons.Rounded.Call, null, tint = fg, modifier = Modifier.size(56.dp))
                 }
                 Text(title, fontSize = sc.headline * 1.15f, fontWeight = FontWeight.Bold, color = fg, textAlign = TextAlign.Center)
-                if (phase is Sos.Phase.Countdown) Text("Then your family is messaged and called", fontSize = sc.small, color = fg.copy(alpha = 0.9f), textAlign = TextAlign.Center)
+                if (phase is Sos.Phase.Countdown) Text("Then your family is alerted and called", fontSize = sc.small, color = fg.copy(alpha = 0.9f), textAlign = TextAlign.Center)
             }
             // the one thing to do now
             when (val ph = phase) {
@@ -153,6 +155,10 @@ class AlertActivity : ComponentActivity() {
                 is Sos.Phase.Answered -> {
                     BigButton("Yes, help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = { Sos.helpComing() })
                     BigButton("No, call the next person", tone = Tone.DANGER, icon = Icons.Rounded.Call, onClick = { Sos.next() })
+                }
+                is Sos.Phase.AppAlert -> {
+                    BigButton("Help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
+                    BigButton("Send SMS now", tone = Tone.DANGER, onClick = { Sos.answer.value = "go" })
                 }
                 is Sos.Phase.WhatsApp -> {
                     if (ph.started) BigButton("Help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, onClick = { Sos.helpComing() })
@@ -185,7 +191,7 @@ class AlertActivity : ComponentActivity() {
             if (step in 1..3 && step > reached) reached = step
             if (!(calm && reached == 0)) Card {
                 val steps = listOf(
-                    "Message family" to (if (sent.isNotEmpty()) "Sent to ${sent.joinToString(", ")}" else "Your location by text"),
+                    "Message family" to (if (sent.isNotEmpty()) "SMS sent to ${sent.joinToString(", ")}" else "Their app first, SMS only if nobody answers"),
                     "Call family, one by one" to ((phase as? Sos.Phase.Calling)?.let { "Calling ${it.name} now" } ?: "On speaker"),
                     "Call ${com.suryaprakash.medlog.ui.LocalSettings.current.emergencyNumber}" to "If nobody answers",
                 )

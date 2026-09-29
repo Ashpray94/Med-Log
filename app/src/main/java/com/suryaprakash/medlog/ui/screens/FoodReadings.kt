@@ -204,7 +204,7 @@ fun FoodScreen(nav: Nav) {
             scope.launch {
                 app.viewDb.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
                 app.viewDb.doses().dropFuture(m.id, System.currentTimeMillis())
-                com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
+                com.suryaprakash.medlog.meds.Scheduler.stopMedicine(ctx, m.copy(active = false))
             }
         }, onDismiss = { feedMenu = null })
     }
@@ -513,8 +513,9 @@ fun ReadingsScreen(nav: Nav) {
     fun save(r: Reading, at: Long? = null) {
         scope.launch {
             app.viewRepo.addReading(r, null, at ?: System.currentTimeMillis())
-            val problem = when (r.type) { "bp" -> if (r.v1 < 100) "low_bp" else "high_bp"; "sugar" -> if (r.v1 < 100) "low_sugar" else "high_sugar"; "spo2" -> "low_oxygen"; "temp" -> "fever"; else -> null }
-            val t = DangerRules.evaluate(problem?.takeIf { r.type != "temp" || r.v1 >= 100.4 }, emptyMap(), listOf(r), emptyList(), app.viewRepo.person())
+            // a plain reading has no problem: naming one (e.g. low BP) made the reason say "with dizziness" that nobody said (B21)
+            val problem = if (r.type == "temp" && r.v1 >= 100.4) "fever" else null
+            val t = DangerRules.evaluate(problem, emptyMap(), listOf(r), emptyList(), app.viewRepo.person())
             savedFeedback(ctx)
             if (t.level == Level.RED) Alerts.dangerToHelpers(ctx, r.label(), t)
             result = t
@@ -534,6 +535,7 @@ fun ReadingsScreen(nav: Nav) {
     Screen("BP, sugar & more", "Tap what you measured. Type the number. Weight comes from your scale.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "Tap what you measured") {
         result?.takeIf { it.level == Level.AMBER }?.let { t -> Card(border = p.amber) { Text("▲ " + t.say, color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body); t.firstAid?.let { Body(it, bold = true) } }; DoctorCallButton() }
+        result?.let { NeedsLimitLine(nav, it.needsLimit) }
         com.suryaprakash.medlog.ui.SectionHeader("Readings", if (recent.isEmpty()) "None in 2 weeks" else "${recent.size} in 2 weeks", "Trends") { nav.go(Route.Reports) }
         com.suryaprakash.medlog.ui.TileGrid(kinds, 2, aspect = 1.25f) { (k, label, look), mod ->
             val last = latest[k]
@@ -594,15 +596,18 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
                     ScaleCard { kg -> onSave(Reading("weight", kg, unit = "kg")) }
                 }
                 else -> {
-                    val (unit, range) = when (type) { "sugar" -> "mg/dL" to 20.0..600.0; "spo2" -> "%" to 50.0..100.0; "temp" -> "°F" to 93.0..110.0; else -> "per minute" to 30.0..220.0 }
+                    val (unit, range) = when (type) { "sugar" -> "mg/dL" to 20.0..600.0; "spo2" -> "%" to 50.0..100.0; "temp" -> "°F or °C" to 34.0..110.0; else -> "per minute" to 30.0..220.0 }
                     com.suryaprakash.medlog.ui.SectionHeader(label, unit, null)
                     if (type == "temp") TempQuick { v1 = if (it == 98.6) "98.6" else it.toInt().toString() }
                     BigField(label, v1, { v1 = it.filter { c -> c.isDigit() || (type == "temp" && c == '.') }.take(5) },
                         keyboard = if (type == "temp") androidx.compose.ui.text.input.KeyboardType.Decimal else androidx.compose.ui.text.input.KeyboardType.Number)
                     val v = v1.toDoubleOrNull()
-                    val ok = v != null && v in range
+                    // 34–43 is taken as °C and saved as °F, e.g. 38.5 becomes 101.3 (B22)
+                    val ok = v != null && v in range && (type != "temp" || DangerRules.toFahrenheit(v) in 93.0..110.0)
                     if (v1.isNotEmpty() && !ok) Hint("Please check the number.")
-                    BigButton(if (ok) "Save $v1" else "Save", enabled = ok, onClick = { onSave(Reading(type, v!!, unit = unit)) })
+                    BigButton(if (ok) "Save $v1" else "Save", enabled = ok, onClick = {
+                        if (type == "temp") onSave(Reading(type, DangerRules.toFahrenheit(v!!), unit = "°F")) else onSave(Reading(type, v!!, unit = unit))
+                    })
                 }
             }
         }

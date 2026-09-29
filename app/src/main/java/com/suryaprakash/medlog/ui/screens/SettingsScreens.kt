@@ -150,7 +150,7 @@ fun SettingsScreen(nav: Nav) {
                 if (relay != s.relayUrl) BigButton("Done", tone = Tone.QUIET, enabled = relay.isEmpty() || relay.startsWith("https://"), onClick = { app.settings.update { it.copy(relayUrl = relay) } })
             }
             Title("WhatsApp group call (extra)")
-            Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so phone calls and SMS always follow.")
+            Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so the SOS still goes on to SMS and phone calls if nobody answers.")
             BigField("Family group invite link", s.whatsappGroupLink, { v -> app.settings.update { it.copy(whatsappGroupLink = v.trim()) } }, hint = "In WhatsApp: group info → Invite via link → Copy link")
             val enabled = WhatsAppCallService.isEnabled(ctx)
             Toggle("Use WhatsApp group call in SOS", s.whatsappSos, if (enabled) "Ready" else "Needs the MedLog SOS helper turned on in Accessibility") { on -> app.settings.update { it.copy(whatsappSos = on) } }
@@ -162,6 +162,10 @@ fun SettingsScreen(nav: Nav) {
             Hint("You're on version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. It also checks once a day by itself.")
         }
         "helperlock" -> Screen("Helper controls", "Things a helper can set.", onHome = { nav.home() }, onBack = { section = null }) {
+            val limitsPlan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Personal limits", com.suryaprakash.medlog.clinical.LimitsForm.summary(limitsPlan.limits), sub = "Numbers the doctor agreed") { nav.go(Route.Limits) }
+            }
             Body("Hide what isn't needed", bold = true)
             listOf("meds" to "Medicines", "food" to "Food & water", "readings" to "BP, sugar & more", "reports" to "How am I doing", "doctor" to "For doctor", "help" to "Help").forEach { (k, l) ->
                 Toggle("Show $l", k !in s.hidden) { on -> app.settings.update { it.copy(hidden = if (on) it.hidden - k else it.hidden + k) } }
@@ -227,7 +231,12 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.ValueRow("Helper controls", if (s.helperPin.isNotBlank()) "PIN set" else null, sub = "Hide features, lock settings") { section = "helperlock" }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Report a problem", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("My reports", null) { nav.go(Route.MyReports) }
             }
+            Toggle("Shake to report a problem", s.shakeOn, "Shake the phone twice to report what you see. Can start by accident if your hands shake.") { on -> app.settings.update { it.copy(shakeToReport = on) } }
             Hint("Version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
         }
     }
@@ -501,7 +510,7 @@ fun PrivacyScreen(nav: Nav) {
             Body("MedLog uses the internet for one thing only: passing help alerts to your helpers' phones when they are far away. Each alert is locked with a key only their phone has. You can turn this off in Settings → SOS.")
         }
         Body("Things leave the phone only when you choose:")
-        listOf("SOS and help messages: by SMS and phone calls to your helpers", "Helper phones: by Bluetooth nearby, or the internet far away, locked with a key", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
+        listOf("Alerts and help messages: only to your helpers' app. SMS and phone calls only in an SOS, when nobody answers in the app", "Helper phones: by Bluetooth nearby, or the internet far away, locked with a key", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
         Body("Your notes are locked (encrypted) on the phone. No ads. No tracking.")
         BigButton("Open App info", tone = Tone.SECONDARY, onClick = { Perms.openAppSettings(ctx) })
         if (!confirm) BigButton("Remove everything", tone = Tone.SECONDARY, onClick = { confirm = true })
@@ -509,7 +518,8 @@ fun PrivacyScreen(nav: Nav) {
             Body("This deletes all notes, medicines and helpers from this phone. It cannot be undone.", bold = true)
             BigButton("Yes, delete everything", tone = Tone.DANGER, onClick = {
                 scope.launch {
-                    app.db.clearAllTables()
+                    // wiping the database must not run on the main thread
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.db.clearAllTables() }
                     java.io.File(ctx.filesDir, "audio").deleteRecursively(); java.io.File(ctx.filesDir, "photos").deleteRecursively()
                     app.settings.update { com.suryaprakash.medlog.data.Settings() }
                     Scheduler.reschedule(ctx)

@@ -45,7 +45,7 @@ class Shots {
         "home" to Route.Home, "tell" to Route.Tell(), "history" to Route.Notes, "meds" to Route.Meds, "food" to Route.Food,
         "output" to Route.Output(), "readings" to Route.Readings, "help" to Route.Help, "sos" to Route.Emergency,
         "helper" to Route.HelperHome, "doctor" to Route.Doctor, "reports" to Route.Reports, "settings" to Route.Settings,
-        "onboarding" to Route.Onboarding, "speakall" to Route.SpeakAll(), "feednew" to Route.FeedNew, "foodpick" to Route.FoodPick(),
+        "onboarding" to Route.Onboarding, "onboardlimits" to Route.Onboarding, "limits" to Route.Limits, "speakall" to Route.SpeakAll(), "feednew" to Route.FeedNew, "foodpick" to Route.FoodPick(),
         "helpers" to Route.Helpers, "visit" to Route.Visit, "permissions" to Route.Permissions, "took" to Route.TookNow, "today" to Route.TodayMeds(), "helperchat" to Route.HelperChat, "messages" to Route.Messages, "notesremoved" to Route.Removed,
         "nutrition" to Route.Nutrition, "easy" to Route.EasySettings, "backup" to Route.Backup, "measure" to Route.Measure("bp"), "measureweight" to Route.Measure("weight"), "measuresymptoms" to Route.Measure("symptoms"),
     )
@@ -75,11 +75,13 @@ class Shots {
             val r = (if (n == "dosechoices") runBlocking {
                 com.suryaprakash.medlog.data.Mirror.db(app, "amma").doses().between(0, Long.MAX_VALUE).firstOrNull { it.status == "DUE" }?.uid?.let { Route.DoseChoices("amma", it) }
             } else routes[n]) ?: continue
-            if (n == "onboarding") app.settings.update { it.copy(onboarded = false) }
+            if (n.startsWith("onboard")) app.settings.update { it.copy(onboarded = false) }
+            // "onboardlimits": setup opened on the personal limits step (the 21st page)
+            if (n == "onboardlimits") app.settings.putString("onboard_step", "20")
             // on a helper's phone, the person's pages show the person's records (as when opened from the helper's home)
-            val helperView = System.getProperty("shots.role") == "helper" && n !in setOf("helper", "helperchat", "settings", "onboarding")
+            val helperView = System.getProperty("shots.role") == "helper" && n !in setOf("helper", "helperchat", "settings", "onboarding", "onboardlimits")
             com.suryaprakash.medlog.data.Viewing.pairId.value = if (helperView) "amma" else null
-            rule.runOnUiThread { nav.home(when (n) { "helper" -> Route.HelperHome; "onboarding" -> Route.Onboarding; else -> Route.Home }); if (r != Route.Home && n != "helper" && n != "onboarding") nav.go(r) }
+            rule.runOnUiThread { nav.home(when (n) { "helper" -> Route.HelperHome; "onboarding", "onboardlimits" -> Route.Onboarding; else -> Route.Home }); if (r != Route.Home && n != "helper" && !n.startsWith("onboard")) nav.go(r) }
             rule.mainClock.advanceTimeBy(3000)
             rule.waitForIdle()
             full.split('@').drop(1).forEach { tap ->

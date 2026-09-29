@@ -4,6 +4,9 @@ import kotlinx.coroutines.launch
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.setValue
@@ -44,6 +47,14 @@ class MainActivity : ComponentActivity() {
         val fromRecents = ((intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
         if (savedInstanceState == null && !fromRecents) handle(intent)
         consume()
+        com.suryaprakash.medlog.feedback.FeedbackWorker.enqueueIfPending(this)
+        // Shake to report: listen only while this screen is showing, and only if the setting is on.
+        val shake = com.suryaprakash.medlog.feedback.ShakeDetector(this) { com.suryaprakash.medlog.feedback.Capture.openFeedback(this, nav) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                try { medlog.settings.flow.collect { if (it.shakeOn) shake.start() else shake.stop() } } finally { shake.stop() }
+            }
+        }
         setContent {
             val settings by medlog.settings.flow.collectAsState()
             MedTheme(settings) { App(nav) }
@@ -85,13 +96,16 @@ class MainActivity : ComponentActivity() {
             medlog.settings.putString("${src}_ask", null)
             medlog.scope.launch { com.suryaprakash.medlog.widget.MedLogWidget.refresh(this@MainActivity) }
         }
+        // links that do something (call, SOS, send a message) only act when MedLog made the link itself
+        val trusted = com.suryaprakash.medlog.integration.TrustedLinks.isTrusted(i, this)
+        val action = com.suryaprakash.medlog.integration.LinkPolicy.linkAction(host, uri.getQueryParameter("send") != null, trusted)
         val route: Route? = when (host) {
             "tell" -> Route.Tell(uri.getQueryParameter("problem"), uri.getQueryParameter("text"), noteId = uri.getQueryParameter("note")?.toLongOrNull())
             "meds" -> Route.Meds
             "speak" -> Route.Tell(speak = true)
             "help" -> {
                 // from the family widget: send the chosen message straight away, then show who got it
-                uri.getQueryParameter("send")?.let { key ->
+                uri.getQueryParameter("send")?.takeIf { action == com.suryaprakash.medlog.integration.LinkPolicy.SEND }?.let { key ->
                     medlog.settings.value.messages.firstOrNull { it.substringBefore('|') == key }?.let { m ->
                         com.suryaprakash.medlog.ui.screens.HelpMessages.send(this, m.substringAfter('|'))
                         medlog.speaker.say("Sending: ${m.substringAfter('|')}")
@@ -100,9 +114,9 @@ class MainActivity : ComponentActivity() {
                 Route.Help
             }
             "messages" -> Route.Messages
-            "call" -> { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
+            "call" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.CALL) Route.Emergency else { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
             "emergency" -> Route.Emergency
-            "sos" -> { Sos.start(this, "SOS"); null }
+            "sos" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.SOS) Route.Emergency else { Sos.start(this, "SOS"); null }
             "doctor" -> Route.Doctor
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {
@@ -252,6 +266,9 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Onboarding -> OnboardingScreen(nav)
             Route.Import -> ImportScreen(nav)
             Route.Devices -> DevicesScreen(nav)
+            Route.Limits -> LimitsScreen(nav)
+            Route.Feedback -> com.suryaprakash.medlog.feedback.FeedbackScreen(nav)
+            Route.MyReports -> com.suryaprakash.medlog.feedback.MyReportsScreen(nav)
         }
     }
 }

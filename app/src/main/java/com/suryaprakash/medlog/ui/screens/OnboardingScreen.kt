@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -134,11 +135,11 @@ private object Onboard {
 }
 
 private enum class S { WELCOME, WHO, ORDER, SIZE, READ, LANGS, NAME, BORN, SEX, CONDITIONS, SYMPTOMS, MEDS, TREATMENTS, ALLERGY, RISKS,
-    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, CHECKIN, PERMISSIONS, WIDGET, DONE }
+    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, LIMITS, CHECKIN, PERMISSIONS, WIDGET, DONE }
 
 /** Pages that count in the progress bar. */
 private val COUNTED = listOf(S.WHO, S.SIZE, S.LANGS, S.NAME, S.BORN, S.SEX, S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS,
-    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
+    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.LIMITS, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
 
 @Composable
 fun OnboardingScreen(nav: Nav) {
@@ -478,8 +479,8 @@ fun OnboardingScreen(nav: Nav) {
 
         // ───────────── helpers ─────────────
         S.HELPERS -> HelpersStep(nav, n, total, first, onBack = { go(S.DOCTORS) }, onEdit = { Onboard.editingHelper = it; go(S.HELPER_FORM) }) {
-            // the first time here, suggest emergencies from what they said
-            if (plan.emergencies.isEmpty()) savePlan { it.copy(emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
+            // the first time here, suggest emergencies from what they said; an empty choice they made is kept (B02)
+            if (!plan.emergenciesAsked && plan.emergencies.isEmpty()) savePlan { it.copy(emergenciesAsked = true, emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
             go(S.EMERGENCIES)
         }
         S.HELPER_FORM -> HelperForm { go(S.HELPERS) }
@@ -489,7 +490,19 @@ fun OnboardingScreen(nav: Nav) {
             hint = "Your helpers are called straight away.",
             step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
             SymptomGrid(CarePlan.EMERGENCIES.filter { app.catalogue.problem(it) != null }, plan.emergencies.toList()) { id ->
-                savePlan { it.copy(emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+                savePlan { it.copy(emergenciesAsked = true, emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+            }
+        }
+
+        // ───────────── personal limits (the helper sets them; opens the limits page, which comes back here) ─────────────
+        S.LIMITS -> {
+            val isSet = com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)
+            FlowScreen(task, "Personal limits, for the helper",
+                hint = "If you are the helper, set the numbers the doctor agreed for blood pressure, oxygen, sugar and temperature. The app then warns only when they are crossed. You can do this later in Settings → Helper controls.",
+                step = n, steps = total, onBack = { back() },
+                primary = if (isSet) "Next" else "Set limits now", onPrimary = { if (isSet) next() else nav.go(Route.Limits) },
+                secondary = if (isSet) "Change limits" else "Later", onSecondary = { if (isSet) nav.go(Route.Limits) else next() }) {
+                if (isSet) Body("Limits are set. ${com.suryaprakash.medlog.clinical.LimitsForm.summary(plan.limits)}.", bold = true)
             }
         }
 
@@ -603,10 +616,10 @@ private fun HelperForm(back: () -> Unit) {
         BigField("Phone number", h.phone, { h = h.copy(phone = it) }, keyboard = KeyboardType.Phone)
         RelationField(h.relation, relations) { h = h.copy(relation = it) }
         Section("What should they get?")
-        com.suryaprakash.medlog.ui.Toggle("Calls and texts if I need help", h.sos, "With where you are") { h = h.copy(sos = it) }
-        com.suryaprakash.medlog.ui.Toggle("A text if I miss a medicine", h.alerts) { h = h.copy(alerts = it) }
+        com.suryaprakash.medlog.ui.Toggle("Alerted and called if I need help", h.sos, "With where you are") { h = h.copy(sos = it) }
+        com.suryaprakash.medlog.ui.Toggle("Told in the app if I miss a medicine", h.alerts) { h = h.copy(alerts = it) }
     }
-    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be called or texted if you need help.", yes = "Keep", no = "Remove",
+    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be alerted or called if you need help.", yes = "Keep", no = "Remove",
         onYes = { confirmRemove = false }, onNo = { confirmRemove = false; scope.launch { id?.let { app.db.helpers().delete(it) }; back() } })
 }
 
@@ -616,7 +629,7 @@ private fun HelpSteps(emergency: String) {
     val p = com.suryaprakash.medlog.ui.LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val steps = listOf(
-        Triple(Icons.Rounded.Sms, p.tintBlue, "A text with where you are" to "The moment you ask for help"),
+        Triple(Icons.Rounded.Sms, p.tintBlue, "An alert on their phones, with where you are" to "The moment you ask for help. A text only if nobody answers"),
         Triple(Icons.Rounded.Call, p.brand, "A call, one person at a time" to "Until someone answers"),
         Triple(Icons.Rounded.LocalHospital, p.red, "Then $emergency" to "If nobody answers"),
     )
@@ -650,7 +663,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
     var more by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
     fun text() {
-        val body = "Hi $name, I've added you as my helper in MedLog. If I need help, you'll get a text and a call." + if (first.isNotBlank()) " – $first" else ""
+        val body = "Hi $name, I've added you as my helper in MedLog. If I need help, you'll get an alert in the app and a call." + if (first.isNotBlank()) " – $first" else ""
         runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${h.phone}")).putExtra("sms_body", body)) }
     }
     val bold = androidx.compose.ui.text.font.FontWeight.Bold
@@ -700,7 +713,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
         add("Change $name's details" to { more = false; onEdit(h.id) })
         add("Remove $name" to { more = false; confirmRemove = true })
     }) { more = false }
-    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be called or texted if you need help.", yes = "Keep $name", no = "Remove $name",
+    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be alerted or called if you need help.", yes = "Keep $name", no = "Remove $name",
         onYes = { confirmRemove = false }, onNo = { confirmRemove = false; scope.launch { app.db.helpers().delete(h.id) } })
 }
 
@@ -860,6 +873,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
             Triple("Illnesses", count(illnesses), Icons.Rounded.MonitorHeart to p.tintPink),
             Triple("Emergencies", count(plan.emergencies.size), Icons.Rounded.Sos to p.red),
             Triple("Check-in", checkIn, Icons.Rounded.Alarm to p.tintOrange),
+            Triple("Limits", if (com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)) "Set" else "Not set", Icons.Rounded.Tune to p.tintTeal),
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             facts.chunked(2).forEach { row ->
@@ -994,7 +1008,7 @@ private val SECTIONS = listOf(
     "about you" to setOf(S.NAME, S.BORN, S.SEX),
     "health questions" to setOf(S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS),
     "doctors" to setOf(S.DOCTORS, S.DOCTOR_FORM),
-    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES),
+    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES, S.LIMITS),
     "daily check-in" to setOf(S.CHECKIN),
     "phone settings" to setOf(S.PERMISSIONS, S.WIDGET),
 )
