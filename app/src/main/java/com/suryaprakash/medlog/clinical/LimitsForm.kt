@@ -66,8 +66,8 @@ object LimitsForm {
     /** The general fever rule the doctor's number replaces, in words. */
     fun tempRule(ageYears: Int?, cancerCare: Boolean): String {
         val amber = if ((ageYears ?: 0) >= 65) "100.4" else "102"
-        val red = if (cancerCare) "100" else "104"
-        return "The general rule this replaces: amber at $amber °F, red at $red °F. Your number becomes both the amber and the red line. 104 °F and above is always red."
+        val rule = if (cancerCare) "red at 100 °F (cancer treatment)" else "amber at $amber °F, red at 104 °F"
+        return "The general rule this replaces: $rule. Your number becomes both the amber and the red line. 104 °F and above is always red."
     }
 
     /** A number for the box: no ".0". */

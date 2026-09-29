@@ -304,7 +304,7 @@ class PersonaRaviTest {
         assertEquals(Band(amberHigh = 102.0, redHigh = 102.0), tempBand)    // 38.9 C = 102.0 F
         assertEquals("102", LimitsForm.initialTexts(temp, tempBand)[Line.AMBER_HIGH])
         assertTrue(LimitsForm.validate(temp, mapOf(Line.AMBER_HIGH to "105", Line.RED_HIGH to "105"))!!.contains("104"))
-        assertTrue(LimitsForm.tempRule(67, true).contains("amber at 100.4 °F, red at 100 °F"))
+        assertTrue(LimitsForm.tempRule(67, true).contains("red at 100 °F")); assertFalse(LimitsForm.tempRule(67, true).contains("amber at"))
         val chemo = PersonContext(67, false, "Cancer", Limits(mapOf("temp" to tempBand), true, "helper", 1), cancerCare = true)
         assertEquals(Level.GREEN, judge(listOf(Reading("temp", 100.2)), chemo).level)
         val over = judge(listOf(Reading("temp", 102.4)), chemo)

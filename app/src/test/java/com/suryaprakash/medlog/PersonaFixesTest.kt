@@ -234,7 +234,7 @@ class PersonaFixesTest {
         assertEquals("120", LimitsForm.typed(bp, emptyMap(), Line.AMBER_HIGH, "120")[Line.AMBER_HIGH])
         assertNull(LimitsForm.typed(bp, emptyMap(), Line.AMBER_HIGH, "120")[Line.RED_HIGH])
         // the rule it replaces is shown
-        assertTrue(LimitsForm.tempRule(67, true).contains("amber at 100.4 °F, red at 100 °F"))
+        assertTrue(LimitsForm.tempRule(67, true).contains("red at 100 °F (cancer treatment)"))
         assertTrue(LimitsForm.tempRule(40, false).contains("amber at 102 °F, red at 104 °F"))
         // and the rules honour it: the doctor's 102 for Kamala replaces her cancer red line of 100
         val own = kamala.copy(limits = limits)
