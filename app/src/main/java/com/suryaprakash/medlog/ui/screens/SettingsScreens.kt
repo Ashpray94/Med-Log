@@ -162,6 +162,10 @@ fun SettingsScreen(nav: Nav) {
             Hint("You're on version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. It also checks once a day by itself.")
         }
         "helperlock" -> Screen("Helper controls", "Things a helper can set.", onHome = { nav.home() }, onBack = { section = null }) {
+            val limitsPlan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Personal limits", com.suryaprakash.medlog.clinical.LimitsForm.summary(limitsPlan.limits), sub = "Numbers the doctor agreed") { nav.go(Route.Limits) }
+            }
             Body("Hide what isn't needed", bold = true)
             listOf("meds" to "Medicines", "food" to "Food & water", "readings" to "BP, sugar & more", "reports" to "How am I doing", "doctor" to "For doctor", "help" to "Help").forEach { (k, l) ->
                 Toggle("Show $l", k !in s.hidden) { on -> app.settings.update { it.copy(hidden = if (on) it.hidden - k else it.hidden + k) } }

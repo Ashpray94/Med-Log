@@ -65,7 +65,11 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
     val sc = LocalScale.current
     val s = LocalSettings.current
     var helpers by remember { mutableStateOf<List<Helper>>(emptyList()) }
-    LaunchedEffect(Unit) { helpers = app.db.helpers().all().filter { it.sos } }
+    var cancerDoctor by remember { mutableStateOf<com.suryaprakash.medlog.data.CarePlan.Doctor?>(null) }
+    LaunchedEffect(Unit) {
+        helpers = app.db.helpers().all().filter { it.sos }
+        cancerDoctor = app.repo.cancerDoctor()   // B58: on cancer treatment, the cancer team comes before the ambulance
+    }
     if (t.mentalHealth) {
         Screen("You are not alone", "Thank you for telling me. You matter. Please talk to someone now. You can call the free helpline, $MENTAL_HEALTH_LINE, any time, day or night.", onHome = { nav.home() }, onBack = { nav.back() }) {
             Card() {
@@ -82,6 +86,10 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
         if (helpers.isNotEmpty()) " Your helpers have been sent a message." else ""
     Screen("Get help now", say, onHome = { nav.home() }, onBack = { nav.back() }) {
         Text(t.say, color = p.red, fontSize = sc.headline, fontWeight = FontWeight.Bold, lineHeight = sc.headline * 1.25f)
+        cancerDoctor?.let { d ->
+            Body("Call your cancer team now", bold = true)
+            BigButton("Call ${d.name}, your cancer doctor", icon = Icons.Rounded.Call, height = sc.target * 1.4f, onClick = { Calls.call(ctx, d.phone) })
+        }
         CallAmbulanceCard(s.emergencyNumber)
         t.firstAid?.let {
             Card(color = p.card, border = p.red) {
@@ -113,7 +121,8 @@ fun DoctorCallButton(dept: String? = null) {
     var profile by remember { mutableStateOf<Profile?>(null) }
     LaunchedEffect(Unit) { profile = ctx.medlog.repo.profile() }
     val pr = profile ?: return
-    val d = com.suryaprakash.medlog.data.CarePlan.parse(pr.plan).doctorFor(dept)
+    val plan = com.suryaprakash.medlog.data.CarePlan.parse(pr.plan)
+    val d = plan.doctorFor(dept, com.suryaprakash.medlog.clinical.DangerRules.cancerCareOf(pr.conditions, plan.treatments))
     val (name, phone) = if (d != null && d.phone.isNotBlank()) d.name to d.phone else pr.doctorName.ifBlank { "my doctor" } to pr.doctorPhone
     if (phone.isNotBlank()) BigButton("Call $name", icon = Icons.Rounded.Call, sub = d?.speciality, onClick = { Calls.call(ctx, phone) })
     else Hint("Add your doctors in Settings to call them with one tap.")

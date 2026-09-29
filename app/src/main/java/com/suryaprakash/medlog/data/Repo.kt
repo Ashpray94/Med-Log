@@ -1,10 +1,12 @@
 package com.suryaprakash.medlog.data
 
 import com.suryaprakash.medlog.clinical.Catalogue
+import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Describe
 import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.PersonContext
 import com.suryaprakash.medlog.clinical.RecentNote
+import com.suryaprakash.medlog.clinical.Told
 import com.suryaprakash.medlog.clinical.Triage
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.Mention
@@ -30,14 +32,23 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     suspend fun person(): PersonContext {
         val p = profile()
         val thinner = p.onBloodThinner || db.medicines().active().any { it.bloodThinner }
-        return PersonContext(ageYears(p.dob), thinner, p.conditions)
+        val plan = CarePlan.parse(p.plan)
+        return PersonContext(ageYears(p.dob), thinner, p.conditions, plan.limits, DangerRules.cancerCareOf(p.conditions, plan.treatments))
+    }
+
+    /** The cancer doctor to call first on the RED page, when the person is on cancer treatment and that doctor has a phone (B58). */
+    suspend fun cancerDoctor(): CarePlan.Doctor? {
+        val p = profile()
+        val plan = CarePlan.parse(p.plan)
+        if (!DangerRules.cancerCareOf(p.conditions, plan.treatments)) return null
+        return plan.doctorFor(null, true)?.takeIf { it.speciality == "Cancer" && it.phone.isNotBlank() }
     }
 
     fun ageYears(dob: String): Int? = ageFromDob(dob)
 
     // ───────── symptoms ─────────
 
-    /** The last few days' symptoms for the danger rules; [exclude] is the note being written, which the rules count from its own answers. */
+    /** The last few days' symptoms for the danger rules; [exclude] is the note being written, which the rules count from its own answers (B06, B07). */
     suspend fun recentForRules(days: Int = 3, exclude: Long? = null): List<RecentNote> =
         db.notes().symptomsSince(System.currentTimeMillis() - days * DAY).filter { it.id != exclude && Occurrences.isOccurrence(it) }.map {
             RecentNote(it.problemId, it.occurredAt, factsFromJson(it.details), it.count)
@@ -87,12 +98,34 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
 
     suspend fun updateFacts(id: Long, facts: Map<String, Fact>) {
         val n = db.notes().get(id) ?: return
+        // hidden markers (keys starting with "_", e.g. _toldLevel) belong to the database copy: the screen never edits them
+        val markers = factsFromJson(n.details).filterKeys { it.startsWith("_") }
+        val all = facts.filterKeys { !it.startsWith("_") } + markers
         db.notes().update(n.copy(
-            details = factsToJson(facts),
+            details = factsToJson(all),
             severity = (facts["severity"]?.value as? Number)?.toInt(),
             count = (facts["count"]?.value as? Number)?.toInt(),
             text = n.problemId?.let { describe.line(it, facts) } ?: n.text,
         ))
+    }
+
+    /**
+     * Records that helpers are being told about note [id] at [level]. Returns true only when the level is higher than
+     * what was told before, so a note texts its helpers at most once per level (B57, B59).
+     */
+    suspend fun markTold(id: Long, level: Level): Boolean {
+        val n = db.notes().get(id) ?: return false
+        val facts = factsFromJson(n.details)
+        if (!Told.shouldTell(facts, level)) return false
+        db.notes().update(n.copy(details = factsToJson(Told.mark(facts, level))))
+        return true
+    }
+
+    /** Deletes note [id] when nothing was answered (the person opened a problem and backed out) (B62). True when deleted. */
+    suspend fun removeIfUnanswered(id: Long): Boolean {
+        val n = db.notes().get(id) ?: return false
+        if (n.kind != Kind.SYMPTOM || factsFromJson(n.details).keys.any { !it.startsWith("_") }) return false
+        remove(listOf(id)); return true
     }
 
     suspend fun updateTriage(id: Long, t: Triage) {

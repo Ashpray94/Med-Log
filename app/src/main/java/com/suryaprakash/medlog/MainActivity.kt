@@ -255,6 +255,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Onboarding -> OnboardingScreen(nav)
             Route.Import -> ImportScreen(nav)
             Route.Devices -> DevicesScreen(nav)
+            Route.Limits -> LimitsScreen(nav)
         }
     }
 }

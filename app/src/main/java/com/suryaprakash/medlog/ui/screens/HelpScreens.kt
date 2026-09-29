@@ -75,6 +75,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Helper
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.saveCarePlan
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.help.Calls
 import com.suryaprakash.medlog.help.Nearby
@@ -374,8 +375,14 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
     val scope = rememberCoroutineScope()
     var h by remember { mutableStateOf(Helper(name = "", phone = "")) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // B59: helpers hear about RED notes; only the ones with this switch on also hear "call the doctor today" (kept in the care plan by phone number)
+    var tellAmber by remember { mutableStateOf(false) }
+    var savedPhone by remember { mutableStateOf("") }
     val pick = rememberContactPicker { n, ph -> h = h.copy(name = n, phone = ph) }
-    LaunchedEffect(id) { if (id != null) app.db.helpers().all().firstOrNull { it.id == id }?.let { h = it } }
+    LaunchedEffect(id) {
+        if (id != null) app.db.helpers().all().firstOrNull { it.id == id }?.let { h = it; savedPhone = it.phone }
+        tellAmber = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan).tellsAmber(savedPhone).takeIf { savedPhone.isNotBlank() } ?: false
+    }
     Screen(if (id == null) "Add a helper" else "Change helper", "Their name and phone number.", onHome = { nav.home() }, onBack = { nav.back() }) {
         BigButton("Choose from contacts", tone = Tone.QUIET, icon = Icons.Rounded.Contacts, onClick = pick)
         BigField("Name", h.name, { h = h.copy(name = it) })
@@ -383,15 +390,20 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
         BigField("Relation (optional)", h.relation, { h = h.copy(relation = it) })
         Toggle("Call and message in an SOS", h.sos) { h = h.copy(sos = it) }
         Toggle("Tell them about missed medicines", h.alerts) { h = h.copy(alerts = it) }
+        Toggle("Tell them when the app says 'call the doctor today'", tellAmber, "Off: they are told only about the most serious notes") { tellAmber = it }
         Toggle("Let them see my notes", h.canSeeNotes, "Only used when you share your doctor page with them") { h = h.copy(canSeeNotes = it) }
         BigButton("Done", tone = Tone.PRIMARY, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
-            scope.launch { if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h); app.refreshWidgets(); nav.back() }
+            scope.launch {
+                if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h)
+                app.repo.saveCarePlan { pl -> pl.withAmberHelper(savedPhone, false).withAmberHelper(h.phone, tellAmber) }
+                app.refreshWidgets(); nav.back()
+            }
         })
         if (id != null) {
             if (!confirmDelete) BigButton("Remove this helper", tone = Tone.SECONDARY, icon = Icons.Rounded.Delete, onClick = { confirmDelete = true })
             else Card(border = p.red) {
                 Body("Remove ${h.name}? They won't be called in an SOS.", bold = true)
-                YesNo(yes = "Remove", no = "Keep", onYes = { scope.launch { app.db.helpers().delete(id); nav.back() } }, onNo = { confirmDelete = false })
+                YesNo(yes = "Remove", no = "Keep", onYes = { scope.launch { app.db.helpers().delete(id); app.repo.saveCarePlan { pl -> pl.withAmberHelper(savedPhone, false) }; nav.back() } }, onNo = { confirmDelete = false })
             }
         }
     }

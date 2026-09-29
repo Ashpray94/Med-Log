@@ -54,6 +54,7 @@ sealed interface Route {
     data object HelperLock : Route
     /** A helper's choices for one of the person's doses ("More" on a reminder). */
     data class DoseChoices(val pairId: String, val uid: String) : Route
+    data object Limits : Route
 }
 
 /** A plain back stack. Back always goes one step back; Home always goes home (plan 4.3 #13). */
