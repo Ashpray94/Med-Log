@@ -2763,5 +2763,6 @@
 "Closed without a fix": "சரிசெய்யாமல் மூடப்பட்டது",
 "You checked it works": "வேலை செய்கிறது என்று நீங்கள் பார்த்தீர்கள்",
 "See my reports": "என் புகார்களைப் பார்க்கவும்",
-"What is still wrong? (You can leave this empty.)": "இன்னும் என்ன தவறு? (காலியாக விடலாம்.)"
+"What is still wrong? (You can leave this empty.)": "இன்னும் என்ன தவறு? (காலியாக விடலாம்.)",
+"Sending \"{0}\" in {1}…": "\"{0}\" {1} விநாடியில் அனுப்புகிறது…"
 }

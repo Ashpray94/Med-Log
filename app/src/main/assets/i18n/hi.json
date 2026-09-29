@@ -2763,5 +2763,6 @@
 "Closed without a fix": "बिना ठीक किए बंद",
 "You checked it works": "आपने जाँचा कि चल रहा है",
 "See my reports": "मेरी शिकायतें देखें",
-"What is still wrong? (You can leave this empty.)": "अब भी क्या गलत है? (खाली छोड़ सकते हैं।)"
+"What is still wrong? (You can leave this empty.)": "अब भी क्या गलत है? (खाली छोड़ सकते हैं।)",
+"Sending \"{0}\" in {1}…": "\"{0}\" {1} सेकंड में भेज रहे हैं…"
 }

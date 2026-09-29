@@ -10,6 +10,8 @@ import com.suryaprakash.medlog.feedback.ReportJson
 import com.suryaprakash.medlog.feedback.ShakeLogic
 import com.suryaprakash.medlog.feedback.Status
 import com.suryaprakash.medlog.feedback.statusLine
+import com.suryaprakash.medlog.ui.screens.PendingSend
+import com.suryaprakash.medlog.ui.screens.SendCountdown
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -198,5 +200,25 @@ class FeedbackTest {
         assertTrue(t.contains("The button is too small"))
         for (d in listOf("HelperHome", "2.9.0", "helper", "Google Pixel", "Android 14 (API 34)", "1700000000000-1234", "Hard to use")) assertTrue(d, t.contains(d))
         assertTrue(Github.shareText(report(note = " ")).contains("no words"))
+    }
+
+    @Test fun sendCountdownGoesThreeTwoOneThenSends() {
+        assertEquals(3, SendCountdown.secondsLeft(1000, 1000))
+        assertEquals(3, SendCountdown.secondsLeft(1000, 1500))
+        assertEquals(2, SendCountdown.secondsLeft(1000, 2100))
+        assertEquals(1, SendCountdown.secondsLeft(1000, 3500))
+        assertEquals(0, SendCountdown.secondsLeft(1000, 4000))
+        assertFalse(SendCountdown.due(1000, 3999))
+        assertTrue(SendCountdown.due(1000, 4000))
+        assertEquals("Sending \"I need water\" in 3…", SendCountdown.line("I need water", 3))
+    }
+
+    @Test fun pendingMessageIsSentOnceEvenIfYouLeave() {
+        val p = PendingSend()
+        p.start("I need water")
+        assertEquals("I need water", p.take())   // leaving the page sends it
+        assertNull(p.take())                     // the timer or a second dispose cannot send it again
+        p.start("Come please"); p.cancel()
+        assertNull(p.take())                     // Cancel is the only way to stop it
     }
 }
