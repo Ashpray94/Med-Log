@@ -113,6 +113,14 @@ object SendCountdown {
     fun line(text: String, secondsLeft: Int) = "Sending \"$text\" in $secondsLeft\u2026"
 }
 
+/** The one message waiting out its countdown. take() hands it out exactly once, so leaving the page, cancelling and the timer can never send it twice. */
+class PendingSend {
+    private var text: String? = null
+    @Synchronized fun start(t: String) { text = t }
+    @Synchronized fun cancel() { text = null }
+    @Synchronized fun take(): String? { val t = text; text = null; return t }
+}
+
 object HelpMessages {
     data class Status(val text: String, val stage: String, val at: Long = System.currentTimeMillis(), val texted: List<String> = emptyList())
     val status = MutableStateFlow<Status?>(null)
@@ -186,11 +194,14 @@ fun HelpScreen(nav: Nav) {
     // a tapped message waits 3 seconds and can be cancelled: (text, time tapped)
     var waiting by remember { mutableStateOf<Pair<String, Long>?>(null) }
     var clock by remember { mutableStateOf(System.currentTimeMillis()) }
+    val pending = remember { PendingSend() }
+    // leaving the page (tab, Back, background) must not lose the message; only Cancel stops it
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { pending.take()?.let { HelpMessages.send(ctx, it) } } }
     LaunchedEffect(waiting) {
         val w = waiting ?: return@LaunchedEffect
         while (true) {
             clock = System.currentTimeMillis()
-            if (SendCountdown.due(w.second, clock)) { HelpMessages.send(ctx, w.first); waiting = null; return@LaunchedEffect }
+            if (SendCountdown.due(w.second, clock)) { pending.take()?.let { HelpMessages.send(ctx, it) }; waiting = null; return@LaunchedEffect }
             delay(200)
         }
     }
@@ -227,12 +238,12 @@ fun HelpScreen(nav: Nav) {
             waiting?.let { w ->
                 Card(border = p.brand) {
                     Body(SendCountdown.line(w.first, SendCountdown.secondsLeft(w.second, clock).coerceAtLeast(1)), bold = true)
-                    BigButton("Cancel", tone = Tone.SECONDARY, onClick = { waiting = null; app.speaker.say("Cancelled") })
+                    BigButton("Cancel", tone = Tone.SECONDARY, onClick = { pending.cancel(); waiting = null; app.speaker.say("Cancelled") })
                 }
             }
             com.suryaprakash.medlog.ui.TileGrid(msgs, 2, aspect = 1.3f) { m, mod ->
                 val key = m.substringBefore('|'); val text = m.substringAfter('|')
-                com.suryaprakash.medlog.ui.Tile("Send: $text", mod, onClick = { waiting?.let { HelpMessages.send(ctx, it.first) }; waiting = text to System.currentTimeMillis(); clock = System.currentTimeMillis(); app.speaker.say("Sending: $text in 3 seconds. Tap Cancel to stop.") }) {
+                com.suryaprakash.medlog.ui.Tile("Send: $text", mod, onClick = { pending.take()?.let { HelpMessages.send(ctx, it) }; pending.start(text); waiting = text to System.currentTimeMillis(); clock = System.currentTimeMillis(); app.speaker.say("Sending: $text in 3 seconds. Tap Cancel to stop.") }) {
                     com.suryaprakash.medlog.ui.OptionIcon(HelpMessages.icon(key), HelpMessages.tint(key, p), 56.dp)
                     Spacer(Modifier.height(10.dp))
                     Text(text, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2)

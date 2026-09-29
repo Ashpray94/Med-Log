@@ -10,6 +10,7 @@ import com.suryaprakash.medlog.feedback.ReportJson
 import com.suryaprakash.medlog.feedback.ShakeLogic
 import com.suryaprakash.medlog.feedback.Status
 import com.suryaprakash.medlog.feedback.statusLine
+import com.suryaprakash.medlog.ui.screens.PendingSend
 import com.suryaprakash.medlog.ui.screens.SendCountdown
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
@@ -210,5 +211,14 @@ class FeedbackTest {
         assertFalse(SendCountdown.due(1000, 3999))
         assertTrue(SendCountdown.due(1000, 4000))
         assertEquals("Sending \"I need water\" in 3…", SendCountdown.line("I need water", 3))
+    }
+
+    @Test fun pendingMessageIsSentOnceEvenIfYouLeave() {
+        val p = PendingSend()
+        p.start("I need water")
+        assertEquals("I need water", p.take())   // leaving the page sends it
+        assertNull(p.take())                     // the timer or a second dispose cannot send it again
+        p.start("Come please"); p.cancel()
+        assertNull(p.take())                     // Cancel is the only way to stop it
     }
 }
