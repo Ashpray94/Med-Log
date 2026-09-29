@@ -156,26 +156,106 @@ Files: new `feedback/` package (`Shake.kt`, `Capture.kt`, `FeedbackScreen.kt`, `
 
 ---
 
-## Phase B: everything shared both ways (after Phase A is merged and checked)
+## Phase B: everything shared both ways
 
 Goal from the owner: the person's phone and every paired helper phone hold the same data, and any of them can
-create, change and delete. Nothing may be missing on any device.
+create, change and delete it. Nothing may be missing on any device.
 
-Design (lead to refine before workers start):
-- Every shared row (profile/plan with limits, helpers without keys, notes, medicines, doses, appointments, doc_lines)
-  gets a stable `uid`, `updatedAt`, `updatedBy` (device id) and a `deleted` tombstone. Last write wins per row, ties
-  broken by device id. Database version 4 with a migration that fills `uid` for existing rows.
-- Changes go out as sealed operations on the **family mailbox** that already exists on the relay (every family member
-  listens), and over Bluetooth when near. The relay keeps notes only 12 hours, so on every reconnect a device asks
-  "send me everything since <my last version from you>", and any device answers from its own copy.
-- A helper phone keeps one replica database per person it helps and can open the person's full app ("Open Amma's
-  MedLog") with the same pages, reading and writing that replica. Alarms, SOS and fall detection still run only on the
-  person's own phone.
-- The Privacy page and the privacy policy change: health notes will pass through the relay, sealed with the family key.
+### B.1 What is shared
 
-Acceptance: a two-device test harness (two in-memory databases and a fake relay) shows create/update/delete from either
-side arriving on the other, including after being offline for more than 12 hours, and conflicts resolving the same way
-on both.
+| Table | Shared | Kept on the phone only |
+|---|---|---|
+| profile (incl. care plan and limits) | every column | – |
+| helpers | name, phone, relation, sos, alerts, canSeeNotes, sortOrder | pairId, pairKey (a phone's own link keys) |
+| notes | every column | audioPath, photoPath (files are not sent) |
+| medicines | every column | photoPath, calendarEventId |
+| doses | every column; `medicineId` sent as the medicine's uid | – |
+| appointments | every column | calendarEventId |
+| doc_lines | every column | – |
+| inbox, settings, prefs | not shared (they belong to one phone) | – |
+
+### B.2 Identity and versions (database version 4)
+
+- New columns on helpers, notes, medicines, doses, appointments, doc_lines: `uid TEXT NOT NULL DEFAULT ''`,
+  `updatedAt INTEGER NOT NULL DEFAULT 0`, `updatedBy TEXT NOT NULL DEFAULT ''`. The profile row's uid is the fixed
+  string `"profile"`. Migration 3→4 adds them and fills `uid` for existing rows with random hex.
+- New tables:
+  - `sync_rows(tbl TEXT, uid TEXT, origin TEXT, oseq INTEGER, at INTEGER, by TEXT, del INTEGER, PRIMARY KEY(tbl, uid))`
+    holds the current version of every shared row. `origin` + `oseq` say which device made that version and its
+    running number on that device.
+  - `sync_state(k TEXT PRIMARY KEY, v TEXT)` holds `device` (this phone's id), `seq` (last local number) and `applying`
+    ("1" while incoming changes are written).
+  - `sync_have(origin TEXT PRIMARY KEY, seq INTEGER)` records the highest number received from each device.
+- **Change capture without touching the screens:** SQLite triggers, created in a Room `onOpen` callback. `AFTER INSERT`
+  and `AFTER UPDATE` stamp `uid` (if empty), `updatedAt`, `updatedBy`, bump `seq` and write `sync_rows` with
+  origin = this device. `AFTER DELETE` writes a `sync_rows` tombstone (`del = 1`). All of them run only
+  `WHEN (SELECT v FROM sync_state WHERE k='applying') = '0'`, so incoming changes don't echo back.
+- Backup restore must list columns explicitly (fixes B16 too), and the new tables are part of the backup.
+
+### B.3 The engine (pure Kotlin, testable on the JVM)
+
+```kotlin
+interface SyncStore {                        // Room implements it; tests use an in-memory one
+    val device: String
+    fun changedSince(have: Map<String, Long>): List<Op>   // every row whose (origin, oseq) is newer than [have]
+    fun version(tbl: String, uid: String): Version?        // (at, by, origin, oseq, del)
+    fun apply(ops: List<Op>): Applied                       // in one transaction with applying = 1
+    fun have(): Map<String, Long>
+}
+data class Op(val tbl: String, val uid: String, val origin: String, val oseq: Long, val at: Long, val by: String, val del: Boolean, val row: JSONObject?)
+```
+- **Last write wins, per row:** an incoming op replaces the local row when `(at, by)` is greater than the local
+  version's `(at, by)`, compared by `at` first and then by device id as a tie-break. It is applied on every device the
+  same way, so all devices end in the same state.
+- Foreign keys travel as uids: `doses.medicineUid`, `notes.groupUid`. An op whose parent hasn't arrived yet waits in
+  a pending list and is retried after each batch.
+- **Catch-up** (the relay keeps notes only 12 hours):
+  - every device sends `HELLO {device, have}` when it starts listening, every 6 hours, and when it sees an unknown device;
+  - any device that receives a HELLO answers with `changedSince(have)`, in batches of up to 200 KB.
+  - Because every device answers for every origin, a helper who was offline for a week still gets the person's changes
+    from any other family phone.
+
+### B.4 Transport
+
+- A new mailbox on the relay per family, `Relay.topic(familyKey, "sync")`, sealed with the family key. The person's
+  phone listens to it too (today it only hands out the family key). Messages over 4 KB go as relay attachments,
+  which `Relay.parse` already reads.
+- When a paired phone is near, the same batches also go over Bluetooth.
+
+### B.5 Helper phones
+
+- One replica database per person helped: `medlog-<pairId>.db`, with the same schema and the same encryption.
+- **"Open Amma's MedLog"** on Helper home switches the screens to that replica (`app.db` / `app.repo` follow the one
+  being viewed). Background work always uses the phone's own database (`app.ownDb`): alarms, SOS, fall detection,
+  check-in, alerts and the widget.
+- While a replica is open, anything that would ring, text or call (Alerts, Sos, Calls) is not run from the helper's
+  phone. Instead the page says "This runs on Amma's phone."
+- Settings stay per phone. The pages that belong to the person (limits, medicines, helpers, messages list) read and
+  write the replica.
+
+### B.6 On the person's phone after incoming changes
+
+- A medicine changed: drop its future DUE doses and reschedule.
+- A dose marked taken or skipped elsewhere: cancel its alarm and notification.
+- Always refresh the widget.
+
+### B.7 Privacy
+
+The Privacy page, `docs/privacy-policy.md` and the Play policy notes change. Health notes will pass through the relay,
+sealed with the family key, which only paired family phones hold. Say it in plain words.
+
+### B.8 Work split
+
+- **B-a (engine, can start now):** new `sync/` package. It holds `Op`, `Version`, `SyncStore`, `SyncEngine` (merge,
+  HELLO and answer, batching, pending parents), `InMemorySyncStore` and wire JSON, plus JVM tests: two and three
+  devices, create/update/delete from each side, concurrent edits, offline for longer than the relay keeps notes,
+  a dose arriving before its medicine, and tombstones.
+- **B-b (database, after W3 is merged):** version 4 entities and migration, triggers, `RoomSyncStore`, backup changes.
+- **B-c (wiring, after B-a and B-b):** the relay mailbox, the listener, replica databases, `ownDb`, "Open Amma's
+  MedLog", the person-phone reactions and the Privacy text.
+
+Acceptance: the B-a tests prove convergence. B-b's migration compiles and its SQL is checked against a real SQLite
+file in a JVM test (`sqlite-jdbc`, test only). B-c builds. The lead then reviews each part as with Phase A.
 
 ---
 
