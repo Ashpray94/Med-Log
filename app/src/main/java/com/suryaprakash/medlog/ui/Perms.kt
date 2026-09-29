@@ -42,7 +42,7 @@ object Perms {
     ) else listOf(
         P("mic", "Let this phone hear you", "So you can talk instead of typing. Your voice stays on this phone.", MIC, true),
         P("notify", "Let this phone remind you", "For medicine times and check-ins.", NOTIFY, true),
-        P("sms", "Send help messages", "So your helpers get a text in an SOS. Uses SMS, not internet.", SMS, true),
+        P("sms", "Send help messages", "Used only in an SOS, when no helper answers in the app. Uses SMS, not internet.", SMS, true),
         P("call", "Call your helpers", "So your helpers can be called in an SOS.", CALL, true),
         P("location", "Share where you are in an SOS", "Only sent in an SOS message, only to your helpers.", LOCATION, false),
         P("nearby", "Reach phones in your home", "So your family's phones ring when you tap a help message.", NEARBY, false),

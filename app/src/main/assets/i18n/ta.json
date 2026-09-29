@@ -2764,5 +2764,21 @@
 "You checked it works": "வேலை செய்கிறது என்று நீங்கள் பார்த்தீர்கள்",
 "See my reports": "என் புகார்களைப் பார்க்கவும்",
 "What is still wrong? (You can leave this empty.)": "இன்னும் என்ன தவறு? (காலியாக விடலாம்.)",
-"Sending \"{0}\" in {1}…": "\"{0}\" {1} விநாடியில் அனுப்புகிறது…"
+"Sending \"{0}\" in {1}…": "\"{0}\" {1} விநாடியில் அனுப்புகிறது…",
+"Alerting your helpers": "உங்கள் உதவியாளர்களுக்குத் தெரிவிக்கிறோம்",
+"Your helpers' phones are ringing. Waiting for an answer.": "உங்கள் உதவியாளர்களின் போன்கள் ஒலிக்கின்றன. பதிலுக்காகக் காத்திருக்கிறோம்.",
+"Send SMS now": "இப்போதே SMS அனுப்பு",
+"Getting help. Alerting your helpers.": "உதவி பெறுகிறோம். உங்கள் உதவியாளர்களுக்குத் தெரிவிக்கிறோம்.",
+"Their app first, SMS only if nobody answers": "முதலில் அவர்களின் செயலி, யாரும் பதிலளிக்காவிட்டால் மட்டுமே SMS",
+"Then your family is alerted and called": "பிறகு உங்கள் குடும்பத்துக்குத் தெரிவித்து அழைக்கப்படும்",
+"Allow text messages. They are used only in an SOS, and only when no helper answers in the app.": "குறுஞ்செய்திகளை அனுமதிக்கவும். இவை SOS-இல் மட்டுமே, செயலியில் எந்த உதவியாளரும் பதிலளிக்காதபோது மட்டுமே பயன்படும்.",
+"For calls, and for an SOS text if nobody answers in the app": "அழைப்புகளுக்காக, செயலியில் யாரும் பதிலளிக்காவிட்டால் SOS குறுஞ்செய்திக்காக",
+"Nearby phones only (internet link off)": "அருகிலுள்ள போன்கள் மட்டும் (இணைய இணைப்பு அணைப்பு)",
+"Add family to alert and call them.": "குடும்பத்தினருக்குத் தெரிவிக்கவும் அழைக்கவும் அவர்களைச் சேர்க்கவும்.",
+"Alerts your helpers' phones, then calls each one": "உங்கள் உதவியாளர்களின் போன்களுக்குத் தெரிவிக்கும், பிறகு ஒவ்வொருவரையும் அழைக்கும்",
+"Alerted and called if I need help": "உதவி தேவைப்பட்டால் தெரிவித்து அழைக்கவும்",
+"Told in the app if I miss a medicine": "மருந்து தவறினால் செயலியில் தெரிவிக்கவும்",
+"An alert on their phones, with where you are": "அவர்கள் போனில் அறிவிப்பு, நீங்கள் இருக்கும் இடத்துடன்",
+"The moment you ask for help. A text only if nobody answers": "நீங்கள் உதவி கேட்டவுடன். யாரும் பதிலளிக்காவிட்டால் மட்டுமே குறுஞ்செய்தி",
+"{0} won't be alerted or called if you need help.": "{0} க்கு உங்களுக்கு உதவி தேவைப்படும்போது தெரிவிக்கப்படாது, அழைக்கப்படாது."
 }

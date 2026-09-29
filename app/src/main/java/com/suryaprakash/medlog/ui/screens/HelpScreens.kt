@@ -128,8 +128,7 @@ class PendingSend {
 
 /**
  * Sending a help message (plan 13.2): straight to paired phones, nearby and over the internet, all at once.
- * Any helper whose phone hasn't said "got it" within 15 seconds is sent a text message too. After 3 minutes
- * with no answer, a phone call is offered.
+ * No SMS (it costs money; only an SOS sends SMS, as the last resort). After 3 minutes with no answer, a phone call is offered.
  */
 object HelpMessages {
     data class Status(val text: String, val stage: String, val at: Long = System.currentTimeMillis(), val texted: List<String> = emptyList())
@@ -140,7 +139,6 @@ object HelpMessages {
         app.scope.launch {
             val helpers = app.db.helpers().all()
             val paired = helpers.filter { it.pairKey != null }
-            val me = app.repo.profile().name
             Nearby.acks.value = emptyList()
             Nearby.reached.value = emptySet()
             app.repo.addEvent(Kind.MESSAGE, "Sent: $text")
@@ -151,10 +149,8 @@ object HelpMessages {
                 // most phones answer "got it" in a second or two; stop waiting once every paired phone has
                 for (t in 0 until 30) { if (paired.all { it.name in Nearby.reached.value }) break; delay(500) }
             }
-            // a text to everyone whose phone didn't get it, including helpers with no paired phone
-            val smsText = Wording.message(me, text, audio != null)
-            val texted = helpers.filter { (it.alerts || it.sos) && it.name !in Nearby.reached.value }.filter { Calls.sms(ctx, it.phone, smsText) }.map { it.name }
-            if (texted.isEmpty() && Nearby.reached.value.isEmpty()) { status.value = Status(text, "failed", started); return@launch }
+            val texted = emptyList<String>()   // never SMS for a help message
+            if (Nearby.reached.value.isEmpty()) { status.value = Status(text, "failed", started); return@launch }
             status.value = Status(text, "sent", started, texted)
             for (t in 0 until 360) { if (Nearby.acks.value.isNotEmpty()) { status.value = Status(text, "answered", started, texted); return@launch }; delay(500) }
             status.value = Status(text, "noanswer", started, texted)
@@ -223,7 +219,7 @@ fun HelpScreen(nav: Nav) {
             Body("Add at least one helper, so we know who to ask.", bold = true)
             BigButton("Add a helper", onClick = { nav.go(Route.HelperEdit(null)) })
         }
-        if (!smsOk) Card(border = p.amber) { Body("Allow text messages, so your messages always get through."); BigButton("Allow", tone = Tone.SECONDARY, onClick = { ask(Perms.SMS + Perms.CALL) }) }
+        if (!smsOk) Card(border = p.amber) { Body("Allow text messages. They are used only in an SOS, and only when no helper answers in the app."); BigButton("Allow", tone = Tone.SECONDARY, onClick = { ask(Perms.SMS + Perms.CALL) }) }
 
         // ── what happened to the last message, person by person ──
         status?.let { st -> MessageStatus(st, acks, reached, helpers.firstOrNull()) }
@@ -530,7 +526,7 @@ private fun WhichHelper(name: String, helpers: List<com.suryaprakash.medlog.data
     com.suryaprakash.medlog.ui.Question("Which of your helpers is $name?")
     helpers.forEach { h -> com.suryaprakash.medlog.ui.Choice(h.name, pick == h.id && !newOne, sub = h.relation.ifBlank { null }) { pick = h.id; newOne = false } }
     com.suryaprakash.medlog.ui.Choice("Someone not in my list", newOne) { newOne = true; pick = null }
-    if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For a text message if the internet can't reach")
+    if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For calls, and for an SOS text if nobody answers in the app")
     val h = helpers.firstOrNull { it.id == pick }
     BigButton("Connect $name's phone", enabled = (h != null && !newOne) || phone.count(Char::isDigit) >= 6,
         onClick = { if (h != null && !newOne) onConnect(h.name, h.phone, h.id) else onConnect(name, phone, null) })
@@ -797,7 +793,7 @@ private fun HelperSettings(nav: Nav, onBack: (() -> Unit)?) {
             com.suryaprakash.medlog.ui.ValueRow("Nearby", "Bluetooth", sub = "Works without internet")
             com.suryaprakash.medlog.ui.GroupLine()
             com.suryaprakash.medlog.ui.ValueRow("Far away", when {
-                !s.internetLink -> "Text messages only"
+                !s.internetLink -> "Nearby phones only (internet link off)"
                 link == Relay.Link.ON -> "Connected"
                 link == Relay.Link.NO_INTERNET -> "No internet"
                 else -> "Connecting…"

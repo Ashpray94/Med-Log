@@ -111,7 +111,7 @@ object Care {
         notify(ctx, 8300 + name.hashCode() % 100, "Time to buy more medicine", text, "medlog://meds")
         if (daysLeft <= 2) {
             val app = ctx.medlog
-            app.scope.launchIo { Alerts.send(ctx, Alerts.Type.REFILL, com.suryaprakash.medlog.help.Wording.refill(app.repo.profile().name, text), alsoNearby = false) }
+            app.scope.launchIo { Alerts.send(ctx, Alerts.Type.REFILL, com.suryaprakash.medlog.help.Wording.refill(app.repo.profile().name, text)) }
         }
     }
 

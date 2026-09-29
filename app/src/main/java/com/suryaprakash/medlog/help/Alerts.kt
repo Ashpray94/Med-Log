@@ -10,24 +10,28 @@ import com.suryaprakash.medlog.medlog
 import kotlinx.coroutines.launch
 
 /**
- * Tells helpers. Every alert goes by SMS (works without internet) and, when their phone is nearby,
- * straight to their MedLog Helper app over Bluetooth / Wi-Fi Direct.
+ * Tells helpers through their helper app only (internet relay and Bluetooth). SMS costs money, so it is never used here:
+ * only an SOS sends SMS, and only as the last resort when no helper answers in the app (see [Sos]).
  */
 object Alerts {
     enum class Type { SOS, DANGER, AMBER, MISSED_DOSE, CHECKIN, FALL, MESSAGE, LOW_BATTERY, REFILL }
 
-    /** [phones]: when given, only helpers whose number (digits only) is in the set are texted (B59). */
-    fun send(ctx: Context, type: Type, text: String, sosOnly: Boolean = false, alsoNearby: Boolean = true, phones: Set<String>? = null) {
+    /** [phones]: when given, only helpers whose number (digits only) is in the set are told (B59). Never SMS. */
+    fun send(ctx: Context, type: Type, text: String, phones: Set<String>? = null) {
         val app = ctx.medlog
         app.scope.launch {
-            val helpers = app.db.helpers().all().filter { if (sosOnly) it.sos else it.alerts || it.sos }
+            val helpers = app.db.helpers().all().filter { it.alerts || it.sos }
                 .filter { phones == null || CarePlan.digits(it.phone) in phones }
-            var sent = 0
-            for (h in helpers) if (Calls.sms(ctx, h.phone, text)) sent++
-            if (alsoNearby) Nearby.broadcast(ctx, type.name, text)
-            app.repo.addEvent(Kind.MESSAGE, "Told helpers: $text", org.json.JSONObject().put("type", type.name).put("sms", sent).toString())
+            val ids = recipients(helpers)
+            if (ids.isNotEmpty()) Nearby.broadcast(ctx, type.name, text, only = { it.id in ids })
+            app.repo.addEvent(Kind.MESSAGE, (if (ids.isEmpty()) "Not sent (no helper phone is paired): " else "Told helpers' phones: ") + text,
+                org.json.JSONObject().put("type", type.name).put("phones", ids.size).toString())
         }
     }
+
+    /** The helpers an app alert can reach: those whose phone is paired. Nobody else is told (no SMS outside an SOS). */
+    fun recipients(helpers: List<com.suryaprakash.medlog.data.Helper>): Set<Long> =
+        helpers.filter { it.pairId != null && it.pairKey != null }.map { it.id }.toSet()
 
     private suspend fun name(ctx: Context) = ctx.medlog.repo.profile().name
 
@@ -62,7 +66,7 @@ object Alerts {
         ctx.medlog.scope.launch {
             val n = name(ctx)
             val phones = ctx.medlog.repo.carePlan().amberHelpers.toSet()
-            if (phones.isNotEmpty()) send(ctx, Type.AMBER, Wording.seeDoctorToday(n, problem, t.reasons.firstOrNull().orEmpty()), alsoNearby = false, phones = phones)
+            if (phones.isNotEmpty()) send(ctx, Type.AMBER, Wording.seeDoctorToday(n, problem, t.reasons.firstOrNull().orEmpty()), phones = phones)
         }
     }
 }

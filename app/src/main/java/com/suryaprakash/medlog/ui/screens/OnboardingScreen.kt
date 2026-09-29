@@ -616,10 +616,10 @@ private fun HelperForm(back: () -> Unit) {
         BigField("Phone number", h.phone, { h = h.copy(phone = it) }, keyboard = KeyboardType.Phone)
         RelationField(h.relation, relations) { h = h.copy(relation = it) }
         Section("What should they get?")
-        com.suryaprakash.medlog.ui.Toggle("Calls and texts if I need help", h.sos, "With where you are") { h = h.copy(sos = it) }
-        com.suryaprakash.medlog.ui.Toggle("A text if I miss a medicine", h.alerts) { h = h.copy(alerts = it) }
+        com.suryaprakash.medlog.ui.Toggle("Alerted and called if I need help", h.sos, "With where you are") { h = h.copy(sos = it) }
+        com.suryaprakash.medlog.ui.Toggle("Told in the app if I miss a medicine", h.alerts) { h = h.copy(alerts = it) }
     }
-    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be called or texted if you need help.", yes = "Keep", no = "Remove",
+    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be alerted or called if you need help.", yes = "Keep", no = "Remove",
         onYes = { confirmRemove = false }, onNo = { confirmRemove = false; scope.launch { id?.let { app.db.helpers().delete(it) }; back() } })
 }
 
@@ -629,7 +629,7 @@ private fun HelpSteps(emergency: String) {
     val p = com.suryaprakash.medlog.ui.LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val steps = listOf(
-        Triple(Icons.Rounded.Sms, p.tintBlue, "A text with where you are" to "The moment you ask for help"),
+        Triple(Icons.Rounded.Sms, p.tintBlue, "An alert on their phones, with where you are" to "The moment you ask for help. A text only if nobody answers"),
         Triple(Icons.Rounded.Call, p.brand, "A call, one person at a time" to "Until someone answers"),
         Triple(Icons.Rounded.LocalHospital, p.red, "Then $emergency" to "If nobody answers"),
     )
@@ -663,7 +663,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
     var more by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
     fun text() {
-        val body = "Hi $name, I've added you as my helper in MedLog. If I need help, you'll get a text and a call." + if (first.isNotBlank()) " – $first" else ""
+        val body = "Hi $name, I've added you as my helper in MedLog. If I need help, you'll get an alert in the app and a call." + if (first.isNotBlank()) " – $first" else ""
         runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${h.phone}")).putExtra("sms_body", body)) }
     }
     val bold = androidx.compose.ui.text.font.FontWeight.Bold
@@ -713,7 +713,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
         add("Change $name's details" to { more = false; onEdit(h.id) })
         add("Remove $name" to { more = false; confirmRemove = true })
     }) { more = false }
-    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be called or texted if you need help.", yes = "Keep $name", no = "Remove $name",
+    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be alerted or called if you need help.", yes = "Keep $name", no = "Remove $name",
         onYes = { confirmRemove = false }, onNo = { confirmRemove = false; scope.launch { app.db.helpers().delete(h.id) } })
 }
 

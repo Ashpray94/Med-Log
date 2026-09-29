@@ -2764,5 +2764,21 @@
 "You checked it works": "आपने जाँचा कि चल रहा है",
 "See my reports": "मेरी शिकायतें देखें",
 "What is still wrong? (You can leave this empty.)": "अब भी क्या गलत है? (खाली छोड़ सकते हैं।)",
-"Sending \"{0}\" in {1}…": "\"{0}\" {1} सेकंड में भेज रहे हैं…"
+"Sending \"{0}\" in {1}…": "\"{0}\" {1} सेकंड में भेज रहे हैं…",
+"Alerting your helpers": "आपके सहायकों को सूचित कर रहे हैं",
+"Your helpers' phones are ringing. Waiting for an answer.": "आपके सहायकों के फ़ोन बज रहे हैं। जवाब का इंतज़ार है।",
+"Send SMS now": "अभी SMS भेजें",
+"Getting help. Alerting your helpers.": "मदद बुला रहे हैं। आपके सहायकों को सूचित कर रहे हैं।",
+"Their app first, SMS only if nobody answers": "पहले उनका ऐप, SMS सिर्फ़ तब जब कोई जवाब न दे",
+"Then your family is alerted and called": "फिर आपके परिवार को सूचित किया जाएगा और फ़ोन किया जाएगा",
+"Allow text messages. They are used only in an SOS, and only when no helper answers in the app.": "टेक्स्ट संदेश की अनुमति दें। ये सिर्फ़ SOS में, और तभी इस्तेमाल होते हैं जब कोई सहायक ऐप में जवाब न दे।",
+"For calls, and for an SOS text if nobody answers in the app": "फ़ोन के लिए, और ऐप में कोई जवाब न दे तो SOS के टेक्स्ट के लिए",
+"Nearby phones only (internet link off)": "सिर्फ़ पास के फ़ोन (इंटरनेट लिंक बंद)",
+"Add family to alert and call them.": "परिवार को सूचित करने और फ़ोन करने के लिए उन्हें जोड़ें।",
+"Alerts your helpers' phones, then calls each one": "आपके सहायकों के फ़ोन पर सूचना जाती है, फिर हर एक को फ़ोन",
+"Alerted and called if I need help": "मदद चाहिए तो सूचना और फ़ोन",
+"Told in the app if I miss a medicine": "दवा छूटने पर ऐप में बताया जाए",
+"An alert on their phones, with where you are": "उनके फ़ोन पर सूचना, आप कहाँ हैं यह भी",
+"The moment you ask for help. A text only if nobody answers": "जैसे ही आप मदद माँगें। टेक्स्ट सिर्फ़ तब जब कोई जवाब न दे",
+"{0} won't be alerted or called if you need help.": "{0} को मदद चाहिए होने पर सूचना या फ़ोन नहीं जाएगा।"
 }
