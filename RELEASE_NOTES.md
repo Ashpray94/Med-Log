@@ -1,6 +1,7 @@
 Updates straight over 2.13 and keeps your data.
 
 ## What's new
+- **Report a problem now reaches us.** Shake the phone, or use Settings, and your picture and words arrive straight away. My reports shows when it's fixed.
 - **SMS only for SOS.** Missed medicines, check-ins, refills and help messages now go only to your helpers' MedLog app. SMS costs money, so it is used only in an SOS, and only when no helper answers in the app within 90 seconds.
 - **Helper alerts look like Meeting Timer**, with a big countdown and exactly three answers: respond ("I'm coming", "I'll give it"), later or skip ("In 5 min", "Skip this dose"), and "Ask another helper".
 - **Personal limits.** Helpers set the person's own numbers (oxygen, blood pressure, temperature, sugar, pulse, vomiting, loose stools, constipation) so alerts fit them and false alarms stop. Setup asks for them; you can set them later in Helper controls.
