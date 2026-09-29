@@ -8,6 +8,7 @@ import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.Limits
 import com.suryaprakash.medlog.clinical.PersonContext
 import com.suryaprakash.medlog.clinical.RecentNote
+import com.suryaprakash.medlog.clinical.Told
 import com.suryaprakash.medlog.clinical.Triage
 import com.suryaprakash.medlog.data.CarePlan
 import com.suryaprakash.medlog.nlu.Fact
@@ -17,7 +18,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 
 /**
@@ -54,7 +54,7 @@ class PersonaKamalaTest {
         val five = eval("vomiting", facts("count" to 5))
         assertEquals(Level.AMBER, five.level)
         assertTrue(five.reasons.toString(), five.reasons.any { it.contains("5 times") && it.contains("call your doctor") })
-        // the "5 or more" tap stores 6
+        // the "5 or more" tap stores 5 (B74); a typed 6 is still AMBER
         assertEquals(Level.AMBER, eval("vomiting", facts("count" to 6)).level)
         // B06: an earlier note of 1 an hour ago plus this note of 3 is 4 in 24 hours, not 7
         val earlier = listOf(RecentNote("vomiting", now - hour, emptyMap(), 1))
@@ -119,7 +119,6 @@ class PersonaKamalaTest {
         assertEquals(Level.AMBER, eval("cough", facts("weeks" to 3, "severity" to 8)).level)
     }
 
-    @Ignore("FAILS: 'Any blood when you cough?' answered Yes on the plain Cough problem is GREEN. Triage.kt:125 only turns 'blood' into RED for vomiting/nausea; there is no rule for cough + blood.")
     @Test fun k4_coughWithBloodAnsweredYesIsRed() {
         assertEquals(Level.RED, eval("cough", facts("blood" to true, "severity" to 8)).level)
     }
@@ -137,9 +136,13 @@ class PersonaKamalaTest {
         assertTrue(eval("fever", facts("confusion" to false, "temperature" to 100.6)).reasons.none { it.contains("onfusion") })
     }
 
-    @Ignore("FAILS (code read, cannot run on JVM): B09 is still open. TellScreen.kt:153 persist() texts the helpers on every RED persist while phase != DANGER; the danger page's 'change' (TellScreen.kt:355) sets phase = SUMMARY, Save (TellScreen.kt:326) calls persist() again, RED again, helpers texted a second time. No 'already told' flag exists.")
     @Test fun k5_helpersAreToldOnceNotTwice() {
-        // needs the Compose screen; kept here so the requirement is not lost
+        // TellScreen texts through Alerts.tellOnce, which asks Repo.markTold -> Told.shouldTell: RED is sent once
+        var facts: Map<String, Fact> = emptyMap()
+        assertTrue(Told.shouldTell(facts, Level.RED))
+        facts = Told.mark(facts, Level.RED)
+        assertFalse("second Save after 'This is wrong - change it'", Told.shouldTell(facts, Level.RED))
+        assertFalse(Told.shouldTell(facts, Level.AMBER))
     }
 
     // ── K6 ──
@@ -164,7 +167,6 @@ class PersonaKamalaTest {
         assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 89.0))).level)
     }
 
-    @Ignore("FAILS: helper red line 88 and a reading of 88 stays AMBER. Triage.kt:189 uses 'r.v1 < b.redLow', so a reading equal to the line is not red; the plan expects RED. Fix: use <= for low red lines, and say on the Personal limits page whether the line itself counts as red.")
     @Test fun k7_spo2HelpersRedLineAt88IsRedAt88() {
         val own = kamala(Limits(mapOf("spo2" to Band(redLow = 88.0))))
         val t = eval(null, readings = listOf(Reading("spo2", 88.0)), who = own)
@@ -213,27 +215,30 @@ class PersonaKamalaTest {
     @Test fun k10_vomitingThenShiveringWithTemperatureIsRed() {
         assertEquals(Level.GREEN, eval("vomiting", facts("count" to 3)).level)
         assertEquals(Level.RED, eval("chills", facts("temperature" to 100.2, "severity" to 4)).level)
-        // documents today's behaviour (see the ignored test below): no temperature, nothing to judge
-        assertEquals(Level.GREEN, eval("chills", facts("severity" to 4)).level)
+        // no temperature: not GREEN any more (B56)
+        assertEquals(Level.AMBER, eval("chills", facts("severity" to 4)).level)
     }
 
-    @Ignore("FAILS: shivering on chemotherapy with no temperature (she tapped Skip, or has no thermometer) is GREEN 'Saved.'. Triage.kt:151-160 only judges a temperature that exists. For cancer care an unmeasured shiver should be AMBER at least ('check your temperature now; if you cannot, call your cancer doctor').")
     @Test fun k10_shiveringOnChemoWithNoTemperatureIsNotGreen() {
-        assertTrue(eval("chills", facts("severity" to 4)).level != Level.GREEN)
+        val t = eval("chills", facts("severity" to 4))
+        assertTrue(t.level != Level.GREEN)
+        assertEquals(listOf("Check your temperature. If you can't, call your cancer doctor today."), t.reasons)
+        assertEquals(Level.AMBER, eval("fever", emptyMap()).level)
+        // not on cancer treatment: unchanged
+        assertEquals(Level.GREEN, eval("chills", facts("severity" to 4), who = PersonContext(67, false, "Diabetes", Limits(), false)).level)
     }
 
     // ── K11: her vomiting interview ──
     @Test fun k11_vomitingInterviewListAndCount() {
         val core = ask("vomiting")
         println("KAMALA vomiting core: " + core.joinToString(" | ") { "${it.id}: ${it.text}" })
-        assertEquals(listOf("when", "q_blood_vomit", "count", "severity"), core.map { it.id })
+        assertEquals(listOf("when", "q_blood_vomit", "q_keepwater", "q_urine", "count", "severity"), core.map { it.id })
         assertTrue("more than 6 core questions: $core", core.size <= 6)
         assertEquals("Was there any blood?", core[1].text)
-        assertEquals("How many times today?", core[2].text)
-        assertEquals("How bad is it?", core[3].text)
+        assertEquals("How many times today?", core[4].text)
+        assertEquals("How bad is it?", core[5].text)
     }
 
-    @Ignore("FAILS: 'Can you keep water down?' (priority 80) and 'Have you passed urine in the last 8 hours?' (70) are only in 'Tell a little more' (Interview.kt dangerQuestions needs priority >= 85; ALWAYS_CORE has only fever and chills). For a chemo patient the RED rule 'no water and no urine' (Triage.kt) can only fire if she agrees to tell more. Fix: ALWAYS_CORE += 'vomiting' to listOf('q_keepwater','q_urine'); core stays at 6.")
     @Test fun k11_vomitingCoreAsksWaterAndUrine() {
         val ids = ask("vomiting").map { it.id }
         assertTrue(ids.toString(), "q_keepwater" in ids && "q_urine" in ids)
@@ -249,16 +254,25 @@ class PersonaKamalaTest {
         assertEquals("Any blood when you cough?", core[1].text)
     }
 
-    @Ignore("FAILS: 'For how many weeks?' (priority 30) is only asked after 'tell a little more', so 'cough for 3 weeks or more' never fires from the core taps; 'A week or more' in 'When did it start?' sets no weeks. Fix: ALWAYS_CORE += 'cough' to listOf('q_weeks') (core becomes 4), or set weeks from started == 'a week or more'.")
     @Test fun k12_coughCoreAsksHowManyWeeks() {
-        assertTrue(ask("cough").any { it.id == "q_weeks" })
+        // only when "When did it start?" was "a week or more" (B54); nothing is derived otherwise
+        assertTrue(ask("cough", facts("started" to "A week or more")).any { it.id == "q_weeks" })
+        assertTrue(ask("cough", facts("started" to "a week or more")).any { it.id == "q_weeks" })
+        assertTrue(ask("cough", facts("started" to "Yesterday")).none { it.id == "q_weeks" })
+        assertTrue(ask("cough").none { it.id == "q_weeks" })
+        assertTrue(ask("cough", facts("started" to "A week or more", "weeks" to 4)).none { it.id == "q_weeks" })
+        assertTrue(ask("cough", facts("started" to "A week or more")).size <= 6)
+        val cough = CAT.problem("cough")!!
+        assertEquals("For how many weeks?", Interview.weeksAsk(CAT, cough, facts("started" to "A week or more"))?.text)
+        assertNull(Interview.weeksAsk(CAT, CAT.problem("vomiting")!!, facts("started" to "A week or more")))
     }
 
     // ── K13: the tiles she can tap match the rules ──
     @Test fun k13_countTapsMatchTheRules() {
-        // the tiles are Once, 2, 3, 4 and '5 or more' (stored as 6)
+        // the tiles are Once, 2, 3, 4 and '5 or more' (stored as 5, B74)
         val values = Interview.COUNT.choices.map { it.value.toInt() }
-        assertEquals(listOf(1, 2, 3, 4, 6), values)
+        assertEquals(listOf(1, 2, 3, 4, 5), values)
+        assertEquals("5 or more", Interview.COUNT.choices.last().label)
         assertEquals(Level.GREEN, eval("vomiting", facts("count" to values[3])).level)   // '4 times'
         assertEquals(Level.AMBER, eval("vomiting", facts("count" to values[4])).level)   // '5 or more'
     }

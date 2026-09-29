@@ -123,6 +123,7 @@ object DangerRules {
 
         // ── bleeding ──
         if (yes(facts, "blood") && problemId in setOf("vomiting", "nausea")) red += "Blood in vomit"
+        if (yes(facts, "blood") && problemId == "cough") red += "Coughing blood"
         if (yes(facts, "coffeeGround")) red += "Vomit looks like coffee grounds"
         if (yes(facts, "blackStool")) red += "Black, tarry stool"
         if (no(facts, "bleedingStops")) red += "Bleeding that does not stop with pressure"
@@ -164,18 +165,21 @@ object DangerRules {
                 }
             }
         }
-        if (yes(facts, "confusion") && problemId != "confusion") red += "Confusion"
+        // no thermometer, or the question was skipped: for a person on cancer treatment a fever or shivering is not left as "Saved"
+        if (temp == null && person.cancerCare && problemId in setOf("chills", "fever"))
+            amber += "Check your temperature. If you can't, call your cancer doctor today."
+        if (yes(facts, "confusion") && problemId != "confusion" && "Fever with confusion" !in red) red += "Confusion"
 
         // ── readings ──
         for (r in readings) when (r.type) {
             "sugar" -> {
                 // helper lines first, the general ones for any line the helper left unset ("> 300" is 300.0.nextUp() with ">=")
-                val b = effective(lim.band("sugar"), Band(amberLow = 70.0, redLow = 54.0, amberHigh = 300.0.nextUp(), redHigh = 400.0))
+                val b = effective(lim.band("sugar"), Band(amberLow = 70.0.nextDown(), redLow = 54.0.nextDown(), amberHigh = 300.0.nextUp(), redHigh = 400.0))
                 val v = r.v1
                 when {
-                    b.redLow != null && v < b.redLow -> { red += "Very low sugar (${v.toInt()})"; firstAid = SUGAR_AID }
-                    b.amberLow != null && v < b.amberLow && (yes(facts, "confusion") || yes(facts, "sweating")) -> { red += "Low sugar (${v.toInt()}) with sweating or confusion"; firstAid = SUGAR_AID }
-                    b.amberLow != null && v < b.amberLow -> { amber += "Low sugar (${v.toInt()})"; firstAid = SUGAR_AID }
+                    b.redLow != null && v <= b.redLow -> { red += "Very low sugar (${v.toInt()})"; firstAid = SUGAR_AID }
+                    b.amberLow != null && v <= b.amberLow && (yes(facts, "confusion") || yes(facts, "sweating")) -> { red += "Low sugar (${v.toInt()}) with sweating or confusion"; firstAid = SUGAR_AID }
+                    b.amberLow != null && v <= b.amberLow -> { amber += "Low sugar (${v.toInt()})"; firstAid = SUGAR_AID }
                     b.redHigh != null && v >= b.redHigh -> red += "Very high sugar (${v.toInt()})"
                     b.amberHigh != null && v >= b.amberHigh -> amber += "High sugar (${v.toInt()})"
                 }
@@ -183,11 +187,11 @@ object DangerRules {
             "spo2" -> {
                 val h = lim.band("spo2")
                 // over 55 the person may live with a lower baseline: 90 is only AMBER and red comes only from the helper
-                val b = effective(h, if (over55) Band(amberLow = 90.0) else Band(amberLow = 94.0, redLow = 90.0))
+                val b = effective(h, if (over55) Band(amberLow = 90.0.nextDown()) else Band(amberLow = 94.0.nextDown(), redLow = 90.0.nextDown()))
                 if (over55 && h?.redLow == null) needsLimit = needsLimit ?: "spo2"
                 when {
-                    b.redLow != null && r.v1 < b.redLow -> red += "Low oxygen (${r.v1.toInt()}%)"
-                    b.amberLow != null && r.v1 < b.amberLow -> amber += if (over55) "Low oxygen (${r.v1.toInt()}%): please call your doctor" else "Oxygen a little low (${r.v1.toInt()}%)"
+                    b.redLow != null && r.v1 <= b.redLow -> red += "Low oxygen (${r.v1.toInt()}%)"
+                    b.amberLow != null && r.v1 <= b.amberLow -> amber += if (over55) "Low oxygen (${r.v1.toInt()}%): please call your doctor" else "Oxygen a little low (${r.v1.toInt()}%)"
                 }
             }
             "bp" -> {
@@ -211,10 +215,10 @@ object DangerRules {
                 }
             }
             "pulse" -> {
-                val b = effective(lim.band("pulse"), Band(amberLow = 40.0, amberHigh = 130.0))
+                val b = effective(lim.band("pulse"), Band(amberLow = 40.0.nextDown(), amberHigh = 130.0))
                 when {
-                    (b.redLow != null && r.v1 < b.redLow) || (b.redHigh != null && r.v1 >= b.redHigh) -> red += "Pulse ${r.v1.toInt()}"
-                    (b.amberLow != null && r.v1 < b.amberLow) || (b.amberHigh != null && r.v1 >= b.amberHigh) -> amber += "Pulse ${r.v1.toInt()}"
+                    (b.redLow != null && r.v1 <= b.redLow) || (b.redHigh != null && r.v1 >= b.redHigh) -> red += "Pulse ${r.v1.toInt()}"
+                    (b.amberLow != null && r.v1 <= b.amberLow) || (b.amberHigh != null && r.v1 >= b.amberHigh) -> amber += "Pulse ${r.v1.toInt()}"
                 }
             }
         }
@@ -223,7 +227,9 @@ object DangerRules {
         val day = 24 * 3600_000L
         if (problemId in setOf("vomiting", "loose_motions")) {
             // [recent] never holds the note being evaluated (Repo.recentForRules leaves it out), so its count is added once, here
-            val last24 = recent.filter { it.problemId == problemId && now - it.at <= day }.sumOf { it.count ?: 1 } + ((num(facts, "count") ?: 1.0).toInt())
+            // an earlier note with no count and no answers (an abandoned tap) is not one vomit
+            val last24 = recent.filter { it.problemId == problemId && now - it.at <= day && !isEmptyNote(it.count, it.facts) }.sumOf { it.count ?: 1 } +
+                (num(facts, "count") ?: 1.0).toInt()
             val what = if (problemId == "vomiting") "Vomiting" else "Loose motions"
             val fh = lim.band(if (problemId == "vomiting") "vomit" else "loose")
             // helper lines first; an unset line uses the general number (more than 5, or more than 4 in cancer care)
@@ -304,6 +310,10 @@ object DangerRules {
             else -> Triage(Level.GREEN, "Saved.", emptyList(), careTips = tips, needsLimit = needsLimit)
         }
     }
+
+    /** No count and nothing answered (only "when did it start", or nothing): the note was opened and left. */
+    fun isEmptyNote(count: Int?, facts: Map<String, Fact>): Boolean =
+        count == null && facts.keys.none { it != "started" && !it.startsWith("_") }
 
     const val SUGAR_AID = "Take 3 teaspoons of sugar in water, or half a glass of juice. Check again in 15 minutes."
 

@@ -23,6 +23,8 @@ data class CarePlan(
     val emergenciesAsked: Boolean = false,
     /** the helper's own lines for this person (see clinical/Limits.kt) */
     val limits: Limits = Limits(),
+    /** phone numbers (digits only) of the helpers who are also told when MedLog says "call the doctor today" (B59); the rest hear only about RED */
+    val amberHelpers: List<String> = emptyList(),
 ) {
     data class Doctor(val name: String, val speciality: String, val phone: String)
 
@@ -30,17 +32,28 @@ data class CarePlan(
         .put("doctors", JSONArray(doctors.map { JSONObject().put("name", it.name).put("speciality", it.speciality).put("phone", it.phone) }))
         .put("symptoms", JSONArray(symptoms)).put("treatments", JSONArray(treatments))
         .put("risks", JSONArray(risks)).put("emergencies", JSONArray(emergencies))
-        .put("emergenciesAsked", emergenciesAsked).put("limits", limits.toJson())
+        .put("emergenciesAsked", emergenciesAsked).put("limits", limits.toJson()).put("amberHelpers", JSONArray(amberHelpers))
         .toString()
 
     /** The doctor to call about a problem in [dept] (the catalogue's department), else the family doctor, else the first. */
-    fun doctorFor(dept: String?): Doctor? {
+    fun doctorFor(dept: String?, cancerCare: Boolean = false): Doctor? {
+        // on cancer treatment the cancer doctor is the one to call, whatever the problem (B58)
+        if (cancerCare) (doctors.firstOrNull { it.speciality == "Cancer" && it.phone.isNotBlank() } ?: doctors.firstOrNull { it.speciality == "Cancer" })?.let { return it }
         val want = SPECIALITY_FOR_DEPT[dept?.lowercase()]
         return doctors.firstOrNull { want != null && it.speciality == want }
             ?: doctors.firstOrNull { it.speciality == "Family doctor" } ?: doctors.firstOrNull()
     }
 
+    fun tellsAmber(phone: String) = digits(phone) in amberHelpers
+    /** The plan with [phone] switched on or off for "call the doctor today" messages. */
+    fun withAmberHelper(phone: String, on: Boolean): CarePlan {
+        val d = digits(phone)
+        return copy(amberHelpers = if (on) (amberHelpers + d).distinct() else amberHelpers - d)
+    }
+
     companion object {
+        fun digits(phone: String) = phone.filter { it.isDigit() }
+
         fun parse(json: String?): CarePlan {
             if (json.isNullOrBlank()) return CarePlan()
             return runCatching {
@@ -52,6 +65,7 @@ data class CarePlan(
                     }.orEmpty(),
                     symptoms = list("symptoms"), treatments = list("treatments"), risks = list("risks"), emergencies = list("emergencies"),
                     emergenciesAsked = o.optBoolean("emergenciesAsked"), limits = Limits.fromJson(o.optJSONObject("limits")),
+                    amberHelpers = list("amberHelpers"),
                 )
             }.getOrDefault(CarePlan())
         }

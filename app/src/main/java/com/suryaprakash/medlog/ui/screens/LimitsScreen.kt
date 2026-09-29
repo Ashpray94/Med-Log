@@ -68,13 +68,13 @@ fun LimitsScreen(nav: Nav) {
         val pr = app.repo.profile()
         age = app.repo.ageYears(pr.dob)
         cancerCare = com.suryaprakash.medlog.clinical.DangerRules.cancerCareOf(pr.conditions, plan.treatments)
-        texts = LimitsForm.SPECS.associate { sp -> sp.key to sp.lines.associateWith { LimitsForm.text(plan.limits.band(sp.key), it) } }
+        texts = LimitsForm.SPECS.associate { sp -> sp.key to LimitsForm.initialTexts(sp, plan.limits.band(sp.key)) }
         confirmed = plan.limits.doctorConfirmed
         loaded = true
     }
 
     fun setText(key: String, line: Line, v: String) {
-        texts = texts + (key to (texts[key].orEmpty() + (line to v.filter { it.isDigit() || it == '.' || it == ',' }.take(6))))
+        texts = texts + (key to LimitsForm.typed(LimitsForm.spec(key), texts[key].orEmpty(), line, v.filter { it.isDigit() || it == '.' || it == ',' }.take(6)))
         error = null; note = null
     }
 
@@ -88,7 +88,7 @@ fun LimitsScreen(nav: Nav) {
             }.take(14)
             val b = LimitsForm.suggest(sp.key, values)
             if (b == null) { note = sp.key to "Not enough readings yet. MedLog needs at least ${LimitsForm.MIN_READINGS}."; return@launch }
-            texts = texts + (sp.key to sp.lines.associateWith { LimitsForm.text(b, it) })
+            texts = texts + (sp.key to LimitsForm.initialTexts(sp, b))
             error = null
             note = sp.key to "Suggested from the last ${values.size} readings. Check the numbers with the doctor, then tap Save."
         }
@@ -117,8 +117,11 @@ fun LimitsScreen(nav: Nav) {
             Card {
                 Body(sp.title, bold = true)
                 Hint("in ${sp.unit}" + if (sp.key == "temp") ". You can type °C (34 to 43): MedLog changes it to °F." else "")
-                sp.lines.forEach { l ->
-                    BigField("${sp.label(l)} (${sp.unit})", texts[sp.key]?.get(l).orEmpty(), { setText(sp.key, l, it) },
+                if (sp.oneNumber) {
+                    Hint(LimitsForm.tempRule(age, cancerCare))
+                    BigField(sp.fieldLabel(sp.lines.first()), texts[sp.key]?.get(sp.lines.first()).orEmpty(), { setText(sp.key, sp.lines.first(), it) }, keyboard = KeyboardType.Decimal)
+                } else sp.lines.forEach { l ->
+                    BigField(sp.fieldLabel(l), texts[sp.key]?.get(l).orEmpty(), { setText(sp.key, l, it) },
                         keyboard = KeyboardType.Decimal, hint = LimitsForm.general(sp.key, l, age, cancerCare))
                 }
                 if (sp.readingType != null) BigButton("Suggest from readings", tone = Tone.OUTLINE, onClick = { suggest(sp) })

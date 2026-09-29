@@ -37,7 +37,7 @@ object Interview {
     ))
 
     val COUNT = Ask("count", "count", "How many times today?", Kind.NUMBER, listOf(
-        Choice("1", "Once"), Choice("2", "2 times"), Choice("3", "3 times"), Choice("4", "4 times"), Choice("6", "5 or more"),
+        Choice("1", "Once"), Choice("2", "2 times"), Choice("3", "3 times"), Choice("4", "4 times"), Choice("5", "5 or more"),
     ))
 
     val WHERE = Ask("where", "site", "Show me where it is.", Kind.BODY)
@@ -155,7 +155,19 @@ object Interview {
     fun deepable(p: Problem) = locatable(p) && p.region !in SHALLOW_REGIONS
 
     /** Danger questions that are always core for a problem, even though their priority is lower (B49, B51). */
-    private val ALWAYS_CORE = mapOf("fever" to listOf("q_temp", "q_stiffneck"), "chills" to listOf("q_temp"))
+    private val ALWAYS_CORE = mapOf(
+        "fever" to listOf("q_temp", "q_stiffneck"), "chills" to listOf("q_temp"),
+        // dehydration is judged from these two, so they are asked before "tell more" (B53); blood stays first
+        "vomiting" to listOf("q_blood_vomit", "q_keepwater", "q_urine"),
+        "loose_motions" to listOf("q_blood_stool", "q_keepwater", "q_urine"),
+    )
+
+    /** "When did it start?" was answered "a week or more" (the tile's label or value). */
+    fun startedWeekOrMore(facts: Map<String, Fact>): Boolean = facts["started"]?.value?.toString()?.trim()?.lowercase() == "a week or more"
+
+    /** For a cough that started a week or more ago: "For how many weeks?" (B54). Nothing is derived otherwise. */
+    fun weeksAsk(cat: Catalogue, p: Problem, facts: Map<String, Fact>): Ask? =
+        if (p.id == "cough" && startedWeekOrMore(facts) && !facts.containsKey("weeks")) cat.questions["q_weeks"]?.let { fromQuestion(cat, it) } else null
 
     /** The danger questions asked before "tell more": the top two, three for fever and falls (B49, B50). */
     private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> {
@@ -171,6 +183,7 @@ object Interview {
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
         coreDanger(cat, p).forEach(::add)
+        weeksAsk(cat, p, facts)?.let(::add)
         if (p.id == "fall" && facts["couldGetUp"]?.value == false) add(FLOOR)
         if (p.id in COUNTABLE) add(COUNT)
         if (locatable(p)) add(WHERE)
