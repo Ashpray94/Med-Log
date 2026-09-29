@@ -53,12 +53,19 @@ interface SyncStore {
     fun knows(tbl: String, uid: String): Boolean
     /**
      * Writes the ops in one transaction with "applying" set, so nothing echoes back. Each op replaces the row only if its version
-     * is greater than the held one (see [Version.compareTo]). For every op that was applied or skipped, have[origin] is raised to
-     * at least its oseq. Returns applied and skipped counts (parked is 0 here; the engine fills it in).
+     * is greater than the held one (see [Version.compareTo]). It does NOT touch have: the engine moves have only over ranges
+     * it knows are complete (see [advanceHave]). Returns applied and skipped counts (parked is 0 here; the engine fills it in).
      */
     fun apply(ops: List<Op>): Applied
-    /** The highest number received from each origin, including this phone's own. */
+    /**
+     * For each origin, the number up to which this phone holds EVERY current row of that origin (a contiguous claim, not just the
+     * highest number seen). For this phone's own origin it is [localSeq]. Persisted (sync_have).
+     */
     fun have(): Map<String, Long>
+    /** Raises have[origin] to at least [seq]. Never lowers it. */
+    fun advanceHave(origin: String, seq: Long)
+    /** The last local number handed out on this phone. */
+    val localSeq: Long
 }
 
 /** Sends one wire message (a JSON string) to the family mailbox. */

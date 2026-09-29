@@ -13,8 +13,7 @@ class InMemorySyncStore(override val device: String, private val now: () -> Long
     private val seen = HashMap<String, Long>()
     private var seq = 0L
 
-    /** The last local number handed out. */
-    val localSeq: Long get() = seq
+    override val localSeq: Long get() = seq
 
     fun localUpsert(tbl: String, uid: String, row: JSONObject) {
         val t = now(); seq++
@@ -53,10 +52,11 @@ class InMemorySyncStore(override val device: String, private val now: () -> Long
                 rows[o.tbl to o.uid] = Entry(o.version, if (o.del) null else o.row?.let { JSONObject(it.toString()) })
                 applied++
             } else skipped++
-            raise(o.origin, o.oseq)
         }
         return Applied(applied, skipped, 0)
     }
+
+    override fun advanceHave(origin: String, seq: Long) = raise(origin, seq)
 
     private fun raise(origin: String, n: Long) { if (n > (seen[origin] ?: 0L)) seen[origin] = n }
 

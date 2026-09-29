@@ -20,7 +20,7 @@ class SyncEngineTest {
 
     private inner class Phone(val id: String) {
         val store = InMemorySyncStore(id) { clock }
-        val engine = SyncEngine(store, relay.sender(id))
+        val engine = SyncEngine(store, relay.sender(id), gapHelloIntervalMs = 0)
         var published = 0L
         init { relay.join(id, engine) }
         fun push() { engine.publishLocal(published); published = store.localSeq }
@@ -154,10 +154,10 @@ class SyncEngineTest {
         assertEquals(0, a.engine.localChanges(a.store.localSeq).size)
         // a single op bigger than the limit still goes, alone
         val big = Op("notes", "big", "A", 1, 1, "A", false, row("text" to "y".repeat(500)))
-        assertEquals(3, WireJson.batches("A", listOf(big, big, big), 300).size)
+        assertEquals(3, WireJson.batches("A", "A", listOf(big, big, big), 0, 3, 300).size)
         // multi-byte text is measured in bytes
         val jp = Op("notes", "jp", "A", 1, 1, "A", false, row("text" to "薬".repeat(100)))
-        WireJson.batches("A", List(20) { jp }, 1000).forEach { assertTrue(it.toByteArray().size <= 1000) }
+        WireJson.batches("A", "A", List(20) { jp.copy(oseq = it + 1L) }, 0, 20, 1000).forEach { assertTrue(it.toByteArray().size <= 1000) }
     }
 
     @Test fun helloIsAnsweredOnlyWithWhatIsMissing() {
@@ -227,11 +227,13 @@ class SyncEngineTest {
             assertEquals(0, e.pendingCount)
             val snap = s.snapshot()
             if (expected == null) expected = snap else assertEquals(expected, snap)
+            // a covers-only message per origin then moves have to the top
+            for ((d, n) in seq) e.onMessage(WireJson.opsMessage("X", emptyList(), mapOf(d to (0L to n))))
             assertEquals(seq, s.have().filterKeys { it != "Z" })
         }
     }
 
-    @Test fun flakyRelayStillConvergesWithFullHellos() {
+    @Test fun flakyRelayConvergesWithNormalHellosOnly() {
         val ph = listOf(Phone("A"), Phone("B"), Phone("C"))
         relay.dropRate = 0.4
         val rnd = Random(7)
@@ -242,10 +244,75 @@ class SyncEngineTest {
             p.push(); relay.pump()
         }
         relay.dropRate = 0.0
-        // a full hello is the safety net when messages were lost
-        ph.forEach { relay.publish(it.id, it.engine.hello(full = true)) }
+        // every phone owns the complete list of its own changes, so one normal round is enough
+        ph.forEach { it.hello() }
         relay.pump()
         same(ph[0], ph[1], ph[2])
+        // and everyone's have shows the whole picture
+        ph.forEach { p -> ph.forEach { q -> assertEquals(q.store.localSeq, p.store.have()[q.id] ?: 0L) } }
+    }
+
+    @Test fun missedRangeIsFetchedByHelloWithoutFullHello() {
+        val a = Phone("A"); val c = Phone("C")
+        relay.dropRate = 1.0
+        for (i in 1..2) { a.store.localUpsert("notes", "n$i", row("v" to i)); tick(); a.push() }
+        relay.dropRate = 0.0
+        a.store.localUpsert("notes", "n3", row("v" to 3)); tick()
+        val third = a.engine.localChanges(2)
+        assertEquals(1, third.size)
+        c.engine.onMessage(third[0])
+        assertNotNull(c.store.row("notes", "n3"))
+        assertEquals(0L, c.store.have()["A"] ?: 0L) // the gap holds have back
+        relay.pump() // the gap sent a HELLO, A answers rows 1 and 2
+        assertEquals(3L, c.store.have()["A"])
+        assertNotNull(c.store.row("notes", "n1")); assertNotNull(c.store.row("notes", "n2"))
+    }
+
+    @Test fun contiguousBatchesArrivingOutOfOrderAdvanceHave() {
+        val a = Phone("A")
+        val cStore = InMemorySyncStore("C") { 0 }
+        val c = SyncEngine(cStore, SyncSender { }, gapHelloIntervalMs = 0)
+        val msgs = (1..3).map { i -> a.store.localUpsert("notes", "n$i", row("v" to i)); a.engine.localChanges(i - 1L).single() }
+        c.onMessage(msgs[2]); assertEquals(0L, cStore.have()["A"] ?: 0L)
+        c.onMessage(msgs[1]); assertEquals(0L, cStore.have()["A"] ?: 0L)
+        c.onMessage(msgs[0]); assertEquals(3L, cStore.have()["A"])
+    }
+
+    @Test fun splitBatchesCoverTheRangeContiguously() {
+        val ops = (1..50).map { Op("notes", "n$it", "A", it * 2L, 1, "A", false, row("t" to "z".repeat(100))) } // odd numbers superseded
+        val msgs = WireJson.batches("A", "A", ops, 0, 105, 2000)
+        assertTrue(msgs.size > 2)
+        var at = 0L
+        for (m in msgs) {
+            val (f, t) = WireJson.readCovers(JSONObject(m)).getValue("A")
+            assertEquals(at, f); at = t
+            assertTrue(m.toByteArray().size <= 2000)
+        }
+        assertEquals(105L, at)
+        // a range with no rows still gets a message, so have can move
+        assertEquals(1, WireJson.batches("A", "A", emptyList(), 3, 9).size)
+    }
+
+    @Test fun parkedOpHoldsHaveBackAndIsRefetchedAfterRestart() {
+        val med = Op("medicines", "m", "B", 1, 10, "B", false, row("name" to "M"))
+        val dose = Op("doses", "d", "A", 1, 20, "A", false, row("medicineUid" to "m"))
+        val peerStore = InMemorySyncStore("P") { 0 }
+        peerStore.apply(listOf(med, dose)); peerStore.advanceHave("A", 1); peerStore.advanceHave("B", 1)
+        val fromPeer = ArrayList<String>()
+        val peer = SyncEngine(peerStore, SyncSender { fromPeer += it })
+        val store = InMemorySyncStore("C") { 0 }
+        val e1 = SyncEngine(store, SyncSender { }, gapHelloIntervalMs = 0)
+        val r = e1.onMessage(WireJson.opsMessage("A", listOf(dose), mapOf("A" to (0L to 1L))))
+        assertEquals(1, r.parked)
+        assertEquals(0L, store.have()["A"] ?: 0L) // the parked dose holds have back
+        // the app restarts: waiting ops are gone, but have says the dose is still missing
+        val e2 = SyncEngine(store, SyncSender { }, gapHelloIntervalMs = 0)
+        peer.onMessage(e2.hello())
+        assertTrue(fromPeer.isNotEmpty())
+        fromPeer.forEach { e2.onMessage(it) }
+        assertNotNull(store.row("doses", "d"))
+        assertEquals(1L, store.have()["A"]); assertEquals(1L, store.have()["B"])
+        assertEquals(0, e2.pendingCount)
     }
 
     @Test fun heldMessagesArriveLater() {

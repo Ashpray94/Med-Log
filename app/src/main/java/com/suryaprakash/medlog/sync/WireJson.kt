@@ -26,10 +26,28 @@ object WireJson {
         return Op(tbl, uid, origin, j.getLong("s"), j.getLong("a"), j.optString("b"), del, row)
     }
 
-    fun opsMessage(from: String, ops: List<Op>): String = opsMessageOf(from, ops.map { op(it).toString() })
+    /**
+     * [covers] says, per origin, "these ops are EVERY current row of that origin whose oseq is in (from, to]". The receiver may
+     * move its have over a range only when it starts at or below what it already has.
+     */
+    fun opsMessage(from: String, ops: List<Op>, covers: Map<String, Pair<Long, Long>> = emptyMap()): String =
+        opsMessageOf(from, ops.map { op(it).toString() }, covers)
 
-    private fun opsMessageOf(from: String, encodedOps: List<String>): String =
-        "{\"kind\":\"ops\",\"from\":" + JSONObject.quote(from) + ",\"ops\":[" + encodedOps.joinToString(",") + "]}"
+    private fun opsMessageOf(from: String, encodedOps: List<String>, covers: Map<String, Pair<Long, Long>>): String {
+        val c = JSONObject()
+        covers.toSortedMap().forEach { (k, v) -> c.put(k, org.json.JSONArray().put(v.first).put(v.second)) }
+        return "{\"kind\":\"ops\",\"from\":" + JSONObject.quote(from) + ",\"covers\":" + c + ",\"ops\":[" + encodedOps.joinToString(",") + "]}"
+    }
+
+    fun readCovers(j: JSONObject): Map<String, Pair<Long, Long>> {
+        val c = j.optJSONObject("covers") ?: return emptyMap()
+        val out = HashMap<String, Pair<Long, Long>>()
+        for (k in c.keys()) {
+            val a = c.optJSONArray(k) ?: continue
+            if (a.length() == 2) out[k] = a.optLong(0) to a.optLong(1)
+        }
+        return out
+    }
 
     fun hello(from: String, have: Map<String, Long>): String = JSONObject().apply {
         put("kind", "hello"); put("from", from)
@@ -48,21 +66,30 @@ object WireJson {
         return (0 until a.length()).mapNotNull { a.optJSONObject(it)?.let(::readOp) }
     }
 
-    /** Splits ops into messages that each serialize to at most [maxBytes] (UTF-8). One op bigger than that goes alone. */
-    fun batches(from: String, ops: List<Op>, maxBytes: Int = MAX_BATCH_BYTES): List<String> {
+    /**
+     * Splits the ops of one [origin] into messages that each serialize to at most [maxBytes] (UTF-8). [ops] must be every current
+     * row of that origin with oseq in ([coverFrom], [coverTo]]. They are sorted by oseq and each message covers the next
+     * contiguous piece of the range, so together the messages cover exactly the whole range (also when there are no ops).
+     * One op bigger than the limit goes alone.
+     */
+    fun batches(from: String, origin: String, ops: List<Op>, coverFrom: Long, coverTo: Long, maxBytes: Int = MAX_BATCH_BYTES): List<String> {
+        if (coverTo <= coverFrom) return emptyList()
         val out = ArrayList<String>()
-        val base = opsMessageOf(from, emptyList()).toByteArray().size
+        val base = opsMessageOf(from, emptyList(), mapOf(origin to (Long.MAX_VALUE to Long.MAX_VALUE))).toByteArray().size
         var cur = ArrayList<String>()
+        var last = coverFrom      // end of the range already sent
+        var lastInCur = coverFrom // highest oseq in the current message
         var size = base
-        for (o in ops) {
+        for (o in ops.sortedBy { it.oseq }) {
             val enc = op(o).toString()
             val n = enc.toByteArray().size + 1 // plus the comma
             if (cur.isNotEmpty() && size + n > maxBytes) {
-                out += opsMessageOf(from, cur); cur = ArrayList(); size = base
+                out += opsMessageOf(from, cur, mapOf(origin to (last to lastInCur)))
+                last = lastInCur; cur = ArrayList(); size = base
             }
-            cur += enc; size += n
+            cur += enc; size += n; lastInCur = o.oseq
         }
-        if (cur.isNotEmpty()) out += opsMessageOf(from, cur)
+        out += opsMessageOf(from, cur, mapOf(origin to (last to coverTo)))
         return out
     }
 }
