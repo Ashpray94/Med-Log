@@ -422,4 +422,76 @@ class SyncDbTest {
         assertEquals(3L, seq(c))
         assertFalse(rows(c) == 2L)
     }
+
+    // ---- what Room's validation would compare ---------------------------------------------------------------------------
+
+    /** SQLite's type affinity rules, as Room's TableInfo.findAffinity does them. */
+    private fun affinity(type: String): String {
+        val t = type.uppercase()
+        return when {
+            t.contains("INT") -> "INTEGER"
+            t.contains("CHAR") || t.contains("CLOB") || t.contains("TEXT") -> "TEXT"
+            t.contains("BLOB") || t.isEmpty() -> "BLOB"
+            t.contains("REAL") || t.contains("FLOA") || t.contains("DOUB") -> "REAL"
+            else -> "NUMERIC"
+        }
+    }
+
+    /**
+     * Room 2.6 TableInfo/Column/Index equality against 4.json: column name, affinity, notNull, primary key position, and the
+     * default value text ONLY when the entity declares one (an entity without a default does not mind a DEFAULT in the database,
+     * which is why shape and color from migration 2->3 are fine). Indices: name, unique, columns in order (only those made by
+     * CREATE INDEX, as Room reads them).
+     */
+    private fun assertMatchesRoomSchema(c: Connection, label: String) {
+        val ents = schemaJson(4).getJSONObject("database").getJSONArray("entities")
+        for (e in 0 until ents.length()) {
+            val ent = ents.getJSONObject(e); val t = ent.getString("tableName"); val at = "$label $t"
+            val info = q(c, "PRAGMA table_info(`$t`)")
+            val fields = ent.getJSONArray("fields")
+            assertEquals("$at column count", fields.length(), info.size)
+            val pk = ent.getJSONObject("primaryKey").getJSONArray("columnNames").let { a -> (0 until a.length()).map { a.getString(it) } }
+            for (f in 0 until fields.length()) {
+                val fld = fields.getJSONObject(f); val name = fld.getString("columnName")
+                val col = info.firstOrNull { it["name"] == name } ?: throw AssertionError("$at: column $name missing")
+                assertEquals("$at.$name affinity", fld.getString("affinity"), affinity(col["type"] as String))
+                assertEquals("$at.$name notNull", fld.getBoolean("notNull"), (col["notnull"] as Long) != 0L)
+                assertEquals("$at.$name pk position", (pk.indexOf(name) + 1).toLong(), col["pk"] as Long)
+                if (fld.has("defaultValue")) assertEquals("$at.$name default", fld.getString("defaultValue"), col["dflt_value"])
+            }
+            val want = HashMap<String, Pair<Boolean, List<String>>>()
+            val idx = ent.optJSONArray("indices")
+            if (idx != null) for (i in 0 until idx.length()) {
+                val ix = idx.getJSONObject(i); val cn = ix.getJSONArray("columnNames")
+                want[ix.getString("name")] = ix.getBoolean("unique") to (0 until cn.length()).map { cn.getString(it) }
+            }
+            val got = HashMap<String, Pair<Boolean, List<String>>>()
+            for (ix in q(c, "PRAGMA index_list(`$t`)")) {
+                if (ix["origin"] != "c") continue
+                val name = ix["name"] as String
+                got[name] = ((ix["unique"] as Long) != 0L) to q(c, "PRAGMA index_info(`$name`)").sortedBy { it["seqno"] as Long }.map { it["name"] as String }
+            }
+            assertEquals("$at indices", want, got)
+        }
+    }
+
+    @Test fun roomValidationMatchesAfterMigrationFrom3() {
+        val c = v3()
+        x(c, "INSERT INTO helpers(name,phone,relation,sos,alerts,pairId,pairKey,canSeeNotes,sortOrder) VALUES('Ravi','999','son',1,1,'p','k',1,0)")
+        addNote(c, "one")
+        x(c, "INSERT INTO medicines(name,strength,form,amount,food,times,days,startDate,critical,asNeeded,minGapHours,purpose,active,bloodThinner,changedAt,changeNote,shape,color) VALUES('Met','','tablet','1','any','08:00','',1,0,0,4,'',1,0,1,'','','')")
+        x(c, "INSERT INTO doses(medicineId,scheduledAt,status,reminded,helperAlerted) VALUES(1, 5000, 'DUE', 0, 0)")
+        run(c, SyncSql.migration3to4())
+        assertMatchesRoomSchema(c, "migrated")
+    }
+
+    @Test fun roomValidationMatchesOnAFreshV4Database() {
+        val c = open()
+        val ents = schemaJson(4).getJSONObject("database").getJSONArray("entities")
+        for (i in 0 until ents.length()) run(c, create(ents.getJSONObject(i)))
+        run(c, SyncSql.onOpen())
+        assertMatchesRoomSchema(c, "fresh")
+        addNote(c, "works")
+        assertEquals(1L, seq(c))
+    }
 }
