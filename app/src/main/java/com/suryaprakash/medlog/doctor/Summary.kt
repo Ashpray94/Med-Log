@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.doctor
 
+import com.suryaprakash.medlog.data.planned
 import com.suryaprakash.medlog.clinical.Catalogue
 import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Describe
@@ -58,26 +59,26 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
     fun build(profile: Profile, from: Long, to: Long, notes: List<Note>, meds: List<Medicine>, doses: List<Dose>, waterGoal: Int, now: Long = System.currentTimeMillis()): Summary {
         val symptoms = notes.filter { it.kind == Kind.SYMPTOM && it.problemId != null }
         val facts = symptoms.associate { it.id to factsFromJson(it.details) }
-        val byProblem = symptoms.groupBy { it.problemId!! }
+        val byProblem = symptoms.groupBy { it.problemId!! }.filterValues { com.suryaprakash.medlog.data.Occurrences.total(it) > 0 }
         val days = generateSequence(day(from)) { it.plusDays(1) }.takeWhile { !it.isAfter(day(to - 1)) }.toList().takeLast(14)
 
         // ── header ──
-        val age = runCatching { Period.between(LocalDate.parse(profile.dob), LocalDate.now()).years }.getOrNull()
+        val age = com.suryaprakash.medlog.data.Repo.ageFromDob(profile.dob)
         val header = listOfNotNull(
-            listOfNotNull(profile.name.ifBlank { "Patient" }, profile.sex.takeIf { it.isNotBlank() }, age?.let { "$it y" }, profile.dob.takeIf { it.isNotBlank() }?.let { "DOB $it" },
+            listOfNotNull(profile.name.ifBlank { "Patient" }, profile.sex.takeIf { it.isNotBlank() }, age?.let { "$it y" }, profile.dob.take(4).takeIf { it.length == 4 }?.let { "Born $it" },
                 profile.bloodGroup.takeIf { it.isNotBlank() }?.let { "Blood $it" }, profile.hospitalId.takeIf { it.isNotBlank() }?.let { "ID $it" }).joinToString(" · "),
             profile.conditions.takeIf { it.isNotBlank() }?.let { "Conditions: $it" },
             if (profile.onBloodThinner || meds.any { it.bloodThinner && it.active }) "On a blood thinner" else null,
         )
-        val alertLine = "ALLERGIES: " + profile.allergies.ifBlank { "none recorded" }
+        val alertLine = profile.allergies.takeIf { it.isNotBlank() }?.let { "ALLERGIES: $it" }.orEmpty()
 
         // ── concerns, ranked ──
         val concerns = ArrayList<Pair<Int, Summary.Concern>>()
         for ((pid, list) in byProblem) {
             val label = cat.problem(pid)?.label ?: pid
-            val total = list.sumOf { it.count ?: 1 }
+            val total = com.suryaprakash.medlog.data.Occurrences.total(list)
             val level = when { list.any { it.triage == "RED" } -> "RED"; list.any { it.triage == "AMBER" } -> "AMBER"; else -> "GREEN" }
-            val perDay = days.map { dd -> list.filter { day(it.occurredAt) == dd }.sumOf { it.count ?: 1 } }
+            val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list).let { m -> days.map { dd -> m[dd] ?: 0 } }
             val active = perDay.filter { it > 0 }
             val trend = if (active.size >= 3 && active.last() > active.first()) ", increasing (${active.first()}→${active.last()}/day)" else if (active.size >= 3 && active.last() < active.first()) ", decreasing (${active.first()}→${active.last()}/day)" else ""
             val span = "${d(list.minOf { it.occurredAt })}–${d(list.maxOf { it.occurredAt })}"
@@ -101,7 +102,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val missed = md.count { it.status == DoseStatus.MISSED || it.status == DoseStatus.SKIPPED }
             if (md.isNotEmpty() && missed > 0 && (missed * 5 >= md.size || m.critical)) {
-                val why = md.mapNotNull { it.reason }.groupingBy { it }.eachCount().entries.joinToString { "${it.key} ×${it.value}" }
+                val why = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key} ×${it.value}" }
                 concerns += (if (m.critical) 2500 else 1500) to Summary.Concern(if (m.critical) "AMBER" else "GREEN", "Missed ${m.name}: $missed of ${md.size} doses${if (why.isNotBlank()) " ($why)" else ""}", emptyList())
             }
         }
@@ -116,10 +117,10 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
         Patterns.find(cat, symptoms, facts, meds, doses, notes, days, zone).forEach { concerns += 1800 to Summary.Concern("PATTERN", "◇ $it", emptyList()) }
 
         // ── timeline ──
-        val timeline = byProblem.entries.sortedByDescending { e -> e.value.sumOf { it.count ?: 1 } }.take(8).map { (pid, list) ->
+        val timeline = byProblem.entries.sortedByDescending { e -> com.suryaprakash.medlog.data.Occurrences.total(e.value) }.take(8).map { (pid, list) ->
             Summary.TimelineRow(cat.problem(pid)?.label ?: pid, days.map { dd ->
                 val on = list.filter { day(it.occurredAt) == dd }
-                val c = on.sumOf { it.count ?: 1 }
+                val c = com.suryaprakash.medlog.data.Occurrences.total(on)
                 val sev = on.mapNotNull { it.severity }.maxOrNull() ?: 0
                 val lvl = when { on.any { it.triage == "RED" } || sev >= 8 -> "RED"; on.any { it.triage == "AMBER" } || sev >= 5 -> "AMBER"; c > 0 -> "GREEN"; else -> "" }
                 c to lvl
@@ -136,13 +137,13 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             if (afterMeals > 0) parts += "after meals ($afterMeals/${list.size})" else if (context.isNotEmpty()) parts += context.distinct().take(3).joinToString(", ")
             val quote = list.mapNotNull { it.transcript }.filter { it.split(" ").size >= 4 }.maxByOrNull { it.length }?.let { "“${it.take(110)}”" }
             val linked = list.mapNotNull { it.groupId }.flatMap { g -> symptoms.filter { it.groupId == g && it.problemId != pid } }.mapNotNull { cat.problem(it.problemId)?.label }.distinct()
-            (cat.problem(pid)?.label ?: pid) + ": " + (parts.joinToString("; ").ifBlank { "no further details" }) +
+            (cat.problem(pid)?.label ?: pid) + (if (parts.isNotEmpty()) ": " + parts.joinToString("; ") else "") +
                 (if (linked.isNotEmpty()) "; with ${linked.joinToString(", ")}" else "") + (quote?.let { " $it" } ?: "")
         }
 
         // ── medicines ──
         val medRows = meds.filter { it.active || it.changedAt >= from }.map { m ->
-            val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
+            val md = doses.planned().filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val taken = md.count { it.status == DoseStatus.TAKEN }
             val prn = notes.count { it.kind == Kind.MED_TAKEN && runCatching { JSONObject(it.details).optString("name") }.getOrNull() == m.name }
             val times = m.times.split(",").count { it.isNotBlank() }
@@ -150,12 +151,12 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             Summary.MedRow(
                 "${m.name}${if (m.critical) " *" else ""}",
                 "${m.strength} ${m.amount} $freq".trim(),
-                if (m.asNeeded) "taken ${prn}×" else if (md.isEmpty()) "–" else "$taken/${md.size} (${taken * 100 / md.size}%)",
+                if (m.asNeeded) (if (prn > 0) "taken ${prn}×" else "") else if (md.isEmpty()) "" else "$taken/${md.size} (${taken * 100 / md.size}%)",
                 listOfNotNull(
                     m.changeNote.takeIf { it.isNotBlank() && it != "started" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,
                     if (!m.active) "stopped" else null,
-                    md.mapNotNull { it.reason }.distinct().takeIf { it.isNotEmpty() }?.joinToString(prefix = "skipped: "),
+                    md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.distinct().takeIf { it.isNotEmpty() }?.joinToString(prefix = "skipped: "),
                 ).joinToString("; "),
             )
         } + notes.filter { it.kind == Kind.MED_TAKEN }.mapNotNull { runCatching { JSONObject(it.details).optString("name") }.getOrNull() }

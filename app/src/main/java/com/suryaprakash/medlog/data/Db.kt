@@ -32,6 +32,7 @@ data class Profile(
     val notes: String = "",
     /** The care plan from setup, as JSON ([CarePlan]): doctors, current symptoms, treatments, risks, emergencies. */
     @androidx.room.ColumnInfo(defaultValue = "") val plan: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 /** Family, neighbours, carers. */
@@ -56,7 +57,7 @@ data class Helper(
  * Everything the person records: symptoms, water, food, readings, SOS, check-ins, doctor visits.
  * [details] holds the structured facts as JSON (see nlu.Fact).
  */
-@Entity(tableName = "notes", indices = [Index("occurredAt"), Index("problemId"), Index("kind")])
+@Entity(tableName = "notes", indices = [Index("occurredAt"), Index("problemId"), Index("kind"), Index("uid"), Index("updatedAt")])
 data class Note(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val kind: String,                 // see Kind
@@ -75,6 +76,9 @@ data class Note(
     val groupId: Long? = null,
     val deletedAt: Long? = null,
     val text: String = "",            // plain summary line, also used for search
+    /** Shared between paired phones: the same entry has the same [uid] everywhere; [updatedAt] says which copy is newer. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 object Kind {
@@ -90,9 +94,10 @@ object Kind {
     const val IMPORTED = "IMPORTED"       // from an old report
     const val QUESTION = "QUESTION"       // question for the doctor
     const val FALL_ALERT = "FALL_ALERT"
+    const val OUTPUT = "OUTPUT"           // stool, urine, vomit
 }
 
-@Entity(tableName = "medicines")
+@Entity(tableName = "medicines", indices = [Index("uid"), Index("updatedAt")])
 data class Medicine(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
@@ -119,11 +124,14 @@ data class Medicine(
     /** what it looks like, so it can be told apart from the others: "round", "oval", "capsule", "oblong" … and a colour name */
     val shape: String = "",
     val color: String = "",
+    /** Shared between paired phones: the same entry has the same [uid] everywhere; [updatedAt] says which copy is newer. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 object DoseStatus { const val DUE = "DUE"; const val TAKEN = "TAKEN"; const val SKIPPED = "SKIPPED"; const val MISSED = "MISSED"; const val SNOOZED = "SNOOZED" }
 
-@Entity(tableName = "doses", indices = [Index(value = ["medicineId", "scheduledAt"], unique = true), Index("scheduledAt")])
+@Entity(tableName = "doses", indices = [Index(value = ["medicineId", "scheduledAt"], unique = true), Index("scheduledAt"), Index("uid"), Index("updatedAt")])
 data class Dose(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val medicineId: Long,
@@ -135,6 +143,9 @@ data class Dose(
     val reminded: Int = 0,
     val helperAlerted: Boolean = false,
     val shownBy: String? = null,      // "medlog" / "meetingtimer"
+    /** Shared between paired phones: the same entry has the same [uid] everywhere; [updatedAt] says which copy is newer. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
 @Entity(tableName = "appointments")
@@ -173,6 +184,7 @@ data class InboxItem(
 
 @Dao
 interface ProfileDao {
+    @Query("UPDATE profile SET updatedAt = :t WHERE id = 1") suspend fun setUpdated(t: Long)
     @Query("SELECT * FROM profile WHERE id = 1") fun flow(): Flow<Profile?>
     @Query("SELECT * FROM profile WHERE id = 1") suspend fun get(): Profile?
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun put(p: Profile)
@@ -190,6 +202,12 @@ interface HelperDao {
 
 @Dao
 interface NoteDao {
+    @Query("SELECT * FROM notes WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Note>
+    @Query("SELECT * FROM notes WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Note?
+    /** The same entry by what it is, whatever its id: kind, problem, when it happened and when it was made (never shared by two different entries). */
+    @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND kind = :kind AND IFNULL(problemId, '') = :problemId AND occurredAt = :at AND createdAt = :created AND text = :text LIMIT 1")
+    suspend fun sameEntry(kind: String, problemId: String, at: Long, created: Long, text: String): Note?
+    @Query("SELECT MAX(updatedAt) FROM notes") suspend fun lastChange(): Long?
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL ORDER BY occurredAt DESC LIMIT :limit") fun recentFlow(limit: Int = 500): Flow<List<Note>>
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to ORDER BY occurredAt") suspend fun between(from: Long, to: Long): List<Note>
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND occurredAt >= :from AND occurredAt < :to ORDER BY occurredAt") fun betweenFlow(from: Long, to: Long): Flow<List<Note>>
@@ -212,6 +230,9 @@ interface NoteDao {
 
 @Dao
 interface MedicineDao {
+    @Query("SELECT * FROM medicines WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Medicine>
+    @Query("SELECT * FROM medicines WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Medicine?
+    @Query("SELECT MAX(updatedAt) FROM medicines") suspend fun lastChange(): Long?
     @Query("SELECT * FROM medicines WHERE active = 1 ORDER BY name") fun activeFlow(): Flow<List<Medicine>>
     @Query("SELECT * FROM medicines WHERE active = 1 ORDER BY name") suspend fun active(): List<Medicine>
     @Query("SELECT * FROM medicines ORDER BY active DESC, name") suspend fun all(): List<Medicine>
@@ -222,6 +243,10 @@ interface MedicineDao {
 
 @Dao
 interface DoseDao {
+    @Query("SELECT * FROM doses WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Dose>
+    @Query("SELECT * FROM doses WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Dose?
+    @Query("SELECT * FROM doses WHERE medicineId = :med AND scheduledAt = :at LIMIT 1") suspend fun at(med: Long, at: Long): Dose?
+    @Query("SELECT MAX(updatedAt) FROM doses") suspend fun lastChange(): Long?
     @Query("SELECT * FROM doses WHERE scheduledAt >= :from AND scheduledAt < :to ORDER BY scheduledAt") fun betweenFlow(from: Long, to: Long): Flow<List<Dose>>
     @Query("SELECT * FROM doses WHERE scheduledAt >= :from AND scheduledAt < :to ORDER BY scheduledAt") suspend fun between(from: Long, to: Long): List<Dose>
     @Query("SELECT * FROM doses WHERE status IN ('DUE','SNOOZED') ORDER BY scheduledAt") suspend fun open(): List<Dose>
@@ -230,6 +255,7 @@ interface DoseDao {
     @Query("SELECT * FROM doses") suspend fun everything(): List<Dose>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(d: Dose): Long
     @Update suspend fun update(d: Dose)
+    @Query("UPDATE doses SET status = 'SKIPPED', reason = :reason, actedAt = :at, snoozeUntil = NULL WHERE medicineId = :med AND status IN ('DUE','SNOOZED')") suspend fun skipOpen(med: Long, reason: String, at: Long)
     @Query("DELETE FROM doses WHERE medicineId = :med AND status = 'DUE' AND scheduledAt > :after") suspend fun dropFuture(med: Long, after: Long)
 }
 
@@ -260,7 +286,7 @@ interface InboxDao {
 
 @Database(
     entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -274,14 +300,75 @@ abstract class MedDb : RoomDatabase() {
     abstract fun inbox(): InboxDao
 
     companion object {
-        fun open(ctx: Context): MedDb {
+        fun open(ctx: Context): MedDb = open(ctx, "medlog.db")
+
+        /** This phone's own records ("medlog.db"), or the copy of someone it helps ("mirror_<pairing>.db"). */
+        fun open(ctx: Context, file: String): MedDb {
+            // screenshot tests on the computer: a plain in-memory database (SQLCipher is phone-only native code)
+            if (android.os.Build.FINGERPRINT == "robolectric")
+                return Room.inMemoryDatabaseBuilder(ctx, MedDb::class.java).allowMainThreadQueries()
+                    .addCallback(object : Callback() { override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, mirror = false) }).build()
             System.loadLibrary("sqlcipher")
             val key = Keys.databaseKey(ctx)
-            return Room.databaseBuilder(ctx, MedDb::class.java, "medlog.db")
+            return Room.databaseBuilder(ctx, MedDb::class.java, file)
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2, M2_3)
+                .addMigrations(M1_2, M2_3, M3_4)
+                .addCallback(object : Callback() {
+                    override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
+                    // every open: the stamps are always the current version, and any row missing its id is put right
+                    override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
+                })
                 .build()
+        }
+
+        private const val NOW_MS = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)"
+
+        /**
+         * Every entry gets an id shared with paired phones, and a time it last changed, without any code having to
+         * remember: new rows are stamped when they're added, and changed rows when they change. A change that
+         * already carries its own time (one arriving from the other phone) is left as it is.
+         */
+        private fun stamps(db: androidx.sqlite.db.SupportSQLiteDatabase, mirror: Boolean = false) {
+            for (t in listOf("notes", "medicines", "doses")) {
+                for (old in listOf("uid", "new", "changed", "stamp", "keep")) db.execSQL("DROP TRIGGER IF EXISTS ${t}_$old")
+                // a new row: give it an id and a time, in one step (rows arriving from the other phone already have both)
+                db.execSQL("CREATE TRIGGER ${t}_new AFTER INSERT ON $t WHEN NEW.uid = '' OR NEW.updatedAt = 0 BEGIN " +
+                    "UPDATE $t SET uid = CASE WHEN uid = '' THEN lower(hex(randomblob(16))) ELSE uid END, " +
+                    "updatedAt = CASE WHEN updatedAt = 0 THEN $NOW_MS ELSE updatedAt END WHERE id = NEW.id; END")
+                // a changed row: its time always moves forward, even twice in one millisecond, so this can never repeat itself
+                db.execSQL("CREATE TRIGGER ${t}_changed AFTER UPDATE ON $t WHEN NEW.updatedAt = OLD.updatedAt BEGIN " +
+                    "UPDATE $t SET updatedAt = MAX($NOW_MS, OLD.updatedAt + 1) WHERE id = NEW.id; END")
+                // a change written from a copy made before the row was saved: it keeps its id and gets a time, never a blank one
+                db.execSQL("CREATE TRIGGER ${t}_keep AFTER UPDATE ON $t WHEN NEW.uid = '' OR NEW.updatedAt = 0 BEGIN " +
+                    "UPDATE $t SET uid = CASE WHEN NEW.uid != '' THEN NEW.uid WHEN OLD.uid != '' THEN OLD.uid ELSE lower(hex(randomblob(16))) END, " +
+                    "updatedAt = CASE WHEN NEW.updatedAt = 0 THEN MAX($NOW_MS, OLD.updatedAt + 1) ELSE NEW.updatedAt END WHERE id = NEW.id; END")
+                // rows that lost their id before this was fixed. On this phone's own records: a new id, sent again.
+                // In a helper's copy they were mixed-up merges of different entries: dropped, and the person's phone sends them again.
+                if (mirror) db.execSQL("DELETE FROM $t WHERE uid = ''")
+                else db.execSQL("UPDATE $t SET uid = lower(hex(randomblob(16))), updatedAt = $NOW_MS WHERE uid = ''")
+                db.execSQL("UPDATE $t SET updatedAt = $NOW_MS WHERE updatedAt = 0")
+            }
+            for (old in listOf("new", "changed")) db.execSQL("DROP TRIGGER IF EXISTS profile_$old")
+            db.execSQL("CREATE TRIGGER profile_new AFTER INSERT ON profile BEGIN UPDATE profile SET updatedAt = MAX($NOW_MS, NEW.updatedAt + 1) WHERE id = NEW.id; END")
+            db.execSQL("CREATE TRIGGER profile_changed AFTER UPDATE ON profile WHEN NEW.updatedAt = OLD.updatedAt BEGIN " +
+                "UPDATE profile SET updatedAt = MAX($NOW_MS, OLD.updatedAt + 1) WHERE id = NEW.id; END")
+        }
+
+        /** 2.10: entries shared with helpers' phones. */
+        private val M3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                for (t in listOf("notes", "medicines", "doses")) {
+                    db.execSQL("ALTER TABLE $t ADD COLUMN uid TEXT NOT NULL DEFAULT ''")
+                    db.execSQL("ALTER TABLE $t ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                    db.execSQL("UPDATE $t SET uid = lower(hex(randomblob(16))), updatedAt = $NOW_MS")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_${t}_uid ON $t (uid)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS index_${t}_updatedAt ON $t (updatedAt)")
+                }
+                db.execSQL("ALTER TABLE profile ADD COLUMN updatedAt INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE profile SET updatedAt = $NOW_MS")
+                stamps(db)
+            }
         }
 
         /** 2.9: what a medicine looks like. */

@@ -4,6 +4,9 @@ import kotlinx.coroutines.launch
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.setValue
@@ -39,7 +42,19 @@ class MainActivity : ComponentActivity() {
         val s = medlog.settings.value
         val root = rootRoute()
         nav = Nav(root).also { n -> n.setupRunning = { !medlog.settings.value.onboarded && medlog.settings.value.role != "helper" } }
-        handle(intent)
+        // a link is acted on once: not again when the screen is rebuilt (turning the phone, dark mode, text size) or the
+        // app is reopened from Recents, which hands back the same link. Acting on it again made a second, empty note.
+        val fromRecents = ((intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
+        if (savedInstanceState == null && !fromRecents) handle(intent)
+        consume()
+        com.suryaprakash.medlog.feedback.FeedbackWorker.enqueueIfPending(this)
+        // Shake to report: listen only while this screen is showing, and only if the setting is on.
+        val shake = com.suryaprakash.medlog.feedback.ShakeDetector(this) { com.suryaprakash.medlog.feedback.Capture.openFeedback(this, nav) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                try { medlog.settings.flow.collect { if (it.shakeOn) shake.start() else shake.stop() } } finally { shake.stop() }
+            }
+        }
         setContent {
             val settings by medlog.settings.flow.collectAsState()
             MedTheme(settings) { App(nav) }
@@ -55,23 +70,42 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // back in front: look for a new version (at most every 30 minutes)
+    override fun onResume() {
+        super.onResume()
+        medlog.scope.launch { runCatching { com.suryaprakash.medlog.Updater.dailyCheck(this@MainActivity) } }
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         handle(intent)
+        consume()
     }
+
+    /** Forgets the link once it has been acted on. */
+    private fun consume() { intent?.let { setIntent(Intent(it).setData(null)) } }
 
     /** medlog://tell?problem=vomiting&text=..., medlog://meds, medlog://help, medlog://doctor, medlog://feature?feature=... */
     private fun handle(i: Intent?) {
         val uri = i?.data ?: return
         if (uri.scheme != "medlog" || !medlog.settings.value.onboarded) return
         val host = uri.host ?: return
+        // from a widget's "Add details": its question is answered here, so it goes back to its usual face
+        uri.getQueryParameter("clear")?.let { src ->
+            medlog.settings.putString("${src}_ask", null)
+            medlog.scope.launch { com.suryaprakash.medlog.widget.MedLogWidget.refresh(this@MainActivity) }
+        }
+        // links that do something (call, SOS, send a message) only act when MedLog made the link itself
+        val trusted = com.suryaprakash.medlog.integration.TrustedLinks.isTrusted(i, this)
+        val action = com.suryaprakash.medlog.integration.LinkPolicy.linkAction(host, uri.getQueryParameter("send") != null, trusted)
         val route: Route? = when (host) {
             "tell" -> Route.Tell(uri.getQueryParameter("problem"), uri.getQueryParameter("text"), noteId = uri.getQueryParameter("note")?.toLongOrNull())
             "meds" -> Route.Meds
+            "speak" -> Route.Tell(speak = true)
             "help" -> {
                 // from the family widget: send the chosen message straight away, then show who got it
-                uri.getQueryParameter("send")?.let { key ->
+                uri.getQueryParameter("send")?.takeIf { action == com.suryaprakash.medlog.integration.LinkPolicy.SEND }?.let { key ->
                     medlog.settings.value.messages.firstOrNull { it.substringBefore('|') == key }?.let { m ->
                         com.suryaprakash.medlog.ui.screens.HelpMessages.send(this, m.substringAfter('|'))
                         medlog.speaker.say("Sending: ${m.substringAfter('|')}")
@@ -80,13 +114,13 @@ class MainActivity : ComponentActivity() {
                 Route.Help
             }
             "messages" -> Route.Messages
-            "call" -> { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
+            "call" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.CALL) Route.Emergency else { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
             "emergency" -> Route.Emergency
-            "sos" -> { Sos.start(this, "SOS"); null }
+            "sos" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.SOS) Route.Emergency else { Sos.start(this, "SOS"); null }
             "doctor" -> Route.Doctor
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {
-                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
+                "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "foodadd" -> Route.FoodPick(); "toilet" -> Route.Output(); "didtake" -> Route.DidITake; "took" -> Route.TookNow; "food" -> Route.Food; "readings" -> Route.Readings
                 "family" -> Route.Help; "messages" -> Route.Messages; "helpers" -> Route.Helpers; "helperadd" -> Route.HelperEdit(null); "pair" -> Route.Pair
                 "visit" -> Route.Visit; "appointments" -> Route.Appointments; "reports" -> Route.Reports; "settings" -> Route.Settings
                 "easy" -> Route.EasySettings; "permissions" -> Route.Permissions; "backup" -> Route.Backup; "privacy" -> Route.Privacy
@@ -94,7 +128,38 @@ class MainActivity : ComponentActivity() {
                 else -> null
             }
             "reports" -> Route.Reports
+            // debug builds only: pair this phone with itself through the relay, to test sharing end to end on one device
+            "debugloop" -> if (!BuildConfig.DEBUG) null else {
+                medlog.scope.launch {
+                    val key = com.suryaprakash.medlog.data.Keys.randomB64(32)
+                    com.suryaprakash.medlog.data.Sync.forget(this@MainActivity, "looptest")
+                    medlog.db.helpers().insert(com.suryaprakash.medlog.data.Helper(name = "Loop helper", phone = "0000000", pairId = "looptest", pairKey = key, sos = false, alerts = false))
+                    com.suryaprakash.medlog.data.People.put(this@MainActivity, com.suryaprakash.medlog.data.CaredFor("looptestB", key, "Loop person"))
+                    medlog.settings.update { it.copy(internetLink = true) }
+                    com.suryaprakash.medlog.help.Nearby.startListening(this@MainActivity)
+                }
+                null
+            }
+            // debug builds only: fire the next medicine alarm now, to test the alarm screen and swipe-to-silence
+            "debugalarm" -> if (!BuildConfig.DEBUG) null else {
+                medlog.scope.launch {
+                    val d = medlog.db.doses().between(System.currentTimeMillis() - 3 * com.suryaprakash.medlog.data.HOUR, System.currentTimeMillis() + 2 * com.suryaprakash.medlog.data.DAY)
+                        .firstOrNull { it.status == com.suryaprakash.medlog.data.DoseStatus.DUE && medlog.db.medicines().get(it.medicineId)?.form != "feed" }
+                    if (d != null) com.suryaprakash.medlog.meds.DoseAlert.show(this@MainActivity, listOf(d), louder = false)
+                }
+                null
+            }
+            "debugunloop" -> if (!BuildConfig.DEBUG) null else {
+                medlog.scope.launch {
+                    medlog.db.helpers().all().filter { it.pairId == "looptest" }.forEach { medlog.db.helpers().delete(it.id) }
+                    com.suryaprakash.medlog.data.People.remove(this@MainActivity, "looptestB")
+                    com.suryaprakash.medlog.help.Nearby.startListening(this@MainActivity)
+                }
+                null
+            }
+            "output" -> Route.Output(uri.getQueryParameter("tab")?.toIntOrNull()?.coerceIn(0, 2) ?: 0)
             "helper" -> Route.HelperHome
+            "dose" -> { val pr = uri.getQueryParameter("pair"); val u = uri.getQueryParameter("uid"); if (pr != null && u != null) Route.DoseChoices(pr, u) else Route.HelperHome }
             "history" -> Route.Notes
             "checkin" -> Route.Home
             "feature" -> when (uri.getQueryParameter("feature")?.lowercase()?.trim()) {
@@ -169,7 +234,11 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Meds -> MedsScreen(nav)
             is Route.MedEdit -> MedEditScreen(nav, r.id)
             Route.DidITake -> DidITakeScreen(nav)
+            Route.TookNow -> TookNowScreen(nav)
+            is Route.TodayMeds -> com.suryaprakash.medlog.ui.screens.TodayMedsScreen(nav, r.feeds)
             Route.Food -> FoodScreen(nav)
+            is Route.SpeakAll -> SpeakAllScreen(nav, r.text)
+            is Route.Output -> OutputScreen(nav, r.tab)
             is Route.FoodPick -> FoodPickScreen(nav, r.noteId)
             Route.FeedNew -> FeedNewScreen(nav)
             Route.Readings -> ReadingsScreen(nav)
@@ -180,20 +249,26 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             is Route.HelperEdit -> HelperEditScreen(nav, r.id)
             Route.Pair -> PairScreen(nav)
             Route.HelperHome -> HelperHomeScreen(nav)
+            Route.HelperChat -> HelperChatScreen(nav)
             Route.Doctor -> DoctorScreen(nav)
             Route.Visit -> VisitScreen(nav)
             Route.Appointments -> AppointmentsScreen(nav)
             Route.Reports -> ReportsScreen(nav)
+            is Route.Measure -> com.suryaprakash.medlog.ui.screens.MeasureScreen(nav, r.key)
             Route.Nutrition -> NutritionScreen(nav)
-            Route.Settings -> SettingsScreen(nav)
+            Route.Settings -> SettingsScreen(nav)   // one Settings page for both modes (owner: "Settings page should never change")
             Route.EasySettings -> EasySettingsScreen(nav)
             Route.Permissions -> PermissionsScreen(nav)
             Route.Backup -> BackupScreen(nav)
             Route.Privacy -> PrivacyScreen(nav)
             Route.HelperLock -> HelperLockScreen(nav)
+            is Route.DoseChoices -> com.suryaprakash.medlog.ui.screens.DoseChoicesScreen(nav, r.pairId, r.uid)
             Route.Onboarding -> OnboardingScreen(nav)
             Route.Import -> ImportScreen(nav)
             Route.Devices -> DevicesScreen(nav)
+            Route.Limits -> LimitsScreen(nav)
+            Route.Feedback -> com.suryaprakash.medlog.feedback.FeedbackScreen(nav)
+            Route.MyReports -> com.suryaprakash.medlog.feedback.MyReportsScreen(nav)
         }
     }
 }

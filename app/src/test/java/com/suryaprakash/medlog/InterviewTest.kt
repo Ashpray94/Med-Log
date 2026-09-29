@@ -46,6 +46,8 @@ class InterviewTest {
         assertTrue(Interview.core(CAT, CAT.problem("itching")!!, emptyMap()).any { it.id == "itch" })
         assertTrue(Interview.core(CAT, CAT.problem("vomiting")!!, emptyMap()).none { it.id == "where" })
         assertTrue(Interview.core(CAT, CAT.problem("knee_pain")!!, emptyMap()).any { it.id == "where" })
+        // a cough that keeps coming: how often, and since when a doctor has known
+        assertTrue(Interview.core(CAT, CAT.problem("cough")!!, emptyMap()).map { it.id }.containsAll(listOf("often", "diagnosed")))
         // never more than a handful before asking whether to go on
         for (p in CAT.problems) assertTrue(p.id, Interview.core(CAT, p, emptyMap()).size <= 6)
         // known facts are not asked again

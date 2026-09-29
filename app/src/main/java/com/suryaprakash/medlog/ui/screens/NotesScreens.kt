@@ -1,4 +1,11 @@
 package com.suryaprakash.medlog.ui.screens
+import com.suryaprakash.medlog.data.planned
+import androidx.compose.material.icons.rounded.Wc
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.ExpandLess
 
 import android.media.MediaPlayer
 import androidx.compose.foundation.Canvas
@@ -81,6 +88,7 @@ import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.UndoHost
 import com.suryaprakash.medlog.ui.steady
+import com.suryaprakash.medlog.ui.lift
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -100,14 +108,14 @@ fun dateLabel(d: LocalDate): String = if (d == LocalDate.now()) "Today" else ful
 /** "Thursday, 24 September", always, with the year when it is not this year. */
 fun fullDate(d: LocalDate): String {
     val pattern = if (d.year == LocalDate.now().year) "EEEE, d MMMM" else "EEEE, d MMMM yyyy"
-    return SimpleDateFormat(pattern, Locale.ENGLISH).format(Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant()))
+    return SimpleDateFormat(pattern, com.suryaprakash.medlog.speech.I18n.locale).format(Date.from(d.atStartOfDay(ZoneId.systemDefault()).toInstant()))
 }
 
 /** Lower-case the first word only when it is an ordinary word ("Earlier…"), never a day or month name. */
 fun softStart(w: String): String = if (w.startsWith("Earlier") || w.startsWith("A ")) w.replaceFirstChar(Char::lowercase) else w
 
 /** "10:06 PM". */
-fun timeLabel(t: Long): String = SimpleDateFormat("h:mm a", Locale.ENGLISH).format(Date(t))
+fun timeLabel(t: Long): String = SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(Date(t))
 
 fun localDate(t: Long): LocalDate = Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).toLocalDate()
 
@@ -155,10 +163,17 @@ fun NotesScreen(nav: Nav) {
     var day by remember { mutableStateOf(LocalDate.now()) }
     val zone = ZoneId.systemDefault()
     val from = day.atStartOfDay(zone).toInstant().toEpochMilli()
-    val notes by app.db.notes().betweenFlow(from, from + DAY).collectAsState(emptyList())
-    val doses by app.db.doses().betweenFlow(from, from + DAY).collectAsState(emptyList())
+    val notes by app.viewDb.notes().betweenFlow(from, from + DAY).collectAsState(emptyList())
+    val allDoses by app.viewDb.doses().betweenFlow(from, from + DAY).collectAsState(emptyList())
+    val medForms by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
+    // feeds are food, not medicine: counted in their own group
+    val feedIds = medForms.filter { it.form == "feed" }.map { it.id }.toSet()
+    val doses = allDoses.filter { it.medicineId !in feedIds }
+    val feedDoses = allDoses.filter { it.medicineId in feedIds }
+    // "Watch" only for something overdue, never for doses still to come later today
+    fun late(list: List<com.suryaprakash.medlog.data.Dose>) = list.any { it.status == DoseStatus.MISSED || (it.status != DoseStatus.TAKEN && it.status != DoseStatus.SKIPPED && it.scheduledAt < System.currentTimeMillis() - 30 * 60_000) }
     val since = remember { System.currentTimeMillis() - 90 * DAY }
-    val allSymptoms by app.db.notes().symptomsSinceFlow(since).collectAsState(emptyList())
+    val allSymptoms by app.viewDb.notes().symptomsSinceFlow(since).collectAsState(emptyList())
     // which days in the strip have something
     val daysWith = remember(allSymptoms) { allSymptoms.map { Instant.ofEpochMilli(it.occurredAt).atZone(zone).toLocalDate() }.toSet() }
 
@@ -166,7 +181,7 @@ fun NotesScreen(nav: Nav) {
     val speak = if (byProblem) "Your problems from the last 3 months. Tap one to see every time you noted it."
         else "${dateLabel(day)}. " + if (symptomNotes.isEmpty()) "Nothing noted." else symptomNotes.joinToString(". ") { app.catalogue.problem(it.problemId)?.label ?: it.text }
 
-    Screen("History", speak, onHome = { nav.home() }, trailing = {
+    Screen("History", speak, onHome = { nav.home() }, onBack = { nav.back() }, trailing = {
         Box(Modifier.size(52.dp).clip(CircleShape).background(p.card).steady("Find a note") { nav.go(Route.Search) }, contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.Search, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
         }
@@ -175,13 +190,15 @@ fun NotesScreen(nav: Nav) {
         if (!byProblem) {
             DayNavigator(day, onPrev = { day = day.minusDays(1) }, onNext = { if (day.isBefore(LocalDate.now())) day = day.plusDays(1) })
             WeekStrip(day, daysWith) { day = it }
-            DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, onNote = { nav.go(Route.NoteDetail(it)) })
+            DaySummary(app, notes, doses.count { it.status == DoseStatus.TAKEN }, doses.size, feedDoses.planned().count { it.status == DoseStatus.TAKEN }, feedDoses.planned().size, onNote = { nav.go(Route.NoteDetail(it)) },
+                medsLate = late(doses), feedsLate = late(feedDoses), medDoses = doses.mapNotNull { d -> medForms.firstOrNull { it.id == d.medicineId }?.let { it.name to d } },
+                onGo = { nav.go(it) })
         } else {
-            val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
+            val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.filterValues { com.suryaprakash.medlog.data.Occurrences.total(it) > 0 }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
             if (grouped.isEmpty()) Empty("Nothing noted in the last 3 months.")
             grouped.forEach { (pid, list) ->
                 val label = app.catalogue.problem(pid)?.label ?: pid
-                val times = list.sumOf { it.count ?: 1 }
+                val times = com.suryaprakash.medlog.data.Occurrences.total(list)
                 HistoryRow(
                     icon = { SpriteIcon(pid, 48.dp) },
                     title = label,
@@ -204,8 +221,8 @@ private fun DayNavigator(day: LocalDate, onPrev: () -> Unit, onNext: () -> Unit)
         ArrowButton(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Go to ${fullDate(day.minusDays(1))}", true, onPrev)
         val at = Date.from(day.atStartOfDay(ZoneId.systemDefault()).toInstant())
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(if (day == LocalDate.now()) "Today" else SimpleDateFormat("d MMMM", Locale.ENGLISH).format(at), fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, textAlign = TextAlign.Center)
-            Text(SimpleDateFormat(if (day == LocalDate.now()) "EEEE, d MMMM yyyy" else "EEEE, yyyy", Locale.ENGLISH).format(at), fontSize = sc.small, color = p.inkSoft, textAlign = TextAlign.Center)
+            Text(if (day == LocalDate.now()) "Today" else SimpleDateFormat("d MMMM", com.suryaprakash.medlog.speech.I18n.locale).format(at), fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, textAlign = TextAlign.Center)
+            Text(SimpleDateFormat(if (day == LocalDate.now()) "EEEE, d MMMM yyyy" else "EEEE, yyyy", com.suryaprakash.medlog.speech.I18n.locale).format(at), fontSize = sc.small, color = p.inkSoft, textAlign = TextAlign.Center)
         }
         ArrowButton(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Go to ${fullDate(day.plusDays(1))}", canNext, onNext)
     }
@@ -243,34 +260,166 @@ private fun WeekStrip(day: LocalDate, daysWith: Set<LocalDate>, onPick: (LocalDa
 
 /** One day: what was felt, then a single line each for medicines, water and food. */
 @Composable
-private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, onNote: (Long) -> Unit) {
+private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, fed: Int, feeds: Int, onNote: (Long) -> Unit, medsLate: Boolean = false, feedsLate: Boolean = false,
+                       medDoses: List<Pair<String, com.suryaprakash.medlog.data.Dose>> = emptyList(), onGo: (Route) -> Unit = {}) {
     val p = LocalPalette.current
+    val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val symptoms = notes.filter { it.kind == Kind.SYMPTOM }.sortedBy { it.occurredAt }
-    val water = notes.filter { it.kind == Kind.WATER }.sumOf { it.count ?: 1 }
-    val food = notes.filter { it.kind == Kind.FOOD }
-    val readings = notes.filter { it.kind == Kind.READING }
+    val water = notes.filter { it.kind == Kind.WATER }
+    val food = notes.filter { it.kind == Kind.FOOD }.sortedBy { it.occurredAt }
+    val readings = notes.filter { it.kind == Kind.READING }.sortedBy { it.occurredAt }
+    val output = notes.filter { it.kind == Kind.OUTPUT }.sortedBy { it.occurredAt }
     val other = notes.filter { it.kind in setOf(Kind.SOS, Kind.VISIT, Kind.MED_TAKEN, Kind.QUESTION, Kind.IMPORTED) }
-    if (symptoms.isEmpty() && water == 0 && food.isEmpty() && due == 0 && readings.isEmpty() && other.isEmpty()) { Empty("Nothing noted on this day."); return }
+    if (symptoms.isEmpty() && water.isEmpty() && food.isEmpty() && due == 0 && feeds == 0 && readings.isEmpty() && other.isEmpty() && output.isEmpty()) { Empty("Nothing noted on this day."); return }
+    // one group per kind of thing; open a group to see each entry
+    var open by remember { mutableStateOf<String?>(null) }
+    fun toggle(k: String) { open = if (open == k) null else k }
+    var doseSheet by remember { mutableStateOf<Pair<String, com.suryaprakash.medlog.data.Dose>?>(null) }
+    doseSheet?.let { (name, d) -> DoseAfterSheet(name, d, onDismiss = { doseSheet = null }) }
+    fun times(list: List<Note>) = list.joinToString(", ") { timeLabel(it.occurredAt) }
+
+    // every time in the same column, as wide as the widest time ("12:59 PM") in this text size, so the times and
+    // the names line up down the list and on their first line
+    val timeStyle = androidx.compose.ui.text.TextStyle(fontSize = sc.body, fontWeight = FontWeight.SemiBold)
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val timeWidth = remember(sc.body, com.suryaprakash.medlog.speech.I18n.lang) {
+        val widest = listOf(0L, 12 * 3600_000L + 59 * 60_000L, 22 * 3600_000L + 59 * 60_000L).maxOf { t ->
+            measurer.measure(timeLabel(java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() + t), timeStyle).size.width
+        }
+        with(density) { widest.toDp() } + 16.dp
+    }
+
+    // each entry in a group is a step on a timeline: the dot, the time on top, what it was, what was noted
+    @Suppress("UNUSED_VARIABLE") val unusedTime = timeStyle to timeWidth
+    @Composable
+    fun Entry(n: Note, title: String, sub: String, level: String = "GREEN", last: Boolean = false) {
+        com.suryaprakash.medlog.ui.TimelineRow(com.suryaprakash.medlog.ui.TimelineItem(timeLabel(n.occurredAt), title, sub.ifBlank { null },
+            mark = when (level) { "RED" -> p.red; "AMBER" -> p.amber; else -> null }, onClick = { onNote(n.id) }), last,
+            trailing = if (level != "GREEN") { { Box(Modifier.padding(top = 4.dp)) { LevelMark(level, withWord = false) } } } else null)
+    }
 
     if (symptoms.isNotEmpty()) {
-        Title("How I felt")
-        symptoms.forEach { n ->
-            val facts = factsFromJson(n.details)
-            HistoryRow(
-                icon = { SpriteIcon(n.problemId, 48.dp) },
-                title = app.catalogue.problem(n.problemId)?.label ?: n.text,
-                sub = listOf(timeLabel(n.occurredAt), shortDetail(app, facts, n.occurredAt)).filter { it.isNotBlank() }.joinToString(" · "),
-                level = n.triage,
-            ) { onNote(n.id) }
+        com.suryaprakash.medlog.ui.SectionHeader("How I felt", "${symptoms.size} noted", null)
+        symptoms.groupBy { it.problemId ?: it.text }.forEach { (pid, list) ->
+            val label = app.catalogue.problem(pid)?.label ?: list.first().text
+            val worst = list.maxByOrNull { levelRank(it.triage) }?.triage ?: "GREEN"
+            HistoryGroup(label, "${list.size} time${if (list.size == 1) "" else "s"} · ${times(list)}", { SpriteIcon(pid, 44.dp) }, worst, open == "s$pid", { toggle("s$pid") }) {
+                list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, label, shortDetail(app, factsFromJson(n.details), n.occurredAt), n.triage, last = lastE) }
+            }
         }
     }
-    val daily = ArrayList<@Composable () -> Unit>()
-    if (due > 0) daily += { HistoryRow({ IconTile(Icons.Rounded.Medication, p.tintOrange, 48.dp) }, "Medicines", "$taken of $due taken", level = if (taken < due) "AMBER" else "GREEN", showChevron = false) {} }
-    if (water > 0) daily += { HistoryRow({ IconTile(Icons.Rounded.LocalDrink, p.tintBlue, 48.dp) }, "Water", "$water ${if (water == 1) "glass" else "glasses"}", showChevron = false) {} }
-    if (food.isNotEmpty()) daily += { HistoryRow({ IconTile(Icons.Rounded.Restaurant, p.tintGreen, 48.dp) }, "Food", food.joinToString(", ") { it.transcript ?: "a meal" }, showChevron = false) {} }
-    readings.forEach { r -> daily += { HistoryRow({ IconTile(Icons.Rounded.MonitorHeart, p.tintPink, 48.dp) }, r.text, timeLabel(r.occurredAt), showChevron = false) {} } }
-    other.forEach { n -> daily += { HistoryRow({ IconTile(if (n.kind == Kind.SOS) Icons.Rounded.Sos else Icons.Rounded.StickyNote2, if (n.kind == Kind.SOS) p.red else p.tintTeal, 48.dp) }, n.text, timeLabel(n.occurredAt)) { onNote(n.id) } } }
-    if (daily.isNotEmpty()) { Title("Medicines, food and more"); daily.forEach { it() } }
+
+    com.suryaprakash.medlog.ui.SectionHeader("Medicines, food and more", "Tap a group to see each one", null)
+    // every group can take you to its own page: Feeds straight away, the others from a line at the foot of the group
+    if (feeds > 0) HistoryGroup("Feeds", "$fed of $feeds given", { IconTile(Icons.Rounded.LocalDrink, p.tintPurple, 44.dp) }, if (feedsLate) "AMBER" else "GREEN", false, { onGo(Route.Food) }, expandable = false) {}
+    if (due > 0) HistoryGroup("Medicines", "$taken of $due taken", { IconTile(Icons.Rounded.Medication, p.tintOrange, 44.dp) }, if (medsLate) "AMBER" else "GREEN", open == "m", { toggle("m") }) {
+        // one line per dose, in time order: when, which medicine, and what happened. Tap one to note it afterwards.
+        medDoses.sortedBy { it.second.scheduledAt }.forEach { (name, d) ->
+            val status = when (d.status) {
+                DoseStatus.TAKEN -> "Taken" + (d.actedAt?.let { " at ${timeLabel(it)}" } ?: "")
+                DoseStatus.MISSED -> "Missed"
+                DoseStatus.SKIPPED -> if (d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS else "Skipped"
+                else -> if (d.scheduledAt > System.currentTimeMillis()) "Later today" else "Not taken yet"
+            }
+            com.suryaprakash.medlog.ui.TimelineRow(com.suryaprakash.medlog.ui.TimelineItem(timeLabel(d.scheduledAt), name, status,
+                mark = when (d.status) { DoseStatus.TAKEN -> p.ok; DoseStatus.MISSED -> p.red; else -> null }, onClick = { doseSheet = name to d }),
+                last = d == medDoses.maxByOrNull { it.second.scheduledAt }?.second)
+        }
+        GoLine("Open Medicines") { onGo(Route.Meds) }
+    }
+    if (water.isNotEmpty()) {
+        val glasses = water.sumOf { it.count ?: 1 }
+        HistoryGroup("Water", "$glasses glass${if (glasses == 1) "" else "es"} · ${times(water)}", { IconTile(Icons.Rounded.LocalDrink, p.tintBlue, 44.dp) }, "GREEN", open == "w", { toggle("w") }) {
+            water.forEachIndexed { i, n -> val lastE = i == water.lastIndex; Entry(n, "${n.count ?: 1} glass", "", last = lastE) }
+            GoLine("Open Food & water") { onGo(Route.Food) }
+        }
+    }
+    if (food.isNotEmpty()) {
+        val kcal = food.sumOf { runCatching { org.json.JSONObject(it.details ?: "").optInt("kcal", 0) }.getOrDefault(0) }
+        HistoryGroup("Food", "${food.size} meal${if (food.size == 1) "" else "s"}${if (kcal > 0) " · $kcal kcal" else ""}", { IconTile(Icons.Rounded.Restaurant, p.tintGreen, 44.dp) },
+            "GREEN", open == "f", { toggle("f") }) {
+            food.forEach { n ->
+                // the main dish as the name; its amount, what came with it and the calories under it
+                val o = runCatching { org.json.JSONObject(n.details ?: "") }.getOrNull()
+                val items = o?.optJSONArray("items")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
+                val main = items.firstOrNull { x -> com.suryaprakash.medlog.nutrition.Foods.all.firstOrNull { it.name == x.optString("name") }?.side != true } ?: items.firstOrNull()
+                val sides = items.filter { it !== main }.joinToString(", ") { it.optString("name") }
+                val k = o?.optInt("kcal", -1) ?: -1
+                if (main == null) Entry(n, n.transcript?.ifBlank { null } ?: "Photo of a meal", if (k >= 0) "$k kcal" else "", last = n == food.last())
+                else Entry(n, main.optString("name").replaceFirstChar(Char::uppercase),
+                    listOfNotNull(main.optString("amount").ifBlank { null }?.takeIf { a -> a.any(Char::isDigit) && listOf("katori", "plate", "cup").none { a.contains(it) } },
+                        sides.ifBlank { null }?.let { "with $it" }, if (k >= 0) "$k kcal" else null).joinToString(" · "), last = n == food.last())
+            }
+            GoLine("Open Food & water") { onGo(Route.Food) }
+        }
+    }
+    if (output.isNotEmpty()) {
+        val flagged = output.any { it.triage != "GREEN" }
+        HistoryGroup("Toilet and tummy", "${output.size} · ${times(output)}", { IconTile(Icons.Rounded.Wc, p.tintTeal, 44.dp) }, if (flagged) "AMBER" else "GREEN",
+            open == "t", { toggle("t") }) {
+            output.forEachIndexed { i, n -> val lastE = i == output.lastIndex; Entry(n, n.text.substringBefore(":"), n.text.substringAfter(": ", ""), n.triage, last = lastE) }
+            GoLine("Open Toilet and tummy") { onGo(Route.Output()) }
+        }
+    }
+    readings.groupBy { r -> runCatching { org.json.JSONObject(r.details).optString("type") }.getOrDefault("") }.forEach { (type, list) ->
+        val name = mapOf("bp" to "Blood pressure", "sugar" to "Sugar", "spo2" to "Oxygen", "temp" to "Temperature", "pulse" to "Pulse", "weight" to "Weight")[type] ?: "Readings"
+        HistoryGroup(name, "${list.size} reading${if (list.size == 1) "" else "s"} · last ${list.last().text?.substringAfter(" ")}", { IconTile(Icons.Rounded.MonitorHeart, p.tintPink, 44.dp) },
+            "GREEN", open == "r$type", { toggle("r$type") }) {
+            list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, n.text ?: "", "", last = lastE) }
+            GoLine("Open BP & sugar") { onGo(Route.Readings) }
+        }
+    }
+    other.groupBy { it.kind }.forEach { (kind, list) ->
+        val name = when (kind) { Kind.SOS -> "SOS"; Kind.VISIT -> "Doctor visits"; Kind.MED_TAKEN -> "Medicines when needed"; Kind.QUESTION -> "Questions for the doctor"; else -> "From old reports" }
+        HistoryGroup(name, "${list.size} · ${times(list)}", { IconTile(if (kind == Kind.SOS) Icons.Rounded.Sos else Icons.Rounded.StickyNote2, if (kind == Kind.SOS) p.red else p.tintTeal, 44.dp) },
+            if (kind == Kind.SOS) "RED" else "GREEN", open == "o$kind", { toggle("o$kind") }) {
+            list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, n.text ?: "", "", last = lastE) }
+        }
+    }
+}
+
+/** The last line of an opened group: to that kind's own page. */
+@Composable
+private fun GoLine(text: String, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp).heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.fill).steady(text, onClick = onClick).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        Text(text, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(22.dp))
+    }
+}
+
+/** A group in the day: an icon, a name and a one-line count; opens to show each entry. Groups with nothing to open don't open. */
+@Composable
+private fun HistoryGroup(title: String, sub: String, icon: @Composable () -> Unit, level: String, open: Boolean, onToggle: () -> Unit, expandable: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    val p = LocalPalette.current
+    val sc = com.suryaprakash.medlog.ui.LocalScale.current
+    val sh = RoundedCornerShape(sc.radius)
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title. $sub", onClick = onToggle).padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            icon()
+            Spacer(Modifier.width(14.dp))
+            // the "Watch" mark sits under the name, so it never squeezes it
+            // the "Watch" mark sits at the right of the name, so the card keeps its height; the name wraps if it must
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink, modifier = Modifier.weight(1f, fill = false))
+                    if (level != "GREEN") { Spacer(Modifier.width(8.dp)); LevelMark(level, withWord = false) }
+                }
+                Text(sub, fontSize = sc.small, color = p.inkSoft)
+            }
+            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, androidx.compose.animation.core.tween(260), label = "chevron")
+            if (expandable) Icon(Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.size(26.dp).graphicsLayer { rotationZ = turn })
+            else Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
+        }
+        androidx.compose.animation.AnimatedVisibility(open && expandable,
+            enter = androidx.compose.animation.expandVertically(androidx.compose.animation.core.tween(260), expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(200, delayMillis = 60)),
+            exit = androidx.compose.animation.shrinkVertically(androidx.compose.animation.core.tween(220), shrinkTowards = Alignment.Top) + androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120))) {
+            Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 10.dp, bottom = 12.dp), content = content)
+        }
+    }
 }
 
 @Composable
@@ -308,12 +457,13 @@ fun ProblemHistoryScreen(nav: Nav, problemId: String) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val since = remember { System.currentTimeMillis() - 90 * DAY }
-    val all by app.db.notes().symptomsSinceFlow(since).collectAsState(emptyList())
+    val all by app.viewDb.notes().symptomsSinceFlow(since).collectAsState(emptyList())
     val list = all.filter { it.problemId == problemId }.sortedByDescending { it.occurredAt }
     val label = app.catalogue.problem(problemId)?.label ?: problemId
     val days = (13 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
-    val counts = days.map { d -> list.filter { localDate(it.occurredAt) == d }.sumOf { it.count ?: 1 } }
-    val total = list.sumOf { it.count ?: 1 }
+    val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list)
+    val counts = days.map { d -> perDay[d] ?: 0 }
+    val total = com.suryaprakash.medlog.data.Occurrences.total(list)
     Screen(label, "$label: noted $total times in the last 3 months.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -332,7 +482,7 @@ fun ProblemHistoryScreen(nav: Nav, problemId: String) {
                 }
             }
             Row(Modifier.fillMaxWidth()) {
-                Text(SimpleDateFormat("d MMMM", Locale.ENGLISH).format(Date.from(days.first().atStartOfDay(ZoneId.systemDefault()).toInstant())), fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
+                Text(SimpleDateFormat("d MMMM", com.suryaprakash.medlog.speech.I18n.locale).format(Date.from(days.first().atStartOfDay(ZoneId.systemDefault()).toInstant())), fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
                 Text("Today", fontSize = sc.small, color = p.inkSoft)
             }
         }
@@ -431,7 +581,7 @@ fun NoteDetailScreen(nav: Nav, id: Long) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
-    val note by app.db.notes().flow(id).collectAsState(null)
+    val note by app.viewDb.notes().flow(id).collectAsState(null)
     var player by remember { mutableStateOf<MediaPlayer?>(null) }
     DisposableEffect(Unit) { onDispose { player?.release() } }
     val n = note ?: return
@@ -465,8 +615,8 @@ fun NoteDetailScreen(nav: Nav, id: Long) {
         if (problem != null) BigButton("Add more about this", tone = Tone.QUIET, onClick = { nav.go(Route.Tell(noteId = n.id)) })
         BigButton("Remove this note", tone = Tone.SECONDARY, icon = Icons.Rounded.Delete, onClick = {
             scope.launch {
-                app.repo.remove(listOf(n.id)); app.refreshWidgets()
-                UndoHost.show("Note removed.") { scope.launch { app.repo.restore(listOf(n.id)); app.refreshWidgets() } }
+                app.viewRepo.remove(listOf(n.id)); app.refreshWidgets()
+                UndoHost.show("Note removed.") { scope.launch { app.viewRepo.restore(listOf(n.id)); app.refreshWidgets() } }
                 nav.back()
             }
         })
@@ -478,13 +628,13 @@ fun RemovedScreen(nav: Nav) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val scope = rememberCoroutineScope()
-    val removed by app.db.notes().removedFlow().collectAsState(emptyList())
+    val removed by app.viewDb.notes().removedFlow().collectAsState(emptyList())
     Screen("Removed notes", "Removed notes are kept for 30 days. Tap Bring back to restore one.", onHome = { nav.home() }, onBack = { nav.back() }) {
         if (removed.isEmpty()) Empty("Nothing removed.")
         removed.forEach { n ->
             Card {
                 Body("${dayLabel(n.occurredAt)} · ${n.text}")
-                BigButton("Bring back", tone = Tone.QUIET, icon = Icons.Rounded.Restore, onClick = { scope.launch { app.repo.restore(listOf(n.id)); app.refreshWidgets() } })
+                BigButton("Bring back", tone = Tone.QUIET, icon = Icons.Rounded.Restore, onClick = { scope.launch { app.viewRepo.restore(listOf(n.id)); app.refreshWidgets() } })
             }
         }
     }
@@ -500,10 +650,36 @@ fun SearchScreen(nav: Nav) {
     var notes by remember { mutableStateOf<List<Note>>(emptyList()) }
     var docs by remember { mutableStateOf<List<DocLine>>(emptyList()) }
     Screen("Find a note", "Type a word, like dizzy or BP.", onHome = { nav.home() }, onBack = { nav.back() }) {
-        BigField("Word to find", q, { v -> q = v; scope.launch { val (a, b) = app.repo.search(v); notes = a; docs = b } })
+        BigField("Word to find", q, { v -> q = v; scope.launch { val (a, b) = app.viewRepo.search(v); notes = a; docs = b } })
         if (q.length >= 2 && notes.isEmpty() && docs.isEmpty()) Empty("Nothing found for “$q”.")
         notes.forEach { n -> NoteRow(n) { nav.go(Route.NoteDetail(n.id)) } }
         if (docs.isNotEmpty()) { Title("From your old reports"); docs.forEach { d -> Card { Hint(d.source); Body(d.content) } } }
         BigButton("Removed notes", tone = Tone.SECONDARY, icon = Icons.Rounded.Restore, onClick = { nav.go(Route.Removed) })
+    }
+}
+
+/**
+ * One dose from any day, noted afterwards: taken on time, taken at another time, not taken, or skipped.
+ * So a day's medicines can be put right at night or the next day, by the person or a helper.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun DoseAfterSheet(name: String, d: com.suryaprakash.medlog.data.Dose, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val p = LocalPalette.current
+    val sc = com.suryaprakash.medlog.ui.LocalScale.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var other by remember { mutableStateOf(false) }
+    fun done(block: suspend () -> Unit) { scope.launch { block(); com.suryaprakash.medlog.ui.savedFeedback(ctx) }; onDismiss() }
+    if (other) { com.suryaprakash.medlog.ui.WhenSheet(d.actedAt ?: d.scheduledAt, onDone = { t -> done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, t ?: System.currentTimeMillis()) } }, onDismiss = onDismiss); return }
+    val t = com.suryaprakash.medlog.ui.screens.chipTime(d.scheduledAt)
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.suryaprakash.medlog.ui.SectionHeader(name, "The $t dose, ${dayLabel(d.scheduledAt).lowercase()}", null)
+            BigButton("Taken on time · $t", tone = com.suryaprakash.medlog.ui.Tone.PRIMARY, onClick = { done { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, d.scheduledAt) } })
+            BigButton("Taken at another time", tone = com.suryaprakash.medlog.ui.Tone.TINT, onClick = { other = true })
+            if (d.status == DoseStatus.TAKEN) BigButton("Not taken", tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, onClick = { done { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } })
+            if (d.status != DoseStatus.SKIPPED) BigButton("Skipped on purpose", tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, onClick = { done { com.suryaprakash.medlog.data.Doses.skip(ctx, d.id, "Skipped") } })
+        }
     }
 }

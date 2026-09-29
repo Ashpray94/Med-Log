@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.planned
 import android.graphics.BitmapFactory
 import com.suryaprakash.medlog.ui.steady
 import androidx.compose.foundation.layout.padding
@@ -85,7 +86,7 @@ fun MedPhoto(path: String?, sizeMul: Float = 1.2f) {
 
 private fun statusWord(d: Dose, now: Long) = when (d.status) {
     DoseStatus.TAKEN -> "✓ Taken ${d.actedAt?.let { DoseActivity.time(it) } ?: ""}"
-    DoseStatus.SKIPPED -> "Skipped" + (d.reason?.let { ": $it" } ?: "")
+    DoseStatus.SKIPPED -> if (d.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) com.suryaprakash.medlog.data.FOOD_INSTEAD_WORDS else "Skipped" + (d.reason?.let { ": $it" } ?: "")
     DoseStatus.MISSED -> "Missed"
     DoseStatus.SNOOZED -> "Later: ${d.snoozeUntil?.let { DoseActivity.time(it) } ?: ""}"
     else -> if (d.scheduledAt <= now) "Due now" else "Later today"
@@ -99,20 +100,21 @@ fun MedsScreen(nav: Nav) {
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
     val (start, end) = remember { Scheduler.today() }
-    val doses by app.db.doses().betweenFlow(start, end).collectAsState(emptyList())
-    val meds by app.db.medicines().activeFlow().collectAsState(emptyList()).let { st -> androidx.compose.runtime.derivedStateOf { st.value.filter { it.form != "feed" } } }
+    val allDoses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList()).let { st -> androidx.compose.runtime.derivedStateOf { st.value.filter { it.form != "feed" } } }
     var confirmDouble by remember { mutableStateOf<Triple<Medicine, Long?, Long?>?>(null) }
     val byId = meds.associateBy { it.id }
+    val doses = allDoses.filter { it.medicineId in byId }
     val now = System.currentTimeMillis()
     LaunchedEffect(Unit) { Scheduler.reschedule(ctx) }
 
     fun takeAsNeeded(m: Medicine, force: Boolean) {
         scope.launch {
-            val last = app.db.notes().kindSince(Kind.MED_TAKEN, now - m.minGapHours * HOUR).firstOrNull { JSONObject(it.details).optString("name") == m.name }
+            val last = app.viewDb.notes().kindSince(Kind.MED_TAKEN, now - m.minGapHours * HOUR).firstOrNull { JSONObject(it.details).optString("name") == m.name }
             if (last != null && !force) { confirmDouble = Triple(m, last.occurredAt, null); return@launch }
-            val id = app.repo.addMedicineTaken(m.name)
+            val id = app.viewRepo.addMedicineTaken(m.name)
             savedFeedback(ctx); app.speaker.say("Noted. You took ${m.name}.")
-            UndoHost.show("Noted: ${m.name}") { scope.launch { app.repo.remove(listOf(id)) } }
+            UndoHost.show("Noted: ${m.name}") { scope.launch { app.viewRepo.remove(listOf(id)) } }
             confirmDouble = null
         }
     }
@@ -122,7 +124,7 @@ fun MedsScreen(nav: Nav) {
             Body("You already took ${m.name}${at?.let { " at ${DoseActivity.time(it)}" } ?: ""}.", bold = true)
             Body("It is safest to wait ${m.minGapHours} hours between doses. Take again?")
             YesNo(yes = "Yes, again", no = "No, wait", onYes = {
-                if (doseId != null) scope.launch { Scheduler.take(ctx, doseId, force = true); confirmDouble = null } else takeAsNeeded(m, true)
+                if (doseId != null) scope.launch { com.suryaprakash.medlog.meds.Scheduler.take(ctx, doseId, force = true); confirmDouble = null } else takeAsNeeded(m, true)
             }, onNo = { confirmDouble = null })
         }
         return
@@ -133,13 +135,14 @@ fun MedsScreen(nav: Nav) {
     Screen("Medicines", speak, onHome = { nav.home() }, onBack = { nav.back() }, subtitle = "What to take, and when") {
         // today, dose by dose, the same cards as Home
         if (doses.isNotEmpty()) {
-            val taken = doses.count { it.status == DoseStatus.TAKEN }
-            com.suryaprakash.medlog.ui.SectionHeader("Today", if (taken == doses.size) "All ${doses.size} taken" else "$taken of ${doses.size} taken", null)
-            doses.forEach { d ->
-                val m = byId[d.medicineId] ?: return@forEach
-                DoseCard(d, m, onOpen = { nav.go(Route.MedEdit(m.id)) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id) } })
+            val taken = doses.planned().count { it.status == DoseStatus.TAKEN }
+            com.suryaprakash.medlog.ui.SectionHeader("Today", if (taken == doses.planned().size) "All ${doses.planned().size} taken" else "$taken of ${doses.planned().size} taken", null)
+            doses.groupBy { it.medicineId }.forEach { (id, g) ->
+                val m = byId[id] ?: return@forEach
+                DayCard(m, g, onOpen = { nav.go(Route.MedEdit(m.id)) },
+                    onTaken = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") } },
+                    onUndo = { d -> scope.launch { com.suryaprakash.medlog.data.Doses.untake(ctx, d.id) } },
+                    onTakenAt = { d, at -> scope.launch { com.suryaprakash.medlog.data.Doses.take(ctx, d.id, at); savedFeedback(ctx) } })
             }
         }
         // taken only when needed
@@ -163,11 +166,11 @@ fun MedsScreen(nav: Nav) {
             }
         }
         // every medicine, to change or add
-        com.suryaprakash.medlog.ui.SectionHeader("My medicines",
+        com.suryaprakash.medlog.ui.SectionHeader(if (com.suryaprakash.medlog.data.Viewing.pairId.collectAsState().value != null) "Their medicines" else "My medicines",
             if (meds.isEmpty()) "None added yet" else "${meds.size} medicine${if (meds.size == 1) "" else "s"} · tap one to change",
             if (meds.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
         if (meds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
-        meds.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
+        meds.filter { m -> doses.none { it.medicineId == m.id } && !m.asNeeded }.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
     }
 }
 
@@ -195,7 +198,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
     var customTime by remember { mutableStateOf("") }
 
     LaunchedEffect(id) {
-        if (id != null) app.db.medicines().get(id)?.let { e ->
+        if (id != null) app.viewDb.medicines().get(id)?.let { e ->
             m = e; original = e; times.clear(); times.addAll(e.times.split(",").map { it.trim() }.filter { it.isNotBlank() }); pills = e.pillsLeft?.toInt()?.toString() ?: ""
         }
     }
@@ -261,12 +264,12 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
             FlowRowOf { listOf("before" to "Before food", "after" to "After food", "with" to "With food", "any" to "Any time").forEach { (k, l) -> Chip(l, m.food == k) { m = m.copy(food = k) } } }
             BigField("For how many days? (leave empty if always)", daysCount, { daysCount = it.filter(Char::isDigit).take(3) }, keyboard = KeyboardType.Number)
         }
-        BigField("How many tablets do you have? (optional)", pills, { pills = it.filter(Char::isDigit).take(4) }, keyboard = KeyboardType.Number, hint = "MedLog tells you before they run out")
+        BigField("How many tablets do you have? (optional)", pills, { pills = it.filter(Char::isDigit).take(4) }, keyboard = KeyboardType.Number, hint = "You'll be told before they run out")
         Toggle("Important medicine", m.critical, "Heart, sugar, fits, blood thinner: faster alerts to helpers if missed") { m = m.copy(critical = it) }
         Toggle("This is a blood thinner", m.bloodThinner) { m = m.copy(bloodThinner = it) }
         val valid = m.name.isNotBlank() && (m.asNeeded || times.isNotEmpty())
         if (!valid) Hint(if (m.name.isBlank()) "Please add the name." else "Please choose when to take it.")
-        BigButton("Save", tone = Tone.OK, enabled = valid, height = sc.target * 1.3f, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, enabled = valid, height = sc.target * 1.3f, onClick = {
             scope.launch {
                 val now = System.currentTimeMillis()
                 val change = original?.let { o ->
@@ -284,10 +287,10 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
                     changedAt = if (original == null || change != original?.changeNote) now else m.changedAt,
                     changeNote = change,
                 )
-                val mid = if (id == null) app.db.medicines().insert(saved) else { app.db.medicines().update(saved); id }
-                app.db.doses().dropFuture(mid, now)
+                val mid = if (id == null) app.viewDb.medicines().insert(saved) else { app.viewDb.medicines().update(saved); id }
+                app.viewDb.doses().dropFuture(mid, now)
                 Scheduler.reschedule(ctx)
-                app.db.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
+                app.viewDb.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
                 savedFeedback(ctx)
                 app.refreshWidgets()
                 nav.back()
@@ -296,10 +299,10 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
         if (id != null) BigButton("Stop this medicine", tone = Tone.SECONDARY, onClick = {
             scope.launch {
                 val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
-                app.db.medicines().update(stopped)
-                app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
+                app.viewDb.medicines().update(stopped)
+                app.viewDb.doses().dropFuture(stopped.id, System.currentTimeMillis())
                 CalendarSync.removeMedicine(ctx, stopped)
-                Scheduler.reschedule(ctx)
+                Scheduler.stopMedicine(ctx, stopped)
                 nav.back()
             }
         })
@@ -314,8 +317,8 @@ fun DidITakeScreen(nav: Nav) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val (start, end) = remember { Scheduler.today() }
-    val doses by app.db.doses().betweenFlow(start, end).collectAsState(emptyList())
-    val meds by app.db.medicines().activeFlow().collectAsState(emptyList())
+    val doses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
     val byId = meds.associateBy { it.id }
     val now = System.currentTimeMillis()
     val taken = doses.filter { it.status == DoseStatus.TAKEN }
@@ -330,7 +333,51 @@ fun DidITakeScreen(nav: Nav) {
     Screen("Did I take my medicines?", say, onHome = { nav.home() }, onBack = { nav.back() }) {
         Card(border = if (pending.isEmpty()) p.ok else p.amber) { Text(say, fontSize = sc.body * 1.05f, color = p.ink, fontWeight = FontWeight.Bold) }
         taken.forEach { d -> byId[d.medicineId]?.let { m -> Row(verticalAlignment = Alignment.CenterVertically) { MedPhoto(m.photoPath); Spacer(Modifier.width(12.dp)); Body("✓ ${m.name} · ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}", bold = true) } } }
-        if (pending.isNotEmpty()) BigButton("Take them now", tone = Tone.OK, onClick = { nav.replace(Route.Meds) })
+        if (pending.isNotEmpty()) BigButton("Take them now", tone = Tone.PRIMARY, onClick = { nav.replace(Route.Meds) })
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+/**
+ * From the widget's Medicine button: the medicines due now, each with its photo, name, strength and time, so
+ * it's plain which one is being noted. One "I took it" each; nothing is marked until it's tapped here.
+ */
+@Composable
+fun TookNowScreen(nav: Nav) {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val scope = rememberCoroutineScope()
+    val (start, end) = remember { Scheduler.today() }
+    val doses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
+    val byId = meds.associateBy { it.id }
+    val now = System.currentTimeMillis()
+    val open = doses.filter { (it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED) && byId[it.medicineId]?.form != "feed" }
+    val due = open.filter { it.scheduledAt <= now + HOUR }.sortedBy { it.scheduledAt }
+    val justTaken = doses.filter { it.status == DoseStatus.TAKEN && (it.actedAt ?: 0) > now - 10 * 60_000L }
+    val next = open.filter { it.scheduledAt > now + HOUR }.minByOrNull { it.scheduledAt }
+    Screen("Which medicine did you take?", if (due.isEmpty()) "Nothing is due right now." else "Tap \"I took it\" on each one you took.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        due.forEach { d ->
+            val m = byId[d.medicineId] ?: return@forEach
+            Card(border = p.outline) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    MedPhoto(m.photoPath)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(m.name, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                        Text(listOf(m.strength, "Due ${DoseActivity.time(d.scheduledAt)}").filter { it.isNotBlank() }.joinToString(" · "), fontSize = sc.body, color = p.inkSoft)
+                    }
+                }
+                BigButton("I took it", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, onClick = {
+                    scope.launch { Scheduler.take(ctx, d.id); com.suryaprakash.medlog.ui.savedFeedback(ctx); com.suryaprakash.medlog.widget.MedLogWidget.refresh(ctx) }
+                })
+            }
+        }
+        justTaken.forEach { d -> byId[d.medicineId]?.let { m -> Hint("✓ ${m.name} taken at ${DoseActivity.time(d.actedAt ?: now)}") } }
+        if (due.isEmpty() && next != null) byId[next.medicineId]?.let { m -> Hint("Next: ${m.name} at ${DoseActivity.time(next.scheduledAt)}") }
+        if (due.isEmpty()) BigButton("Done", tone = Tone.PRIMARY, onClick = { nav.home() })
+        BigButton("See all medicines", tone = Tone.SECONDARY, onClick = { nav.replace(Route.Meds) })
     }
 }

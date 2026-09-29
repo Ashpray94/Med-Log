@@ -9,7 +9,7 @@ val LocalNav = staticCompositionLocalOf<Nav?> { null }
 /** Every screen in the app (plan section 5). */
 sealed interface Route {
     data object Home : Route
-    data class Tell(val problemId: String? = null, val text: String? = null, val pick: Boolean = false, val noteId: Long? = null) : Route
+    data class Tell(val problemId: String? = null, val text: String? = null, val pick: Boolean = false, val noteId: Long? = null, val speak: Boolean = false) : Route
     data object Notes : Route
     data class ProblemHistory(val problemId: String) : Route
     data class NoteDetail(val id: Long) : Route
@@ -17,7 +17,13 @@ sealed interface Route {
     data object Meds : Route
     data class MedEdit(val id: Long? = null) : Route
     data object DidITake : Route
+    /** From the widget: which medicine you're noting as taken, one tap each. */
+    data object TookNow : Route
+    /** Every medicine for today, or every feed ([feeds]), from "See all". */
+    data class TodayMeds(val feeds: Boolean = false) : Route
     data object Food : Route
+    data class SpeakAll(val text: String? = null) : Route
+    data class Output(val tab: Int = -1) : Route
     data class FoodPick(val noteId: Long? = null) : Route
     data object FeedNew : Route
     data object Readings : Route
@@ -31,18 +37,26 @@ sealed interface Route {
     data object Visit : Route
     data object Appointments : Route
     data object Reports : Route
+    /** One measure from My health: its chart and every entry. */
+    data class Measure(val key: String) : Route
     data object Nutrition : Route
     data object Settings : Route
     data object EasySettings : Route
     data object Permissions : Route
     data object Onboarding : Route
     data object HelperHome : Route
+    data object HelperChat : Route
     data object Import : Route
     data object Search : Route
     data object Devices : Route
     data object Backup : Route
     data object Privacy : Route
     data object HelperLock : Route
+    /** A helper's choices for one of the person's doses ("More" on a reminder). */
+    data class DoseChoices(val pairId: String, val uid: String) : Route
+    data object Limits : Route
+    data object Feedback : Route
+    data object MyReports : Route
 }
 
 /** A plain back stack. Back always goes one step back; Home always goes home (plan 4.3 #13). */

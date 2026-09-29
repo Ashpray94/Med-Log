@@ -117,6 +117,15 @@
 
         <!-- full-screen alerts: SOS countdown, fall check, daily check-in, helper alert -->
         <activity
+            android:name=".ui.LockLogActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:taskAffinity="com.suryaprakash.medlog.locklog"
+            android:theme="@style/Theme.MedLog" />
+        <activity
             android:name=".help.AlertActivity"
             android:exported="false"
             android:excludeFromRecents="true"
@@ -129,6 +138,10 @@
         <receiver android:name=".meds.AlarmReceiver" android:exported="false" />
         <receiver android:name=".UpdateReceiver" android:exported="false" />
         <receiver android:name=".meds.DoseActionReceiver" android:exported="false" />
+        <receiver android:name=".care.HelperDoseReceiver" android:exported="false" />
+        <receiver android:name=".help.SilenceReceiver" android:exported="false" />
+        <receiver android:name=".help.AlertReplyReceiver" android:exported="false" />
+        <receiver android:name=".help.AlertSnoozeReceiver" android:exported="false" />
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -206,6 +219,28 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/widget_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.FeelWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_feel_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_feel_info" />
+        </receiver>
+        <receiver
+            android:name=".widget.OutWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_out_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_out_info" />
         </receiver>
 
         <!-- ML Kit's usage reporting (Google datatransport): removed, so it has nothing to send and nowhere to send it -->

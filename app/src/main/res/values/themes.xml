@@ -5,5 +5,13 @@
         <item name="android:statusBarColor">@color/paper</item>
         <item name="android:navigationBarColor">@color/paper</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">@color/brand</item>
+    </style>
+    <!-- Android's own date and time pickers, in each mode's accent (teal for my health, blue for helping) -->
+    <style name="Picker.Mine" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">@color/brand</item>
+    </style>
+    <style name="Picker.Helping" parent="android:Theme.Material.Light.Dialog.Alert">
+        <item name="android:colorAccent">@color/brand_helper</item>
     </style>
 </resources>

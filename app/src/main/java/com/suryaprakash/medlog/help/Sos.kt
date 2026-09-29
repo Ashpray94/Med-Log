@@ -41,9 +41,30 @@ import org.json.JSONObject
 import kotlin.coroutines.resume
 
 /**
- * SOS (plan 13.3). After a spoken countdown, all at once:
- *  1. SMS with location to every SOS helper (mobile network, no internet)
- *  2. alarm on nearby helper phones
+ * What SOS does after it has alerted the helpers' app: wait for a person's answer, or send SMS (owner decision: SMS costs
+ * money, so it is the last resort). Pure, so it is tested on the JVM.
+ */
+object SosPlan {
+    enum class Next { WAIT, SMS, HELP_COMING }
+    /** Answers from a helper that mean help is on the way. "cant" and the automatic "got" are not. */
+    val HELP = setOf("coming", "5min", "call")
+    const val WAIT_SEC = 90
+    /** No helper phone confirmed the alert in this time: it reached nobody, so SMS now. */
+    const val RECEIPT_SEC = 20
+
+    fun decide(paired: Int, receipts: Int, replies: List<String>, elapsedSec: Int, smsNow: Boolean, waitSec: Int = WAIT_SEC): Next = when {
+        replies.any { it in HELP } -> Next.HELP_COMING
+        smsNow || paired == 0 -> Next.SMS
+        receipts == 0 && elapsedSec >= RECEIPT_SEC -> Next.SMS
+        elapsedSec >= waitSec -> Next.SMS
+        else -> Next.WAIT
+    }
+}
+
+/**
+ * SOS (plan 13.3). After a spoken countdown:
+ *  1. alarm on every SOS helper's phone through the helper app (free), then wait up to [SosPlan.WAIT_SEC] for an answer
+ *  2. only if nobody answers: SMS with location to every SOS helper (the last resort, it costs money)
  *  3. optional WhatsApp family group call
  *  4. phone calls to each helper in turn, on speaker
  *  5. then the emergency number
@@ -54,6 +75,7 @@ object Sos {
         data object Idle : Phase
         data class Countdown(val seconds: Int) : Phase
         data object Messaging : Phase
+        data class AppAlert(val secondsLeft: Int) : Phase
         data class WhatsApp(val started: Boolean) : Phase
         data class Calling(val name: String, val index: Int, val total: Int) : Phase
         data class Answered(val name: String, val secondsLeft: Int) : Phase
@@ -74,7 +96,14 @@ object Sos {
     /** Answers from the SOS screen. */
     val answer = MutableStateFlow<String?>(null)
 
-    fun start(ctx: Context, reason: String, countdown: Boolean = true) {
+    /** The kinds of emergency, in pictures: chosen on the SOS page or once SOS has started, and sent to helpers. */
+    val KINDS = listOf("fall" to "A fall", "chest_pain" to "Chest pain", "breathless" to "Can't breathe", "bleeding" to "Bleeding",
+        "fainted" to "Fainted", "one_side_weak" to "Face or arm weak", "confusion" to "Confused", "fits" to "Fits")
+    /** The kind chosen for the SOS running now, if any. */
+    val kind = MutableStateFlow<String?>(null)
+
+    fun start(ctx: Context, reason: String, countdown: Boolean = true, kindId: String? = null) {
+        kind.value = kindId
         if (_phase.value !is Phase.Idle && _phase.value !is Phase.Cancelled && _phase.value !is Phase.HelpComing) { showScreen(ctx); return }
         log.value = emptyList(); smsSentTo.value = emptyList(); answer.value = null
         val i = Intent(ctx, SosService::class.java).putExtra("reason", reason).putExtra("countdown", countdown)
@@ -122,6 +151,7 @@ class SosService : Service() {
     /** Waits up to [sec] seconds for a tap on the SOS screen. */
     private suspend fun waitAnswer(sec: Int, onTick: (Int) -> Unit = {}): String? {
         fun take(): String? = Sos.answer.value?.also { Sos.answer.value = null }
+            ?: if (Nearby.acks.value.any { it.reply in SosPlan.HELP }) "coming" else null   // a helper answered in the app
         // "Help is coming" / "Cancel" tapped during a call is kept, not lost
         take()?.let { if (it == "coming" || it == "cancel") return it }
         for (left in sec downTo 1) {
@@ -145,7 +175,7 @@ class SosService : Service() {
         }
         Sos.set(Sos.Phase.Messaging)
         Sos.note("SOS started: $reason")
-        app.speaker.say("Getting help. Messaging your helpers.")
+        app.speaker.say("Getting help. Alerting your helpers.")
         val helpers = app.db.helpers().all().filter { it.sos }
 
         // ── location, taken on this phone ──
@@ -153,15 +183,35 @@ class SosService : Service() {
         val where = loc?.let { "https://maps.google.com/?q=%.5f,%.5f (within about %d m)".format(java.util.Locale.US, it.latitude, it.longitude, it.accuracy.toInt()) }
         Sos.note(if (where != null) "Location found" else "Location not available")
 
-        // ── SMS to everyone ──
         val recent = app.db.notes().symptomsSince(System.currentTimeMillis() - 6 * 3600_000L).firstOrNull()?.text
         val text = Wording.sos(name, reason, recent, where)
+
+        // ── the helpers' app first (free): their phones ring until someone answers ──
+        val paired = helpers.count { it.pairId != null && it.pairKey != null }
+        Nearby.acks.value = emptyList(); Nearby.reached.value = emptySet()
+        if (paired > 0) { Nearby.broadcast(this, "SOS", text, only = { it.sos }); Sos.note("Alarm sent to $paired helper phone(s)") }
+        var sec = 0
+        var smsNow = false
+        while (true) {
+            val next = SosPlan.decide(paired, Nearby.reached.value.size, Nearby.acks.value.map { it.reply }, sec, smsNow)
+            if (next == SosPlan.Next.HELP_COMING) { Sos.note("${Nearby.acks.value.first { it.reply in SosPlan.HELP }.name} answered in the app"); finishHelp(); return }
+            if (next == SosPlan.Next.SMS) break
+            Sos.set(Sos.Phase.AppAlert(SosPlan.WAIT_SEC - sec))
+            when (waitAnswer(1)) {
+                "cancel" -> { Sos.set(Sos.Phase.Cancelled); Sos.note("Cancelled"); saveLog(reason, where); return }
+                "coming" -> { finishHelp(); return }
+                "go" -> smsNow = true
+                else -> sec++
+            }
+        }
+
+        // ── SMS only now: nobody answered in the app (the last resort, it costs money) ──
+        Sos.set(Sos.Phase.Messaging)
+        Sos.note(if (paired == 0) "No helper phone is paired: sending SMS" else "No answer in the app: sending SMS")
         val sent = ArrayList<String>()
         for (h in helpers) if (Calls.sms(this, h.phone, text)) sent += h.name
         Sos.smsSentTo.value = sent
         Sos.note(if (sent.isEmpty()) "SMS could not be sent" else "SMS sent to ${sent.joinToString()}")
-        Nearby.broadcast(this, "SOS", text)
-        Sos.note("Alert sent to nearby helper phones")
 
         // ── optional WhatsApp family group call ──
         if (s.whatsappSos && s.whatsappGroupLink.isNotBlank() && WhatsAppCallService.isEnabled(this)) {

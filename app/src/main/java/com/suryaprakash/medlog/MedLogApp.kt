@@ -30,6 +30,10 @@ class MedLogApp : Application() {
     val describe by lazy { Describe(catalogue) }
     val db by lazy { MedDb.open(this) }
     val repo by lazy { Repo(db, catalogue, describe) }
+    fun repoFor(d: com.suryaprakash.medlog.data.MedDb) = Repo(d, catalogue, describe)
+    /** What the screens show: this phone's own records, or the person a helper is looking after ([com.suryaprakash.medlog.data.Viewing]). */
+    val viewDb: com.suryaprakash.medlog.data.MedDb get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.let { com.suryaprakash.medlog.data.Mirror.db(this, it) } ?: db
+    val viewRepo: Repo get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.let { com.suryaprakash.medlog.data.Mirror.repo(this, it) } ?: repo
     val speaker by lazy { Speaker(this) { settings.value.speechRate } }
     override fun onCreate() {
         super.onCreate()
@@ -40,9 +44,24 @@ class MedLogApp : Application() {
         speaker.init()
         scope.launch {
             runCatching { com.suryaprakash.medlog.help.Nearby.startListening(this@MedLogApp) }
+            runCatching { com.suryaprakash.medlog.data.Sync.watch(this@MedLogApp, db); com.suryaprakash.medlog.data.Sync.schedule(this@MedLogApp) }
             runCatching { Updater.dailyCheck(this@MedLogApp) }
             catalogue
             runCatching { repo.purgeRemoved() }
+            // copies made by an earlier bug (a link acted on again when the app reopened) go to Removed
+            // once: from now on, the same thing noted within 10 minutes is asked about instead
+            // copies of one entry under different ids, on this phone and in each copy of a person helped: made one again
+            runCatching { repo.mergeCopies() }
+            runCatching { com.suryaprakash.medlog.data.People.all(this@MedLogApp).forEach { pp -> repoFor(com.suryaprakash.medlog.data.Mirror.db(this@MedLogApp, pp.pairId)).mergeCopies() } }
+            // once: helper copies ask the person's phone for everything again, after rows that had lost their id were dropped
+            if (settings.getString("resync_v1") == null) runCatching {
+                com.suryaprakash.medlog.data.People.all(this@MedLogApp).forEach { pp ->
+                    com.suryaprakash.medlog.data.Mirror.db(this@MedLogApp, pp.pairId)   // opening it puts its rows right
+                    settings.putLong("sync_got_${pp.pairId}", 0); com.suryaprakash.medlog.data.Sync.askSince(this@MedLogApp, pp.pairId)
+                }
+                settings.putString("resync_v1", "done")
+            }
+            if (settings.getString("dedupe_v1") == null) runCatching { repo.removeDuplicates(); settings.putString("dedupe_v1", "done") }
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }
             refreshWidgets()
@@ -52,7 +71,7 @@ class MedLogApp : Application() {
     /** Redraws the home-screen widget after anything it shows has changed. */
     fun refreshWidgets() {
         scope.launch {
-            runCatching { com.suryaprakash.medlog.widget.MedLogWidget().updateAll(this@MedLogApp) }
+            runCatching { com.suryaprakash.medlog.widget.MedLogWidget.refresh(this@MedLogApp) }
         }
     }
 

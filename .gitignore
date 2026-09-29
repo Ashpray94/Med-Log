@@ -17,3 +17,4 @@ __pycache__/
 # the signing key never goes in this public repository (see signing/README.md)
 signing/*.jks
 signing/*.properties
+preview/

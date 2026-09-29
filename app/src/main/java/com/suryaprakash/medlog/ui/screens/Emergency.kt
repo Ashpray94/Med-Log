@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import kotlinx.coroutines.launch
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -83,6 +84,14 @@ fun EmergencyScreen(nav: Nav) {
         onHome = { nav.home() }, onBack = { nav.back() }) {
         CallAmbulanceCard(s.emergencyNumber)
         AlertFamilyCard(helpers.size) { Sos.start(ctx, "SOS") }
+        // if there's time: what kind of emergency. One tap alerts the family with it (the countdown still lets you stop)
+        com.suryaprakash.medlog.ui.SectionHeader("What's happening?", "If you have time, tap one. Your family is alerted and told what it is.", null)
+        com.suryaprakash.medlog.ui.TileGrid(Sos.KINDS, 4, aspect = 0.66f) { (id, label), mod ->
+            com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 44.dp, speak = "Alert my family: $label", onClick = {
+                app.scope.launch { app.repo.addEvent(com.suryaprakash.medlog.data.Kind.SOS, "SOS: $label") }
+                Sos.start(ctx, "SOS: $label", kindId = id)
+            }) { com.suryaprakash.medlog.pictogram.SpriteIcon(id, 44.dp) }
+        }
         val people = buildList {
             helpers.take(3).forEach { add(Person(it.name, it.relation.ifBlank { "Family" }, it.phone)) }
             profile?.takeIf { it.doctorPhone.isNotBlank() }?.let { add(Person(it.doctorName.ifBlank { "Doctor" }, "Doctor", it.doctorPhone)) }
@@ -134,7 +143,7 @@ fun AlertFamilyCard(helpers: Int, modifier: Modifier = Modifier, onStart: () -> 
     val progress by animateFloatAsState(if (holding) 1f else 0f, tween(if (holding) 2000 else 150), label = "hold") {
         if (it >= 1f && holding) { holding = false; onStart() }
     }
-    val words = if (helpers == 0) "Texts your location. Add family to call them too." else "Texts your location to $helpers, then calls each one"
+    val words = if (helpers == 0) "Add family to alert and call them." else "Alerts your helpers' phones, then calls each one"
     Box(
         modifier.fillMaxWidth().heightIn(min = 112.dp).clip(RoundedCornerShape(sc.radius + 6.dp)).background(Color(0xFF202327))
             .semantics { role = Role.Button; contentDescription = "Alert my family. Hold for 2 seconds. $words"; onClick("Alert my family") { onStart(); true } }
@@ -199,13 +208,13 @@ fun CallOnePerson(people: List<Person>, onAdd: () -> Unit) {
                         Box(Modifier.size(62.dp).clip(CircleShape).background(tints[i % tints.size].copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
                             Text(who.name.take(1).uppercase(), color = tints[i % tints.size], fontSize = sc.title * 0.8f, fontWeight = FontWeight.Bold)
                         }
-                        Box(Modifier.size(24.dp).clip(CircleShape).background(p.ok), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(24.dp).clip(CircleShape).background(p.brand), contentAlignment = Alignment.Center) {
                             Icon(Icons.Rounded.Call, null, tint = Color.White, modifier = Modifier.size(14.dp))
                         }
                     }
                     Spacer(Modifier.size(6.dp))
-                    Text(who.name, fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(who.role, fontSize = sc.small, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(who.name, fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text(who.role, fontSize = sc.small, color = p.inkSoft)
                 }
             }
             if (people.size < 4) Column(

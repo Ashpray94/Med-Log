@@ -1,5 +1,10 @@
 package com.suryaprakash.medlog.ui
 
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.ui.draw.drawBehind
@@ -67,6 +72,7 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.Icon
 import com.suryaprakash.medlog.ui.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -78,6 +84,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.material.icons.rounded.Sync
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -94,6 +105,8 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -123,14 +136,34 @@ private var lastTapAt = 0L
  */
 @Composable
 fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -> Unit = {}, onClick: () -> Unit): Modifier {
+    val latestPress = androidx.compose.runtime.rememberUpdatedState(onPress)
+    val act = steadyAction(label, enabled, onClick)
+    return this
+        .semantics { role = Role.Button; contentDescription = label; onClick(label) { act(); true } }
+        .pointerInput(label, enabled) {
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                latestPress.value(true)
+                val up = waitForUpOrCancellation()
+                latestPress.value(false)
+                if (up != null) act()
+            }
+        }
+}
+
+/**
+ * The app's tap rules as a plain action, for Android's own buttons, tabs and chips too: a steady-hands pause
+ * between taps, and (when "touch to hear" is on) the first tap reads the label and the second does it.
+ */
+@Composable
+fun steadyAction(label: String, enabled: Boolean = true, onClick: () -> Unit): () -> Unit {
     val s = LocalSettings.current
     val haptic = LocalHapticFeedback.current
     val ctx = LocalContext.current
-    // always run the latest action: the tap handler below lives across recompositions, so it must not keep an
+    // always run the latest action: the tap handler lives across recompositions, so it must not keep an
     // old copy of onClick (that made a second tap undo the first on multi-choice pages)
     val latest = androidx.compose.runtime.rememberUpdatedState(onClick)
-    val latestPress = androidx.compose.runtime.rememberUpdatedState(onPress)
-    val act = {
+    return {
         val now = System.currentTimeMillis()
         val debounce = if (s.steadyTouch) 600 else 250
         if (enabled && now - lastTapAt > debounce) {
@@ -145,17 +178,6 @@ fun Modifier.steady(label: String, enabled: Boolean = true, onPress: (Boolean) -
             }
         }
     }
-    return this
-        .semantics { role = Role.Button; contentDescription = label; onClick(label) { act(); true } }
-        .pointerInput(label, enabled) {
-            awaitEachGesture {
-                awaitFirstDown(requireUnconsumed = false)
-                latestPress.value(true)
-                val up = waitForUpOrCancellation()
-                latestPress.value(false)
-                if (up != null) act()
-            }
-        }
 }
 
 /** Soft press feedback shared by every tappable surface. */
@@ -207,7 +229,7 @@ fun UndoBar(modifier: Modifier = Modifier) {
             Box(
                 Modifier.heightIn(min = sc.target - 8.dp).clip(RoundedCornerShape(12.dp)).steady("Undo") { UndoHost.action?.invoke(); UndoHost.clear() }.padding(horizontal = 18.dp),
                 contentAlignment = Alignment.Center,
-            ) { Text("Undo", color = Color(0xFF7DD3C8), fontWeight = FontWeight.SemiBold, fontSize = sc.button) }
+            ) { Text("Undo", color = p.brandSoft, fontWeight = FontWeight.SemiBold, fontSize = sc.button) }
         }
     }
 }
@@ -233,6 +255,10 @@ fun Screen(
     trailing: (@Composable () -> Unit)? = null,
     actions: (@Composable ColumnScope.() -> Unit)? = null,
     eyebrow: String? = null,
+    /** Beside the title and subtitle, centred on both (Home's Me | Helping switch). */
+    side: (@Composable () -> Unit)? = null,
+    /** A thin strip across the whole width, right under the status bar: how up to date the records are. */
+    banner: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val p = LocalPalette.current
@@ -241,28 +267,46 @@ fun Screen(
     val ctx = LocalContext.current
     val nav = LocalNav.current
     val full = "$title. $speak"
-    val hasNav = nav != null && s.role != "helper"
+    // the bottom bar only on the main pages; deeper pages get the room back, with SOS up by Read instead
+    val here = nav?.current
+    val topLevel = here == Route.Home || here == Route.Help || here == Route.HelperHome || here == Route.HelperChat || here == Route.Settings
+    val hasNav = nav != null && topLevel
+    val sosUp = nav != null && !topLevel && here != Route.Emergency
+    val typing = imeShowing()
     LaunchedEffect(full) { ReadAloud.text = full }
     LaunchedEffect(title) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
     Box(Modifier.fillMaxSize().background(background ?: p.paper)) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
+            banner?.invoke()
             // the title, the Read switch and Back stay put; only what's under them scrolls
             // one header for every page, the same size everywhere so nothing jumps between pages:
             // a fixed row (Back or a greeting on the left, Read on the right), a one-line title, and a line for the subtitle
             val header: @Composable ColumnScope.() -> Unit = {
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp).height(56.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (onBack != null) BackLink(onBack)
-                    else if (!eyebrow.isNullOrBlank()) Text(eyebrow.uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp)
-                    Spacer(Modifier.weight(1f))
-                    ReadToggle()
+                    if (onBack != null) { BackLink(onBack); Spacer(Modifier.weight(1f)) }
+                    // the greeting takes what the buttons leave, and wraps; the buttons are never squeezed
+                    else if (!eyebrow.isNullOrBlank()) Text(tr(eyebrow).uppercase(), fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = p.inkSoft, letterSpacing = 1.2.sp,
+                        modifier = Modifier.weight(1f).padding(end = 8.dp))
+                    else Spacer(Modifier.weight(1f))
+                    // on a page with a greeting (Home), its one extra button sits up here, level with the greeting
+                    val up = !eyebrow.isNullOrBlank() && trailing != null
+                    if (up) { trailing?.invoke(); Spacer(Modifier.width(10.dp)) }
+                    if (sosUp) { SosPill(); Spacer(Modifier.width(10.dp)) }
+                    // the main pages keep their top corner clear: Read is in Settings (and on every other page)
+                    if (!topLevel || nav == null) ReadToggle()
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).semantics { heading() })
-                    trailing?.invoke()
+                    Column(Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(title, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.title * 1.15f,
+                                modifier = Modifier.weight(1f).semantics { heading() })
+                            if (eyebrow.isNullOrBlank()) trailing?.invoke()
+                        }
+                        Text(subtitle ?: " ", fontSize = sc.body, color = if (eyebrow != null) p.ink else p.inkSoft, fontWeight = if (eyebrow != null) FontWeight.Medium else null,
+                            modifier = Modifier.padding(top = 2.dp))
+                    }
+                    if (side != null) { Spacer(Modifier.width(12.dp)); side() }
                 }
-                Text(subtitle ?: " ", fontSize = sc.body, color = if (eyebrow != null) p.ink else p.inkSoft, fontWeight = if (eyebrow != null) FontWeight.Medium else null,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 2.dp))
             }
             Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = sc.gap), content = header)
             val state = rememberScrollState()
@@ -273,25 +317,92 @@ fun Screen(
                     // room so the Read aloud button never covers the last row
                     if (scroll) Spacer(Modifier.height(24.dp))
                 }
-                if (scroll) MoreBelow(state, Modifier.align(Alignment.BottomCenter))
+                if (scroll && !typing) MoreBelow(state, Modifier.align(Alignment.BottomCenter))
             }
             if (actions != null) ActionArea(actions)
-            if (hasNav) BottomBar(onHome)
+            // while typing, the keyboard needs the room: the bottom bar steps aside
+            if (hasNav && !typing) BottomBar(onHome)
         }
         UndoBar(Modifier.align(Alignment.BottomCenter).padding(bottom = sc.target + 28.dp).navigationBarsPadding())
     }
 }
+
+/**
+ * The thin strip under the status bar: one line, edge to edge. Grey when all is well, amber when something is
+ * waiting, red when it failed.
+ */
+@Composable
+fun TopBanner(text: String, tone: Color? = null, icon: ImageVector = Icons.Rounded.Sync) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val (bg, fg) = when (tone) { p.amber -> p.amberSoft to p.amber; p.red -> p.redSoft to p.red; else -> p.fill to p.inkSoft }
+    Row(Modifier.fillMaxWidth().background(bg).padding(horizontal = sc.margin, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = fg, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, fontSize = sc.small * 0.9f, fontWeight = FontWeight.SemiBold, color = fg)
+    }
+}
+
+/** SOS in the top corner, on pages without the bottom bar: always one tap away, never taking the page's room. */
+@Composable
+fun SosPill() {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val nav = LocalNav.current ?: return
+    Box(Modifier.height(48.dp).clip(RoundedCornerShape(24.dp)).background(p.red).steady("SOS, emergency help") { nav.go(Route.Emergency) }.padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center) {
+        Text("SOS", color = Color.White, fontSize = sc.small, fontWeight = FontWeight.ExtraBold)
+    }
+}
+
+/**
+ * Me | Helping as two icons beside the name: switches at once, no question. Each side shows its own colour
+ * (teal for my health, blue for helping), the same colour the whole app takes in that mode.
+ */
+@Composable
+fun ModeSwitch(helping: Boolean, onChange: (Boolean) -> Unit) {
+    val p = LocalPalette.current
+    Row(Modifier.clip(RoundedCornerShape(26.dp)).background(p.fill).padding(3.dp)) {
+        listOf(Triple(false, Icons.Rounded.Person, "My health"), Triple(true, Icons.Rounded.Groups, "Helping someone")).forEach { (h, icon, label) ->
+            val on = h == helping
+            val tint = if (h) HELPER_BRAND else MY_BRAND
+            Box(Modifier.size(48.dp).clip(CircleShape).background(if (on) tint else Color.Transparent)
+                .semantics { role = Role.Tab; selected = on }.steady(label + if (on) ", chosen" else "") { if (!on) onChange(h) },
+                contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = if (on) Color.White else p.inkSoft, modifier = Modifier.size(24.dp))
+            }
+        }
+    }
+}
+
+/** True while the on-screen keyboard is up. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+fun imeShowing(): Boolean = androidx.compose.foundation.layout.WindowInsets.isImeVisible && android.os.Build.FINGERPRINT != "robolectric"
 
 /** The pinned area for a screen's main action: a thin line above, then the buttons. */
 @Composable
 fun ActionArea(content: @Composable ColumnScope.() -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Column(Modifier.fillMaxWidth().background(p.paper)) {
+    // the page's main action on its own white band, so it stands apart from the page and the bar under it
+    Column(Modifier.fillMaxWidth().background(p.card)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            androidx.compose.runtime.CompositionLocalProvider(LocalOnCard provides true) { content() }
+        }
     }
 }
+
+/**
+ * True inside a white card. Quiet controls (grey buttons, segmented choices, chips) take the opposite surface of
+ * what they sit on: grey on a card, white (lifted by a soft shadow) on the page, so they never melt into it.
+ */
+val LocalOnCard = androidx.compose.runtime.compositionLocalOf { false }
+
+/** A soft shadow and a faint edge (8% black, never a heavy frame) that lift a white surface off the page. */
+fun Modifier.lift(shape: Shape, on: Boolean = true): Modifier = if (on) this.shadow(1.5.dp, shape, clip = false, ambientColor = Color(0x33000000), spotColor = Color(0x33000000))
+    .border(1.dp, Color(0x14000000), shape) else this
 
 /** True when a task page is shown inside a sheet: then its top has only Close. */
 val LocalInSheet = androidx.compose.runtime.compositionLocalOf { false }
@@ -316,7 +427,7 @@ fun ReadToggle(modifier: Modifier = Modifier) {
     val on = s.autoRead
     val sh = RoundedCornerShape(24.dp)
     Row(
-        modifier.height(48.dp).clip(sh).background(if (on) p.ok else p.card).border(1.5.dp, if (on) p.ok else p.line, sh)
+        modifier.height(48.dp).clip(sh).background(if (on) p.brand else p.card)
             .semantics { role = Role.Switch; stateDescription = if (on) "On" else "Off" }
             .steady("Read aloud") {
                 val now = !on
@@ -338,7 +449,7 @@ private fun BackLink(onBack: () -> Unit) {
     val sc = LocalScale.current
     @Suppress("UNUSED_VARIABLE") val unused = sc
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.size(48.dp).clip(sh).background(p.card).border(1.5.dp, p.line, sh).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(48.dp).lift(sh).clip(sh).background(p.card).steady("Back", onClick = onBack), contentAlignment = Alignment.Center) {
         Icon(Icons.AutoMirrored.Rounded.ArrowBack, null, tint = p.ink, modifier = Modifier.size(24.dp))
     }
 }
@@ -356,38 +467,35 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
     Column(Modifier.fillMaxWidth().background(p.paper)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         val here = nav.current
+        // the same three places on both kinds of phone: home, SOS in the middle, and the people around you
+        val helper = s.role == "helper"
+        val home = if (helper) Route.HelperHome else Route.Home
+        val people = if (helper) Route.HelperChat else Route.Help
         val tabs = listOfNotNull(
-            Triple("Home", Icons.Rounded.Home, here == Route.Home) to { nav.home() },
+            Triple("Home", Icons.Rounded.Home, here == home) to { nav.home(home) },
+            Triple(if (helper) "Helpers" else "Family", Icons.Rounded.Groups, here == people) to { nav.home(home); if (people != home) nav.go(people) },
             Triple("SOS", Icons.Rounded.Sos, here == Route.Emergency) to { if (here != Route.Emergency) nav.go(Route.Emergency) },
-            Triple("Family", Icons.Rounded.Groups, here == Route.Help) to { nav.home(); nav.go(Route.Help) },
+            Triple("Settings", Icons.Rounded.Settings, here == Route.Settings) to { nav.home(home); nav.go(Route.Settings) },
         )
         val ordered = if (s.leftHand) tabs.reversed() else tabs
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
+        // Android's own navigation bar; SOS is its one red, larger place
+        androidx.compose.material3.NavigationBar(containerColor = p.paper, tonalElevation = 0.dp) {
             ordered.forEach { (t, go) ->
                 val (label, icon, on) = t
-                if (label == "SOS") {
-                    // the one thing that must always be reachable: a solid red button, bigger than the rest
-                    Column(
-                        Modifier.weight(1f).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp)).steady("SOS, emergency help", onClick = go),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                    ) {
-                        Box(Modifier.size(if (sc.big) 62.dp else 58.dp).clip(RoundedCornerShape(18.dp)).background(p.red), contentAlignment = Alignment.Center) {
+                val sos = label == "SOS"
+                NavigationBarItem(
+                    selected = on && !sos,
+                    onClick = steadyAction(if (sos) "SOS, emergency help" else label, onClick = go),
+                    icon = {
+                        if (sos) Box(Modifier.size(if (sc.big) 60.dp else 56.dp, if (sc.big) 48.dp else 44.dp).clip(RoundedCornerShape(16.dp)).background(p.red), contentAlignment = Alignment.Center) {
                             Text("SOS", color = Color.White, fontSize = sc.body, fontWeight = FontWeight.ExtraBold)
-                        }
-                    }
-                    return@forEach
-                }
-                val tint = if (on) p.brand else p.inkSoft
-                // the current place sits on a soft teal square, in teal
-                Column(
-                    Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp))
-                        .background(if (on) p.brandSoft else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                ) {
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
-                    Spacer(Modifier.height(3.dp))
-                    Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.brand else p.inkSoft, maxLines = 1)
-                }
+                        } else Icon(icon, null, modifier = Modifier.size(if (sc.big) 28.dp else 26.dp))
+                    },
+                    label = if (sos) null else { { Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, maxLines = 1) } },
+                    colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+                        selectedIconColor = p.brand, selectedTextColor = p.ink, indicatorColor = p.fill,
+                        unselectedIconColor = p.inkSoft, unselectedTextColor = p.inkSoft),
+                )
             }
         }
     }
@@ -412,7 +520,7 @@ fun PillButton(text: String, icon: ImageVector?, bg: Color, fg: Color, border: C
 fun RoundIcon(icon: ImageVector, label: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     Box(
-        Modifier.size(52.dp).clip(CircleShape).background(p.card).steady(label, onClick = onClick),
+        Modifier.size(48.dp).clip(CircleShape).background(p.card).steady(label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = p.inkSoft, modifier = Modifier.size(28.dp)) }
 }
@@ -437,33 +545,40 @@ fun BigButton(
     val sc = LocalScale.current
     // PRIMARY is the one main action on a screen. SECONDARY is white with a grey outline, OUTLINE a grey outline with teal words, TINT a light teal fill with teal words, QUIET is a grey fill:
     // both clearly less important, never competing with the accent.
+    val onCard = LocalOnCard.current
+    val quiet = if (onCard) p.fill else p.card
     val (bg, fg) = when (tone) {
         Tone.PRIMARY -> p.brand to p.onBrand
-        Tone.SECONDARY -> p.paper to p.ink
-        Tone.OUTLINE -> Color.Transparent to p.brand
-        Tone.TINT -> p.brandSoft to p.brand
+        Tone.SECONDARY -> quiet to p.ink
+        Tone.OUTLINE -> quiet to p.ink
+        Tone.TINT -> quiet to p.ink
         Tone.DANGER -> p.red to Color.White
         Tone.OK -> p.ok to Color.White
         Tone.AMBER -> p.amberSoft to p.amber
-        Tone.QUIET -> p.card to p.ink
+        Tone.QUIET -> quiet to p.ink
     }
-    var pressed by remember { mutableStateOf(false) }
     val left = leading != null || sub != null
-    Row(
-        modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = height ?: sc.target).clip(RoundedCornerShape(16.dp))
-            .background(if (enabled) bg else p.fill.copy(alpha = 0.6f))
-            .then(if (tone == Tone.SECONDARY && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else if (tone == Tone.OUTLINE && enabled) Modifier.border(2.dp, p.line, RoundedCornerShape(16.dp)) else Modifier)
-            .steady(text + (sub?.let { ". $it" } ?: ""), enabled, onPress = { pressed = it }, onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = if (left) Arrangement.Start else Arrangement.Center,
+    val shape = RoundedCornerShape(16.dp)
+    val quietTone = tone in setOf(Tone.SECONDARY, Tone.OUTLINE, Tone.TINT, Tone.QUIET)
+    // Android's own Material button (ripple, states, accessibility), with the app's tap rules and sizes
+    androidx.compose.material3.Button(
+        onClick = steadyAction(text + (sub?.let { ". $it" } ?: ""), enabled, onClick),
+        enabled = enabled,
+        modifier = modifier.fillMaxWidth().heightIn(min = height ?: sc.target).lift(shape, on = !onCard && enabled && quietTone),
+        shape = shape,
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg,
+            disabledContainerColor = p.fill.copy(alpha = 0.5f), disabledContentColor = p.inkSoft),
+        elevation = null,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
     ) {
-        leading?.let { it(); Spacer(Modifier.width(14.dp)) }
-        if (icon != null) { Icon(icon, null, tint = if (enabled) fg else p.inkSoft, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(14.dp)) }
-        Column(Modifier.then(if (left) Modifier.weight(1f) else Modifier)) {
-            Text(text, color = if (enabled) fg else p.inkSoft, fontSize = sc.button, fontWeight = FontWeight.SemiBold, lineHeight = sc.button * 1.2f, maxLines = 3,
-                textAlign = if (left) TextAlign.Start else TextAlign.Center)
-            if (sub != null) Text(sub, color = (if (enabled) fg else p.inkSoft).copy(alpha = 0.8f), fontSize = sc.small, lineHeight = sc.small * 1.25f)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = if (left) Arrangement.Start else Arrangement.Center) {
+            leading?.let { it(); Spacer(Modifier.width(14.dp)) }
+            if (icon != null) { Icon(icon, null, tint = if (enabled) fg else p.inkSoft, modifier = Modifier.size(24.dp)); Spacer(Modifier.width(10.dp)) }
+            Column(Modifier.then(if (left) Modifier.weight(1f) else Modifier)) {
+                Text(text, color = if (enabled) fg else p.inkSoft, fontSize = sc.button, fontWeight = FontWeight.SemiBold, lineHeight = sc.button * 1.2f, maxLines = 3,
+                    textAlign = if (left) TextAlign.Start else TextAlign.Center)
+                if (sub != null) Text(sub, color = (if (enabled) fg else p.inkSoft).copy(alpha = 0.8f), fontSize = sc.small, lineHeight = sc.small * 1.25f)
+            }
         }
     }
 }
@@ -476,7 +591,7 @@ fun BigButton(
 fun YesNo(yes: String = "Yes", no: String = "No", onYes: () -> Unit, onNo: () -> Unit) {
     val sc = LocalScale.current
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        BigButton(yes, Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.4f, onClick = onYes)
+        BigButton(yes, Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.4f, onClick = onYes)
         BigButton(no, Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.4f, onClick = onNo)
     }
 }
@@ -506,7 +621,7 @@ fun Choice(text: String, selected: Boolean, multi: Boolean = false, sub: String?
     Row(
         modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
             .clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else p.card).border(if (selected) 3.dp else 1.dp, if (selected) p.brand else p.line, sh)
+            .background(if (selected) p.brandSoft else p.card).then(if (selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(text + if (selected) ", chosen" else ", not chosen", onPress = { pressed = it }, onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -539,12 +654,51 @@ fun SectionHeader(title: String, caption: String, action: String?, actionIcon: I
     Row(Modifier.fillMaxWidth().padding(top = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.semantics { heading() })
-            Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft)
         }
-        if (action != null) Row(Modifier.clip(RoundedCornerShape(12.dp)).background(p.brandSoft).steady("$action: $title", onClick = onAction)
+        if (action != null) Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(12.dp)).background(p.fill).steady("$action: $title", onClick = onAction)
             .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (actionIcon != null) { Icon(actionIcon, null, tint = p.brand, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)) }
-            Text(action, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.brand)
+            if (actionIcon != null) { Icon(actionIcon, null, tint = p.ink, modifier = Modifier.size(20.dp)); Spacer(Modifier.width(6.dp)) }
+            Text(action, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink)
+        }
+    }
+}
+
+/**
+ * One part of a longer form, in its own white container: an icon, the part's name and what's chosen so far, and a
+ * chevron. Tap the head to open or close it; only what's inside the open one needs reading.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+fun Panel(title: String, icon: ImageVector, tint: Color, summary: String, open: Boolean, onToggle: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val still = LocalSettings.current.lessMotion
+    val sh = RoundedCornerShape(sc.radius)
+    // opening: the body grows down from the header, then its contents fade in; closing is the same, reversed and a little quicker
+    val ease = androidx.compose.animation.core.FastOutSlowInEasing
+    fun <T> t(ms: Int, delay: Int = 0) = androidx.compose.animation.core.tween<T>(if (still) 0 else ms, if (still) 0 else delay, ease)
+    val keep = remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+    LaunchedEffect(open) { if (open) { delay(if (still) 0 else 300); keep.bringIntoView() } }
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(keep).clip(sh).background(p.card)) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).steady("$title, $summary. ${if (open) "Close" else "Open"}", onClick = onToggle).padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically) {
+            OptionIcon(icon, tint, 44.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+                Text(summary, fontSize = sc.small, color = p.inkSoft)
+            }
+            val turn by androidx.compose.animation.core.animateFloatAsState(if (open) 180f else 0f, t(260), label = "chevron")
+            Icon(Icons.Rounded.ExpandMore, null, tint = p.inkSoft, modifier = Modifier.size(28.dp).graphicsLayer { rotationZ = turn })
+        }
+        androidx.compose.animation.AnimatedVisibility(open,
+            enter = androidx.compose.animation.expandVertically(t(280), expandFrom = Alignment.Top) + androidx.compose.animation.fadeIn(t(200, 100)),
+            exit = androidx.compose.animation.fadeOut(t(120)) + androidx.compose.animation.shrinkVertically(t(240, 40), shrinkTowards = Alignment.Top)) {
+            Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+                content()
+            }
         }
     }
 }
@@ -635,16 +789,20 @@ fun Card(modifier: Modifier = Modifier, color: Color? = null, border: Color? = n
     val p = LocalPalette.current
     val sh = shape ?: RoundedCornerShape(LocalScale.current.radius)
     var pressed by remember { mutableStateOf(false) }
+    val white = (color ?: p.card) == p.card
     Column(
         modifier.fillMaxWidth().scale(pressScale(pressed))
-            
+            .lift(sh, on = white)
             .clip(sh).background(color ?: p.card)
-            .then(if (border != null) Modifier.border(2.dp, border, sh) else Modifier)
+            .then(when {
+                border == null -> Modifier
+                border == p.line || border == p.outline -> Modifier
+                else -> Modifier
+            })
             .then(if (onClick != null) Modifier.steady(label, onPress = { pressed = it }, onClick = onClick) else Modifier)
             .padding(padding),
         verticalArrangement = Arrangement.spacedBy(10.dp),
-        content = content,
-    )
+    ) { androidx.compose.runtime.CompositionLocalProvider(LocalOnCard provides white) { content() } }
 }
 
 /** A row: grey icon tile, title, optional subtitle, chevron. */
@@ -656,15 +814,15 @@ fun ListRow(title: String, sub: String? = null, icon: ImageVector? = null, tint:
     Row(
         Modifier.fillMaxWidth().scale(pressScale(pressed)).heightIn(min = sc.target + 8.dp)
             
-            .clip(RoundedCornerShape(sc.radius)).background(p.card)
+            .lift(RoundedCornerShape(sc.radius)).clip(RoundedCornerShape(sc.radius)).background(p.card)
             .steady(title + (sub?.let { ". $it" } ?: ""), onPress = { pressed = it }, onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (leading != null) { leading(); Spacer(Modifier.width(14.dp)) }
         else if (icon != null) { IconTile(icon, tint ?: p.ink, 44.dp); Spacer(Modifier.width(14.dp)) }
         Column(Modifier.weight(1f)) {
-            Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Text(title, fontSize = sc.body * 1.05f, fontWeight = FontWeight.SemiBold, color = p.ink)
+            if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
         }
         Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(28.dp))
     }
@@ -688,18 +846,83 @@ fun IconTile(icon: ImageVector, tint: Color, size: Dp) {
     }
 }
 
-/** Equal-sized tiles in a grid: every tile in every row has the same width and height. */
+/** Set by [TileGrid] when it lays tiles out: the height every tile gets, and the height the tallest tile needs. */
+data class TileFit(val height: Dp, val tallest: Dp)
+val LocalTileFit = androidx.compose.runtime.compositionLocalOf<TileFit?> { null }
+
+/**
+ * Tiles in a grid, all exactly the same size: every tile is first measured at its natural height, and all of them get
+ * the tallest one's (never less than [aspect] allows). So the longest label, at the largest text size, sets the size
+ * for all, and nothing is ever cut off or squeezed.
+ */
 @Composable
-fun <T> TileGrid(items: List<T>, cols: Int, aspect: Float = 1f, gap: Dp = 12.dp, tile: @Composable (T, Modifier) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(gap)) {
-        items.chunked(cols).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
-                row.forEach { tile(it, Modifier.weight(1f).aspectRatio(aspect)) }
-                repeat(cols - row.size) { Spacer(Modifier.weight(1f).aspectRatio(aspect)) }
-            }
+fun <T> TileGrid(items: List<T>, cols: Int, aspect: Float = 1f, gap: Dp = 12.dp, minHeight: Dp = 0.dp, fixedCols: Boolean = false, tile: @Composable (T, Modifier) -> Unit) {
+    androidx.compose.ui.layout.SubcomposeLayout { c ->
+        val g = gap.roundToPx()
+        // the widest single word any label has: fewer columns rather than a word broken in two ("Bleedin / g")
+        val need = TileNeed()
+        subcompose("need") { CompositionLocalProvider(LocalTileNeed provides need) { items.forEach { tile(it, Modifier) } } }
+        var cols = cols
+        while (!fixedCols && cols > 2 && need.widest > (c.maxWidth - g * (cols - 1)) / cols) cols--
+        val w = ((c.maxWidth - g * (cols - 1)) / cols).coerceAtLeast(0)
+        val natural = subcompose("measure") { items.forEach { tile(it, Modifier) } }
+            .map { it.measure(androidx.compose.ui.unit.Constraints(minWidth = w, maxWidth = w)) }
+        val tallest = natural.maxOfOrNull { it.height } ?: 0
+        val h = maxOf(tallest, (w / aspect).toInt(), minHeight.roundToPx())
+        val fit = TileFit(h.toDp(), tallest.toDp())
+        val placed = subcompose("place") {
+            CompositionLocalProvider(LocalTileFit provides fit) { items.forEach { tile(it, Modifier) } }
+        }.map { it.measure(androidx.compose.ui.unit.Constraints.fixed(w, h)) }
+        val rows = (items.size + cols - 1) / cols
+        layout(c.maxWidth, (rows * h + (rows - 1).coerceAtLeast(0) * g)) {
+            placed.forEachIndexed { i, pl -> pl.place((i % cols) * (w + g), (i / cols) * (h + g)) }
         }
     }
 }
+
+/**
+ * The one picture-and-label tile. The picture sits on the same line in every tile of the grid, and the label is
+ * centred in a box as tall as the longest label needs. Labels are never cut: they wrap, and long words hyphenate.
+ */
+@Composable
+fun PicTile(label: String, modifier: Modifier, picture: Dp, selected: Boolean = false, speak: String = label, color: Color? = null,
+            onClick: () -> Unit, under: (@Composable () -> Unit)? = null, pic: @Composable () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val fit = LocalTileFit.current
+    // tell the grid how wide the longest word is, so it never has to break one
+    LocalTileNeed.current?.let { need ->
+        val m = androidx.compose.ui.text.rememberTextMeasurer()
+        val style = androidx.compose.ui.text.TextStyle(fontSize = sc.small, fontWeight = FontWeight.SemiBold)
+        // the label as shown (translated), in the script's own font where it has one
+        val shown = tr(label)
+        val script = LocalScript.current
+        val st = if (script.indic) style.copy(fontFamily = script.family) else style
+        val px = remember(shown, sc.small) { shown.split(' ', '\n').maxOfOrNull { w -> m.measure(w, st).size.width } ?: 0 }
+        val pad = with(androidx.compose.ui.platform.LocalDensity.current) { (TILE_PAD * 2 + 4.dp).roundToPx() }
+        need.widest = maxOf(need.widest, px + pad)
+    }
+    Tile(speak, modifier, selected = selected, color = color, onClick = onClick) {
+        // everything but the label box has a fixed height, so the label box gets what the tallest tile's label needed
+        val fixed = TILE_PAD * 2 + picture + TILE_GAP
+        Box(Modifier.size(picture), contentAlignment = Alignment.Center) { pic() }
+        Spacer(Modifier.height(TILE_GAP))
+        Column(Modifier.fillMaxWidth().then(if (fit != null) Modifier.height(fit.tallest - fixed) else Modifier),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(label, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = sc.small * 1.3f, style = androidx.compose.ui.text.TextStyle(hyphens = androidx.compose.ui.text.style.Hyphens.Auto,
+                    lineBreak = androidx.compose.ui.text.style.LineBreak.Paragraph))
+            under?.invoke()
+        }
+    }
+}
+
+/** Filled while a [TileGrid] works out its columns: the width the widest word in any label needs. */
+class TileNeed { var widest = 0 }
+val LocalTileNeed = androidx.compose.runtime.compositionLocalOf<TileNeed?> { null }
+
+val TILE_PAD = 12.dp
+val TILE_GAP = 10.dp
 
 /**
  * A tappable tile, same size as its neighbours: white with a grey outline. Chosen tiles get the accent outline,
@@ -712,11 +935,11 @@ fun Tile(label: String, modifier: Modifier, selected: Boolean = false, color: Co
     var pressed by remember { mutableStateOf(false) }
     val sh = RoundedCornerShape(sc.radius)
     Box(
-        modifier.scale(pressScale(pressed)).clip(sh)
-            .background(if (selected) Color(0xFFBFE0DA) else color ?: p.card).border(if (selected) 3.dp else 1.5.dp, if (selected) p.brand else p.line, sh)
+        modifier.scale(pressScale(pressed)).lift(sh, on = !LocalOnCard.current).clip(sh)
+            .background(if (selected) p.brandSoft else color ?: p.card).then(if (selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(label + if (selected) ", chosen" else "", onPress = { pressed = it }, onClick = onClick),
     ) {
-        Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
+        Column(Modifier.fillMaxSize().padding(TILE_PAD), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center, content = content)
     }
 }
 
@@ -748,16 +971,19 @@ fun LevelMark(level: String, withWord: Boolean = true) {
 fun Chip(text: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(
-        modifier.heightIn(min = 52.dp).clip(RoundedCornerShape(26.dp))
-            .background(if (selected) p.brand else p.paper)
-            .then(if (!selected) Modifier.border(1.5.dp, p.line, RoundedCornerShape(26.dp)) else Modifier)
-            .steady(text + if (selected) ", chosen" else "", onClick = onClick).padding(horizontal = 18.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (selected) { Icon(Icons.Rounded.Check, null, tint = p.onBrand, modifier = Modifier.size(22.dp)); Spacer(Modifier.width(6.dp)) }
-        Text(text, color = if (selected) p.onBrand else p.ink, fontSize = sc.body, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium)
-    }
+    // Android's own filter chip, finger-sized
+    androidx.compose.material3.FilterChip(
+        selected = selected,
+        onClick = steadyAction(text + if (selected) ", chosen" else "", onClick = onClick),
+        label = { Text(text, fontSize = sc.body, fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium, modifier = Modifier.padding(vertical = 10.dp)) },
+        modifier = modifier.heightIn(min = 52.dp),
+        shape = RoundedCornerShape(26.dp),
+        leadingIcon = if (selected) { { Icon(Icons.Rounded.Check, null, modifier = Modifier.size(22.dp)) } } else null,
+        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+            containerColor = if (LocalOnCard.current) p.fill else p.card, labelColor = p.ink,
+            selectedContainerColor = p.brand, selectedLabelColor = p.onBrand, selectedLeadingIconColor = p.onBrand),
+        border = null,
+    )
 }
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
@@ -786,12 +1012,19 @@ fun BoxScope.Centered(content: @Composable () -> Unit) = Box(Modifier.align(Alig
 fun Segmented(options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).border(1.dp, p.line, RoundedCornerShape(16.dp)).padding(4.dp)) {
+    // Android's own segmented buttons; every choice as tall as the tallest, so a long label wraps instead of being cut
+    androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
         options.forEachIndexed { i, o ->
-            Box(
-                Modifier.weight(1f).height(sc.target - 12.dp).clip(RoundedCornerShape(12.dp)).background(if (i == selected) p.brand else Color.Transparent).steady(o + if (i == selected) ", chosen" else "") { onSelect(i) },
-                contentAlignment = Alignment.Center,
-            ) { Text(o, fontSize = sc.body, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium, color = if (i == selected) p.onBrand else p.inkSoft, maxLines = 1) }
+            SegmentedButton(
+                selected = i == selected,
+                onClick = steadyAction(o + if (i == selected) ", chosen" else "") { onSelect(i) },
+                shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(i, options.size),
+                modifier = Modifier.fillMaxHeight().heightIn(min = sc.target - 8.dp),
+                colors = androidx.compose.material3.SegmentedButtonDefaults.colors(
+                    activeContainerColor = p.brand, activeContentColor = p.onBrand, activeBorderColor = p.brand,
+                    inactiveContainerColor = p.card, inactiveContentColor = p.ink, inactiveBorderColor = p.outline.copy(alpha = 0.6f)),
+                icon = {},
+            ) { Text(o, fontSize = sc.body, fontWeight = if (i == selected) FontWeight.Bold else FontWeight.Medium, textAlign = TextAlign.Center) }
         }
     }
 }
@@ -836,18 +1069,16 @@ fun FlowScreen(
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
                     Box(Modifier.size(width = 40.dp, height = 5.dp).clip(RoundedCornerShape(3.dp)).background(p.line))
                 }
-                Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     if (onClose != null) RoundButton(Icons.Rounded.Close, "Close", onClose) else Spacer(Modifier.size(56.dp))
-                    Text(task, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                    Text(task, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
                     Spacer(Modifier.size(56.dp))
                 }
             } else
             // the top bar keeps its height on every page (empty on a first page), so the title never moves between pages
-            Row(Modifier.fillMaxWidth().height(72.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 72.dp).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (onBack != null) RoundButton(Icons.AutoMirrored.Rounded.ArrowBack, "Back", onBack) else Spacer(Modifier.size(56.dp))
-                Text(if (onBack != null || onClose != null) task else "", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
+                Text(if (onBack != null || onClose != null) task else "", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.inkSoft, textAlign = TextAlign.Center, modifier = Modifier.weight(1f).padding(horizontal = 8.dp))
                 ReadToggle()
                 if (onClose != null) { Spacer(Modifier.width(8.dp)); RoundButton(Icons.Rounded.Close, "Close", onClose) }
                 else if (!s.readAloud) Spacer(Modifier.size(56.dp))
@@ -894,7 +1125,7 @@ fun FlowActions(primary: String?, primaryEnabled: Boolean, onPrimary: () -> Unit
         if (secondary != null) {
             Text(secondary, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, maxLines = 1,
                 modifier = Modifier.heightIn(min = sc.target).clip(RoundedCornerShape(16.dp))
-                    .border(1.5.dp, p.inkSoft.copy(alpha = 0.45f), RoundedCornerShape(16.dp)).steady(secondary, onClick = onSecondary)
+                    .background(p.fill).steady(secondary, onClick = onSecondary)
                     .padding(horizontal = 20.dp).wrapContentHeight(Alignment.CenterVertically))
             if (primary != null) Spacer(Modifier.width(20.dp))
         }
@@ -910,15 +1141,13 @@ fun MoreBelow(scroll: ScrollState, modifier: Modifier = Modifier) {
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
     if (!scroll.canScrollForward) return
-    Box(modifier.fillMaxWidth().height(88.dp).background(Brush.verticalGradient(listOf(p.paper.copy(alpha = 0f), p.paper.copy(alpha = 0.95f), p.paper))), contentAlignment = Alignment.BottomCenter) {
-        Row(
-            Modifier.padding(bottom = 8.dp).height(46.dp).clip(RoundedCornerShape(23.dp)).background(p.card).border(2.dp, p.brand, RoundedCornerShape(23.dp))
-                .steady("More below") { scope.launch { scroll.animateScrollTo(scroll.value + (scroll.viewportSize * 0.8f).toInt()) } }.padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("More below", fontSize = sc.small, fontWeight = FontWeight.Bold, color = p.brand)
-            Spacer(Modifier.width(6.dp))
-            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = p.brand, modifier = Modifier.size(24.dp))
+    // a thin strip along the bottom edge, not a button: a soft fade and a small "More below", tap to scroll
+    Box(modifier.fillMaxWidth().height(48.dp).background(Brush.verticalGradient(listOf(p.paper.copy(alpha = 0f), p.paper.copy(alpha = 0.92f), p.paper)))
+        .steady("More below") { scope.launch { scroll.animateScrollTo(scroll.value + (scroll.viewportSize * 0.8f).toInt()) } },
+        contentAlignment = Alignment.BottomCenter) {
+        Row(Modifier.padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("More below", fontSize = sc.small * 0.9f, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+            Icon(Icons.Rounded.KeyboardArrowDown, null, tint = p.inkSoft, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -955,8 +1184,8 @@ private fun BigOptionCard(o: BigOption, modifier: Modifier) {
     Box(
         modifier.heightIn(min = if (sc.big) 230.dp else 200.dp).scale(pressScale(pressed))
             
-            .clip(sh).background(if (o.selected) Color(0xFFBFE0DA) else p.card)
-            .border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.line, sh)
+            .clip(sh).background(if (o.selected) p.brandSoft else p.card)
+            .then(if (o.selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick),
         contentAlignment = Alignment.Center,          // the picture and words sit in the middle of the card
     ) {
@@ -985,7 +1214,7 @@ fun ChoiceGrid(items: List<String>, isOn: (String) -> Boolean, onToggle: (String
                     val sh = RoundedCornerShape(18.dp)
                     Box(
                         Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(sh)
-                            .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, sh)
+                            .background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(3.dp, p.brand, sh) else Modifier)
                             .steady(item + if (on) ", chosen" else ", not chosen") { onToggle(item) }.padding(horizontal = 16.dp, vertical = 12.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) { Text(item, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink) }
@@ -1043,7 +1272,7 @@ private fun BigOptionRow(o: BigOption) {
     var pressed by remember { mutableStateOf(false) }
     Row(
         Modifier.fillMaxWidth().heightIn(min = if (sc.big) 132.dp else 116.dp).scale(pressScale(pressed)).clip(sh)
-            .background(if (o.selected) Color(0xFFBFE0DA) else p.card).border(if (o.selected) 3.dp else 1.dp, if (o.selected) p.brand else p.line, sh)
+            .background(if (o.selected) p.brandSoft else p.card).then(if (o.selected) Modifier.border(3.dp, p.brand, sh) else Modifier)
             .steady(o.title + (o.sub?.let { ". $it" } ?: "") + if (o.selected) ", chosen" else "", onPress = { pressed = it }, onClick = o.onClick)
             .padding(horizontal = 18.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1092,35 +1321,101 @@ fun Section(title: String, action: String? = null, onAction: () -> Unit = {}) {
 @Composable
 fun Group(content: @Composable ColumnScope.() -> Unit) {
     val sh = RoundedCornerShape(LocalScale.current.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(LocalPalette.current.card), content = content)
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(LocalPalette.current.card)) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalOnCard provides true) { content() }
+    }
 }
 
 @Composable
 fun GroupLine() = Box(Modifier.padding(start = 18.dp).fillMaxWidth().height(1.dp).background(LocalPalette.current.line))
 
 /**
- * One fact in a [Group]: what it is on the left, its value on the right ("Doctor — Dr. Rao, Heart"). Tappable
- * rows end in a chevron; an empty value shows a quiet "Add".
+ * One short fact in a [Group], as a key and its value side by side ("Calories a day  1,600 kcal"). Only for
+ * summaries: when either side is long they stack (the key small on top, the value under it), so nothing is squeezed.
+ * A row you can tap is never a key-value row: it becomes a [NavRow].
  */
 @Composable
 fun ValueRow(label: String, value: String?, sub: String? = null, valueColor: Color? = null, onClick: (() -> Unit)? = null) {
+    if (onClick != null) { NavRow(label, value, sub, valueColor, onClick); return }
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = sc.target + 4.dp)
-            .then(if (onClick != null) Modifier.steady(label + ": " + (value ?: "not added"), onClick = onClick) else Modifier)
-            .padding(horizontal = 18.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    val v = value?.ifBlank { null } ?: "–"
+    val side = label.length <= 24 && v.length <= 16
+    if (side) Row(Modifier.fillMaxWidth().heightIn(min = sc.target + 4.dp).padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(label, fontSize = sc.body, color = p.ink, fontWeight = FontWeight.Medium)
             if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
         }
         Spacer(Modifier.width(12.dp))
-        Text(value?.ifBlank { null } ?: if (onClick != null) "Add" else "–", fontSize = sc.body, fontWeight = FontWeight.SemiBold,
-            color = when { value.isNullOrBlank() && onClick != null -> p.brand; else -> valueColor ?: p.inkSoft },
-            textAlign = TextAlign.End, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 170.dp))
-        if (onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft.copy(alpha = 0.6f), modifier = Modifier.size(26.dp))
+        Text(v, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = valueColor ?: p.ink, textAlign = TextAlign.End)
+    } else Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+        Text(label, fontSize = sc.small, color = p.inkSoft, fontWeight = FontWeight.Medium)
+        Text(v, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = valueColor ?: p.ink)
+        if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
+    }
+}
+
+/**
+ * A row that opens something, in a [Group]: its name, what it's set to on the line under it (never squeezed into a
+ * second column), and a chevron.
+ */
+@Composable
+fun NavRow(title: String, value: String? = null, sub: String? = null, valueColor: Color? = null, onClick: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = sc.target + 4.dp).steady(title + ": " + (value ?: sub ?: ""), onClick = onClick).padding(horizontal = 18.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, fontSize = sc.body, color = p.ink, fontWeight = FontWeight.Medium)
+            value?.ifBlank { null }?.let { Text(it, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = valueColor ?: p.inkSoft) }
+            if (sub != null) Text(sub, fontSize = sc.small, color = p.inkSoft)
+        }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(26.dp))
+    }
+}
+
+/**
+ * One row of a timeline, on its own (inside a group that is already a card) or in a [Timeline]: a dot and the
+ * line down to the next, the time small on top, the words under it at full width, a chevron when it opens.
+ */
+@Composable
+fun TimelineRow(it: TimelineItem, last: Boolean, trailing: (@Composable () -> Unit)? = null) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)
+        .then(if (it.onClick != null) Modifier.clip(RoundedCornerShape(12.dp)).steady("${it.time}. ${it.text}", onClick = it.onClick) else Modifier)) {
+        Column(Modifier.width(18.dp).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.padding(top = 6.dp).size(10.dp).clip(CircleShape).background(it.mark ?: p.outline))
+            if (!last) Box(Modifier.padding(top = 4.dp).width(2.dp).weight(1f).background(p.line))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f).padding(bottom = 14.dp)) {
+            Text(it.time, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft)
+            Text(it.text, fontSize = sc.body, color = it.mark?.takeIf { m -> m == p.red } ?: p.ink, fontWeight = FontWeight.Medium)
+            if (it.sub != null) Text(it.sub, fontSize = sc.small, color = p.inkSoft)
+        }
+        trailing?.invoke()
+        if (it.onClick != null) Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.padding(top = 10.dp).size(24.dp))
+    }
+}
+
+/** One entry on a [Timeline]: when, what (any length), an optional line under it, and a dot colour only when it matters. */
+data class TimelineItem(val time: String, val text: String, val sub: String? = null, val mark: Color? = null, val onClick: (() -> Unit)? = null)
+
+/**
+ * Things that happened, newest first, down a thin line: the time small on top, the words under it at full width,
+ * so a long message reads as easily as a short one. For history only; facts go in [ValueRow].
+ */
+@Composable
+fun Timeline(items: List<TimelineItem>) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(sc.radius)
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card).padding(start = 16.dp, end = 12.dp, top = 16.dp, bottom = 4.dp)) {
+        items.forEachIndexed { i, it -> TimelineRow(it, last = i == items.lastIndex) }
     }
 }
 
@@ -1162,9 +1457,9 @@ fun Point(icon: ImageVector, title: String, sub: String) {
 data class DayPart(val icon: ImageVector, val tint: Color, val name: String)
 
 fun dayPart(hour: Int): DayPart = when (hour) {
-    in 4..9 -> DayPart(DayIcons.Sunrise, Color(0xFFEA7310), "Morning")
-    in 10..15 -> DayPart(Icons.Rounded.WbSunny, Color(0xFFD99A00), if (hour < 12) "Morning" else "Afternoon")
-    in 16..19 -> DayPart(DayIcons.Sunset, Color(0xFFD63B2F), "Evening")
+    in 4..9 -> DayPart(DayIcons.Sunrise, Color(0xFFC4600A), "Morning")
+    in 10..15 -> DayPart(Icons.Rounded.WbSunny, Color(0xFFA06F00), if (hour < 12) "Morning" else "Afternoon")
+    in 16..19 -> DayPart(DayIcons.Sunset, Color(0xFFC0271F), "Evening")
     else -> DayPart(Icons.Rounded.NightsStay, Color(0xFF2266DD), "Night")
 }
 
@@ -1190,4 +1485,47 @@ private fun horizonSun(up: Boolean): ImageVector {
         addPath(androidx.compose.ui.graphics.vector.PathParser().parsePathString(arrow).toNodes(), stroke = ink, strokeLineWidth = 2f, strokeLineCap = round,
             strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round)
     }.build()
+}
+
+/**
+ * Every bottom sheet in the app: it opens at most three quarters of the screen high, grows to nine tenths as its
+ * content is scrolled up, and never reaches under the status bar. [scroll] = false for content that scrolls itself.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun AppSheet(onDismissRequest: () -> Unit, containerColor: Color = LocalPalette.current.paper, scroll: Boolean = true,
+             content: @Composable ColumnScope.() -> Unit) {
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val screen = with(density) { androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp.toPx() }
+    var limit by remember { androidx.compose.runtime.mutableFloatStateOf(screen * 0.75f) }
+    val grow = remember(screen) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                if (available.y < 0 && limit < screen * 0.9f) {
+                    val d = minOf(-available.y, screen * 0.9f - limit)
+                    limit += d
+                    return androidx.compose.ui.geometry.Offset(0f, -d)
+                }
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismissRequest, sheetState = sheetState, containerColor = containerColor) {
+        Box(Modifier.fillMaxWidth().heightIn(max = with(density) { limit.toDp() }).nestedScroll(grow)) {
+            Column(Modifier.fillMaxWidth().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier), content = content)
+        }
+    }
+}
+
+/** While a page is being put together: a spinner and a word, never a blank page. */
+@Composable
+fun Loading(text: String = "Getting it ready…") {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    Row(Modifier.fillMaxWidth().padding(vertical = 32.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.CircularProgressIndicator(Modifier.size(28.dp), color = p.brand, strokeWidth = 3.dp)
+        Spacer(Modifier.width(14.dp))
+        Text(text, fontSize = sc.body, color = p.inkSoft)
+    }
 }

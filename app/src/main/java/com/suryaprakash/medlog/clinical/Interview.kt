@@ -37,10 +37,26 @@ object Interview {
     ))
 
     val COUNT = Ask("count", "count", "How many times today?", Kind.NUMBER, listOf(
-        Choice("1", "Once"), Choice("2", "2 times"), Choice("3", "3 times"), Choice("4", "4 times"), Choice("6", "5 or more"),
+        Choice("1", "Once"), Choice("2", "2 times"), Choice("3", "3 times"), Choice("4", "4 times"), Choice("5", "5 or more"),
     ))
 
     val WHERE = Ask("where", "site", "Show me where it is.", Kind.BODY)
+
+    /** For something that keeps coming back (a cough, breathlessness, headaches): how long it has been known, and how often. */
+    val DIAGNOSED = Ask("diagnosed", "diagnosed", "How long ago did a doctor say what it is?", Kind.CHOICE, listOf(
+        Choice("not yet", "Not seen a doctor yet", listOf("not yet", "no doctor", "not seen", "abhi nahi", "illai", "illa")),
+        Choice("under a month", "Less than a month", listOf("this month", "weeks", "few weeks", "is mahine", "indha maasam")),
+        Choice("1 to 6 months", "1 to 6 months", listOf("months", "few months", "kuch mahine", "konja maasam")),
+        Choice("6 to 12 months", "6 months to a year", listOf("six months", "half year", "chhe mahine", "aaru maasam")),
+        Choice("over a year", "More than a year", listOf("year", "years", "long time", "saal", "varusham", "romba naal")),
+    ))
+    val OFTEN = Ask("often", "often", "How often does it happen?", Kind.CHOICE, listOf(
+        Choice("all the time", "All the time", listOf("all the time", "always", "constant", "hamesha", "eppavum")),
+        Choice("many times a day", "Many times a day", listOf("many times", "again and again", "baar baar", "adikkadi")),
+        Choice("once or twice a day", "Once or twice a day", listOf("once a day", "twice a day", "daily", "every day", "roz", "dinamum")),
+        Choice("a few times a week", "A few times a week", listOf("week", "few times a week", "hafte", "vaaram")),
+        Choice("now and then", "Now and then", listOf("sometimes", "rarely", "now and then", "kabhi kabhi", "appappo")),
+    ))
 
     val DEPTH = Ask("depth", "depth", "How deep does it feel?", Kind.CHOICE, listOf(
         Choice("on the skin", "On the skin", listOf("skin", "surface", "outside", "upar", "mele", "tolu", "charma"), "depth_skin"),
@@ -93,6 +109,13 @@ object Interview {
         Choice("tingling", "Tingling", listOf("tingling", "pins and needles", "numb", "jhanjhanahat", "kooch", "marathu"), "feel_tingling"),
     ))
 
+    /** How long on the floor: asked right after "Could you get up?" is answered no (B50). Values are minutes. */
+    val FLOOR = Ask("q_floor", "timeOnFloor", "How long were you on the floor?", Kind.CHOICE, listOf(
+        Choice("5", "Under 10 minutes", listOf("few minutes", "under 10", "less than 10", "short time", "little while")),
+        Choice("30", "10 to 60 minutes", listOf("half an hour", "30 minutes", "20 minutes", "10 to 60", "some time")),
+        Choice("90", "More than an hour", listOf("more than an hour", "an hour", "hour", "hours", "long time", "all night")),
+    ))
+
     val MORE = Ask("more", "more", "Can you tell me a little more? It helps your doctor.", Kind.YESNO)
 
     val PATTERN = Ask("pattern", "pattern", "Is it there all the time, or does it come and go?", Kind.CHOICE, listOf(
@@ -129,6 +152,12 @@ object Interview {
     private val NO_SEVERITY = setOf("fainted", "fits", "fall", "near_fall", "choking", "sneeze", "burp", "hiccup", "black_stool", "blood_stool",
         "blood_urine", "high_bp", "low_bp", "low_sugar", "high_sugar", "low_oxygen", "self_harm", "confusion", "memory")
 
+    /** Things that often last or keep coming back, where the doctor wants to know since when and how often. */
+    private val LASTING = setOf("cough", "breathless", "wheeze", "headache", "migraine", "acidity", "constipation", "loose_motions", "dizzy",
+        "palpitations", "cant_sleep", "back_pain", "neck_pain", "hip_pain", "knee_pain", "shoulder_pain", "leg_pain", "foot_pain", "body_ache", "itching", "rash", "hives", "tremor", "numbness", "tingling", "foot_numb",
+        "frequent_urine", "leaking_urine", "low_mood", "anxious", "snoring", "hoarse", "runny_nose", "blocked_nose", "sneeze", "nausea", "tired", "weakness")
+    fun lasting(p: Problem) = p.id in LASTING
+
     private val BURNS = setOf("burn", "sunburn")
     private val ITCHY = setOf("itching", "itchy_eyes", "hives", "fungal", "rash")
     private val SENSATIONS = setOf("tingling", "numbness", "foot_numb", "nausea", "dizzy", "palpitations", "breathless", "anxious", "tired", "weakness", "chills", "hot_flush")
@@ -147,16 +176,44 @@ object Interview {
     fun locatable(p: Problem) = p.id !in NOT_LOCATABLE && p.region !in setOf("whole", "mind")
     fun deepable(p: Problem) = locatable(p) && p.region !in SHALLOW_REGIONS
 
+    /** Danger questions that are always core for a problem, even though their priority is lower (B49, B51). */
+    private val ALWAYS_CORE = mapOf(
+        "fever" to listOf("q_temp", "q_stiffneck"), "chills" to listOf("q_temp"),
+        // dehydration is judged from these two, so they are asked before "tell more" (B53); blood stays first
+        "vomiting" to listOf("q_blood_vomit", "q_keepwater", "q_urine"),
+        "loose_motions" to listOf("q_blood_stool", "q_keepwater", "q_urine"),
+    )
+
+    /** "When did it start?" was answered "a week or more" (the tile's label or value). */
+    fun startedWeekOrMore(facts: Map<String, Fact>): Boolean = facts["started"]?.value?.toString()?.trim()?.lowercase() == "a week or more"
+
+    /** For a cough that started a week or more ago: "For how many days?" (2.13 asks in days; B54). Nothing is derived otherwise. */
+    fun weeksAsk(cat: Catalogue, p: Problem, facts: Map<String, Fact>): Ask? =
+        if (p.id == "cough" && startedWeekOrMore(facts) && !facts.containsKey("weeks") && !facts.containsKey("days")) cat.questions["q_weeks"]?.let { fromQuestion(cat, it) } else null
+
+    /** The danger questions asked before "tell more": the top two, three for fever and falls (B49, B50). */
+    private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> {
+        val must = ALWAYS_CORE[p.id].orEmpty().mapNotNull { cat.questions[it] }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
+        val rest = dangerQuestions(cat, p).filter { d -> must.none { it.field == d.field } }
+        val room = (if (p.id in setOf("fever", "fall")) 3 else 2) - must.size
+        return must + rest.take(room.coerceAtLeast(0))
+    }
+
     /** Core questions for [p], skipping anything already known. */
     fun core(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
-        dangerQuestions(cat, p).take(2).forEach(::add)
+        coreDanger(cat, p).forEach(::add)
+        weeksAsk(cat, p, facts)?.let(::add)
+        if (p.id == "fall" && facts["couldGetUp"]?.value == false) add(FLOOR)
         if (p.id in COUNTABLE) add(COUNT)
         if (locatable(p)) add(WHERE)
         if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
         if (p.id !in NO_SEVERITY) add(scaleFor(p))
+        // something that keeps coming back: how often, and since when a doctor has known; danger signs always come first,
+        // and whatever doesn't fit in the first few questions is asked with the rest
+        if (lasting(p)) listOf(OFTEN, DIAGNOSED).forEach { if (out.size < 6) add(it) }
         return out
     }
 
@@ -164,21 +221,23 @@ object Interview {
     fun extended(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field) && out.none { it.field == a.field }) out += a.copy(core = false) }
+        if (lasting(p)) core(cat, p, emptyMap()).map { it.field }.let { asked -> listOf(OFTEN, DIAGNOSED).filter { it.field !in asked }.forEach(::add) }
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
-        dangerQuestions(cat, p).drop(2).forEach(::add)
-        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q -> fromQuestion(cat, q)?.let(::add) }
+        val inCore = coreDanger(cat, p).map { it.field }.toSet()
+        dangerQuestions(cat, p).filter { it.field !in inCore }.forEach(::add)
+        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 && it.field !in inCore }.forEach { q -> fromQuestion(cat, q)?.let(::add) }
         // other catalogue fields that have simple answers
         for (f in p.fields) {
             val field = cat.field(f) ?: continue
-            if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "pillows", "timeOnFloor", "sleepHours")) continue
+            if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "days", "pillows", "timeOnFloor", "sleepHours")) continue
             when (field.type) {
                 FieldType.YESNO -> add(Ask("f_$f", f, yesNoText(field.label), Kind.YESNO, core = false, danger = field.danger))
                 FieldType.CHOICE -> add(Ask("f_$f", f, choiceText(f, field.label), Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false))
                 else -> {}
             }
         }
-        if (locatable(p) || "pattern" in p.fields || p.region == "whole") add(PATTERN)
+        if (!lasting(p) && (locatable(p) || "pattern" in p.fields || p.region == "whole")) add(PATTERN)
         if (locatable(p)) { add(WORSE); add(BETTER) }
         add(TOOK_MED)
         add(ANYTHING)
@@ -241,7 +300,7 @@ object Interview {
             }
             Kind.NUMBER -> Lang.number(t)?.let { Heard.Value(it, "$it") } ?: Heard.Unclear
             Kind.TEMP -> Regex("\\b(\\d{2,3}(?:\\.\\d)?)\\b").find(t)?.groupValues?.get(1)?.toDoubleOrNull()?.let { v ->
-                val f = if (v in 34.0..43.0) Math.round((v * 9 / 5 + 32) * 10) / 10.0 else v
+                val f = DangerRules.toFahrenheit(v)
                 if (f in 93.0..110.0) Heard.Value(f, "$f °F") else null
             } ?: Heard.Unclear
             Kind.FREE -> if (raw.isNotBlank()) Heard.Value(raw.trim(), raw.trim()) else Heard.Unclear

@@ -45,16 +45,16 @@ object Pdf {
         // ── heading ──
         w.pair("Patient-reported symptoms", n.period, 15f)
         w.text(n.patient, 11f, bold = true)
-        w.kv("Allergies", n.allergies, if (n.allergies != "None known") RED else INK)
-        w.kv("Conditions", n.conditions)
-        w.kv("Medicines", n.currentMeds)
+        // only what was recorded: no "none known" or "none recorded" rows
+        if (n.allergies.isNotBlank()) w.kv("Allergies", n.allergies, RED)
+        if (n.conditions.isNotBlank()) w.kv("Conditions", n.conditions)
+        if (n.currentMeds.isNotBlank()) w.kv("Medicines", n.currentMeds)
         w.rule()
 
         // ── main concerns, with the body diagram beside them ──
         val diagramW = 150f
         val top = w.y
-        w.section("Main concerns", right = diagramW + 12f)
-        if (n.concerns.isEmpty()) w.text("No concerning findings reported.", 10f, right = diagramW + 12f)
+        if (n.concerns.isNotEmpty()) w.section("Main concerns", right = diagramW + 12f)
         n.concerns.forEachIndexed { i, c -> w.text("${i + 1}.  $c", 10.5f, bold = i == 0, right = diagramW + 12f) }
         if (n.pins.isNotEmpty()) {
             w.bodyDiagram(W - M - diagramW, top + 2f, diagramW, n.pins) { back -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 400) }
@@ -69,43 +69,51 @@ object Pdf {
                 listOf("#", "Symptom", "When", "Where", "Character", "Notes"),
                 floatArrayOf(0.04f, 0.15f, 0.22f, 0.17f, 0.17f, 0.25f),
                 n.symptoms.map { r -> listOf("${r.n}", r.name, r.whenText, r.where, r.nature, r.notes) to (if (r.urgent == "RED") RED else if (r.urgent == "AMBER") AMBER else INK) },
+                dropEmpty = true,
             )
         }
         if (n.medicines.isNotEmpty()) {
             w.section("Medicines in this period")
-            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.26f, 0.2f, 0.14f, 0.4f), n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change.ifBlank { "–" }) to INK })
+            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.26f, 0.2f, 0.14f, 0.4f), n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
         }
         if (n.readings.isNotEmpty()) { w.section("Readings"); n.readings.forEach { w.text(it, 10f) } }
         if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text(it, 10f, color = SOFT) } }
         if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
         w.footer(n.footer)
         // ── nutrition: its own page, verdict first, detail after ──
-        nut?.let { r ->
+        // only when food or feeds were logged; days with nothing logged, and "nothing logged" findings, are left out
+        nut?.takeIf { r -> r.days.any { it.logged } || r.feeds.isNotEmpty() }?.let { r ->
             w.page()
             w.pair("Nutrition and weight", n.period, 15f)
-            w.text(r.headline.text, 12.5f, bold = true, color = if (r.headline.level == "RED") RED else if (r.headline.level == "AMBER") AMBER else INK)
-            r.findings.drop(1).forEach { f -> w.text("•  ${f.text}", 10.5f, color = if (f.level == "RED") RED else if (f.level == "AMBER") AMBER else INK) }
+            val found = (listOf(r.headline) + r.findings.drop(1)).filter { !it.text.startsWith("Nothing logged") }
+            found.firstOrNull()?.let { h -> w.text(h.text, 12.5f, bold = true, color = if (h.level == "RED") RED else if (h.level == "AMBER") AMBER else INK) }
+            found.drop(1).forEach { f -> w.text("•  ${f.text}", 10.5f, color = if (f.level == "RED") RED else if (f.level == "AMBER") AMBER else INK) }
             w.gap(4f)
-            w.kv("Calories", r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
-            w.kv("Protein", r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
-            w.kv("Weight", r.weightChange?.let { "${"%.1f".format(r.weights.first().second)} → ${"%.1f".format(r.weights.last().second)} kg in ${r.weightDays} days" } ?: "Not enough readings")
-            w.kv("Targets", if (r.targetsFromDoctor) "Set by the doctor" else "30 kcal and 1 g protein per kg (to be confirmed)")
+            val logged = r.days.filter { it.logged }
+            if (logged.isNotEmpty()) w.kv("Calories", r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
+            if (logged.isNotEmpty()) w.kv("Protein", r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
+            r.weightChange?.let { w.kv("Weight", "${"%.1f".format(r.weights.first().second)} → ${"%.1f".format(r.weights.last().second)} kg in ${r.weightDays} days") }
+            if (logged.isNotEmpty()) w.kv("Targets", if (r.targetsFromDoctor) "Set by the doctor" else "30 kcal and 1 g protein per kg (to be confirmed)")
             if (r.feeds.isNotEmpty()) w.kv("Feeds", r.feeds.joinToString("; "))
             w.rule()
-            w.section("Day by day")
-            w.table(listOf("Day", "kcal", "Protein", "Water", "What went in"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
-                r.days.reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), if (d.logged) "${d.kcal.toInt()}" else "–",
-                    if (d.logged) "${d.protein.toInt()} g" else "–", "${d.water}", if (d.logged) d.items.joinToString(", ") else "Nothing logged") to
-                    (r.kcalTarget?.let { t -> if (d.logged && d.kcal < t * 0.6) RED else if (d.logged && d.kcal < t * 0.85) AMBER else INK } ?: INK) })
-            if (r.missed.isNotEmpty()) { w.section("Missed feeds"); r.missed.sortedBy { it.at }.forEach { m -> w.text("${java.text.SimpleDateFormat("d MMM, h:mm a", java.util.Locale.ENGLISH).format(java.util.Date(m.at))}  ·  ${m.feed} ${m.ml.toInt()} ml", 10f) } }
+            if (logged.isNotEmpty()) {
+                w.section("Day by day")
+                w.table(listOf("Day", "kcal", "Protein", "Water", "What went in"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
+                    logged.reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), "${d.kcal.toInt()}",
+                        "${d.protein.toInt()} g", if (d.water > 0) "${d.water}" else "", d.items.joinToString(", ")) to
+                        (r.kcalTarget?.let { t -> if (d.kcal < t * 0.6) RED else if (d.kcal < t * 0.85) AMBER else INK } ?: INK) }, dropEmpty = true)
+            }
             if (r.changes.isNotEmpty()) { w.section("What changed"); r.changes.forEach { w.text("•  $it", 10f) } }
             if (r.observed.isNotEmpty()) { w.section("Also noticed"); r.observed.forEach { w.text("•  $it", 10f) } }
-            w.text("Food values are estimates for home cooking.", 9f, color = SOFT)
+            if (logged.isNotEmpty()) w.text("Food values are estimates for home cooking.", 9f, color = SOFT)
             w.footer(n.footer)
         }
         w.finish()
 
-        val f = File(File(ctx.cacheDir, "share").apply { mkdirs() }, "Symptom-summary.pdf")
+        // a new name each time, so a viewer never shows a copy it kept from before; older ones are cleared
+        val dir = File(ctx.cacheDir, "share").apply { mkdirs() }
+        dir.listFiles { x -> x.name.startsWith("Symptom-summary") || x.name.startsWith("Health-summary") }?.forEach { it.delete() }
+        val f = File(dir, "Health-summary-${java.text.SimpleDateFormat("yyyy-MM-dd-HHmm", java.util.Locale.ENGLISH).format(java.util.Date())}.pdf")
         FileOutputStream(f).use { doc.writeTo(it) }
         doc.close()
         return f
@@ -169,7 +177,12 @@ object Pdf {
             if (right == 0f) { c.drawLine(M, y - 3f, W - M, y - 3f, lp) }
         }
 
-        fun table(head: List<String>, frac: FloatArray, rows: List<Pair<List<String>, Int>>) {
+        /** With [dropEmpty], a column with nothing in any row is left out and the others share its width. */
+        fun table(head0: List<String>, frac0: FloatArray, rows0: List<Pair<List<String>, Int>>, dropEmpty: Boolean = false) {
+            val keep = head0.indices.filter { i -> !dropEmpty || rows0.any { it.first.getOrNull(i).orEmpty().isNotBlank() } }
+            val head = keep.map { head0[it] }
+            val frac = keep.map { frac0[it] }.let { f -> val sum = f.sum(); FloatArray(f.size) { f[it] / sum } }
+            val rows = rows0.map { (cells, color) -> keep.map { cells.getOrElse(it) { "" } } to color }
             val total = W - 2 * M
             val xs = FloatArray(frac.size) { i -> M + total * frac.take(i).sum() }
             val ws = FloatArray(frac.size) { total * frac[it] - 6f }
@@ -239,7 +252,9 @@ object Pdf {
         val pm = ctx.getSystemService(PrintManager::class.java) ?: return
         pm.print("Symptom summary", object : PrintDocumentAdapter() {
             override fun onLayout(old: PrintAttributes?, new: PrintAttributes?, cancel: CancellationSignal?, cb: LayoutResultCallback, extras: Bundle?) {
-                cb.onLayoutFinished(PrintDocumentInfo.Builder("Symptom-summary.pdf").setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).build(), true)
+                // the real number of pages: some phones' print preview shows only the first page when it isn't given
+                val pages = runCatching { android.graphics.pdf.PdfRenderer(ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)).use { it.pageCount } }.getOrDefault(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
+                cb.onLayoutFinished(PrintDocumentInfo.Builder("Symptom-summary.pdf").setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(pages).build(), true)
             }
             override fun onWrite(pages: Array<out PageRange>?, dest: ParcelFileDescriptor, cancel: CancellationSignal?, cb: WriteResultCallback) {
                 runCatching { f.inputStream().use { input -> FileOutputStream(dest.fileDescriptor).use { input.copyTo(it) } }; cb.onWriteFinished(arrayOf(PageRange.ALL_PAGES)) }

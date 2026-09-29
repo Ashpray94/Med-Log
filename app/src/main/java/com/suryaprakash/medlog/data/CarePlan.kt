@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.data
 
+import com.suryaprakash.medlog.clinical.Limits
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -18,23 +19,41 @@ data class CarePlan(
     val risks: List<String> = emptyList(),
     /** problem ids that, for this person, mean: call the helpers now */
     val emergencies: List<String> = emptyList(),
+    /** the emergencies step was answered, even with an empty list: don't refill it */
+    val emergenciesAsked: Boolean = false,
+    /** the helper's own lines for this person (see clinical/Limits.kt) */
+    val limits: Limits = Limits(),
+    /** phone numbers (digits only) of the helpers who are also told when MedLog says "call the doctor today" (B59); the rest hear only about RED */
+    val amberHelpers: List<String> = emptyList(),
 ) {
-    data class Doctor(val name: String, val speciality: String, val phone: String)
+    data class Doctor(val name: String, val speciality: String, val phone: String, val hospital: String = "")
 
     fun toJson(): String = JSONObject()
-        .put("doctors", JSONArray(doctors.map { JSONObject().put("name", it.name).put("speciality", it.speciality).put("phone", it.phone) }))
+        .put("doctors", JSONArray(doctors.map { JSONObject().put("name", it.name).put("speciality", it.speciality).put("phone", it.phone).put("hospital", it.hospital) }))
         .put("symptoms", JSONArray(symptoms)).put("treatments", JSONArray(treatments))
         .put("risks", JSONArray(risks)).put("emergencies", JSONArray(emergencies))
+        .put("emergenciesAsked", emergenciesAsked).put("limits", limits.toJson()).put("amberHelpers", JSONArray(amberHelpers))
         .toString()
 
     /** The doctor to call about a problem in [dept] (the catalogue's department), else the family doctor, else the first. */
-    fun doctorFor(dept: String?): Doctor? {
+    fun doctorFor(dept: String?, cancerCare: Boolean = false): Doctor? {
+        // on cancer treatment the cancer doctor is the one to call, whatever the problem (B58)
+        if (cancerCare) (doctors.firstOrNull { it.speciality == "Cancer" && it.phone.isNotBlank() } ?: doctors.firstOrNull { it.speciality == "Cancer" })?.let { return it }
         val want = SPECIALITY_FOR_DEPT[dept?.lowercase()]
         return doctors.firstOrNull { want != null && it.speciality == want }
             ?: doctors.firstOrNull { it.speciality == "Family doctor" } ?: doctors.firstOrNull()
     }
 
+    fun tellsAmber(phone: String) = digits(phone) in amberHelpers
+    /** The plan with [phone] switched on or off for "call the doctor today" messages. */
+    fun withAmberHelper(phone: String, on: Boolean): CarePlan {
+        val d = digits(phone)
+        return copy(amberHelpers = if (on) (amberHelpers + d).distinct() else amberHelpers - d)
+    }
+
     companion object {
+        fun digits(phone: String) = phone.filter { it.isDigit() }
+
         fun parse(json: String?): CarePlan {
             if (json.isNullOrBlank()) return CarePlan()
             return runCatching {
@@ -42,9 +61,11 @@ data class CarePlan(
                 fun list(k: String) = o.optJSONArray(k)?.let { a -> (0 until a.length()).map { a.getString(it) } }.orEmpty()
                 CarePlan(
                     doctors = o.optJSONArray("doctors")?.let { a ->
-                        (0 until a.length()).map { a.getJSONObject(it) }.map { Doctor(it.optString("name"), it.optString("speciality"), it.optString("phone")) }
+                        (0 until a.length()).map { a.getJSONObject(it) }.map { Doctor(it.optString("name"), it.optString("speciality"), it.optString("phone"), it.optString("hospital")) }
                     }.orEmpty(),
                     symptoms = list("symptoms"), treatments = list("treatments"), risks = list("risks"), emergencies = list("emergencies"),
+                    emergenciesAsked = o.optBoolean("emergenciesAsked"), limits = Limits.fromJson(o.optJSONObject("limits")),
+                    amberHelpers = list("amberHelpers"),
                 )
             }.getOrDefault(CarePlan())
         }
@@ -67,7 +88,7 @@ data class CarePlan(
             "Stroke before", "Parkinson's", "Memory loss", "Cancer", "Depression or anxiety",
         )
 
-        val TREATMENTS = listOf("Insulin", "Dialysis", "Oxygen at home", "Physiotherapy", "Chemotherapy", "Blood thinner", "Inhaler", "Wound dressing")
+        val TREATMENTS = listOf("Insulin", "Dialysis", "Oxygen at home", "Physiotherapy", "Chemotherapy", "Radiotherapy", "Blood thinner", "Inhaler", "Wound dressing")
 
         /** Risks, with the words the person sees. */
         val RISKS = linkedMapOf(
@@ -88,8 +109,10 @@ data class CarePlan(
         /** Emergencies suggested from the risks chosen, so the person only confirms. */
         fun emergenciesFor(risks: List<String>, conditions: List<String>): List<String> {
             val out = LinkedHashSet<String>()
-            out += listOf("chest_pain", "breathless", "fainted")
-            if ("falls" in risks || "alone" in risks) out += "fall"
+            // only what the chosen risks point to: "Hard to breathe" is not an emergency for everyone
+            if ("heart" in risks) out += "chest_pain"
+            if ("breathing" in risks) out += "breathless"
+            if ("falls" in risks || "alone" in risks) { out += "fall"; out += "fainted" }
             if ("low_sugar" in risks || "Diabetes" in conditions) out += "low_sugar"
             if ("stroke" in risks || "Stroke before" in conditions || "High BP" in conditions) out += "one_side_weak"
             if ("fits" in risks) out += "fits"

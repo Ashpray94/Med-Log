@@ -75,7 +75,7 @@ suspend fun buildNote(ctx: android.content.Context, days: Int): com.suryaprakash
     val to = LocalDate.now().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val from = to - days * DAY
     return com.suryaprakash.medlog.doctor.DoctorNoteBuilder(app.catalogue, app.describe).build(
-        app.repo.profile(), from, to, app.db.notes().between(from, to), app.db.medicines().all(), app.db.doses().between(from, to),
+        app.viewRepo.profile(), from, to, app.viewDb.notes().between(from, to), app.viewDb.medicines().all(), app.viewDb.doses().between(from, to),
         translit = { com.suryaprakash.medlog.speech.Translit.toLatin(it) })
 }
 
@@ -87,7 +87,7 @@ fun VisitScreen(nav: Nav) {
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
     var f by remember { mutableStateOf(VisitForm()) }
-    LaunchedEffect(Unit) { app.repo.profile().doctorName.takeIf { it.isNotBlank() }?.let { f = f.copy(doctor = it) } }
+    LaunchedEffect(Unit) { app.viewRepo.profile().doctorName.takeIf { it.isNotBlank() }?.let { f = f.copy(doctor = it) } }
     Screen("After the visit", "What did the doctor say? Fill in what you remember, or tap Speak and tell me: who you saw, what they did, any new medicine, and when to go back.", onHome = { nav.home() }, onBack = { nav.back() }) {
         com.suryaprakash.medlog.ui.rememberDictation("What did the doctor say?") { f = VisitParser.fill(f, it) }?.let { speak ->
             BigButton("Speak", tone = Tone.QUIET, icon = Icons.Rounded.Mic, sub = "Say who you saw, any new medicine, when to go back", onClick = speak)
@@ -106,24 +106,24 @@ fun VisitScreen(nav: Nav) {
         BigField("What is it for?", f.medicineFor, { f = f.copy(medicineFor = it) })
         BigField("Next appointment", f.nextText, { f = f.copy(nextText = it) }, hint = f.nextAt?.let { "Understood as ${dayLabel(it)} ${timeLabel(it)}" } ?: "For example: in 2 weeks")
         BigField("Notes or questions for next time", f.notes, { f = f.copy(notes = it) }, lines = 2)
-        BigButton("Save", tone = Tone.OK, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, onClick = {
             scope.launch {
                 val o = JSONObject().put("doctor", f.doctor).put("with", f.accompanied).put("reason", f.reason).put("happened", f.happened)
                     .put("referral", f.referral).put("referTo", f.referTo).put("referFor", f.referFor).put("referNumber", f.referNumber)
                     .put("newMedicine", f.newMedicine).put("for", f.medicineFor).put("next", f.nextText).put("notes", f.notes)
-                app.repo.addEvent(Kind.VISIT, "Saw ${f.doctor.ifBlank { "the doctor" }}" + (f.reason.takeIf { it.isNotBlank() }?.let { " for $it" } ?: "") + (f.happened.takeIf { it.isNotBlank() }?.let { ". $it" } ?: ""), o.toString())
-                if (f.notes.isNotBlank()) app.repo.addQuestion(f.notes)
+                app.viewRepo.addEvent(Kind.VISIT, "Saw ${f.doctor.ifBlank { "the doctor" }}" + (f.reason.takeIf { it.isNotBlank() }?.let { " for $it" } ?: "") + (f.happened.takeIf { it.isNotBlank() }?.let { ". $it" } ?: ""), o.toString())
+                if (f.notes.isNotBlank()) app.viewRepo.addQuestion(f.notes)
                 f.nextAt?.let { at ->
                     val a = Appointment(at = at, doctor = f.doctor, purpose = "Follow-up")
-                    val id = app.db.appointments().insert(a)
-                    CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
+                    val id = app.viewDb.appointments().insert(a)
+                    CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.viewDb.appointments().update(a.copy(id = id, calendarEventId = ev)) }
                     com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
                 }
                 savedFeedback(ctx)
                 if (f.newMedicine.isNotBlank()) nav.replace(Route.MedEdit(null)) else nav.back()
             }
         })
-        if (f.newMedicine.isNotBlank()) Hint("After saving, you'll add the new medicine so MedLog can remind you.")
+        if (f.newMedicine.isNotBlank()) Hint("After this, add the new medicine so you get reminders.")
     }
 }
 
@@ -179,33 +179,34 @@ fun AppointmentsScreen(nav: Nav) {
     val app = ctx.medlog
     val p = LocalPalette.current
     val scope = rememberCoroutineScope()
-    val list by app.db.appointments().upcomingFlow(System.currentTimeMillis() - DAY).collectAsState(emptyList())
+    val list by app.viewDb.appointments().upcomingFlow(System.currentTimeMillis() - DAY).collectAsState(emptyList())
     var date by remember { mutableStateOf<LocalDateTime?>(null) }
     var doctor by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
     var purpose by remember { mutableStateOf("") }
-    Screen("Doctor appointments", "Your next doctor visits. MedLog reminds you the evening before and prepares your doctor page.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Doctor appointments", "Your next doctor visits. You'll get a reminder the evening before, with your doctor page ready.", onHome = { nav.home() }, onBack = { nav.back() }) {
         if (list.isEmpty()) Hint("No appointments yet.")
-        list.forEach { a -> Card { Body("${dayLabel(a.at)} · ${timeLabel(a.at)}", bold = true); Body(listOf(a.doctor, a.place, a.purpose).filter { it.isNotBlank() }.joinToString(" · ")); BigButton("Remove", tone = Tone.SECONDARY, onClick = { scope.launch { app.db.appointments().delete(a.id) } }) } }
+        list.forEach { a -> Card { Body("${dayLabel(a.at)} · ${timeLabel(a.at)}", bold = true); Body(listOf(a.doctor, a.place, a.purpose).filter { it.isNotBlank() }.joinToString(" · ")); BigButton("Remove", tone = Tone.SECONDARY, onClick = { scope.launch { app.viewDb.appointments().delete(a.id) } }) } }
         Title("Add an appointment")
         FlowRowOf {
             val now = LocalDateTime.now()
             listOf("Tomorrow" to now.plusDays(1), "In 1 week" to now.plusWeeks(1), "In 1 month" to now.plusMonths(1)).forEach { (l, d) -> Chip(l, date?.toLocalDate() == d.toLocalDate()) { date = d.withHour(10).withMinute(0) } }
             Chip("Pick a date", false) {
                 val n = LocalDate.now()
-                DatePickerDialog(ctx, { _, y, m, d -> TimePickerDialog(ctx, { _, h, mi -> date = LocalDateTime.of(y, m + 1, d, h, mi) }, 10, 0, false).show() }, n.year, n.monthValue - 1, n.dayOfMonth).show()
+                val pick = if (ctx.medlog.settings.value.role == "helper") com.suryaprakash.medlog.R.style.Picker_Helping else com.suryaprakash.medlog.R.style.Picker_Mine
+                DatePickerDialog(ctx, pick, { _, y, m, d -> TimePickerDialog(ctx, pick, { _, h, mi -> date = LocalDateTime.of(y, m + 1, d, h, mi) }, 10, 0, false).show() }, n.year, n.monthValue - 1, n.dayOfMonth).show()
             }
         }
         date?.let { Body("${dayLabel(it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())} at ${timeLabel(it.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())}", bold = true) }
         BigField("Doctor", doctor, { doctor = it })
         BigField("Place", place, { place = it })
         BigField("For what", purpose, { purpose = it })
-        BigButton("Save", tone = Tone.OK, icon = Icons.Rounded.Add, enabled = date != null, onClick = {
+        BigButton("Done", tone = Tone.PRIMARY, icon = Icons.Rounded.Add, enabled = date != null, onClick = {
             scope.launch {
                 val at = date!!.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
                 val a = Appointment(at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())
-                val id = app.db.appointments().insert(a)
-                CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
+                val id = app.viewDb.appointments().insert(a)
+                CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.viewDb.appointments().update(a.copy(id = id, calendarEventId = ev)) }
                 com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
                 date = null; doctor = ""; place = ""; purpose = ""
                 savedFeedback(ctx)

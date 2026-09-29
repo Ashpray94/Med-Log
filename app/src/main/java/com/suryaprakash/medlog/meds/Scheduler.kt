@@ -84,6 +84,7 @@ object Scheduler {
             for (t in events(d, m, s.snoozeMinutes, s.escalateMinutes, s.escalateCriticalMinutes, s.useMeetingTimer)) if (t > now - 1000) next = minOf(next, t)
         }
         Care.nextWake(ctx, now)?.let { next = minOf(next, it) }
+        runCatching { com.suryaprakash.medlog.care.HelperCare.nextWake(ctx, now) }.getOrNull()?.let { next = minOf(next, it) }
         return next
     }
 
@@ -122,6 +123,8 @@ object Scheduler {
         var louder = false
         for (d in app.db.doses().open()) {
             val m = medsById[d.medicineId] ?: continue
+            // a stopped medicine never rings or alerts anyone: close its open dose
+            if (!m.active) { app.db.doses().update(d.copy(status = DoseStatus.SKIPPED, reason = "Stopped", actedAt = now, snoozeUntil = null)); DoseAlert.cancel(ctx, d.id); continue }
             var dose = d
             // missed
             if (now >= d.scheduledAt + MISS_AFTER) {
@@ -135,7 +138,7 @@ object Scheduler {
                 dose = dose.copy(helperAlerted = true)
                 val name = app.repo.profile().name.ifBlank { "Your family member" }
                 val t = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
-                Alerts.send(ctx, Alerts.Type.MISSED_DOSE, com.suryaprakash.medlog.help.Wording.missedDose(name, t, m.name))
+                Alerts.send(ctx, Alerts.Type.MISSED_DOSE, com.suryaprakash.medlog.help.Wording.missedDose(name, t, m.name, feed = m.form == "feed"))
             }
             // first reminder (or after snooze), then repeats
             val base = d.snoozeUntil ?: d.scheduledAt
@@ -149,6 +152,18 @@ object Scheduler {
         }
         if (toShow.isNotEmpty()) DoseAlert.show(ctx, toShow, louder)
         Care.tick(ctx, now)
+        runCatching { com.suryaprakash.medlog.care.HelperCare.tick(ctx, now) }
+        reschedule(ctx)
+    }
+
+    /** A medicine was stopped: its open doses are skipped ("Stopped"), so nothing rings or alerts for them. */
+    suspend fun stopMedicine(ctx: Context, m: Medicine) {
+        val app = ctx.medlog
+        val db = app.viewDb
+        val open = db.doses().open().filter { it.medicineId == m.id }
+        db.doses().skipOpen(m.id, "Stopped", System.currentTimeMillis())
+        open.forEach { DoseAlert.cancel(ctx, it.id) }
+        app.refreshWidgets()
         reschedule(ctx)
     }
 
@@ -166,11 +181,16 @@ object Scheduler {
     enum class Taken { OK, ALREADY }
 
     /** Marks a dose taken. Returns ALREADY if it was already taken (the double-dose guard asks first). */
-    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false): Taken {
+    /** [at]: when it was really taken, for noting it afterwards (at night, or for an earlier day); now if null. */
+    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false, at: Long? = null): Taken {
         val app = ctx.medlog
         val d = app.db.doses().get(doseId) ?: return Taken.OK
-        if (d.status == DoseStatus.TAKEN && !force) return Taken.ALREADY
-        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
+        if (d.status == DoseStatus.TAKEN && !force) {
+            // already taken: only the time changes
+            if (at != null) { app.db.doses().update(d.copy(actedAt = at)); app.refreshWidgets() }
+            return Taken.ALREADY
+        }
+        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = at ?: System.currentTimeMillis(), snoozeUntil = null))
         app.db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
         if (force && d.status == DoseStatus.TAKEN) {
             val m = app.db.medicines().get(d.medicineId)
@@ -231,7 +251,7 @@ object Scheduler {
         return app.db.doses().between(now - 3 * HOUR, now + 2 * DAY)
             .filter { it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED }
             .sortedBy { it.scheduledAt }
-            .firstNotNullOfOrNull { d -> meds[d.medicineId]?.let { d to it } }
+            .firstNotNullOfOrNull { d -> meds[d.medicineId]?.takeIf { it.active }?.let { d to it } }
     }
 
     fun today(zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {

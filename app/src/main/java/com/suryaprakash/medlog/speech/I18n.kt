@@ -21,6 +21,9 @@ object I18n {
 
     val active get() = lang != "en" && exact.isNotEmpty()
 
+    /** For dates and times on screen: "रविवार, 27 सितंबर", "ஞாயிறு, 27 செப்டம்பர்". */
+    val locale: java.util.Locale get() = if (lang == "en") java.util.Locale.ENGLISH else java.util.Locale(lang, "IN")
+
     /** Loads the language for [tag] ("ta-IN"); English, or a language with no file, turns translation off. */
     @Synchronized
     fun use(ctx: Context, tag: String) {
@@ -48,17 +51,18 @@ object I18n {
 
     private val SLOT = Regex("\\{(\\d)\\}")
 
-    /** "Call {0}" → ^Call (.+?)$, longest fixed text first so the most specific pattern wins. */
+    /** "Call {0}" → ^Call (.+?)$, most fixed words first so the most specific pattern wins ("I took the {0} dose" before "{0} took the {1} dose"). */
     private fun compile(map: Map<String, String>) = map.filterKeys { SLOT.containsMatchIn(it) }.map { (en, tr) ->
         val parts = SLOT.split(en)
         val order = SLOT.findAll(en).map { it.groupValues[1] }.toList()
         val rx = buildString {
             append('^')
-            parts.forEachIndexed { i, p -> append(Regex.escape(p)); if (i < order.size) append("(.+?)") }
+            // a slot right after a letter is a plural ending ("item{1}" → "item" / "items"), so it may be empty
+            parts.forEachIndexed { i, p -> append(Regex.escape(p)); if (i < order.size) append(if (p.lastOrNull()?.isLetter() == true) "(s|es|)" else "(.+?)") }
             append('$')
         }
-        Triple(Regex(rx, RegexOption.DOT_MATCHES_ALL), tr, order)
-    }.sortedByDescending { (rx, _, _) -> rx.pattern.length }.map { (rx, tr, order) ->
+        Triple(Regex(rx, RegexOption.DOT_MATCHES_ALL), tr, order) to parts.sumOf { it.length }
+    }.sortedByDescending { it.second }.map { it.first }.map { (rx, tr, order) ->
         // translation slots refer to English slot numbers; remember the order they were captured in
         rx to (order.joinToString(",") + "\u0000" + tr)
     }
@@ -88,12 +92,23 @@ object I18n {
         if ('\n' in core) return lead + core.split('\n').joinToString("\n") { translate(it) } + trail
         val sentences = core.split(Regex("(?<=[.?!])\\s+"))
         if (sentences.size > 1) {
-            val parts = sentences.map { s -> exact[s] ?: s }
+            val parts = sentences.map { s -> translate(s) }
             if (parts != sentences) return lead + parts.joinToString(" ") + trail
+        }
+        // a list of short parts, the way notes are written: translate each part that has a translation
+        val end = core.lastOrNull()?.takeIf { it == '.' || it == '?' }?.toString() ?: ""
+        val body = core.removeSuffix(end)
+        for (sep in listOf("; ", ", ", " · ")) {
+            if (sep !in body) continue
+            val parts = body.split(sep)
+            val done = parts.map { translate(it) }
+            val hits = parts.indices.count { done[it] != parts[it] || parts[it].none(Char::isLetter) }
+            if (hits * 2 >= parts.size) return lead + done.joinToString(sep) + end + trail
         }
         return text
     }
 
     /** A value inside a pattern: a problem name or a word is translated, a person's name or number is left alone. */
-    private fun translateValue(v: String) = exact[v.trim()] ?: exact[v.trim().replaceFirstChar { it.uppercase() }] ?: v
+    private fun translateValue(v: String) = exact[v.trim()] ?: exact[v.trim().replaceFirstChar { it.uppercase() }]
+        ?: exact[v.trim().replaceFirstChar { it.lowercase() }] ?: v
 }

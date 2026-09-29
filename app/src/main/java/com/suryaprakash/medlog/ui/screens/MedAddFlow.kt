@@ -142,7 +142,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
     var someDays by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
-        if (id != null) app.db.medicines().get(id)?.let { e ->
+        if (id != null) app.viewDb.medicines().get(id)?.let { e ->
             m = e; original = e; times.clear(); times.addAll(e.times.split(",").map { it.trim() }.filter { it.isNotBlank() })
             pills = e.pillsLeft?.toInt()?.toString() ?: ""; someDays = e.days.isNotBlank()
         }
@@ -273,7 +273,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
         }
 
         // ───────────── only when needed: the gap ─────────────
-        M.GAP -> FlowScreen(task, "How long between doses, at least?", hint = "MedLog warns you if you try to take it sooner.", step = n, steps = ps.size,
+        M.GAP -> FlowScreen(task, "How long between doses, at least?", hint = "You'll be warned if you try to take it sooner.", step = n, steps = ps.size,
             onBack = { back() }, onClose = close, primary = primaryNext, onPrimary = { next() }) {
             AmountLine(m.amount, m.form, unit) { m = m.copy(amount = it) }
             Section("Wait at least")
@@ -309,7 +309,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                     row.forEach { (k, c) ->
                         val on = m.color.ifBlank { "white" } == k
                         Box(Modifier.weight(1f).height(56.dp).clip(RoundedCornerShape(16.dp)).background(Color(c))
-                            .border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, RoundedCornerShape(16.dp))
+                            .then(if (on) Modifier.border(3.dp, p.brand, RoundedCornerShape(16.dp)) else Modifier)
                             .steady(k.replaceFirstChar(Char::uppercase) + if (on) ", chosen" else "") { m = m.copy(color = k) })
                     }
                 }
@@ -320,7 +320,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
         M.REVIEW -> {
             val valid = m.name.isNotBlank() && (m.asNeeded || times.isNotEmpty())
             FlowScreen(task, "Check and save", step = ps.size, steps = ps.size, onBack = { back() }, onClose = close,
-                primary = "Save", primaryEnabled = valid, onPrimary = {
+                primary = "Done", primaryEnabled = valid, onPrimary = {
                     scope.launch {
                         val now = System.currentTimeMillis()
                         val change = original?.let { o ->
@@ -339,10 +339,10 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                             changedAt = if (original == null || change != original?.changeNote) now else m.changedAt,
                             changeNote = change,
                         )
-                        val mid = if (id == null) app.db.medicines().insert(saved) else { app.db.medicines().update(saved); id }
-                        app.db.doses().dropFuture(mid, now)
+                        val mid = if (id == null) app.viewDb.medicines().insert(saved) else { app.viewDb.medicines().update(saved); id }
+                        app.viewDb.doses().dropFuture(mid, now)
                         Scheduler.reschedule(ctx)
-                        app.db.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
+                        app.viewDb.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
                         savedFeedback(ctx); app.refreshWidgets(); nav.back()
                     }
                 }) {
@@ -400,10 +400,10 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                         .steady("Stop this medicine") {
                             scope.launch {
                                 val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
-                                app.db.medicines().update(stopped)
-                                app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
+                                app.viewDb.medicines().update(stopped)
+                                app.viewDb.doses().dropFuture(stopped.id, System.currentTimeMillis())
                                 CalendarSync.removeMedicine(ctx, stopped)
-                                Scheduler.reschedule(ctx); nav.back()
+                                Scheduler.stopMedicine(ctx, stopped); nav.back()
                             }
                         }.wrapContentHeight(Alignment.CenterVertically))
             }
@@ -416,7 +416,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
 /** "08:00" → "8:00 AM". */
 private fun timeWords(t: String): String = runCatching {
     val lt = java.time.LocalTime.parse(t.padStart(5, '0'))
-    lt.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH))
+    lt.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", com.suryaprakash.medlog.speech.I18n.locale))
 }.getOrDefault(t)
 
 private fun amountSteps(form: String) = if (form == "syrup" || form == "drops") listOf("1 ml", "2.5 ml", "5 ml", "7.5 ml", "10 ml", "15 ml", "20 ml") else listOf("½", "1", "1½", "2", "3", "4")
@@ -443,7 +443,7 @@ private fun TimeCard(t: String, amount: String, onOpen: () -> Unit, onRemove: ()
     val hour = t.substringBefore(":").toIntOrNull() ?: 8
     val (icon, tint, part) = com.suryaprakash.medlog.ui.dayPart(hour)
     val sh = RoundedCornerShape(24.dp)
-    Box(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh)
+    Box(Modifier.fillMaxWidth().clip(sh).background(p.card)
         .steady("$part, ${timeWords(t)}, $amount. Tap to change", onClick = onOpen), contentAlignment = Alignment.CenterStart) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
             OptionIcon(icon, tint, 64.dp)
@@ -483,8 +483,7 @@ private fun CounterSheet(title: String, label: String, start: Int, zero: String,
     val p = LocalPalette.current
     val sc = LocalScale.current
     var v by remember { mutableStateOf(start) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Group {
@@ -517,13 +516,12 @@ private fun PurposeSheet(start: String, onDone: (String) -> Unit, onDismiss: () 
     val chosen = remember { mutableStateListOf<String>().apply { addAll(start.split(",").map { it.trim() }.filter { it.isNotEmpty() }) } }
     var query by remember { mutableStateOf("") }
     var mine by remember { mutableStateOf<List<String>>(emptyList()) }
-    LaunchedEffect(Unit) { mine = ctx.medlog.repo.profile().conditions.split(",").map { it.trim() }.filter { it.isNotEmpty() } }
+    LaunchedEffect(Unit) { mine = ctx.medlog.viewRepo.profile().conditions.split(",").map { it.trim() }.filter { it.isNotEmpty() } }
     // (label, picture) for every choice
     val illnesses = remember(mine) { (mine + com.suryaprakash.medlog.data.CarePlan.CONDITIONS).distinct().map { it to (ILLNESS_PICTURE[it] ?: "confusion") } }
     val problems = remember { com.suryaprakash.medlog.pictogram.Sprites.SECTIONS.flatMap { it.second }.mapNotNull { id -> cat.problem(id)?.let { it.label to id } } }
     fun toggle(x: String) { if (x in chosen) chosen.remove(x) else chosen.add(x) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper, scroll = false) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.92f).padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Text("What is it for?", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             com.suryaprakash.medlog.ui.SearchBox(query, { query = it }, "Search problems")
@@ -547,11 +545,8 @@ private fun PurposeSheet(start: String, onDone: (String) -> Unit, onDismiss: () 
 private fun PictureGrid(items: List<Pair<String, String>>, chosen: List<String>, toggle: (String) -> Unit) {
     val sc = LocalScale.current
     com.suryaprakash.medlog.ui.TileGrid(items, 2, aspect = 1.0f) { (label, pic), mod ->
-        com.suryaprakash.medlog.ui.Tile(label, mod, selected = label in chosen, onClick = { toggle(label) }) {
+        com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 84.dp, selected = label in chosen, onClick = { toggle(label) }) {
             com.suryaprakash.medlog.pictogram.SpriteIcon(pic, 84.dp)
-            Spacer(Modifier.height(8.dp))
-            Text(label, fontSize = sc.body, lineHeight = sc.body * 1.15f, maxLines = 2, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold,
-                color = LocalPalette.current.ink)
         }
     }
 }
@@ -567,8 +562,7 @@ private fun TimeSheet(start: String, onDone: (String) -> Unit, onDismiss: () -> 
     var mi by remember { mutableStateOf(lt.minute - lt.minute % 5) }
     var pm by remember { mutableStateOf(if (lt.hour >= 12) 1 else 0) }
     fun result(): String { val hour24 = (h % 12) + if (pm == 1) 12 else 0; return "%02d:%02d".format(hour24, mi) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Time", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -587,7 +581,7 @@ private fun LookTile(label: String, on: Boolean, modifier: Modifier, onClick: ()
     val p = LocalPalette.current
     val sc = LocalScale.current
     Box(modifier.fillMaxHeight().heightIn(min = sc.target + 12.dp).clip(RoundedCornerShape(18.dp))
-        .background(if (on) Color(0xFFBFE0DA) else p.card).border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, RoundedCornerShape(18.dp))
+        .background(if (on) p.brandSoft else p.card).then(if (on) Modifier.border(3.dp, p.brand, RoundedCornerShape(18.dp)) else Modifier)
         .steady(label + if (on) ", chosen" else "", onClick = onClick).padding(10.dp), contentAlignment = Alignment.Center) {
         Text(label, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
     }
@@ -718,8 +712,7 @@ private fun FieldSheet(title: String, label: String, start: String, number: Bool
     val p = LocalPalette.current
     val sc = LocalScale.current
     var v by remember { mutableStateOf(start) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text(title, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             BigField(label, v, { v = it }, keyboard = if (number) KeyboardType.Number else KeyboardType.Text)
@@ -734,14 +727,15 @@ private fun FieldSheet(title: String, label: String, start: String, number: Bool
 fun MedicinePicture(m: Medicine, size: Dp) {
     val p = LocalPalette.current
     Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.28f)).background(p.fill), contentAlignment = Alignment.Center) {
-        if (m.form == "tablet" || m.form == "capsule") PillPicture(m.shape.ifBlank { if (m.form == "capsule") "capsule" else "round" }, m.color.ifBlank { "white" }, size * 0.62f)
-        else FormPicture(if (m.form == "feed") "syrup" else m.form, size * 0.75f)
+        if (m.form == "tablet" || m.form == "capsule") PillPicture(m.shape.ifBlank { if (m.form == "capsule") "capsule" else "round" }, m.color.ifBlank { "white" }, size * 0.78f)
+        else FormPicture(if (m.form == "feed") "syrup" else m.form, size * 0.88f)
     }
 }
 
 /** How much one dose is, in words: "1 tablet", "2 puffs", "10 ml". */
 fun doseWords(m: Medicine): String {
-    if (m.form == "feed") return m.amount
+    // an amount already in words ("2 puffs", "18 units") is used as it is
+    if (m.form == "feed" || m.amount.any { it.isLetter() }) return m.amount
     val unit = when (m.form) { "syrup", "drops" -> "ml"; "cream" -> "use"; "inhaler" -> "puff"; "injection" -> "dose"; else -> m.form }
     return amountWords(m.amount, unit)
 }
@@ -755,13 +749,13 @@ fun MedicineCard(m: Medicine, onClick: () -> Unit) {
     val unit = when (m.form) { "syrup", "drops" -> "ml"; "cream" -> "use"; "inhaler" -> "puff"; "injection" -> "dose"; else -> m.form }
     val whenWords = if (m.asNeeded || times.isEmpty()) "When needed" else
         (if (times.size == 1) timeWords(times[0]) else times.dropLast(1).joinToString(", ") { timeWords(it) } + " and " + timeWords(times.last())) +
-            " · " + amountWords(m.amount, unit)
-    Row(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh)
+            " · " + doseWords(m)
+    Row(Modifier.fillMaxWidth().clip(sh).background(p.card)
         .steady("${m.name} ${m.strength}. $whenWords. Tap to change", onClick = onClick).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
         MedicinePicture(m, 64.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+            Text(listOf(m.name, m.strength.takeIf { m.form != "feed" }.orEmpty()).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
             if (m.purpose.isNotBlank()) Text("For ${m.purpose}", fontSize = sc.body, color = p.ink)
             else Text("Add what it's for", fontSize = sc.body, color = p.brand)
             Text(whenWords, fontSize = sc.small, color = p.inkSoft)
