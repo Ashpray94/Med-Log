@@ -3,6 +3,8 @@ package com.suryaprakash.medlog
 import com.suryaprakash.medlog.clinical.Band
 import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Level
+import com.suryaprakash.medlog.clinical.Line
+import com.suryaprakash.medlog.clinical.LimitsForm
 import com.suryaprakash.medlog.clinical.Limits
 import com.suryaprakash.medlog.clinical.PersonContext
 import com.suryaprakash.medlog.data.CarePlan
@@ -24,8 +26,8 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 import java.io.IOException
@@ -220,9 +222,122 @@ class PersonaRaviTest {
         assertEquals(Limits(), CarePlan.parse("garbage").limits)
     }
 
-    @Ignore("PENDING W3: setup's 'Personal limits (for the helper)' step can be skipped, and the same page is found again in Helper controls (PIN) and from the 'no limit set' line. The page is not on this branch yet.")
-    @Test fun r5_setupLimitsStepCanBeSkippedAndFoundAgainInHelperControls() {}
+    // ── R5 (Personal limits: skip at set-up, find again later) ──
+    private val noFacts = emptyMap<String, Fact>()
+    private fun judge(readings: List<Reading>, person: PersonContext, facts: Map<String, Fact> = noFacts) =
+        DangerRules.evaluate(null, facts, readings, emptyList(), person)
+    private fun plan(json: String = """{"doctors":[],"symptoms":[],"treatments":[],"risks":[],"emergencies":[]}""") = CarePlan.parse(json)
 
-    @Ignore("PENDING W3: walk-through of the Personal limits page (see docs/PERSONA_TEST_REPORT.md, Ravi, item 5).")
-    @Test fun r5_limitsPageWalkThrough() {}
+    /**
+     * Pure pieces of "skip at set-up, find it again in Helper controls". UNVERIFIED (code read only, no emulator):
+     *  - OnboardingScreen.kt S.LIMITS: the "Later" button (shown while no limits are set) only calls next(), so
+     *    it saves nothing and moves on; "Set limits now" calls nav.go(Route.Limits).
+     *  - SettingsScreens.kt "helperlock" (Helper controls): the first row "Personal limits" calls nav.go(Route.Limits)
+     *    and shows LimitsForm.summary(plan.limits). That the PIN gate in front of "helperlock" opens, and that the
+     *    row is tappable, is not proven here.
+     *  - FoodReadings.kt NeedsLimitLine: only that the grey text is chosen (needsLimitLine) is proven, not that it is
+     *    shown under the reading or that tapping it opens the page.
+     */
+    @Test fun r5_setupLimitsStepCanBeSkippedAndFoundAgainInHelperControls() {
+        val over55 = PersonContext(70, false)
+        // 1. Skipped at set-up: "Later" changes nothing, so the plan has no limits. Both the set-up step (isSet false =
+        //    "Later" / "Set limits now" buttons) and the Helper controls row read exactly this.
+        val skipped = plan()
+        assertFalse(LimitsForm.isSet(skipped.limits))
+        assertEquals("Not set", LimitsForm.summary(skipped.limits))
+        assertEquals(skipped, CarePlan.parse(skipped.toJson()))            // nothing invented by saving the plan again
+        // 2. Later she takes readings: the rules do not judge the numbers alone and a quiet grey line names the gap.
+        val spo2 = listOf(Reading("spo2", 91.0))
+        val bp = listOf(Reading("bp", 150.0, 95.0))
+        val r1 = judge(spo2, over55); val r2 = judge(bp, over55)
+        assertEquals("spo2", r1.needsLimit); assertEquals("bp", r2.needsLimit)
+        assertEquals("Your helper hasn't set oxygen limits yet.", LimitsForm.needsLimitLine(r1.needsLimit))
+        assertEquals("Your helper hasn't set blood pressure limits yet.", LimitsForm.needsLimitLine(r2.needsLimit))
+        assertEquals(Level.GREEN, r2.level)
+        // 3. Ravi opens the page later (what LimitsScreen.save() does): types numbers, validates, saves with the tick.
+        val typed = mapOf(
+            "spo2" to mapOf(Line.AMBER_LOW to "93", Line.RED_LOW to "88"),
+            "bpSys" to mapOf(Line.AMBER_HIGH to "140", Line.RED_HIGH to "170"),
+        )
+        assertNull(LimitsForm.validateAll(typed))
+        val limits = LimitsForm.toLimits(typed, doctorConfirmed = true, setBy = "helper", setAt = 5L)
+        val saved = CarePlan.parse(skipped.copy(limits = limits).toJson())  // saveCarePlan then Repo.person() read
+        assertEquals(setOf("spo2", "bpSys"), saved.limits.bands.keys)      // empty measures are not stored
+        assertTrue(LimitsForm.isSet(saved.limits))
+        assertEquals("Set · doctor agreed", LimitsForm.summary(saved.limits))   // the Helper controls row and the set-up step now say "Set"
+        // 4. The same readings now use his numbers and the grey lines are gone.
+        val p2 = PersonContext(70, false, "", saved.limits)
+        val a1 = judge(spo2, p2); val a2 = judge(bp, p2)
+        assertEquals(Level.AMBER, a1.level); assertNull(a1.needsLimit); assertNull(LimitsForm.needsLimitLine(a1.needsLimit))
+        assertEquals(Level.AMBER, a2.level); assertNull(a2.needsLimit); assertNull(LimitsForm.needsLimitLine(a2.needsLimit))
+        assertEquals(Level.RED, judge(listOf(Reading("spo2", 88.0)), p2).level)
+        assertEquals(Level.RED, judge(listOf(Reading("bp", 172.0, 90.0)), p2).level)
+        // 5. Without his numbers a 70-year-old with the same readings is never called red.
+        assertEquals(Level.GREEN, judge(bp, over55).level)
+        // 6. Someone who is 40 needs no helper numbers: no grey line, and the general rules apply.
+        assertNull(judge(spo2, PersonContext(40, false)).needsLimit)
+    }
+
+    /** The limits page's pure parts: what was typed is checked, the fever is one number, suggestions, the words. UNVERIFIED: layout, keyboard, the Save button and nav.back() (LimitsScreen.kt). */
+    @Test fun r5_limitsPageWalkThrough() {
+        // Every measure Ravi can see is on the page, with the words that match what the rules do.
+        assertEquals(listOf("bpSys", "bpDia", "spo2", "sugar", "temp", "pulse", "vomit", "loose", "constipationDays"), LimitsForm.SPECS.map { it.key })
+        assertEquals("Amber at or below (%)", LimitsForm.spec("spo2").fieldLabel(Line.AMBER_LOW))
+        assertEquals("Amber more than (times)", LimitsForm.spec("vomit").fieldLabel(Line.AMBER_HIGH))
+        // Typing mistakes get plain words and nothing is saved.
+        val spo2 = LimitsForm.spec("spo2")
+        assertEquals("Oxygen (SpO₂): \"abc\" is not a number.", LimitsForm.validate(spo2, mapOf(Line.AMBER_LOW to "abc")))
+        assertTrue(LimitsForm.validate(spo2, mapOf(Line.AMBER_LOW to "50"))!!.contains("between 70 and 100"))
+        assertTrue(LimitsForm.validate(spo2, mapOf(Line.AMBER_LOW to "90", Line.RED_LOW to "92"))!!.contains("red low number"))
+        assertTrue(LimitsForm.validate(LimitsForm.spec("bpSys"), mapOf(Line.AMBER_LOW to "150", Line.AMBER_HIGH to "140"))!!.contains("low numbers must be lower"))
+        assertTrue(LimitsForm.validate(LimitsForm.spec("bpSys"), mapOf(Line.AMBER_HIGH to "170", Line.RED_HIGH to "160"))!!.contains("red high number"))
+        assertNull(LimitsForm.validate(spo2, emptyMap()))                   // all empty = "use the general numbers"
+        assertNotNull(LimitsForm.validateAll(mapOf("spo2" to mapOf(Line.AMBER_LOW to "x"))))
+        assertFalse(LimitsForm.isSet(LimitsForm.toLimits(emptyMap(), false, "helper", 1)))   // saving an empty page stores no numbers
+
+        // Fever is one number (B71): both lines set, whatever unit, and the cancer red line 100.0 no longer overrides it.
+        val temp = LimitsForm.spec("temp")
+        val typedTemp = LimitsForm.typed(temp, LimitsForm.initialTexts(temp, null), Line.AMBER_HIGH, "38.9")
+        assertEquals(mapOf(Line.AMBER_HIGH to "38.9", Line.RED_HIGH to "38.9"), typedTemp)
+        assertNull(LimitsForm.validate(temp, typedTemp))
+        val tempBand = LimitsForm.band("temp", typedTemp)
+        assertEquals(Band(amberHigh = 102.0, redHigh = 102.0), tempBand)    // 38.9 C = 102.0 F
+        assertEquals("102", LimitsForm.initialTexts(temp, tempBand)[Line.AMBER_HIGH])
+        assertTrue(LimitsForm.validate(temp, mapOf(Line.AMBER_HIGH to "105", Line.RED_HIGH to "105"))!!.contains("104"))
+        assertTrue(LimitsForm.tempRule(67, true).contains("amber at 100.4 °F, red at 100 °F"))
+        val chemo = PersonContext(67, false, "Cancer", Limits(mapOf("temp" to tempBand), true, "helper", 1), cancerCare = true)
+        assertEquals(Level.GREEN, judge(listOf(Reading("temp", 100.2)), chemo).level)
+        val over = judge(listOf(Reading("temp", 102.4)), chemo)
+        assertEquals(Level.RED, over.level); assertTrue(over.reasons.any { it.contains("above the limit set for you") })
+        assertEquals(Level.RED, judge(listOf(Reading("temp", 104.0)), chemo).level)     // 104 is always red
+        assertEquals(Level.RED, judge(listOf(Reading("temp", 100.2)), chemo.copy(limits = Limits())).level)   // without his number the general rule
+
+        // "Suggest from readings": needs 3, uses the median, only the lines the measure has.
+        assertNull(LimitsForm.suggest("spo2", listOf(96.0, 97.0)))
+        assertEquals(Band(amberLow = 91.0, redLow = 86.0), LimitsForm.suggest("spo2", listOf(95.0, 96.0, 97.0, 96.0, 96.0)))
+        assertEquals(Band(amberHigh = 100.4, redHigh = 101.9), LimitsForm.suggest("temp", listOf(98.2, 98.6, 98.4)))
+        assertEquals(104.0, LimitsForm.suggest("temp", listOf(102.0, 102.0, 102.0))!!.redHigh!!, 0.0)     // red never above 104
+        assertEquals(Band(amberLow = 90.0, redLow = 60.0, amberHigh = 180.0, redHigh = 240.0), LimitsForm.suggest("sugar", listOf(120.0, 118.0, 122.0)))
+        // a suggestion is only a fill-in: it passes the same check as typed numbers
+        val s = LimitsForm.suggest("bpSys", listOf(120.0, 118.0, 122.0))!!
+        assertNull(LimitsForm.validate(LimitsForm.spec("bpSys"), LimitsForm.initialTexts(LimitsForm.spec("bpSys"), s)))
+
+        // Hints show the general number the box replaces, in the same words as the rules.
+        assertEquals("general: 93", LimitsForm.general("spo2", Line.AMBER_LOW, 40, false))
+        assertEquals("general: 89", LimitsForm.general("spo2", Line.AMBER_LOW, 70, false))
+        assertEquals("general: none", LimitsForm.general("bpSys", Line.AMBER_HIGH, 70, false))
+        assertEquals("general: 4", LimitsForm.general("vomit", Line.AMBER_HIGH, 67, true))
+
+        // Saved limits survive the care plan's JSON, and broken data reads as "not set".
+        val limits = LimitsForm.toLimits(mapOf("temp" to typedTemp, "pulse" to mapOf(Line.AMBER_HIGH to "110")), true, "Ravi", 9)
+        val back = CarePlan.parse(plan().copy(limits = limits).toJson()).limits
+        assertEquals(limits, back)
+        assertEquals("Ravi", back.setBy); assertTrue(back.doctorConfirmed)
+        assertEquals(Limits(), Limits.fromJson(JSONObject("""{"bands":"oops"}""")))
+        assertEquals("Set", LimitsForm.summary(back.copy(doctorConfirmed = false)))
+        // Pulse: a helper who sets only the high line keeps the general low line
+        val pulse = PersonContext(60, false, "", back)
+        assertEquals(Level.AMBER, judge(listOf(Reading("pulse", 115.0)), pulse).level)
+        assertEquals(Level.AMBER, judge(listOf(Reading("pulse", 38.0)), pulse).level)
+    }
 }
