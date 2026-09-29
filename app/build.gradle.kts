@@ -31,8 +31,8 @@ android {
         applicationId = "com.suryaprakash.medlog"
         minSdk = 23
         targetSdk = 35
-        versionCode = 2131
-        versionName = "2.13.1"
+        versionCode = 2140
+        versionName = "2.14.0"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Where "Report a problem" sends reports: a PRIVATE GitHub repo. The token is never committed; it comes from the

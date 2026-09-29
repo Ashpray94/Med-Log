@@ -1,14 +1,14 @@
-Updates straight over 2.10 and keeps your data.
+Updates straight over 2.13 and keeps your data.
 
 ## What's new
-- **Copies from helper phones merged.** Entries saved before 2.13 had no shared ID, so each helper's phone kept its own copy under a new ID and sent it back. That made each entry appear two or three times. Your phone and each helper's phone now recognise the same entry, merge the copies into one (the extras go to Removed), and agree on one ID from then on.
-- **No more duplicate entries.** Reopening the app, turning the phone, or a fast double tap could each save another empty note. Each now saves once. Exact copies already made are moved to Removed, where they can be restored.
-- **Counts you can trust.** "How many times today?" is now read as a running total, so two notes saying "3 times" mean 3, not 6. History, Home, the widget, the doctor page and the PDF all count the same way. "Better now" doesn't count as another time.
-- **Sharing between phones fixed.** Some entries were missing the ID that links them across phones, so on a helper's phone they could overwrite each other. Every entry keeps its ID now. A helper's phone asks for a full resend once, so it catches up.
-- **Same one, or again?** Noting the same problem within 10 minutes asks whether it's the same one (to add details) or it happened again. This works in the app and on the widget.
-- **Add details on Home:** notes still waiting for details are listed, one tap each.
-- **My health:** each measure opens its own page with its chart and every entry. The charts start where your entries do.
-- **Doctor page:** concerns, symptoms, medicines and readings each open their own page.
-- **PDF:** always includes its second page, because it now waits for the nutrition part before sharing or printing.
+- **SMS only for SOS.** Missed medicines, check-ins, refills and help messages now go only to your helpers' MedLog app. SMS costs money, so it is used only in an SOS, and only when no helper answers in the app within 90 seconds.
+- **Helper alerts look like Meeting Timer**, with a big countdown and exactly three answers: respond ("I'm coming", "I'll give it"), later or skip ("In 5 min", "Skip this dose"), and "Ask another helper".
+- **Personal limits.** Helpers set the person's own numbers (oxygen, blood pressure, temperature, sugar, pulse, vomiting, loose stools, constipation) so alerts fit them and false alarms stop. Setup asks for them; you can set them later in Helper controls.
+- **Cancer care rules.** During chemotherapy or radiotherapy: more than 4 vomits or loose stools a day, or 2 days without a bowel movement, means call the doctor. 104 °F and above is always urgent.
+- **Safer.** SOS and call links only work from MedLog's own widget. Pairing needs "They match" on both phones. Stopping a medicine stops its reminders.
+- **Report a problem.** Shake the phone, or use Settings, to send a picture of the page and your words.
+- **Family messages wait 3 seconds** so a slip of the finger can be cancelled.
+- **One Settings page** in both modes. Helpers can update the app again from Settings → Updates.
+- **New versions** show a small sheet once. After that they wait in Settings → Updates.
 
 Install **MedLog-VERSION-arm64.apk** on most phones.

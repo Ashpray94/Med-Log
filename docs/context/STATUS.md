@@ -3,7 +3,16 @@
 Update this at the end of every chat: what changed, what's open, what wasn't verified.
 
 ## Now
-- Released: **2.13.1** (versionCode 2131), branch `main-mxp0m4`, draft PR #1.
+- Released: **2.14.0** (versionCode 2140), branch `main-mxp0m4`, draft PR #1.
+- 2.14.0: SMS only for SOS (app first, SMS after 90 s with no answer: `SosPlan`); helper alerts use Meeting Timer's
+  reminder page (`assets/alert/`) with exactly 3 replies per alert (`help/AlertReplies.kt`); personal limits and
+  cancer-care rules; trusted links; "They match" pairing; stopped medicines close their doses; shake to report
+  (needs the `MEDLOG_FEEDBACK_TOKEN` secret); 3-second send on family messages; one Settings page in both modes;
+  update sheet once per phone lifetime (`UpdateSheetOnce`).
+- Not in 2.14.0 on purpose: the other branch's sync engine (2.13.1's `data/Sync.kt` stays).
+- 2.14.0 phone checks: the WebView alert over the lock screen with sound; notification's 3 buttons; "In 5 min" rings
+  again (lost if the phone restarts); "Ask another helper" rings the other phone; SOS app-first then SMS; pairing
+  with They match on both phones; shake to report; the update sheet shows once.
 - Best version before the 2.11 review: 2.10.9 (commit `36b7755`).
 
 ## Recently changed (2.11 – 2.13)
