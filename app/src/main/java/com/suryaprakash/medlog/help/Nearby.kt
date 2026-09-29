@@ -74,11 +74,12 @@ object Nearby {
      * phones anywhere, and over Bluetooth / Wi-Fi Direct to phones in range. Receipts and replies come back
      * through the always-on listener ([NearbyService]) within a second or two, and land in [reached] and [acks].
      */
-    fun broadcast(ctx: Context, kind: String, text: String, audio: File? = null) {
+    /** [only]: when given, just those helpers' phones (e.g. AMBER goes only to the helpers chosen for it). */
+    fun broadcast(ctx: Context, kind: String, text: String, audio: File? = null, only: ((Helper) -> Boolean)? = null) {
         val app = ctx.medlog
         if (app.settings.value.role != "self") return
         app.scope.launch {
-            val helpers = app.ownDb.helpers().all().filter { it.pairId != null && it.pairKey != null }
+            val helpers = app.ownDb.helpers().all().filter { it.pairId != null && it.pairKey != null && (only == null || only(it)) }
             if (helpers.isEmpty()) return@launch
             val me = app.ownRepo.profile().name.ifBlank { "MedLog" }
             val mid = Keys.randomB64(9)

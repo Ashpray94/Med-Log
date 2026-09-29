@@ -154,7 +154,7 @@ fun SettingsScreen(nav: Nav) {
                 if (relay != s.relayUrl) BigButton("Save address", tone = Tone.QUIET, enabled = relay.isEmpty() || relay.startsWith("https://"), onClick = { app.settings.update { it.copy(relayUrl = relay) } })
             }
             Title("WhatsApp group call (extra)")
-            Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so phone calls and SMS always follow.")
+            Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so the SOS still goes on to SMS and phone calls if nobody answers.")
             BigField("Family group invite link", s.whatsappGroupLink, { v -> app.settings.update { it.copy(whatsappGroupLink = v.trim()) } }, hint = "In WhatsApp: group info → Invite via link → Copy link")
             val enabled = WhatsAppCallService.isEnabled(ctx)
             Toggle("Use WhatsApp group call in SOS", s.whatsappSos, if (enabled) "Ready" else "Needs the MedLog SOS helper turned on in Accessibility") { on -> app.settings.update { it.copy(whatsappSos = on) } }
@@ -479,7 +479,7 @@ fun PrivacyScreen(nav: Nav) {
             Body("When a helper is paired, your health notes, medicines, doses, appointments, limits and profile are kept the same on every paired phone, so any of you can add, change or delete them. They travel through an internet mailbox (a relay), locked with a key that only the paired family phones have. The relay cannot read them, and it keeps each message for 12 hours only. Photos and voice clips are not sent. You can turn this off in Settings → SOS.")
         }
         Body("Things leave the phone only when you choose:")
-        listOf("SOS and help messages: by SMS and phone calls to your helpers", "Helper phones: help alerts by Bluetooth nearby or the internet far away, and your shared health notes over the internet, all locked with a key only your family's phones have", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
+        listOf("Alerts and help messages: only to your helpers' MedLog app. SMS and phone calls only in an SOS, when nobody answers in the app", "Helper phones: help alerts by Bluetooth nearby or the internet far away, and your shared health notes over the internet, all locked with a key only your family's phones have", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
         Body("Your notes are locked (encrypted) on the phone. No ads. No tracking.")
         BigButton("Open App info", tone = Tone.SECONDARY, onClick = { Perms.openAppSettings(ctx) })
         if (!confirm) BigButton("Delete everything", tone = Tone.SECONDARY, onClick = { confirm = true })

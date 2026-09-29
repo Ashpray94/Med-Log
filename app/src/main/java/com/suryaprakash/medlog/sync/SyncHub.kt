@@ -40,6 +40,7 @@ class OwnEffects(private val app: MedLogApp) : SyncEffects {
     override suspend fun doseClosed(uid: String) = DoseAlert.cancel(app, app.ownDb.doses().byUid(uid)?.id ?: 0)
     override suspend fun reschedule() = Scheduler.reschedule(app)
     override fun refreshWidget() = app.refreshWidgets()
+    override suspend fun noteArrived(uid: String) = com.suryaprakash.medlog.help.Alerts.tellArrived(app, uid)
 }
 
 /**

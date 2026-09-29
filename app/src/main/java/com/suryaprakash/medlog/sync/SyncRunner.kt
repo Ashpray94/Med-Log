@@ -24,6 +24,8 @@ interface SyncEffects {
     suspend fun reschedule()
     /** After any batch that changed something. */
     fun refreshWidget()
+    /** A RED or AMBER note from the last day arrived from another phone: tell the helpers once (app only, never SMS). */
+    suspend fun noteArrived(uid: String) {}
 
     companion object { val NONE = object : SyncEffects {
         override suspend fun medicineChanged(uid: String) {}
@@ -138,14 +140,16 @@ class SyncRunner(
     }
 
     private suspend fun react(a: Applied) {
-        val meds = LinkedHashSet<String>(); val stopped = LinkedHashSet<String>(); val doses = LinkedHashSet<String>()
+        val meds = LinkedHashSet<String>(); val stopped = LinkedHashSet<String>(); val doses = LinkedHashSet<String>(); val notes = LinkedHashSet<String>()
         for (o in a.written) when (o.tbl) {
             "medicines" -> if (o.del || o.row?.optInt("active", 1) == 0) stopped += o.uid else meds += o.uid
             "doses" -> if (o.del || o.row?.optString("status") in CLOSED) doses += o.uid
+            "notes" -> if (alerting(o, clock())) notes += o.uid
         }
         for (u in stopped) effects.medicineStopped(u)
         for (u in meds) effects.medicineChanged(u)
         for (u in doses) effects.doseClosed(u)
+        for (u in notes) effects.noteArrived(u)
         if (a.tables.any { it == "medicines" || it == "doses" }) effects.reschedule()
         effects.refreshWidget()
     }
@@ -153,5 +157,10 @@ class SyncRunner(
     companion object {
         const val SKEW_LOG_MS = 10 * 60_000L
         private val CLOSED = setOf("TAKEN", "SKIPPED", "MISSED")
+        /** A note worth telling helpers about: RED or AMBER, not removed, and from the last day (an old note caught up later is not news). */
+        fun alerting(o: Op, now: Long): Boolean {
+            val r = o.row ?: return false
+            return !o.del && r.optString("triage") in setOf("RED", "AMBER") && r.isNull("deletedAt") && r.optLong("occurredAt", 0) > now - 24 * 3600_000L
+        }
     }
 }
