@@ -126,7 +126,6 @@ fun HomeScreen(nav: Nav) {
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
     Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
-        PersonaSwitch(nav)
         // ── the one main action ──
         HeroTell { nav.go(Route.Tell()) }
 

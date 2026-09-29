@@ -166,11 +166,11 @@ class PersonaRaviTest {
     @Test fun r4_closedIssueShowsFixedAndStillBrokenReopensWithTheNewNote() {
         val f = Fake(); val s = sender(f)
         var r = s.send(report(shot = false)) { null }
-        assertEquals("Sent · #12 Open", statusLine(r))
+        assertEquals("Sent, the team will look at it", statusLine(r))
         f.issueState = "closed"
         r = s.refresh(r)
         assertEquals(Status.CLOSED, r.status)
-        assertEquals("Fixed · #12 closed", statusLine(r))
+        assertEquals("The team says it's fixed", statusLine(r))
         r = s.stillBroken(r, "It is still small on my phone")
         assertEquals(Status.SENT, r.status)
         val patch = f.calls.last { it.first == "PATCH" }
@@ -183,7 +183,7 @@ class PersonaRaviTest {
         // "It works now" is the only way to VERIFIED, and closing again does not undo it
         f.issueState = "closed"
         r = s.verify(s.refresh(r))
-        assertEquals("Fixed and checked · #12", statusLine(r))
+        assertEquals("You checked it works", statusLine(r))
         assertEquals(Status.VERIFIED, s.refresh(r).status)
     }
 

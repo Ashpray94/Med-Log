@@ -47,6 +47,7 @@ import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Section
 import com.suryaprakash.medlog.ui.Tone
+import com.suryaprakash.medlog.ui.Toggle
 import com.suryaprakash.medlog.ui.rememberDictation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -70,6 +71,7 @@ fun FeedbackScreen(nav: Nav) {
     var category by remember { mutableStateOf(Category.BUG) }
     var note by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var sendPicture by remember { mutableStateOf(true) }
     var done by remember { mutableStateOf<String?>(null) }
     val dictate = rememberDictation("Say what went wrong") { note = (note + " " + it).trim() }
     val helper = LocalSettings.current.role == "helper"
@@ -97,12 +99,13 @@ fun FeedbackScreen(nav: Nav) {
         Section("What happened?")
         BigField("Your words", note, { note = it }, lines = 4)
         if (dictate != null) BigButton("Speak", tone = Tone.SECONDARY, icon = Icons.Rounded.Mic, onClick = dictate)
-        Hint("The picture can show health details. It goes only to the MedLog team's private tracker.")
-        BigButton("Send", icon = Icons.Rounded.Send, enabled = !busy && (note.isNotBlank() || bitmap != null), onClick = {
+        if (bitmap != null) Toggle("Send the picture", sendPicture) { sendPicture = it }
+        Hint("The picture can show health details. It is sent only if the tracker is private; otherwise only your words are sent.")
+        BigButton("Send", icon = Icons.Rounded.Send, enabled = !busy && (note.isNotBlank() || (bitmap != null && sendPicture)), onClick = {
             busy = true
             scope.launch {
                 val id = "${meta.time}-${(1000..9999).random()}"
-                val jpeg = if (bitmap != null) withContext(Dispatchers.Default) { Capture.compose(bitmap, strokes.toList()) } else null
+                val jpeg = if (bitmap != null && sendPicture) withContext(Dispatchers.Default) { Capture.compose(bitmap, strokes.toList()) } else null
                 val r = Report(id, meta.time, category, note.trim(), meta.route, meta.version, meta.role, meta.device, meta.android, hasShot = jpeg != null)
                 withContext(Dispatchers.IO) { FeedbackStore(ctx).save(r, jpeg) }
                 if (FeedbackSender.configured) FeedbackWorker.enqueue(ctx)
@@ -150,9 +153,25 @@ private fun ShotPad(bitmap: android.graphics.Bitmap, strokes: androidx.compose.r
 /** Plain words for where a report is. */
 fun statusLine(r: Report): String = when (r.status) {
     Status.QUEUED -> "Waiting to send"
-    Status.SENT -> "Sent · #${r.issue} Open"
-    Status.CLOSED -> "Fixed · #${r.issue} closed"
-    Status.VERIFIED -> "Fixed and checked · #${r.issue}"
+    Status.SENT -> "Sent, the team will look at it"
+    Status.CLOSED -> "The team says it's fixed"
+    Status.CLOSED_NO_FIX -> "Closed without a fix"
+    Status.VERIFIED -> "You checked it works"
+}
+
+/** Opens the Android share sheet with the words and details, and the picture if there is one. */
+private fun shareReport(ctx: android.content.Context, r: Report, store: FeedbackStore) {
+    val text = Github.shareText(r)
+    val shot = store.shotFile(r.id).takeIf { r.hasShot && it.exists() }
+    val send = android.content.Intent(android.content.Intent.ACTION_SEND).putExtra(android.content.Intent.EXTRA_TEXT, text)
+        .putExtra(android.content.Intent.EXTRA_SUBJECT, "MedLog problem report")
+    if (shot != null) {
+        val uri = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", shot)
+        send.setType("image/jpeg").putExtra(android.content.Intent.EXTRA_STREAM, uri)
+            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        send.clipData = android.content.ClipData.newRawUri("", uri)
+    } else send.setType("text/plain")
+    ctx.startActivity(android.content.Intent.createChooser(send, "Share this report").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 /** Every report with its status. A fixed one can be confirmed ("It works now") or reopened ("Still broken"). */
@@ -190,6 +209,7 @@ fun MyReportsScreen(nav: Nav) {
     }
 
     Screen("My reports", "The problems you told us about, and what happened to them.", onHome = if (helper) null else ({ nav.home() }), onBack = { nav.back() }) {
+        if (!FeedbackSender.configured) Card(border = LocalPalette.current.amber) { Body("This version of MedLog can't send reports by itself.", bold = true) }
         if (reports.isEmpty()) Body("No reports yet. Shake the phone, or use Report a problem in Settings.")
         reports.forEach { r ->
             Card {
@@ -197,11 +217,13 @@ fun MyReportsScreen(nav: Nav) {
                 if (r.note.isNotBlank()) Body(r.note.take(140))
                 Hint(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(java.util.Date(r.createdAt)))
                 Body(statusLine(r), bold = true)
-                if (r.hasShot && r.textOnly) Hint("The picture was not sent, only the words.")
+                if (r.issue > 0) Hint("#${r.issue}")
+                if (r.hasShot && r.textOnly) Hint("Sent without the picture")
                 if (r.status == Status.CLOSED) {
                     BigButton("It works now", onClick = { work({ s, x -> s.verify(x) }, r) })
                     BigButton("Still broken", tone = Tone.SECONDARY, onClick = { problem = r; why = "" })
                 }
+                if (r.status == Status.QUEUED && !FeedbackSender.configured) BigButton("Share it", tone = Tone.SECONDARY, onClick = { runCatching { shareReport(ctx, r, store) } })
                 if (r.status == Status.QUEUED && FeedbackSender.configured) BigButton("Send now", tone = Tone.SECONDARY, onClick = { FeedbackWorker.enqueue(ctx); app.speaker.say("Sending") })
             }
         }

@@ -156,6 +156,9 @@ fun SettingsScreen(nav: Nav) {
             if (s.whatsappSos && !enabled) BigButton("Turn on in Accessibility", tone = Tone.QUIET, onClick = { Perms.open(ctx, Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)) })
         }
         "lang" -> LanguagesSection(onBack = { section = null }, onHome = { nav.home() })
+        "whose" -> Screen("Whose phone is this?", "Change this phone between yours and a helper's.", onHome = { nav.home() }, onBack = { section = null }) {
+            RoleSwitch(nav)
+        }
         "update" -> Screen("Updates", "Check for a new version of MedLog and install it.", onHome = { nav.home() }, onBack = { section = null }) {
             UpdateCard(auto = true)
             Hint("You're on MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. MedLog also checks once a day by itself.")
@@ -214,6 +217,8 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.ValueRow("Permissions", null) { nav.go(Route.Permissions) }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Backup and new phone", null) { nav.go(Route.Backup) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Whose phone is this?", if (s.role == "helper") "A helper's" else "Mine") { section = "whose" }
                 if (com.suryaprakash.medlog.Updater.allowed(ctx)) {
                     com.suryaprakash.medlog.ui.GroupLine()
                     com.suryaprakash.medlog.ui.ValueRow("Updates", com.suryaprakash.medlog.BuildConfig.VERSION_NAME) { section = "update" }
