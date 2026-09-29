@@ -620,6 +620,9 @@ fun HelperHomeScreen(nav: Nav) {
                     sub = if (m.acked) "You answered" else null, mark = if (m.kind in setOf("SOS", "DANGER", "FALL")) p.red else null)
             })
         }
+        com.suryaprakash.medlog.ui.Group {
+            com.suryaprakash.medlog.ui.ValueRow("Report a problem with the app", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+        }
         Text("Help one more person", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 .steady("Help one more person") { PairMode.helping = true; nav.go(Route.Pair) }.padding(vertical = 12.dp))
@@ -750,6 +753,7 @@ fun HelperSettingsScreen(nav: Nav) = HelperSettings(nav, onBack = null)
 private fun HelperSettings(nav: Nav, onBack: (() -> Unit)?) {
     val s = LocalSettings.current
     val link by Relay.link.collectAsState()
+    val ctx = LocalContext.current
     Screen("Settings", "How this phone hears ${s.pairedWith.ifBlank { "them" }}.", onHome = null, onBack = onBack) {
         com.suryaprakash.medlog.ui.Section("Connection")
         com.suryaprakash.medlog.ui.Group {
@@ -765,6 +769,13 @@ private fun HelperSettings(nav: Nav, onBack: (() -> Unit)?) {
             com.suryaprakash.medlog.ui.ValueRow("Connect again", null, sub = "If the other phone was reset") { nav.go(Route.Pair) }
         }
         SharingSettings()
+        com.suryaprakash.medlog.ui.Section("Problems with the app")
+        com.suryaprakash.medlog.ui.Group {
+            com.suryaprakash.medlog.ui.ValueRow("Report a problem", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+            com.suryaprakash.medlog.ui.GroupLine()
+            com.suryaprakash.medlog.ui.ValueRow("My reports", null) { nav.go(Route.MyReports) }
+        }
+        Toggle("Shake to report a problem", s.shakeOn, "Shake the phone twice to report what you see.") { on -> ctx.medlog.settings.update { it.copy(shakeToReport = on) } }
     }
 }
 
