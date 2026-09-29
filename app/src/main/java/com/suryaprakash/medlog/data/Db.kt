@@ -118,6 +118,10 @@ data class Medicine(
     val minGapHours: Int = 4,
     val purpose: String = "",
     val photoPath: String? = null,
+    /**
+     * The pill count as of [pillsAt] (the last refill or edit). What is left now is this minus the doses taken since, worked out by
+     * [com.suryaprakash.medlog.meds.Pills], so doses taken on two phones at once are both counted.
+     */
     val pillsLeft: Double? = null,
     val active: Boolean = true,
     val bloodThinner: Boolean = false,
@@ -127,6 +131,10 @@ data class Medicine(
     /** what it looks like, so it can be told apart from the others: "round", "oval", "capsule", "oblong" … and a colour name */
     val shape: String = "",
     val color: String = "",
+    /** When [pillsLeft] was counted (ms); doses taken after this time are subtracted from it. */
+    @androidx.room.ColumnInfo(defaultValue = "0") val pillsAt: Long = 0,
+    /** A feed's contents (parts with kcal and protein, tube or mouth) as JSON, see nutrition.Feeds; shared with the family, "" for a medicine. */
+    @androidx.room.ColumnInfo(defaultValue = "") val feedInfo: String = "",
     /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
     @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
     @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
@@ -186,6 +194,10 @@ data class DocLine(
 @Entity(tableName = "sync_rows", primaryKeys = ["tbl", "uid"], indices = [Index(value = ["origin", "oseq"])])
 data class SyncRow(val tbl: String, val uid: String, val origin: String, val oseq: Long, val at: Long, val by: String, val del: Long)
 
+/** The version of every column of every live shared row (database version 5): per-column last write wins. [col] is the wire name of the column. */
+@Entity(tableName = "sync_cols", primaryKeys = ["tbl", "uid", "col"], indices = [Index(value = ["origin", "oseq"])])
+data class SyncCol(val tbl: String, val uid: String, val col: String, val at: Long, val by: String, val origin: String, val oseq: Long)
+
 /** device (this phone's id), seq (last local number), applying ("1" while incoming changes are written). */
 @Entity(tableName = "sync_state")
 data class SyncState(@PrimaryKey val k: String, val v: String)
@@ -212,6 +224,8 @@ interface ProfileDao {
     @Query("SELECT * FROM profile WHERE id = 1") fun flow(): Flow<Profile?>
     @Query("SELECT * FROM profile WHERE id = 1") suspend fun get(): Profile?
     @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun put(p: Profile)
+    /** Writes the row in place, so only the columns whose value changed count as changed for sharing (put replaces the whole row). */
+    @Update suspend fun update(p: Profile)
 }
 
 @Dao
@@ -257,8 +271,14 @@ interface MedicineDao {
     @Update suspend fun update(m: Medicine)
 }
 
+/** How many doses of a medicine were taken since its pill count was made. */
+data class TakenCount(val medicineId: Long, val n: Int)
+
 @Dao
 interface DoseDao {
+    /** Per medicine with a pill count: the TAKEN doses acted after the time of the count (see meds.Pills). */
+    @Query(com.suryaprakash.medlog.meds.Pills.TAKEN_SINCE)
+    suspend fun takenSincePillsAt(): List<TakenCount>
     @Query("SELECT * FROM doses WHERE scheduledAt >= :from AND scheduledAt < :to ORDER BY scheduledAt") fun betweenFlow(from: Long, to: Long): Flow<List<Dose>>
     @Query("SELECT * FROM doses WHERE scheduledAt >= :from AND scheduledAt < :to ORDER BY scheduledAt") suspend fun between(from: Long, to: Long): List<Dose>
     @Query("SELECT * FROM doses WHERE status IN ('DUE','SNOOZED') ORDER BY scheduledAt") suspend fun open(): List<Dose>
@@ -299,8 +319,8 @@ interface InboxDao {
 }
 
 @Database(
-    entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class, SyncRow::class, SyncState::class, SyncHave::class],
-    version = 4,
+    entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class, SyncRow::class, SyncCol::class, SyncState::class, SyncHave::class],
+    version = 5,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -320,7 +340,7 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, name)
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2, M2_3, M3_4)
+                .addMigrations(M1_2, M2_3, M3_4, M4_5)
                 .addCallback(object : androidx.room.RoomDatabase.Callback() {
                     override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                         for (sql in com.suryaprakash.medlog.sync.SyncSql.onOpen()) db.execSQL(sql)
@@ -333,6 +353,13 @@ abstract class MedDb : RoomDatabase() {
         private val M3_4 = object : androidx.room.migration.Migration(3, 4) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 for (sql in com.suryaprakash.medlog.sync.SyncSql.migration3to4()) db.execSQL(sql)
+            }
+        }
+
+        /** Per-column versions for sharing, the feed's contents and the pill count's baseline on the medicine. */
+        private val M4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                for (sql in com.suryaprakash.medlog.sync.SyncSql.migration4to5()) db.execSQL(sql)
             }
         }
 

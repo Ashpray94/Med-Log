@@ -6,6 +6,10 @@ import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.Limits
 import com.suryaprakash.medlog.clinical.PersonContext
 import com.suryaprakash.medlog.data.CarePlan
+import com.suryaprakash.medlog.data.Medicine
+import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.onto
+import com.suryaprakash.medlog.meds.Pills
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.Reading
 import com.suryaprakash.medlog.nlu.Source
@@ -54,7 +58,7 @@ class PersonaSharingTest {
     // ───────── harness ─────────
 
     private fun schema(): org.json.JSONArray {
-        val f = listOf("schemas", "app/schemas").map { File("$it/com.suryaprakash.medlog.data.MedDb/4.json") }.first { it.exists() }
+        val f = listOf("schemas", "app/schemas").map { File("$it/com.suryaprakash.medlog.data.MedDb/5.json") }.first { it.exists() }
         return JSONObject(f.readText()).getJSONObject("database").getJSONArray("entities")
     }
 
@@ -143,8 +147,44 @@ class PersonaSharingTest {
         val st = SqlSyncStore(JdbcSqlDb(c))
         return q(c, "SELECT tbl, uid, origin, oseq, at, `by` AS b, del FROM sync_rows ORDER BY tbl, uid").map { r ->
             val row = if ((r["del"] as Long) == 0L) canon(st.readRow(r["tbl"] as String, r["uid"] as String)) else "deleted"
-            "${r["tbl"]}|${r["uid"]}|${r["origin"]}#${r["oseq"]}@${r["at"]}by${r["b"]}|$row"
+            val cols = q(c, "SELECT col, origin, oseq, at, `by` AS b FROM sync_cols WHERE tbl = '${r["tbl"]}' AND uid = '${r["uid"]}' ORDER BY col").joinToString(";") { "${it["col"]}=${it["origin"]}#${it["oseq"]}@${it["at"]}by${it["b"]}" }
+            "${r["tbl"]}|${r["uid"]}|${r["origin"]}#${r["oseq"]}@${r["at"]}by${r["b"]}|$row|$cols"
         }
+    }
+
+    private fun profileOf(r: Map<String, Any?>) = Profile(1, r["name"] as String, r["dob"] as String, r["sex"] as String, r["bloodGroup"] as String, r["hospitalId"] as String,
+        r["conditions"] as String, r["allergies"] as String, r["doctorName"] as String, r["doctorPhone"] as String, (r["onBloodThinner"] as Long) != 0L, r["notes"] as String, r["plan"] as String)
+
+    /**
+     * What "My details" > Save does now: it writes onto the FRESHEST row only what the page changed (Repo.updateProfile + Profile.onto), as a
+     * plain UPDATE of the row, so only the columns whose value really changed are stamped.
+     */
+    private fun saveMyDetails(c: Connection, opened: Map<String, Any?>, edited: Profile) {
+        val o = edited.onto(profileOf(opened), profileOf(profileRow(c)))
+        xa(c, "UPDATE profile SET name=?, dob=?, sex=?, bloodGroup=?, hospitalId=?, conditions=?, allergies=?, doctorName=?, doctorPhone=?, onBloodThinner=?, notes=?, plan=? WHERE id = 1",
+            o.name, o.dob, o.sex, o.bloodGroup, o.hospitalId, o.conditions, o.allergies, o.doctorName, o.doctorPhone, if (o.onBloodThinner) 1L else 0L, o.notes, o.plan)
+    }
+
+    private fun medicineOf(r: Map<String, Any?>) = Medicine(id = r["id"] as Long, name = r["name"] as String, strength = r["strength"] as String, form = r["form"] as String,
+        amount = r["amount"] as String, food = r["food"] as String, times = r["times"] as String, days = r["days"] as String, startDate = r["startDate"] as Long,
+        endDate = r["endDate"] as Long?, critical = (r["critical"] as Long) != 0L, asNeeded = (r["asNeeded"] as Long) != 0L, minGapHours = (r["minGapHours"] as Long).toInt(),
+        purpose = r["purpose"] as String, photoPath = r["photoPath"] as String?, pillsLeft = r["pillsLeft"] as Double?, active = (r["active"] as Long) != 0L,
+        bloodThinner = (r["bloodThinner"] as Long) != 0L, changedAt = r["changedAt"] as Long, changeNote = r["changeNote"] as String, calendarEventId = r["calendarEventId"] as Long?,
+        shape = r["shape"] as String, color = r["color"] as String, pillsAt = r["pillsAt"] as Long, feedInfo = r["feedInfo"] as String)
+
+    /** What a medicine page's Save does now: Repo.updateMedicine { fresh -> edited.onto(original, fresh) }, as a plain UPDATE of the row. */
+    private fun saveMedicinePage(c: Connection, id: Long, original: Medicine, edited: Medicine) {
+        val o = edited.onto(original, medicineOf(q(c, "SELECT * FROM medicines WHERE id = $id").first()))
+        xa(c, "UPDATE medicines SET name=?, strength=?, form=?, amount=?, food=?, times=?, days=?, startDate=?, endDate=?, critical=?, asNeeded=?, minGapHours=?, purpose=?, pillsLeft=?, active=?, bloodThinner=?, changedAt=?, changeNote=?, shape=?, color=?, pillsAt=?, feedInfo=? WHERE id = ?",
+            o.name, o.strength, o.form, o.amount, o.food, o.times, o.days, o.startDate, o.endDate, if (o.critical) 1L else 0L, if (o.asNeeded) 1L else 0L, o.minGapHours, o.purpose, o.pillsLeft,
+            if (o.active) 1L else 0L, if (o.bloodThinner) 1L else 0L, o.changedAt, o.changeNote, o.shape, o.color, o.pillsAt, o.feedInfo, id)
+    }
+
+    /** Pills left, as the phone works it out (meds.Pills over the doses taken since the count). */
+    private fun pillsLeft(c: Connection, name: String): Double? {
+        val taken = q(c, Pills.TAKEN_SINCE).associate { it["medicineId"] as Long to (it["n"] as Long).toInt() }
+        val m = medicineOf(q(c, "SELECT * FROM medicines WHERE name = '$name'").first())
+        return Pills.left(m, taken[m.id] ?: 0)
     }
     private fun same(a: Ph, b: Ph) = assertEquals("${a.name} and ${b.name} differ", snap(a.c), snap(b.c))
 
@@ -256,15 +296,14 @@ class PersonaSharingTest {
         assertEquals(102.0, onRavi.limits.band("temp")!!.redHigh!!, 0.0)     // and his limits are still there
     }
 
-    /** BUG B75: "My details" > Save writes the whole profile row it loaded when the page opened, plan included. */
-    @Ignore("BUG B75: Save in My details (SettingsScreens.kt:86-88,114) writes the stale plan back and erases limits a helper set meanwhile, on every phone")
+    /** B75 (fixed): "My details" > Save used to write the whole profile row it loaded when the page opened, plan included. */
     @Test fun s2_limitsRaviSetWhileKamalaHasMyDetailsOpenSurviveHerSave() {
         val f = Fam(); val ravi = f.ravisPhonePairs()
         val opened = profileRow(f.kamala.c)                                 // she opens "My details": the page holds this copy while section != null
         pause(); ravisSetsLimits(ravi); ravi.push(); f.relay.pump()
         assertEquals(Level.GREEN, chillsLevel(f.kamala.c, 100.2))           // the limits reached her phone
         pause()
-        putProfile(f.kamala.c, opened + ("conditions" to "Cancer, diabetes"))  // she taps Save (ProfileDao.put = INSERT OR REPLACE of the whole row)
+        saveMyDetails(f.kamala.c, opened, profileOf(opened).copy(conditions = "Cancer, diabetes"))  // she taps Save: only what the page changed goes onto the freshest row
         f.kamala.push(); f.relay.pump()
         assertEquals("Cancer, diabetes", one(ravi.c, "SELECT conditions FROM profile"))
         assertEquals("the limits Ravi set were erased by Kamala's Save", Level.GREEN, chillsLevel(f.kamala.c, 100.2))
@@ -272,16 +311,17 @@ class PersonaSharingTest {
         same(f.kamala, ravi)
     }
 
-    @Test fun documented_s2_profileIsOneRow_concurrentEditsOfDifferentFieldsKeepOnlyTheLaterOne() {
-        // Ravi (limits, in plan) and Kamala (conditions) edit the profile while neither has heard the other. Both phones agree afterwards,
-        // but only the later row survives: this is the same root cause as B75, for edits that really are at the same time.
+    @Test fun s2_profileConcurrentEditsOfDifferentFieldsBothSurvive() {
+        // Ravi (limits, in plan) and Kamala (conditions) edit the profile while neither has heard the other. Each column has its own version,
+        // so both edits survive on both phones (before per-column versions only the later row survived).
         val f = Fam(); val ravi = f.ravisPhonePairs()
         pause(); ravisSetsLimits(ravi)
         pause(); xa(f.kamala.c, "UPDATE profile SET conditions = 'Cancer, diabetes'")
         ravi.push(); f.kamala.push(); f.relay.pump()
         same(f.kamala, ravi)
         assertEquals("Cancer, diabetes", one(ravi.c, "SELECT conditions FROM profile"))
-        assertNull("Ravi's limits are gone", personOf(ravi.c).limits.band("temp"))
+        assertEquals(102.0, personOf(ravi.c).limits.band("temp")!!.redHigh!!, 0.0)
+        assertEquals(102.0, personOf(f.kamala.c).limits.band("temp")!!.redHigh!!, 0.0)
     }
 
     // ───────── 3. A new medicine, a dose marked by the helper, and the same dose tapped by Kamala ─────────
@@ -322,10 +362,8 @@ class PersonaSharingTest {
         val noon = base + 12 * hour
         // Kamala taps "I took it" (dose TAKEN and one pill fewer), and a moment later Ravi taps it on her replica, before either has heard the other
         x(f.kamala.c, "UPDATE doses SET status = 'TAKEN', actedAt = ${noon + 60_000} WHERE scheduledAt = $noon")
-        x(f.kamala.c, "UPDATE medicines SET pillsLeft = 13 WHERE name = 'Dexamethasone'")
         pause()
         x(ravi.c, "UPDATE doses SET status = 'TAKEN', actedAt = ${noon + 30_000} WHERE scheduledAt = $noon")
-        x(ravi.c, "UPDATE medicines SET pillsLeft = 13 WHERE name = 'Dexamethasone'")
         f.kamala.push(); ravi.push(); f.relay.pump()
         same(f.kamala, ravi)
         for (p in listOf(f.kamala, ravi)) {
@@ -333,7 +371,7 @@ class PersonaSharingTest {
             assertEquals(3L, n(p.c, "SELECT count(*) FROM doses"))
             assertEquals("TAKEN", one(p.c, "SELECT status FROM doses WHERE scheduledAt = $noon"))
             assertEquals(noon + 30_000, n(p.c, "SELECT actedAt FROM doses WHERE scheduledAt = $noon"))   // the later tap (Ravi's) is the version both keep
-            assertEquals(13.0, one(p.c, "SELECT pillsLeft FROM medicines WHERE name = 'Dexamethasone'"))
+            assertEquals(13.0, pillsLeft(p.c, "Dexamethasone"))
         }
     }
 
@@ -366,35 +404,30 @@ class PersonaSharingTest {
         assertEquals(1L, n(ravi.c, "SELECT count(*) FROM doses WHERE scheduledAt = $eightAm"))
     }
 
-    /** BUG B76a: pillsLeft is a counter kept in a shared row that is replaced whole. */
-    @Ignore("BUG B76: pillsLeft lost update. Two different doses taken at the same time on two phones leave 9 pills, not 8 (medicines row is replaced whole)")
+    /** B76a (fixed): the pill count used to be a counter kept in a shared row; now it is the count at the last refill minus the TAKEN doses since (meds.Pills). */
     @Test fun s3_twoDifferentDosesTakenOnTwoPhonesAtOnce_bothPillsAreCounted() {
         val f = Fam(); val ravi = f.ravisPhonePairs()
         val noon = base + 12 * hour
         x(f.kamala.c, "UPDATE doses SET status = 'TAKEN', actedAt = ${eightAm + 1} WHERE scheduledAt = $eightAm")
-        x(f.kamala.c, "UPDATE medicines SET pillsLeft = pillsLeft - 1 WHERE name = 'Dexamethasone'")       // 14 -> 13 (Scheduler.countDown)
         pause()
         x(ravi.c, "UPDATE doses SET status = 'TAKEN', actedAt = ${noon + 1} WHERE scheduledAt = $noon")
-        x(ravi.c, "UPDATE medicines SET pillsLeft = pillsLeft - 1 WHERE name = 'Dexamethasone'")           // 14 -> 13 (Scheduler.take, replica branch)
         f.kamala.push(); ravi.push(); f.relay.pump()
         same(f.kamala, ravi)
         assertEquals(2L, n(f.kamala.c, "SELECT count(*) FROM doses WHERE status = 'TAKEN'"))
-        assertEquals("two doses were taken, so two pills are gone", 12.0, one(f.kamala.c, "SELECT pillsLeft FROM medicines WHERE name = 'Dexamethasone'"))
+        assertEquals("two doses were taken, so two pills are gone", 12.0, pillsLeft(f.kamala.c, "Dexamethasone"))
+        assertEquals(12.0, pillsLeft(ravi.c, "Dexamethasone"))
     }
 
-    /** BUG B76b: the medicine edit page saves every column of the copy it loaded. */
-    @Ignore("BUG B76: Save on the medicine page (MedsScreens.kt:196-199,269-285) writes the stale 'active' back: a medicine Ravi stopped starts again")
+    /** B76b (fixed): the medicine edit page used to save every column of the copy it loaded. */
     @Test fun s3_aMedicineRaviStoppedWhileKamalaHadItsPageOpen_isNotStartedAgainByHerSave() {
         val f = Fam(); val ravi = f.ravisPhonePairs()
-        val opened = q(f.kamala.c, "SELECT * FROM medicines WHERE name = 'Dexamethasone'").first()     // the page holds this copy
+        val opened = medicineOf(q(f.kamala.c, "SELECT * FROM medicines WHERE name = 'Dexamethasone'").first())     // the page holds this copy
         pause(); x(ravi.c, "UPDATE medicines SET active = 0 WHERE name = 'Dexamethasone'")
         ravi.push(); f.relay.pump()
         assertEquals(0L, n(f.kamala.c, "SELECT active FROM medicines WHERE name = 'Dexamethasone'"))
         pause()
-        // she only changes the note field and taps Save: Room's update() writes all columns of the copy, active = 1 included
-        xa(f.kamala.c, "UPDATE medicines SET name=?, strength=?, form=?, amount=?, food=?, times=?, days=?, startDate=?, endDate=?, critical=?, asNeeded=?, minGapHours=?, purpose=?, pillsLeft=?, active=?, bloodThinner=?, changedAt=?, changeNote=?, shape=?, color=? WHERE id = ?",
-            opened["name"], opened["strength"], opened["form"], opened["amount"], opened["food"], opened["times"], opened["days"], opened["startDate"], opened["endDate"], opened["critical"],
-            opened["asNeeded"], opened["minGapHours"], "with food", opened["pillsLeft"], opened["active"], opened["bloodThinner"], opened["changedAt"], opened["changeNote"], opened["shape"], opened["color"], opened["id"])
+        // she only changes the purpose and taps Save: the page writes onto the freshest row only what it changed, so active stays 0
+        saveMedicinePage(f.kamala.c, opened.id, opened, opened.copy(purpose = "with food"))
         f.kamala.push(); f.relay.pump()
         assertEquals("with food", one(ravi.c, "SELECT purpose FROM medicines WHERE name = 'Dexamethasone'"))
         assertEquals("the medicine Ravi stopped is active again", 0L, n(ravi.c, "SELECT active FROM medicines WHERE name = 'Dexamethasone'"))
@@ -457,7 +490,6 @@ class PersonaSharingTest {
         same(f.kamala, ravi)
     }
 
-    @Ignore("BUG B76: a medicine is one row, last write wins for ALL columns. Kamala's purpose edit is lost when Ravi changes the times at the same moment")
     @Test fun s5_bothEditDifferentFieldsOfOneMedicine_bothEditsSurvive() {
         val f = Fam(); val ravi = f.ravisPhonePairs()
         x(f.kamala.c, "UPDATE medicines SET purpose = 'nausea cover' WHERE name = 'Dexamethasone'")
@@ -487,24 +519,26 @@ class PersonaSharingTest {
         same(f.kamala, ravi)
     }
 
-    @Test fun documented_s6_kamalaEditedBeforeRaviRemoved_theRemoveWinsAndHerCorrectionIsLost() {
+    @Test fun s6_kamalaEditedBeforeRaviRemoved_theRemoveAndHerCorrectionBothSurvive() {
         val f = Fam(); val ravi = raviAddsAWrongNote(f)
         pause(); x(f.kamala.c, "UPDATE notes SET text = 'Vomited 2 times', count = 2, triage = 'GREEN' WHERE text = 'Vomited 5 times'")   // her correction, first
         pause(); x(ravi.c, "UPDATE notes SET deletedAt = ${base + 4 * hour} WHERE text = 'Vomited 5 times'")                                   // his remove, later, from the old copy
         f.kamala.push(); ravi.push(); f.relay.pump()
         same(f.kamala, ravi)
         assertEquals(0L, n(f.kamala.c, "SELECT count(*) FROM notes WHERE deletedAt IS NULL AND problemId = 'vomiting' AND occurredAt = ${base + 3 * hour}"))
-        // her correction is gone: the removed note that "Bring back" would restore still says 5 times (AMBER)
-        assertEquals(5L, n(f.kamala.c, "SELECT count FROM notes WHERE problemId = 'vomiting' AND occurredAt = ${base + 3 * hour}"))
+        // "Remove" is the column deletedAt and her correction is other columns: both survive, so "Bring back" would restore her 2 times, not his old 5
+        assertEquals(2L, n(f.kamala.c, "SELECT count FROM notes WHERE problemId = 'vomiting' AND occurredAt = ${base + 3 * hour}"))
     }
 
-    @Test fun documented_s6_kamalaEditedAfterRaviRemoved_herEditBringsTheNoteBackOnBothPhones() {
+    @Test fun s6_kamalaEditedAfterRaviRemoved_theNoteStaysRemovedWithHerCorrection() {
         val f = Fam(); val ravi = raviAddsAWrongNote(f)
         pause(); x(ravi.c, "UPDATE notes SET deletedAt = ${base + 4 * hour} WHERE text = 'Vomited 5 times'")
         pause(); x(f.kamala.c, "UPDATE notes SET text = 'Vomited 3 times', count = 3 WHERE text = 'Vomited 5 times'")     // she has not seen the remove yet
         ravi.push(); f.kamala.push(); f.relay.pump()
         same(f.kamala, ravi)
-        assertEquals("Vomited 3 times", one(ravi.c, "SELECT text FROM notes WHERE deletedAt IS NULL AND occurredAt = ${base + 3 * hour}"))
+        // his remove (the column deletedAt) is not undone by her edit of other columns; "Bring back" restores her corrected note
+        assertEquals(0L, n(ravi.c, "SELECT count(*) FROM notes WHERE deletedAt IS NULL AND occurredAt = ${base + 3 * hour}"))
+        assertEquals("Vomited 3 times", one(ravi.c, "SELECT text FROM notes WHERE occurredAt = ${base + 3 * hour}"))
     }
 
     @Test fun s6_aHardDeleteOfAnAppointmentReachesKamala_andALaterEditBringsItBack_sameOnBoth() {
@@ -626,6 +660,7 @@ class PersonaSharingTest {
         val seq = n(p.c, "SELECT CAST(v AS INTEGER) FROM sync_state WHERE k='seq'")
         x(p.c, sql)
         x(p.c, "UPDATE sync_rows SET at = at + $ahead WHERE origin = '${p.device}' AND oseq > $seq")
+        x(p.c, "UPDATE sync_cols SET at = at + $ahead WHERE origin = '${p.device}' AND oseq > $seq")
     }
 
     @Test fun s9_raviClockIsOneHourAhead_afterHeHeardFromKamala_herLaterEditsStillWin() {
@@ -652,16 +687,16 @@ class PersonaSharingTest {
         assertEquals("ravi ahead", one(f.kamala.c, "SELECT purpose FROM medicines WHERE name = 'Dexamethasone'"))
     }
 
-    @Test fun documented_s9_aDeleteFromAPhoneWithAFastClockEatsAnEditThatWasMadeLaterInRealTime() {
-        // the hardest case of the plan's "which wins": Ravi removes a note (his clock is 1 hour ahead), then Kamala corrects the same note
-        // (real time later, but she has not received the remove). Her correction is lost on both phones and nobody is told.
+    @Test fun s9_aRemoveFromAPhoneWithAFastClockNoLongerEatsAnEditMadeLaterInRealTime() {
+        // Ravi removes a note (his clock is 1 hour ahead), then Kamala corrects the same note (real time later, but she has not received the
+        // remove). "Remove" is the column deletedAt and her correction is other columns, so both survive (whole-row versions lost her correction).
         val f = Fam(); val ravi = raviAddsAWrongNote(f)
         pause(); editWithClockAhead(ravi, hour, "UPDATE notes SET deletedAt = ${base + 4 * hour} WHERE text = 'Vomited 5 times'")
         pause(); x(f.kamala.c, "UPDATE notes SET text = 'Vomited 3 times', count = 3 WHERE text = 'Vomited 5 times'")
         ravi.push(); f.kamala.push(); f.relay.pump()
         same(f.kamala, ravi)
         assertEquals(0L, n(f.kamala.c, "SELECT count(*) FROM notes WHERE deletedAt IS NULL AND occurredAt = ${base + 3 * hour}"))
-        assertEquals("Vomited 5 times", one(f.kamala.c, "SELECT text FROM notes WHERE occurredAt = ${base + 3 * hour}"))
+        assertEquals("Vomited 3 times", one(f.kamala.c, "SELECT text FROM notes WHERE occurredAt = ${base + 3 * hour}"))
     }
 
     // ───────── data that stays on the phone ─────────

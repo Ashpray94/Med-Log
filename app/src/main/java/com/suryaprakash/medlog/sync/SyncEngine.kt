@@ -8,7 +8,7 @@ data class ParentRule(val childTbl: String, val field: String, val parentTbl: St
 /**
  * Merges what other phones send and tells them what this phone changed.
  *
- * Merge rule: last write wins per row, by (at, by) with the device id as tie-break (see [Version.compareTo]). Deletes are
+ * Merge rule: last write wins per column (see [Merge]), by (at, by) with the device id as tie-break (see [Version.compareTo]). Deletes are
  * tombstones that take part in the same comparison, so a later edit brings a deleted row back and a later delete removes it,
  * the same on every phone. The same set of ops in any order gives the same state.
  *
@@ -123,8 +123,8 @@ class SyncEngine(
     }
 
     private fun park(o: Op) {
-        // a newer copy of the same row replaces an older parked one
-        val i = pending.indexOfFirst { it.tbl == o.tbl && it.uid == o.uid }
+        // a newer copy of the same row from the same phone replaces an older parked one (another phone's copy may hold other columns)
+        val i = pending.indexOfFirst { it.tbl == o.tbl && it.uid == o.uid && it.origin == o.origin }
         if (i < 0) pending += o else if (o.version > pending[i].version) pending[i] = o
     }
 

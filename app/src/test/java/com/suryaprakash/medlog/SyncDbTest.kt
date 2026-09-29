@@ -91,9 +91,9 @@ class SyncDbTest {
     private fun rows(c: Connection) = n(c, "SELECT count(*) FROM sync_rows")
 
     /** A fully migrated database with the given device name and the triggers installed. */
-    private fun v4(name: String): Connection {
+    private fun v5(name: String): Connection {
         val c = v3()
-        run(c, SyncSql.migration3to4())
+        run(c, SyncSql.migration3to4() + SyncSql.migration4to5())
         x(c, "UPDATE sync_state SET v='$name' WHERE k='device'")
         return c
     }
@@ -104,15 +104,15 @@ class SyncDbTest {
     // ---- the schema and the migration -------------------------------------------------------------------------------------
 
     @Test fun syncTablesMatchTheExportedSchema() {
-        val ents = schemaJson(4).getJSONObject("database").getJSONArray("entities")
+        val ents = schemaJson(5).getJSONObject("database").getJSONArray("entities")
         val want = HashSet<String>()
         for (i in 0 until ents.length()) { val e = ents.getJSONObject(i); if (e.getString("tableName").startsWith("sync_")) want += create(e) }
-        assertEquals(4, want.size)
+        assertEquals(6, want.size) // sync_rows, its index, sync_state, sync_have, sync_cols, its index
         assertEquals(want, SyncSql.CREATE_TABLES.toSet())
     }
 
     @Test fun addedColumnsMatchTheEntities() {
-        val ents = schemaJson(4).getJSONObject("database").getJSONArray("entities")
+        val ents = schemaJson(5).getJSONObject("database").getJSONArray("entities")
         for (i in 0 until ents.length()) {
             val e = ents.getJSONObject(i)
             if (SyncSql.UID_TABLES.none { it.name == e.getString("tableName") }) continue
@@ -131,7 +131,7 @@ class SyncDbTest {
         x(c, "INSERT INTO doses(medicineId,scheduledAt,status,reminded,helperAlerted) VALUES(1, 5000, 'DUE', 0, 0)")
         x(c, "INSERT INTO appointments(at,doctor,place,purpose,done) VALUES(9,'','','',0)")
         x(c, "INSERT INTO doc_lines(source,content,importedAt) VALUES('s','c',1)")
-        run(c, SyncSql.migration3to4())
+        run(c, SyncSql.migration3to4() + SyncSql.migration4to5())
         val uids = q(c, "SELECT uid FROM notes UNION ALL SELECT uid FROM helpers UNION ALL SELECT uid FROM medicines UNION ALL SELECT uid FROM appointments UNION ALL SELECT uid FROM doc_lines").map { it["uid"] as String }
         assertTrue(uids.all { it.length == 32 })
         assertEquals(uids.size, uids.toSet().size)
@@ -139,6 +139,9 @@ class SyncDbTest {
         assertEquals("$medUid:5000", one(c, "SELECT uid FROM doses"))
         assertEquals(8L, rows(c)) // profile, helper, 2 notes, medicine, dose, appointment, doc line
         assertEquals(8L, seq(c))
+        // every live row has a version for each of its columns: the row's own
+        assertEquals(SyncSql.TABLES.sumOf { s -> s.keys.size * n(c, "SELECT count(*) FROM sync_rows WHERE tbl = '${s.name}'") }, n(c, "SELECT count(*) FROM sync_cols"))
+        assertEquals(0L, n(c, "SELECT count(*) FROM sync_cols c JOIN sync_rows r ON r.tbl = c.tbl AND r.uid = c.uid WHERE c.at <> r.at OR c.oseq <> r.oseq OR c.origin <> r.origin"))
         assertEquals(setOf(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L), q(c, "SELECT oseq FROM sync_rows").map { it["oseq"] as Long }.toSet())
         assertEquals(1L, n(c, "SELECT count(*) FROM sync_rows WHERE tbl='profile' AND uid='profile'"))
         assertEquals(device(c), one(c, "SELECT DISTINCT origin FROM sync_rows"))
@@ -152,7 +155,7 @@ class SyncDbTest {
     // ---- the triggers ----------------------------------------------------------------------------------------------------
 
     @Test fun insertStampsUidAndWritesOneSyncRow() {
-        val c = v4("A")
+        val c = v5("A")
         addNote(c, "headache")
         val r = q(c, "SELECT uid, updatedAt, updatedBy FROM notes").single()
         assertEquals(32, (r["uid"] as String).length)
@@ -168,7 +171,7 @@ class SyncDbTest {
     }
 
     @Test fun updateBumpsOnceAndOnlyForSharedColumns() {
-        val c = v4("A")
+        val c = v5("A")
         addNote(c, "a")
         val uid = one(c, "SELECT uid FROM notes") as String
         x(c, "UPDATE notes SET text = 'b'")
@@ -184,7 +187,7 @@ class SyncDbTest {
     }
 
     @Test fun staleCopyWithEmptyUidKeepsTheUid() {
-        val c = v4("A")
+        val c = v5("A")
         addNote(c, "a")
         val uid = one(c, "SELECT uid FROM notes") as String
         x(c, "UPDATE notes SET uid = '', updatedAt = 5, text = 'z'") // what @Update does with an old copy that never had a uid
@@ -194,7 +197,7 @@ class SyncDbTest {
     }
 
     @Test fun deleteWritesATombstone() {
-        val c = v4("A")
+        val c = v5("A")
         addNote(c, "a")
         val uid = one(c, "SELECT uid FROM notes") as String
         x(c, "DELETE FROM notes")
@@ -204,7 +207,7 @@ class SyncDbTest {
     }
 
     @Test fun incomingWritesDoNotCreateSyncRows() {
-        val c = v4("A")
+        val c = v5("A")
         x(c, "UPDATE sync_state SET v='1' WHERE k='applying'")
         addNote(c, "from B")
         x(c, "UPDATE notes SET text = 'changed'")
@@ -214,7 +217,7 @@ class SyncDbTest {
     }
 
     @Test fun profileUsesTheFixedUid() {
-        val c = v4("A")
+        val c = v5("A")
         x(c, "INSERT OR REPLACE INTO profile(id,name,dob,sex,bloodGroup,hospitalId,conditions,allergies,doctorName,doctorPhone,onBloodThinner,notes,plan) VALUES(1,'A','','','','','','','','',0,'','')")
         assertEquals(1L, seq(c))
         x(c, "INSERT OR REPLACE INTO profile(id,name,dob,sex,bloodGroup,hospitalId,conditions,allergies,doctorName,doctorPhone,onBloodThinner,notes,plan) VALUES(1,'B','','','','','','','','',0,'','{}')")
@@ -225,7 +228,7 @@ class SyncDbTest {
     }
 
     @Test fun doseUidIsMadeFromMedicineAndTime() {
-        val c = v4("A")
+        val c = v5("A")
         x(c, "INSERT INTO medicines(name,strength,form,amount,food,times,days,startDate,critical,asNeeded,minGapHours,purpose,active,bloodThinner,changedAt,changeNote,shape,color) VALUES('M','','tablet','1','any','','',1,0,0,4,'',1,0,1,'','','')")
         x(c, "INSERT INTO doses(medicineId,scheduledAt,status,reminded,helperAlerted) VALUES(1, 777, 'DUE', 0, 0)")
         assertEquals(one(c, "SELECT uid FROM medicines") as String + ":777", one(c, "SELECT uid FROM doses"))
@@ -234,7 +237,7 @@ class SyncDbTest {
     }
 
     @Test fun triggersCanBeInstalledTwice() {
-        val c = v4("A")
+        val c = v5("A")
         run(c, SyncSql.onOpen()); run(c, SyncSql.onOpen())
         addNote(c, "a")
         assertEquals(1L, seq(c))
@@ -250,7 +253,7 @@ class SyncDbTest {
     }
 
     private fun phone(relay: FakeRelay, id: String): Phone {
-        val p = Phone(v4(id), id)
+        val p = Phone(v5(id), id)
         p.engine = SyncEngine(p.store, relay.sender(id), gapHelloIntervalMs = 0)
         relay.join(id, p.engine)
         return p
@@ -318,7 +321,7 @@ class SyncDbTest {
     }
 
     @Test fun newerVersionWinsAndOlderIsSkipped() {
-        val c = v4("B")
+        val c = v5("B")
         val b = SqlSyncStore(JdbcSqlDb(c))
         val op = { at: Long, text: String -> com.suryaprakash.medlog.sync.Op("notes", "u1", "X", at, at, "X", false,
             JSONObject("{\"kind\":\"SYMPTOM\",\"occurredAt\":1,\"createdAt\":1,\"details\":\"{}\",\"triage\":\"GREEN\",\"triageReasons\":\"\",\"text\":\"$text\"}")) }
@@ -333,7 +336,7 @@ class SyncDbTest {
     }
 
     @Test fun failedApplyRollsBackAndResetsTheFlag() {
-        val c = v4("A")
+        val c = v5("A")
         val s = SqlSyncStore(JdbcSqlDb(c))
         x(c, "DROP TABLE appointments")
         val ok = com.suryaprakash.medlog.sync.Op("notes", "u1", "X", 1, 1, "X", false, JSONObject("{\"kind\":\"K\",\"occurredAt\":1,\"createdAt\":1,\"details\":\"{}\",\"triage\":\"GREEN\",\"triageReasons\":\"\",\"text\":\"t\"}"))
@@ -345,7 +348,7 @@ class SyncDbTest {
     }
 
     @Test fun doseWithoutItsMedicineIsRefusedAndClashingDoseIsSkipped() {
-        val c = v4("A")
+        val c = v5("A")
         val s = SqlSyncStore(JdbcSqlDb(c))
         val dose = { uid: String, med: String -> com.suryaprakash.medlog.sync.Op("doses", uid, "X", 1, 1, "X", false,
             JSONObject("{\"medicineUid\":\"$med\",\"scheduledAt\":100,\"status\":\"DUE\",\"reminded\":0,\"helperAlerted\":0}")) }
@@ -358,7 +361,7 @@ class SyncDbTest {
     }
 
     @Test fun haveIsPersistedNeverLoweredAndIncludesOwnSeq() {
-        val c = v4("A")
+        val c = v5("A")
         val s = SqlSyncStore(JdbcSqlDb(c))
         addNote(c, "x")
         s.advanceHave("B", 5); s.advanceHave("B", 3); s.advanceHave("A", 99)
@@ -384,7 +387,7 @@ class SyncDbTest {
         x(oc, "CREATE TABLE medicines (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, strength TEXT NOT NULL, form TEXT NOT NULL, amount TEXT NOT NULL, food TEXT NOT NULL, times TEXT NOT NULL, days TEXT NOT NULL, startDate INTEGER NOT NULL, endDate INTEGER, critical INTEGER NOT NULL, asNeeded INTEGER NOT NULL, minGapHours INTEGER NOT NULL, purpose TEXT NOT NULL, photoPath TEXT, pillsLeft REAL, active INTEGER NOT NULL, bloodThinner INTEGER NOT NULL, changedAt INTEGER NOT NULL, changeNote TEXT NOT NULL, calendarEventId INTEGER)")
         x(oc, "INSERT INTO medicines VALUES(1,'OldMed','','tablet','1','any','','',1,NULL,0,0,4,'',NULL,NULL,1,0,1,'',NULL)")
         oc.close()
-        val c = v4("A")
+        val c = v5("A")
         addNote(c, "will be replaced")
         x(c, "ATTACH DATABASE '${old.absolutePath}' AS bk")
         for (s in RestoreSql.statements(cols(c, "main"), bkCols(c))) x(c, s)
@@ -403,11 +406,11 @@ class SyncDbTest {
     }
 
     @Test fun restoreOfANewBackupKeepsTheSyncTablesAndDoesNotShareTheWipe() {
-        val src = v4("SRC")
+        val src = v5("SRC")
         addNote(src, "kept"); addNote(src, "kept too")
         val f = File.createTempFile("backup", ".db").also { files += it }
         x(src, "VACUUM INTO '${f.absolutePath}'".also { f.delete() })
-        val c = v4("NEW")
+        val c = v5("NEW")
         addNote(c, "local")
         x(c, "ATTACH DATABASE '${f.absolutePath}' AS bk")
         for (s in RestoreSql.statements(cols(c, "main"), bkCols(c))) x(c, s)
@@ -447,7 +450,7 @@ class SyncDbTest {
      * CREATE INDEX, as Room reads them).
      */
     private fun assertMatchesRoomSchema(c: Connection, label: String) {
-        val ents = schemaJson(4).getJSONObject("database").getJSONArray("entities")
+        val ents = schemaJson(5).getJSONObject("database").getJSONArray("entities")
         for (e in 0 until ents.length()) {
             val ent = ents.getJSONObject(e); val t = ent.getString("tableName"); val at = "$label $t"
             val info = q(c, "PRAGMA table_info(`$t`)")
@@ -484,13 +487,40 @@ class SyncDbTest {
         addNote(c, "one")
         x(c, "INSERT INTO medicines(name,strength,form,amount,food,times,days,startDate,critical,asNeeded,minGapHours,purpose,active,bloodThinner,changedAt,changeNote,shape,color) VALUES('Met','','tablet','1','any','08:00','',1,0,0,4,'',1,0,1,'','','')")
         x(c, "INSERT INTO doses(medicineId,scheduledAt,status,reminded,helperAlerted) VALUES(1, 5000, 'DUE', 0, 0)")
-        run(c, SyncSql.migration3to4())
+        run(c, SyncSql.migration3to4() + SyncSql.migration4to5())
         assertMatchesRoomSchema(c, "migrated")
     }
 
-    @Test fun roomValidationMatchesOnAFreshV4Database() {
+    /** A database exactly as version 4 of the app made it (4.json, its sync tables, versions in sync_rows only). */
+    private fun v4real(): Connection {
         val c = open()
         val ents = schemaJson(4).getJSONObject("database").getJSONArray("entities")
+        for (i in 0 until ents.length()) run(c, create(ents.getJSONObject(i)))
+        run(c, SyncSql.seedState())
+        x(c, "INSERT INTO medicines(name,strength,form,amount,food,times,days,startDate,critical,asNeeded,minGapHours,purpose,pillsLeft,active,bloodThinner,changedAt,changeNote,shape,color,uid,updatedAt,updatedBy) VALUES('Met','','tablet','1','any','08:00','',1,0,0,4,'',12,1,0,1,'','','','m-uid',777,'phone-x')")
+        x(c, "INSERT INTO sync_rows(tbl,uid,origin,oseq,at,`by`,del) VALUES('medicines','m-uid','phone-x',3,777,'phone-x',0)")
+        x(c, "INSERT INTO sync_state(k,v) VALUES('hlc','0') ON CONFLICT(k) DO NOTHING")
+        return c
+    }
+
+    @Test fun roomValidationMatchesAfterMigrationFrom4_andGivesEveryColumnTheRowsVersion() {
+        val c = v4real()
+        run(c, SyncSql.migration4to5() + SyncSql.onOpen())
+        assertMatchesRoomSchema(c, "migrated 4 to 5")
+        val m = q(c, "SELECT pillsLeft, pillsAt, feedInfo FROM medicines").single()
+        assertEquals(12.0, m["pillsLeft"]); assertEquals(777L, m["pillsAt"]); assertEquals("", m["feedInfo"]) // the count was made when the row was last written
+        assertEquals(SyncSql.MEDICINES.keys.size.toLong(), n(c, "SELECT count(*) FROM sync_cols WHERE tbl = 'medicines' AND uid = 'm-uid' AND at = 777 AND origin = 'phone-x' AND oseq = 3"))
+        // from now on an update stamps only the column that changed
+        x(c, "UPDATE sync_state SET v='me' WHERE k='device'")
+        x(c, "UPDATE medicines SET purpose = 'with food'")
+        assertEquals(listOf("purpose"), q(c, "SELECT col FROM sync_cols WHERE tbl = 'medicines' AND origin = 'me'").map { it["col"] })
+        assertEquals(1L, n(c, "SELECT count(*) FROM sync_cols WHERE tbl = 'medicines' AND col = 'name' AND origin = 'phone-x'"))
+        assertEquals("me", one(c, "SELECT origin FROM sync_rows WHERE tbl = 'medicines'"))
+    }
+
+    @Test fun roomValidationMatchesOnAFreshV5Database() {
+        val c = open()
+        val ents = schemaJson(5).getJSONObject("database").getJSONArray("entities")
         for (i in 0 until ents.length()) run(c, create(ents.getJSONObject(i)))
         run(c, SyncSql.onOpen())
         assertMatchesRoomSchema(c, "fresh")
