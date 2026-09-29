@@ -32,7 +32,7 @@ object Backup {
 
     suspend fun export(ctx: Context, uri: Uri, password: String) = withContext(Dispatchers.IO) {
         require(password.length >= 6)
-        val db = ctx.medlog.db.openHelper.writableDatabase
+        val db = ctx.medlog.ownDb.openHelper.writableDatabase
         val tmp = File(ctx.cacheDir, "backup.tmp").apply { delete() }
         db.query("PRAGMA wal_checkpoint(FULL)").close()
         db.execSQL("ATTACH DATABASE ${q(tmp.absolutePath)} AS bk KEY ${q(password)}")
@@ -47,7 +47,7 @@ object Backup {
     suspend fun import(ctx: Context, uri: Uri, password: String) = withContext(Dispatchers.IO) {
         val tmp = File(ctx.cacheDir, "restore.tmp").apply { delete() }
         ctx.contentResolver.openInputStream(uri)!!.use { input -> tmp.outputStream().use { input.copyTo(it) } }
-        val db = ctx.medlog.db.openHelper.writableDatabase
+        val db = ctx.medlog.ownDb.openHelper.writableDatabase
         db.execSQL("ATTACH DATABASE ${q(tmp.absolutePath)} AS bk KEY ${q(password)}")
         try {
             db.query("SELECT count(*) FROM bk.sqlite_master").use { it.moveToFirst() }   // throws if the password is wrong

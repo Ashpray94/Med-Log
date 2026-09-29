@@ -89,7 +89,7 @@ object CalendarSync {
         ctx.medlog.settings.putString("cal_med_${m.id}", null)
     }
 
-    suspend fun syncAll(ctx: Context) { for (m in ctx.medlog.db.medicines().all()) syncMedicine(ctx, m) }
+    suspend fun syncAll(ctx: Context) { for (m in ctx.medlog.ownDb.medicines().all()) syncMedicine(ctx, m) }
 
     /** A doctor visit: normal event, so Meeting Timer reminds like any appointment. */
     fun addAppointment(ctx: Context, a: Appointment): Long? {

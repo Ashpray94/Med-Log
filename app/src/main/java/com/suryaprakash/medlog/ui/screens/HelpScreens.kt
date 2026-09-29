@@ -3,6 +3,7 @@ package com.suryaprakash.medlog.ui.screens
 import com.suryaprakash.medlog.ui.cardTitle
 import android.content.Context
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.MedicalServices
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -129,12 +130,12 @@ object HelpMessages {
     fun send(ctx: Context, text: String, audio: File? = null) {
         val app = ctx.medlog
         app.scope.launch {
-            val helpers = app.db.helpers().all()
+            val helpers = app.ownDb.helpers().all()
             val paired = helpers.filter { it.pairKey != null }
-            val me = app.repo.profile().name
+            val me = app.ownRepo.profile().name
             Nearby.acks.value = emptyList()
             Nearby.reached.value = emptySet()
-            app.repo.addEvent(Kind.MESSAGE, "Sent: $text")
+            app.ownRepo.addEvent(Kind.MESSAGE, "Sent: $text")
             val started = System.currentTimeMillis()
             status.value = Status(text, "sending", started)
             if (paired.isNotEmpty() && (Nearby.allowed(ctx) || Relay.enabled(ctx))) {
@@ -514,7 +515,7 @@ fun HelperHomeScreen(nav: Nav) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val s = LocalSettings.current
-    val inbox by app.db.inbox().flow().collectAsState(emptyList())
+    val inbox by app.ownDb.inbox().flow().collectAsState(emptyList())
     LaunchedEffect(Unit) { Nearby.startListening(ctx) }
     // everyone this phone helps; with more than one, a switch at the top picks whose messages are shown
     val people = remember(s.pairedWith) { com.suryaprakash.medlog.data.People.all(ctx) }
@@ -547,7 +548,7 @@ fun HelperHomeScreen(nav: Nav) {
                 Hint("${dayLabel(latest.at)} ${timeLabel(latest.at)}")
                 Text(latest.text, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.15f)
                 if (!latest.acked) {
-                    fun reply(r: String) { com.suryaprakash.medlog.help.AlertSound.stop(); scope.launch { app.db.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
+                    fun reply(r: String) { com.suryaprakash.medlog.help.AlertSound.stop(); scope.launch { app.ownDb.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
                     BigButton("I'm coming", icon = Icons.Rounded.DirectionsWalk, onClick = { reply("coming") })
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         BigButton("In 5 min", Modifier.weight(1f), Tone.SECONDARY, onClick = { reply("5min") })
@@ -559,6 +560,11 @@ fun HelperHomeScreen(nav: Nav) {
         // ── check on them, before they have to ask ──
         BigButton("Ask $who how they are", tone = if (latest == null || latest.acked) Tone.PRIMARY else Tone.SECONDARY, icon = Icons.Rounded.ChatBubble,
             enabled = s.internetLink, onClick = { Nearby.ask(ctx, person?.pairId) })
+        person?.let { pe ->
+            BigButton("Open ${pe.name.ifBlank { "their" }.let { if (pe.name.isBlank()) it else "$it's" }} MedLog", tone = Tone.SECONDARY, icon = Icons.Rounded.MedicalServices,
+                onClick = { app.viewing.open(pe.pairId, pe.name); nav.home(Route.Home) })
+            if (pe.familyKey.isBlank()) Hint("$who's phone has not shared their MedLog yet. It fills in once their phone is online with the new MedLog.")
+        }
         asking?.takeIf { it.pairId.isEmpty() || it.pairId == person?.pairId }?.let { a ->
             com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("You asked at ${timeLabel(a.at)}", when {
@@ -617,6 +623,19 @@ private fun HelperSettings(nav: Nav, onBack: () -> Unit) {
             com.suryaprakash.medlog.ui.ValueRow("My reports", null) { nav.go(Route.MyReports) }
         }
         Toggle("Shake to report a problem", s.shakeOn, "Shake the phone twice to report what you see.") { on -> ctx.medlog.settings.update { it.copy(shakeToReport = on) } }
+        var stopFor by remember { mutableStateOf<com.suryaprakash.medlog.data.CaredFor?>(null) }
+        val people = remember(s.pairedWith) { com.suryaprakash.medlog.data.People.all(ctx) }
+        if (people.isNotEmpty()) com.suryaprakash.medlog.ui.Section("People you help")
+        people.forEach { pe ->
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Stop helping ${pe.name.ifBlank { "this person" }}", null, sub = "Removes their MedLog from this phone") { stopFor = pe }
+            }
+        }
+        stopFor?.let { pe ->
+            com.suryaprakash.medlog.ui.Card { Body("Stop helping ${pe.name.ifBlank { "this person" }}? Their MedLog is removed from this phone. Their own phone keeps everything.") }
+            YesNo(yes = "Stop helping", no = "Keep",
+                onYes = { stopFor = null; ctx.medlog.scope.launch { ctx.medlog.sync.unpair(ctx, pe.pairId) } }, onNo = { stopFor = null })
+        }
     }
 }
 

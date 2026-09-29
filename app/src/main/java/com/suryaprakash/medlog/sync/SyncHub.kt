@@ -9,6 +9,8 @@ import com.suryaprakash.medlog.MedLogApp
 import com.suryaprakash.medlog.data.DAY
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.People
+import com.suryaprakash.medlog.data.ReplicaFiles
+import com.suryaprakash.medlog.data.ReplicaPlan
 import com.suryaprakash.medlog.help.FamilyChat
 import com.suryaprakash.medlog.help.Nearby
 import com.suryaprakash.medlog.help.Relay
@@ -26,23 +28,23 @@ import java.util.concurrent.Executors
 /** After incoming changes on the person's own phone: alarms, notification and widget (plan B.6). Thin glue over the Scheduler. */
 class OwnEffects(private val app: MedLogApp) : SyncEffects {
     override suspend fun medicineChanged(uid: String) {
-        val m = app.db.medicines().byUid(uid) ?: return
+        val m = app.ownDb.medicines().byUid(uid) ?: return
         val now = System.currentTimeMillis()
         val want = Scheduler.times(m, now, now + 2 * DAY).toSet()
-        for (d in app.db.doses().open()) if (d.medicineId == m.id && d.status == DoseStatus.DUE && d.scheduledAt > now && d.scheduledAt !in want) app.db.doses().delete(d.id)
+        for (d in app.ownDb.doses().open()) if (d.medicineId == m.id && d.status == DoseStatus.DUE && d.scheduledAt > now && d.scheduledAt !in want) app.ownDb.doses().delete(d.id)
     }
     override suspend fun medicineStopped(uid: String) {
-        val m = app.db.medicines().byUid(uid)
+        val m = app.ownDb.medicines().byUid(uid)
         if (m != null) Scheduler.stopMedicine(app, m) else DoseAlert.cancel(app, 0)
     }
-    override suspend fun doseClosed(uid: String) = DoseAlert.cancel(app, app.db.doses().byUid(uid)?.id ?: 0)
+    override suspend fun doseClosed(uid: String) = DoseAlert.cancel(app, app.ownDb.doses().byUid(uid)?.id ?: 0)
     override suspend fun reschedule() = Scheduler.reschedule(app)
     override fun refreshWidget() = app.refreshWidgets()
 }
 
 /**
  * Wires [SyncRunner]s to the relay. One channel per shared database and family key: today the phone's own (its own family key,
- * once a helper is paired); a helper phone will attach one per replica with [attach] and the replica's own key.
+ * once a helper is paired); a helper phone attaches one per replica ([refreshReplicas]) with the replica's own key.
  *
  * All store access runs on ONE thread. Messages go to the relay through a queue with retries; whatever is still lost is found again
  * by the next HELLO (every 6 hours, or when a phone starts listening), because the relay only keeps notes 12 hours.
@@ -85,14 +87,40 @@ class SyncHub(private val app: MedLogApp) {
 
     /** Does this phone share its data with family (a paired helper, or a family key it already gave out)? */
     suspend fun sharing(ctx: Context): Boolean =
-        app.settings.getString("own_family_key") != null || People.any(ctx) || app.db.helpers().all().any { it.pairKey != null }
+        app.settings.getString("own_family_key") != null || People.any(ctx) || app.ownDb.helpers().all().any { it.pairKey != null }
 
     /** Person's phone: attach the own database when a helper is paired, detach when none is left. Cheap to call repeatedly. */
     suspend fun refreshOwn(ctx: Context) {
         val st = app.settings.value
-        val paired = st.role != "helper" && st.onboarded && app.db.helpers().all().any { it.pairKey != null }
-        if (paired && chans[OWN] == null) attach(OWN, Base64.decode(FamilyChat.familyKey(ctx), Base64.NO_WRAP), app.db, OwnEffects(app))
+        val paired = st.role != "helper" && st.onboarded && app.ownDb.helpers().all().any { it.pairKey != null }
+        if (paired && chans[OWN] == null) attach(OWN, Base64.decode(FamilyChat.familyKey(ctx), Base64.NO_WRAP), app.ownDb, OwnEffects(app))
         else if (!paired && chans[OWN] != null) detach(OWN)
+    }
+
+    /**
+     * Helper phone: one replica per person helped whose family key is known, on its own channel "p-<pairId>" and its own key. No effects:
+     * a replica never rings anything. Opens the replica file on first use; detaches (and keeps the file) for a person no longer listed.
+     */
+    suspend fun refreshReplicas(ctx: Context) {
+        val want = ReplicaPlan.wanted(People.all(ctx)).associateBy { ReplicaFiles.channel(it.pairId) }
+        val d = ReplicaPlan.diff(want.keys, chans.keys.filter { it.startsWith("p-") })
+        for (n in d.detach) detach(n)
+        for (n in d.attach) want[n]?.let { p -> attach(n, p.familyBytes ?: return@let, app.replicas.db(p.pairId), SyncEffects.NONE) }
+    }
+
+    /** A person was removed or unpaired on this helper phone: stop their channel, close and delete the replica, leave it if it was open. */
+    fun forgetReplica(pairId: String) {
+        if (app.viewing.state.value?.pairId == pairId) app.viewing.back()
+        detach(ReplicaFiles.channel(pairId))
+        app.replicas.drop(pairId)
+    }
+
+    /** Helper phone: stop helping [pairId]. Their replica goes; the list, the name shown and the listening are brought up to date. */
+    suspend fun unpair(ctx: Context, pairId: String) {
+        forgetReplica(pairId)
+        People.remove(ctx, pairId)
+        app.settings.update { it.copy(pairedWith = People.names(ctx)) }
+        Relay.reconnect()
     }
 
     /** Runs [name]'s database in sync over the mailbox of [key]. The database must be a [com.suryaprakash.medlog.data.MedDb] (own or replica). */
@@ -128,6 +156,7 @@ class SyncHub(private val app: MedLogApp) {
     suspend fun identityChanged(ctx: Context) {
         for (c in chans.values) runCatching { c.runner.reopen() }
         refreshOwn(ctx)
+        refreshReplicas(ctx)
     }
 
     /**
@@ -138,9 +167,11 @@ class SyncHub(private val app: MedLogApp) {
     suspend fun wipeAll(ctx: Context) {
         for (n in chans.keys.toList()) detach(n)
         Nearby.stopListening(ctx); Relay.stop()
+        app.viewing.back()
+        app.replicas.dropAll()
         app.settings.forgetFamily()
         withContext(dispatcher) {
-            val db = app.db
+            val db = app.ownDb
             db.runInTransaction { val w = db.openHelper.writableDatabase; for (sql in SyncSql.wipe()) w.execSQL(sql) }
         }
     }

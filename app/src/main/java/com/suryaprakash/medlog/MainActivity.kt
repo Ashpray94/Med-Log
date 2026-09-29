@@ -13,6 +13,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
@@ -94,7 +99,7 @@ class MainActivity : ComponentActivity() {
                 Route.Help
             }
             "messages" -> Route.Messages
-            "call" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.CALL) Route.Emergency else { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
+            "call" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.CALL) Route.Emergency else { medlog.scope.launch { medlog.ownDb.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
             "emergency" -> Route.Emergency
             "sos" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.SOS) Route.Emergency else { Sos.start(this, "SOS"); null }
             "doctor" -> Route.Doctor
@@ -128,7 +133,33 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun App(nav: Nav) {
     BackHandler(enabled = nav.stack.size > 1) { nav.back() }
-    androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalNav provides nav) { Screens(nav) }
+    val app = com.suryaprakash.medlog.MedLogApp.app
+    val viewed by app.viewing.state.collectAsState()
+    androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalNav provides nav) {
+        // a switch of database rebuilds every page, so nothing keeps showing the other person's data
+        androidx.compose.runtime.key(viewed?.pairId) {
+            if (viewed == null) Screens(nav)
+            else androidx.compose.foundation.layout.Column(androidx.compose.ui.Modifier.fillMaxSize()) {
+                ViewingBanner(viewed!!.name) { app.viewing.back(); nav.home(if (app.settings.value.role == "helper") Route.HelperHome else Route.Home) }
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.weight(1f).consumeWindowInsets(androidx.compose.foundation.layout.WindowInsets.statusBars)) { Screens(nav) }
+            }
+        }
+    }
+}
+
+/** Always on top while a replica is open: whose MedLog this is, and the way back. */
+@Composable
+private fun ViewingBanner(name: String, onBack: () -> Unit) {
+    val p = com.suryaprakash.medlog.ui.LocalPalette.current
+    val who = name.ifBlank { "their" }.let { if (name.isBlank()) it else "$it's" }
+    androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.fillMaxWidth().background(p.brand).statusBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        androidx.compose.material3.Text("Viewing $who MedLog", color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            modifier = androidx.compose.ui.Modifier.weight(1f))
+        androidx.compose.material3.Text("Back to mine", color = androidx.compose.ui.graphics.Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+            modifier = androidx.compose.ui.Modifier.heightIn(min = 48.dp).clickable(onClickLabel = "Back to my own MedLog") { onBack() }.padding(start = 12.dp, top = 12.dp))
+    }
 }
 
 @Composable

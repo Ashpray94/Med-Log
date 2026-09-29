@@ -314,10 +314,10 @@ abstract class MedDb : RoomDatabase() {
     abstract fun inbox(): InboxDao
 
     companion object {
-        fun open(ctx: Context): MedDb {
+        fun open(ctx: Context, name: String = "medlog.db"): MedDb {
             System.loadLibrary("sqlcipher")
             val key = Keys.databaseKey(ctx)
-            return Room.databaseBuilder(ctx, MedDb::class.java, "medlog.db")
+            return Room.databaseBuilder(ctx, MedDb::class.java, name)
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
                 .addMigrations(M1_2, M2_3, M3_4)

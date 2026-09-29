@@ -20,16 +20,16 @@ object Alerts {
     fun send(ctx: Context, type: Type, text: String, sosOnly: Boolean = false, alsoNearby: Boolean = true, phones: Set<String>? = null) {
         val app = ctx.medlog
         app.scope.launch {
-            val helpers = app.db.helpers().all().filter { if (sosOnly) it.sos else it.alerts || it.sos }
+            val helpers = app.ownDb.helpers().all().filter { if (sosOnly) it.sos else it.alerts || it.sos }
                 .filter { phones == null || CarePlan.digits(it.phone) in phones }
             var sent = 0
             for (h in helpers) if (Calls.sms(ctx, h.phone, text)) sent++
             if (alsoNearby) Nearby.broadcast(ctx, type.name, text)
-            app.repo.addEvent(Kind.MESSAGE, "Told helpers: $text", org.json.JSONObject().put("type", type.name).put("sms", sent).toString())
+            app.ownRepo.addEvent(Kind.MESSAGE, "Told helpers: $text", org.json.JSONObject().put("type", type.name).put("sms", sent).toString())
         }
     }
 
-    private suspend fun name(ctx: Context) = ctx.medlog.repo.profile().name
+    private suspend fun name(ctx: Context) = ctx.medlog.ownRepo.profile().name
 
     fun dangerToHelpers(ctx: Context, problem: String, t: Triage) {
         ctx.medlog.scope.launch {
@@ -45,7 +45,7 @@ object Alerts {
     fun tellOnce(ctx: Context, noteId: Long, problem: String, t: Triage) {
         if (t.level == Level.GREEN) return
         ctx.medlog.scope.launch {
-            val repo = ctx.medlog.repo
+            val repo = ctx.medlog.ownRepo
             if (t.level == Level.AMBER && repo.carePlan().amberHelpers.isEmpty()) return@launch   // nobody asked: leave the note untold
             if (!repo.markTold(noteId, t.level)) return@launch
             if (t.level == Level.RED) dangerToHelpers(ctx, problem, t) else amberToHelpers(ctx, problem, t)
@@ -61,7 +61,7 @@ object Alerts {
     fun amberToHelpers(ctx: Context, problem: String, t: Triage) {
         ctx.medlog.scope.launch {
             val n = name(ctx)
-            val phones = ctx.medlog.repo.carePlan().amberHelpers.toSet()
+            val phones = ctx.medlog.ownRepo.carePlan().amberHelpers.toSet()
             if (phones.isNotEmpty()) send(ctx, Type.AMBER, Wording.seeDoctorToday(n, problem, t.reasons.firstOrNull().orEmpty()), alsoNearby = false, phones = phones)
         }
     }

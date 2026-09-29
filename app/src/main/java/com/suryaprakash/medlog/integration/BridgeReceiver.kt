@@ -30,10 +30,10 @@ class BridgeReceiver : BroadcastReceiver() {
                 val t = runCatching { LocalTime.parse(time) }.getOrNull() ?: return@launch
                 val zone = ZoneId.systemDefault()
                 val (s, e) = Scheduler.today()
-                val dose = app.db.doses().between(s - 3 * 3600_000L, e).filter { it.medicineId == med }
+                val dose = app.ownDb.doses().between(s - 3 * 3600_000L, e).filter { it.medicineId == med }
                     .minByOrNull { kotlin.math.abs(Instant.ofEpochMilli(it.scheduledAt).atZone(zone).toLocalTime().toSecondOfDay() - t.toSecondOfDay()) } ?: return@launch
                 when (intent.action) {
-                    ACTION_SHOWN -> if (dose.shownBy == null) app.db.doses().update(dose.copy(shownBy = "meetingtimer", reminded = 1))
+                    ACTION_SHOWN -> if (dose.shownBy == null) app.ownDb.doses().update(dose.copy(shownBy = "meetingtimer", reminded = 1))
                     ACTION_DOSE -> when (status) {
                         "taken" -> Scheduler.take(ctx, dose.id)
                         "snooze" -> Scheduler.snooze(ctx, dose.id)

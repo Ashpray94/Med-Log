@@ -78,9 +78,9 @@ object Nearby {
         val app = ctx.medlog
         if (app.settings.value.role != "self") return
         app.scope.launch {
-            val helpers = app.db.helpers().all().filter { it.pairId != null && it.pairKey != null }
+            val helpers = app.ownDb.helpers().all().filter { it.pairId != null && it.pairKey != null }
             if (helpers.isEmpty()) return@launch
-            val me = app.repo.profile().name.ifBlank { "MedLog" }
+            val me = app.ownRepo.profile().name.ifBlank { "MedLog" }
             val mid = Keys.randomB64(9)
             currentMid = mid
             val body = JSONObject().put("kind", kind).put("text", text).put("from", me).put("at", System.currentTimeMillis()).put("mid", mid)
@@ -113,7 +113,7 @@ object Nearby {
         if (re == currentMid) reached.value = reached.value + h.name
         acks.value = acks.value + Ack(h.name, reply)
         ctx.medlog.speaker.say("${h.name}: ${replyWords(reply)}")
-        ctx.medlog.scope.launch { ctx.medlog.repo.addEvent(com.suryaprakash.medlog.data.Kind.MESSAGE, "${h.name} replied: ${replyWords(reply)}") }
+        ctx.medlog.scope.launch { ctx.medlog.ownRepo.addEvent(com.suryaprakash.medlog.data.Kind.MESSAGE, "${h.name} replied: ${replyWords(reply)}") }
     }
 
     /** Everything a helper's phone sends to the person's phone: receipts, replies and "How are you?". */
@@ -199,12 +199,12 @@ object Nearby {
         val app = ctx.medlog
         val words = ANSWERS.firstOrNull { it.first == answerKey }?.second ?: answerKey
         app.scope.launch {
-            val h = app.db.helpers().all().firstOrNull { it.id == helperId && it.pairKey != null } ?: return@launch
-            val me = app.repo.profile().name.ifBlank { "MedLog" }
+            val h = app.ownDb.helpers().all().firstOrNull { it.id == helperId && it.pairKey != null } ?: return@launch
+            val me = app.ownRepo.profile().name.ifBlank { "MedLog" }
             val body = JSONObject().put("kind", "ANSWER").put("answer", answerKey).put("text", words).put("from", me)
                 .put("at", System.currentTimeMillis()).put("mid", Keys.randomB64(9)).put("re", re)
             Relay.post(ctx, key(h), Relay.DOWN, body)
-            app.repo.addEvent(com.suryaprakash.medlog.data.Kind.CHECKIN, "Told ${h.name}: $words")
+            app.ownRepo.addEvent(com.suryaprakash.medlog.data.Kind.CHECKIN, "Told ${h.name}: $words")
         }
     }
 
@@ -264,7 +264,7 @@ object Nearby {
         when {
             People.any(ctx) -> start()
             st.onboarded && st.internetLink -> app.scope.launch {
-                if (app.db.helpers().all().any { it.pairKey != null }) { start(); FamilyChat.shareKey(ctx) } else stopListening(ctx)
+                if (app.ownDb.helpers().all().any { it.pairKey != null }) { start(); FamilyChat.shareKey(ctx) } else stopListening(ctx)
             }
             else -> stopListening(ctx)
         }
@@ -276,6 +276,7 @@ object Nearby {
     internal suspend fun listenTopics(ctx: Context): Map<String, ByteArray> {
         val app = ctx.medlog
         app.sync.refreshOwn(ctx)
+        app.sync.refreshReplicas(ctx)
         return buildMap {
             putAll(app.sync.topics())
             for (p in People.all(ctx)) {
@@ -283,7 +284,7 @@ object Nearby {
                 p.familyBytes?.let { put(Relay.topic(it, "family"), it) }
             }
             if (app.settings.value.role != "helper" && app.settings.value.onboarded)
-                app.db.helpers().all().forEach { h -> h.pairKey?.let { key(h) }?.let { put(Relay.topic(it, Relay.UP), it) } }
+                app.ownDb.helpers().all().forEach { h -> h.pairKey?.let { key(h) }?.let { put(Relay.topic(it, Relay.UP), it) } }
         }
     }
 
@@ -294,7 +295,7 @@ object Nearby {
             if (topic == Relay.topic(p.keyBytes, Relay.DOWN)) { received(ctx, o, viaNearby = false, pairId = p.pairId); return }
             if (p.familyBytes?.let { Relay.topic(it, "family") } == topic) { FamilyChat.received(ctx, o); return }
         }
-        val h = app.db.helpers().all().firstOrNull { it.pairKey != null && Relay.topic(key(it), Relay.UP) == topic } ?: return
+        val h = app.ownDb.helpers().all().firstOrNull { it.pairKey != null && Relay.topic(key(it), Relay.UP) == topic } ?: return
         fromHelper(ctx, h, o)
     }
 
@@ -340,7 +341,7 @@ object Nearby {
         if (kind == "ANSWER") {
             asking.value?.takeIf { it.mid == o.optString("re") }?.let { asking.value = it.copy(got = true, sent = true, answer = o.optString("text"), answerAt = sentAt) }
             app.scope.launch {
-                val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from"), text = o.optString("text"), kind = kind, at = sentAt, acked = true))
+                val id = app.ownDb.inbox().insert(InboxItem(fromName = o.optString("from"), text = o.optString("text"), kind = kind, at = sentAt, acked = true))
                 val worried = o.optString("answer") in setOf("notwell", "call")
                 val pi = PendingIntent.getActivity(ctx, id.toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
                 val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
@@ -361,7 +362,7 @@ object Nearby {
             val audio = o.optString("audio").takeIf { it.isNotEmpty() }?.let { b ->
                 File(ctx.filesDir, "audio").apply { mkdirs() }.let { File(it, "msg_${System.currentTimeMillis()}.amr") }.also { it.writeBytes(Base64.decode(b, Base64.NO_WRAP)) }
             }
-            val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from"), text = o.optString("text"), kind = kind, at = sentAt, audioPath = audio?.absolutePath))
+            val id = app.ownDb.inbox().insert(InboxItem(fromName = o.optString("from"), text = o.optString("text"), kind = kind, at = sentAt, audioPath = audio?.absolutePath))
             if (!fresh) {
                 // old news: a normal notification, not an alarm in the middle of the night
                 val sentWords = java.text.SimpleDateFormat("h:mm a, d MMM", java.util.Locale.getDefault()).format(java.util.Date(sentAt))
@@ -445,7 +446,7 @@ object Nearby {
         val app = ctx.medlog
         val c = client(ctx)
         app.scope.launch {
-            val me = app.repo.profile().name.ifBlank { "MedLog" }
+            val me = app.ownRepo.profile().name.ifBlank { "MedLog" }
             val pairId = Keys.randomB64(9).replace('/', '_').replace('+', '-')
             val key = Keys.randomB64(32)
             c.requestConnection("PU|$me", endpointId, object : ConnectionLifecycleCallback() {
@@ -463,9 +464,9 @@ object Nearby {
                         .put("relay", app.settings.value.relayUrl).put("internet", app.settings.value.internetLink)
                         .put("family", FamilyChat.familyKey(ctx)).toString().toByteArray()))
                     app.scope.launch {
-                        val existing = app.db.helpers().all().firstOrNull { it.phone.filter(Char::isDigit).takeLast(10) == helperPhone.filter(Char::isDigit).takeLast(10) && helperPhone.isNotBlank() }
-                        if (existing != null) app.db.helpers().update(existing.copy(pairId = pairId, pairKey = key))
-                        else app.db.helpers().insert(Helper(name = helperName, phone = helperPhone, pairId = pairId, pairKey = key))
+                        val existing = app.ownDb.helpers().all().firstOrNull { it.phone.filter(Char::isDigit).takeLast(10) == helperPhone.filter(Char::isDigit).takeLast(10) && helperPhone.isNotBlank() }
+                        if (existing != null) app.ownDb.helpers().update(existing.copy(pairId = pairId, pairKey = key))
+                        else app.ownDb.helpers().insert(Helper(name = helperName, phone = helperPhone, pairId = pairId, pairKey = key))
                         pair.value = pair.value.copy(done = helperName)
                         startListening(ctx); Relay.reconnect()
                         delay(2000); c.disconnectFromEndpoint(id); c.stopDiscovery()

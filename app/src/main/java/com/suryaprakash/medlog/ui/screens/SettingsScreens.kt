@@ -303,7 +303,7 @@ private fun CalendarPicker() {
     val cals = remember { CalendarSync.calendars(ctx) }
     if (cals.isEmpty()) { Hint("No calendar found. Add your Google account to this phone first."); return }
     FlowRowOf {
-        Chip("Off", s.calendarId <= 0) { app.settings.update { it.copy(calendarId = -1) }; scope.launch { app.db.medicines().all().forEach { CalendarSync.removeMedicine(ctx, it) } } }
+        Chip("Off", s.calendarId <= 0) { app.settings.update { it.copy(calendarId = -1) }; scope.launch { app.ownDb.medicines().all().forEach { CalendarSync.removeMedicine(ctx, it) } } }
         cals.forEach { c -> Chip("${c.name}${if (c.google) "" else " (phone only)"}", s.calendarId == c.id) { app.settings.update { it.copy(calendarId = c.id) }; scope.launch { CalendarSync.syncAll(ctx) } } }
     }
     Toggle("Plain titles (\"Medicine time\")", s.calendarNeutralTitles, "Keeps medicine names off Google's servers.") { on -> app.settings.update { it.copy(calendarNeutralTitles = on) }; scope.launch { CalendarSync.syncAll(ctx) } }
