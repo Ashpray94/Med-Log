@@ -230,6 +230,7 @@ interface DoseDao {
     @Query("SELECT * FROM doses") suspend fun everything(): List<Dose>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(d: Dose): Long
     @Update suspend fun update(d: Dose)
+    @Query("UPDATE doses SET status = 'SKIPPED', reason = :reason, actedAt = :at, snoozeUntil = NULL WHERE medicineId = :med AND status IN ('DUE','SNOOZED')") suspend fun skipOpen(med: Long, reason: String, at: Long)
     @Query("DELETE FROM doses WHERE medicineId = :med AND status = 'DUE' AND scheduledAt > :after") suspend fun dropFuture(med: Long, after: Long)
 }
 

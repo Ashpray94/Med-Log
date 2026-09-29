@@ -112,7 +112,7 @@ fun HomeScreen(nav: Nav) {
         next = Scheduler.nextDose(ctx)
         val (from, to) = Scheduler.today()
         val meds = app.db.medicines().all().associateBy { it.id }
-        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
+        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.takeIf { it.active || d.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }?.let { d to it } }
         val now = System.currentTimeMillis()
         askBetter = recent.firstOrNull { it.ongoing && now - it.lastAt > 20 * 3600_000L && app.settings.getString("asked_better_${it.problemId}") != java.time.LocalDate.now().toString() }?.problemId
         remindersBlocked = !Perms.exactAlarmsOk(ctx) || !Perms.has(ctx, *Perms.NOTIFY)
