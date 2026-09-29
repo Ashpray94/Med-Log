@@ -47,6 +47,7 @@ import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.HOUR
 import com.suryaprakash.medlog.data.Kind
 import com.suryaprakash.medlog.data.Medicine
+import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.importer.Ocr
 import com.suryaprakash.medlog.integration.CalendarSync
 import com.suryaprakash.medlog.medlog
@@ -122,7 +123,7 @@ fun MedsScreen(nav: Nav) {
             Body("You already took ${m.name}${at?.let { " at ${DoseActivity.time(it)}" } ?: ""}.", bold = true)
             Body("It is safest to wait ${m.minGapHours} hours between doses. Take again?")
             YesNo(yes = "Yes, again", no = "No, wait", onYes = {
-                if (doseId != null) scope.launch { Scheduler.take(ctx, doseId, force = true); confirmDouble = null } else takeAsNeeded(m, true)
+                if (doseId != null) scope.launch { Scheduler.take(ctx, doseId, force = true, db = app.db); confirmDouble = null } else takeAsNeeded(m, true)
             }, onNo = { confirmDouble = null })
         }
         return
@@ -138,8 +139,8 @@ fun MedsScreen(nav: Nav) {
             doses.forEach { d ->
                 val m = byId[d.medicineId] ?: return@forEach
                 DoseCard(d, m, onOpen = { nav.go(Route.MedEdit(m.id)) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); app.speaker.say("Well done.") } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id) } })
+                    onTaken = { scope.launch { Scheduler.take(ctx, d.id, db = app.db); savedFeedback(ctx); app.speaker.say("Well done.") } },
+                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id, db = app.db) } })
             }
         }
         // taken only when needed
@@ -189,6 +190,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
     val times = remember { mutableStateListOf<String>() }
     var daysCount by remember { mutableStateOf("") }
     var pills by remember { mutableStateOf("") }
+    var pillsShown by remember { mutableStateOf("") }
     var ocrLines by remember { mutableStateOf<List<String>>(emptyList()) }
     var reading by remember { mutableStateOf(false) }
     var photoFile by remember { mutableStateOf<File?>(null) }
@@ -196,7 +198,8 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
 
     LaunchedEffect(id) {
         if (id != null) app.db.medicines().get(id)?.let { e ->
-            m = e; original = e; times.clear(); times.addAll(e.times.split(",").map { it.trim() }.filter { it.isNotBlank() }); pills = e.pillsLeft?.toInt()?.toString() ?: ""
+            m = e; original = e; times.clear(); times.addAll(e.times.split(",").map { it.trim() }.filter { it.isNotBlank() })
+            pills = app.repo.pillsLeft()[e.id]?.toInt()?.toString() ?: ""; pillsShown = pills
         }
     }
 
@@ -280,11 +283,12 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
                     name = m.name.trim(), strength = m.strength.trim(),
                     times = if (m.asNeeded) "" else times.sorted().joinToString(","),
                     endDate = daysCount.toIntOrNull()?.let { now + it * DAY },
-                    pillsLeft = pills.toDoubleOrNull(),
+                    pillsLeft = if (id == null || pills != pillsShown) pills.toDoubleOrNull() else m.pillsLeft,
+                    pillsAt = if (id == null || pills != pillsShown) now else m.pillsAt,
                     changedAt = if (original == null || change != original?.changeNote) now else m.changedAt,
                     changeNote = change,
                 )
-                val mid = if (id == null) app.db.medicines().insert(saved) else { app.db.medicines().update(saved); id }
+                val mid = if (id == null) app.db.medicines().insert(saved) else { app.repo.updateMedicine(id) { fresh -> saved.onto(original ?: saved, fresh) }; id }
                 app.db.doses().dropFuture(mid, now)
                 Scheduler.reschedule(ctx)
                 app.db.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
@@ -296,7 +300,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
         if (id != null) BigButton("Stop this medicine", tone = Tone.SECONDARY, onClick = {
             scope.launch {
                 val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
-                app.db.medicines().update(stopped)
+                app.repo.updateMedicine(stopped.id) { it.copy(active = false, changedAt = stopped.changedAt, changeNote = "stopped") }
                 app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
                 CalendarSync.removeMedicine(ctx, stopped)
                 Scheduler.reschedule(ctx)

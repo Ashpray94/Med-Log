@@ -79,12 +79,12 @@ class MedLogWidget : GlanceAppWidget() {
         val app = context.medlog
         val s = app.settings.value
         val self = s.onboarded && s.role == "self"
-        val profile = runCatching { app.repo.profile() }.getOrNull()
+        val profile = runCatching { app.ownRepo.profile() }.getOrNull()
         val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile?.plan)
         val ids = if (!self) emptyList() else runCatching {
-            val history = app.db.notes().symptomsSince(System.currentTimeMillis() - 180 * com.suryaprakash.medlog.data.DAY)
+            val history = app.ownDb.notes().symptomsSince(System.currentTimeMillis() - 180 * com.suryaprakash.medlog.data.DAY)
                 .mapNotNull { n -> n.problemId?.let { com.suryaprakash.medlog.clinical.Suggest.Logged(it, n.occurredAt) } }
-            val r = com.suryaprakash.medlog.clinical.Suggest.rank(history, profile?.let { app.repo.ageYears(it.dob) }, profile?.conditions.orEmpty().split(",").map { it.trim() },
+            val r = com.suryaprakash.medlog.clinical.Suggest.rank(history, profile?.let { app.ownRepo.ageYears(it.dob) }, profile?.conditions.orEmpty().split(",").map { it.trim() },
                 plan.symptoms, java.time.LocalTime.now().hour, known = { app.catalogue.problem(it) != null }, limit = 4)
             (r.yours + r.suggested).distinct().take(4)
         }.getOrDefault(emptyList())
@@ -201,7 +201,7 @@ class MedLogWidget : GlanceAppWidget() {
         val DOSE = ActionParameters.Key<Long>("dose")
         val PROBLEM = ActionParameters.Key<String>("problem")
         val TEXT = ActionParameters.Key<String>("text")
-        fun link(ctx: Context, path: String) = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse("medlog://$path")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        fun link(ctx: Context, path: String) = Intent(ctx, MainActivity::class.java).setAction(Intent.ACTION_VIEW).setData(Uri.parse("medlog://$path")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP).putExtra(com.suryaprakash.medlog.integration.TrustedLinks.EXTRA, com.suryaprakash.medlog.integration.TrustedLinks.secret(ctx))
         fun ordinal(n: Int) = "$n" + when { n % 100 in 11..13 -> "th"; n % 10 == 1 -> "st"; n % 10 == 2 -> "nd"; n % 10 == 3 -> "rd"; else -> "th" }
     }
 }
@@ -213,8 +213,8 @@ class NoteProblem : ActionCallback {
         val app = context.medlog
         val label = app.catalogue.problem(pid)?.label ?: return
         val now = System.currentTimeMillis()
-        app.repo.saveTold(listOf(com.suryaprakash.medlog.nlu.Mention(pid)), null, now, com.suryaprakash.medlog.clinical.Triage.OK, emptyList(), emptyList(), null)
-        val today = app.repo.recentProblems(12).firstOrNull { it.problemId == pid }?.todayCount ?: 1
+        app.ownRepo.saveTold(listOf(com.suryaprakash.medlog.nlu.Mention(pid)), null, now, com.suryaprakash.medlog.clinical.Triage.OK, emptyList(), emptyList(), null)
+        val today = app.ownRepo.recentProblems(12).firstOrNull { it.problemId == pid }?.todayCount ?: 1
         val time = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(now))
         app.settings.putString("widget_noted", "✓ ${com.suryaprakash.medlog.ui.tr(label)} " + (if (today > 1) "(${MedLogWidget.ordinal(today)} today) " else "") + time)
         app.settings.putLong("widget_noted_at", now)

@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.suryaprakash.medlog.data.editPerson
 import com.suryaprakash.medlog.nutrition.Nutrition
 import com.suryaprakash.medlog.ui.BigButton
 import com.suryaprakash.medlog.ui.Group
@@ -129,7 +130,7 @@ fun NutritionScreen(nav: Nav) {
         Hint("Food values are estimates for home cooking. Feed values come from what was entered for each feed.")
     }
     if (targets) TargetsSheet(rep?.kcalTarget?.takeIf { rep.targetsFromDoctor }, rep?.proteinTarget?.takeIf { rep.targetsFromDoctor }, onDone = { k, pr ->
-        ctx.medlog.settings.putString("kcal_target", k?.toString()); ctx.medlog.settings.putString("protein_target", pr?.toString()); targets = false; version++
+        ctx.medlog.editPerson { it.copy(kcalTarget = k, proteinTarget = pr) }; targets = false; version++
     }, onDismiss = { targets = false })
 }
 

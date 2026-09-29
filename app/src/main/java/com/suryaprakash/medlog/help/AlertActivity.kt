@@ -99,6 +99,7 @@ class AlertActivity : ComponentActivity() {
         val (title, say) = when (val ph = phase) {
             is Sos.Phase.Countdown -> "Calling for help in ${ph.seconds}" to "Calling for help in ${ph.seconds} seconds. Tap Cancel to stop."
             Sos.Phase.Messaging -> "Getting help" to "Messaging your helpers."
+            is Sos.Phase.AppAlert -> "Alerting your helpers" to "Your helpers' phones are ringing. Waiting for an answer."
             is Sos.Phase.WhatsApp -> (if (ph.started) "WhatsApp call started" else "Starting WhatsApp call") to "Starting a WhatsApp call with your family."
             is Sos.Phase.Calling -> "Calling ${ph.name}" to "Calling ${ph.name}."
             is Sos.Phase.Answered -> "Did ${ph.name} answer?" to "Did ${ph.name} answer? Is help coming? If you don't tap, I will call the next person."
@@ -110,7 +111,7 @@ class AlertActivity : ComponentActivity() {
         // which step of the three SOS is on: 1 message family, 2 call family, 3 call the ambulance
         val step = when (phase) {
             is Sos.Phase.Countdown -> 0
-            Sos.Phase.Messaging -> 1
+            Sos.Phase.Messaging, is Sos.Phase.AppAlert -> 1
             is Sos.Phase.WhatsApp, is Sos.Phase.Calling, is Sos.Phase.Answered -> 2
             is Sos.Phase.EmergencyCountdown, is Sos.Phase.EmergencyCalling -> 3
             else -> 4
@@ -127,6 +128,7 @@ class AlertActivity : ComponentActivity() {
                     is Sos.Phase.Countdown -> Text("${ph.seconds}", fontSize = sc.huge * 2.2f, fontWeight = FontWeight.Bold, color = fg)
                     is Sos.Phase.EmergencyCountdown -> Text("${ph.seconds}", fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = fg)
                     is Sos.Phase.Answered -> Text("${ph.secondsLeft}", fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = fg)
+                    is Sos.Phase.AppAlert -> Text("${ph.secondsLeft}", fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = fg)
                     else -> androidx.compose.material3.Icon(if (calm) Icons.Rounded.Check else Icons.Rounded.Call, null, tint = fg, modifier = Modifier.size(56.dp))
                 }
                 Text(title, fontSize = sc.headline * 1.15f, fontWeight = FontWeight.Bold, color = fg, textAlign = TextAlign.Center)
@@ -146,6 +148,10 @@ class AlertActivity : ComponentActivity() {
                     if (ph.started) BigButton("Help is coming", tone = Tone.OK, icon = Icons.Rounded.Check, onClick = { Sos.helpComing() })
                     BigButton("Call helpers one by one", tone = Tone.DANGER, icon = Icons.Rounded.Call, onClick = { Sos.next() })
                 }
+                is Sos.Phase.AppAlert -> {
+                    BigButton("Help is coming", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
+                    BigButton("Send SMS now", tone = Tone.DANGER, onClick = { Sos.answer.value = "go" })
+                }
                 is Sos.Phase.EmergencyCountdown -> {
                     BigButton("Call ${ph.number} now", tone = Tone.DANGER, icon = Icons.Rounded.Call, height = sc.target * 1.5f, onClick = { Sos.answer.value = "go" })
                     BigButton("Help is already coming", tone = Tone.OK, onClick = { Sos.helpComing() })
@@ -156,7 +162,7 @@ class AlertActivity : ComponentActivity() {
             // the three steps, so it is clear what has happened and what comes next
             Card {
                 val steps = listOf(
-                    "Message family" to (if (sent.isNotEmpty()) "Sent to ${sent.joinToString(", ")}" else "Your location by text"),
+                    "Message family" to (if (sent.isNotEmpty()) "SMS sent to ${sent.joinToString(", ")}" else "Their app first, SMS only if nobody answers"),
                     "Call family, one by one" to ((phase as? Sos.Phase.Calling)?.let { "Calling ${it.name} now" } ?: "On speaker"),
                     "Call ${com.suryaprakash.medlog.ui.LocalSettings.current.emergencyNumber}" to "If nobody answers",
                 )
@@ -195,12 +201,12 @@ class AlertActivity : ComponentActivity() {
         LaunchedEffect(Unit) {
             medlog.speaker.say("Did you fall? Are you OK? Tap I'm OK. If you don't, I will call for help in one minute.")
             while (left > 0 && !done) { delay(1000); left-- ; if (left % 15 == 0 && left > 0) medlog.speaker.say("Are you OK? Calling for help in $left seconds.") }
-            if (!done) { done = true; medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: no answer, SOS started"); Sos.start(this@AlertActivity, "Possible fall, no answer", countdown = false); onClose() }
+            if (!done) { done = true; medlog.ownRepo.addEvent(Kind.FALL_ALERT, "Possible fall: no answer, SOS started"); Sos.start(this@AlertActivity, "Possible fall, no answer", countdown = false); onClose() }
         }
         Screen("Did you fall?", "Did you fall? Are you OK?", onHome = null, background = p.redSoft) {
             Text("$left", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = p.red)
             BigButton("I'm OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
-                done = true; medlog.scope.launch { medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
+                done = true; medlog.scope.launch { medlog.ownRepo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
             })
             BigButton("I fell – I need help", tone = Tone.DANGER, height = sc.target * 1.5f, onClick = { done = true; Sos.start(this@AlertActivity, "I fell", countdown = false); onClose() })
             BigButton("I fell but I'm OK – note it", tone = Tone.SECONDARY, onClick = { done = true; openApp("tell?problem=fall") })
@@ -212,12 +218,12 @@ class AlertActivity : ComponentActivity() {
     private fun CheckInPanel(onClose: () -> Unit) {
         val sc = LocalScale.current
         val name = remember { mutableStateOf("") }
-        LaunchedEffect(Unit) { name.value = medlog.repo.profile().name }
+        LaunchedEffect(Unit) { name.value = medlog.ownRepo.profile().name }
         val hello = "Good morning${if (name.value.isNotBlank()) ", ${name.value}" else ""}! How are you today?"
         Screen("How are you today?", hello, onHome = null) {
             Body(hello, bold = true)
             fun answer(word: String, route: String?) {
-                medlog.scope.launch { medlog.repo.addEvent(Kind.CHECKIN, "Check-in: $word") }
+                medlog.scope.launch { medlog.ownRepo.addEvent(Kind.CHECKIN, "Check-in: $word") }
                 com.suryaprakash.medlog.care.CheckIn.answered(this@AlertActivity)
                 savedFeedback(this@AlertActivity)
                 if (route != null) openApp(route) else { medlog.speaker.say("Thank you. Have a good day."); onClose() }
@@ -249,7 +255,7 @@ class AlertActivity : ComponentActivity() {
         val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
         fun reply(r: String) {
             AlertSound.stop()
-            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
+            medlog.scope.launch { if (id > 0) medlog.ownDb.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
             onClose()
         }
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000)).padding(12.dp), contentAlignment = Alignment.BottomCenter) {

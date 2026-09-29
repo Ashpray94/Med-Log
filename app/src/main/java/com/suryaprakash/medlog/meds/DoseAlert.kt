@@ -20,7 +20,7 @@ object DoseAlert {
 
     suspend fun show(ctx: Context, doses: List<Dose>, louder: Boolean) {
         val app = ctx.medlog
-        val meds = doses.mapNotNull { d -> app.db.medicines().get(d.medicineId)?.let { d to it } }
+        val meds = doses.mapNotNull { d -> app.ownDb.medicines().get(d.medicineId)?.let { d to it } }
         if (meds.isEmpty()) return
         val title = if (meds.all { it.second.form == "feed" }) "Time to give the feed" else if (meds.size == 1) "Time for ${meds[0].second.name}" else "Time for your medicines"
         val text = meds.joinToString(", ") { (_, m) -> "${m.name} ${m.strength}".trim() }
@@ -50,7 +50,7 @@ object DoseAlert {
         CoroutineScope(Dispatchers.IO).launch {
             val app = ctx.medlog
             val (s, e) = Scheduler.today()
-            val stillDue = app.db.doses().between(s - 3 * 3600_000L, System.currentTimeMillis() + 60_000)
+            val stillDue = app.ownDb.doses().between(s - 3 * 3600_000L, System.currentTimeMillis() + 60_000)
                 .any { (it.status == "DUE" || it.status == "SNOOZED") && it.reminded > 0 && it.snoozeUntil == null }
             if (!stillDue) { NotificationManagerCompat.from(ctx).cancel(BASE_ID); AlarmTone.stop() }
         }

@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -87,6 +88,8 @@ import com.suryaprakash.medlog.clinical.Suggest
 import com.suryaprakash.medlog.data.CarePlan
 import com.suryaprakash.medlog.data.Helper
 import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.editPerson
+import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.meds.Scheduler
 import com.suryaprakash.medlog.ui.BigButton
@@ -133,11 +136,11 @@ private object Onboard {
 }
 
 private enum class S { WELCOME, WHO, ORDER, SIZE, READ, LANGS, NAME, BORN, SEX, CONDITIONS, SYMPTOMS, MEDS, TREATMENTS, ALLERGY, RISKS,
-    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, CHECKIN, PERMISSIONS, WIDGET, DONE }
+    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, LIMITS, CHECKIN, PERMISSIONS, WIDGET, DONE }
 
 /** Pages that count in the progress bar. */
 private val COUNTED = listOf(S.WHO, S.SIZE, S.LANGS, S.NAME, S.BORN, S.SEX, S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS,
-    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
+    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.LIMITS, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
 
 @Composable
 fun OnboardingScreen(nav: Nav) {
@@ -149,7 +152,11 @@ fun OnboardingScreen(nav: Nav) {
     LaunchedEffect(Unit) { if (profile == null) profile = app.repo.profile() }
     val pr = profile ?: Profile()
     val plan = CarePlan.parse(pr.plan)
-    fun save(p: Profile) { profile = p; scope.launch { app.db.profile().put(p) } }
+    // writes onto the freshest row only what this tap changed (Repo.updateProfile), never a whole old copy
+    fun save(p: Profile) {
+        val old = profile ?: Profile(); profile = p
+        scope.launch { app.repo.updateProfile { fresh -> p.onto(old, fresh).let { if (p.plan != old.plan) it.copy(plan = p.plan) else it } } }
+    }
     // read the latest answers at the moment of the tap, never a copy from when the page was drawn
     // (quick taps in a row used to overwrite each other)
     fun update(f: (Profile) -> Profile) = save(f(profile ?: Profile()))
@@ -477,8 +484,8 @@ fun OnboardingScreen(nav: Nav) {
 
         // ───────────── helpers ─────────────
         S.HELPERS -> HelpersStep(nav, n, total, first, onBack = { go(S.DOCTORS) }, onEdit = { Onboard.editingHelper = it; go(S.HELPER_FORM) }) {
-            // the first time here, suggest emergencies from what they said
-            if (plan.emergencies.isEmpty()) savePlan { it.copy(emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
+            // the first time here, suggest emergencies from what they said; an empty choice they made is kept (B02)
+            if (!plan.emergenciesAsked && plan.emergencies.isEmpty()) savePlan { it.copy(emergenciesAsked = true, emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
             go(S.EMERGENCIES)
         }
         S.HELPER_FORM -> HelperForm { go(S.HELPERS) }
@@ -488,7 +495,19 @@ fun OnboardingScreen(nav: Nav) {
             hint = "Your helpers are called straight away.",
             step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
             SymptomGrid(CarePlan.EMERGENCIES.filter { app.catalogue.problem(it) != null }, plan.emergencies.toList()) { id ->
-                savePlan { it.copy(emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+                savePlan { it.copy(emergenciesAsked = true, emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+            }
+        }
+
+        // ───────────── personal limits (the helper sets them; opens the limits page, which comes back here) ─────────────
+        S.LIMITS -> {
+            val isSet = com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)
+            FlowScreen(task, "Personal limits, for the helper",
+                hint = "If you are the helper, set the numbers the doctor agreed for blood pressure, oxygen, sugar and temperature. MedLog then warns only when they are crossed. You can do this later in Settings → Helper controls.",
+                step = n, steps = total, onBack = { back() },
+                primary = if (isSet) "Next" else "Set limits now", onPrimary = { if (isSet) next() else nav.go(Route.Limits) },
+                secondary = if (isSet) "Change limits" else "Later", onSecondary = { if (isSet) nav.go(Route.Limits) else next() }) {
+                if (isSet) Body("Limits are set. ${com.suryaprakash.medlog.clinical.LimitsForm.summary(plan.limits)}.", bold = true)
             }
         }
 
@@ -500,10 +519,10 @@ fun OnboardingScreen(nav: Nav) {
                 opts.forEach { (t, l) ->
                     val part = com.suryaprakash.medlog.ui.dayPart(t.substringBefore(":").toInt())
                     Choice(l.first, s.checkInEnabled && s.checkInTime == t, sub = l.second, icon = part.icon, tint = part.tint) {
-                        app.settings.update { it.copy(checkInEnabled = true, checkInTime = t) } }
+                        app.editPerson { it.copy(checkInEnabled = true, checkInTime = t) } }
                 }
                 Choice("Don't ask me every day", !s.checkInEnabled, icon = Icons.Rounded.NotificationsOff, tint = com.suryaprakash.medlog.ui.LocalPalette.current.inkSoft) {
-                    app.settings.update { it.copy(checkInEnabled = false) } }
+                    app.editPerson { it.copy(checkInEnabled = false) } }
             }
         }
 
@@ -857,6 +876,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
             Triple("Illnesses", count(illnesses), Icons.Rounded.MonitorHeart to p.tintPink),
             Triple("Emergencies", count(plan.emergencies.size), Icons.Rounded.Sos to p.red),
             Triple("Check-in", checkIn, Icons.Rounded.Alarm to p.tintOrange),
+            Triple("Limits", if (com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)) "Set" else "Not set", Icons.Rounded.Tune to p.tintTeal),
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             facts.chunked(2).forEach { row ->
@@ -1009,7 +1029,7 @@ private val SECTIONS = listOf(
     "about you" to setOf(S.NAME, S.BORN, S.SEX),
     "health questions" to setOf(S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS),
     "doctors" to setOf(S.DOCTORS, S.DOCTOR_FORM),
-    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES),
+    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES, S.LIMITS),
     "daily check-in" to setOf(S.CHECKIN),
     "phone settings" to setOf(S.PERMISSIONS, S.WIDGET),
 )

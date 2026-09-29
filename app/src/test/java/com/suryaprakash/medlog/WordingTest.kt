@@ -11,6 +11,8 @@ class WordingTest {
         Wording.sos("", "SOS", null, null),
         Wording.seeDoctorNow("Kamala", "Chest pain"),
         Wording.seeDoctorToday("Kamala", "Fever"),
+        Wording.seeDoctorNow("Kamala", "Shivering", "Fever during cancer treatment (100.2 °F)"),
+        Wording.seeDoctorToday("Kamala", "Vomiting", "Vomiting 5 times in 24 hours"),
         Wording.missedDose("Kamala", "8 am", "Metformin 500"),
         Wording.takenTwice("Kamala", "Amlodipine"),
         Wording.noCheckIn("Kamala"),

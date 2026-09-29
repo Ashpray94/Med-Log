@@ -60,6 +60,7 @@ import com.suryaprakash.medlog.data.DocLine
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Kind
 import com.suryaprakash.medlog.data.Note
+import com.suryaprakash.medlog.data.occurrences
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.factsFromJson
@@ -179,7 +180,10 @@ fun NotesScreen(nav: Nav) {
         } else {
             val grouped = allSymptoms.filter { it.problemId != null }.groupBy { it.problemId!! }.entries.sortedByDescending { e -> e.value.maxOf { it.occurredAt } }
             if (grouped.isEmpty()) Empty("Nothing noted in the last 3 months.")
-            grouped.forEach { (pid, list) ->
+            grouped.forEach { (pid, all) ->
+                // "Yes, better" taps are not occurrences: they add nothing to the total or to "last noted" (B19)
+                val list = all.occurrences()
+                if (list.isEmpty()) return@forEach
                 val label = app.catalogue.problem(pid)?.label ?: pid
                 val times = list.sumOf { it.count ?: 1 }
                 HistoryRow(
@@ -312,8 +316,10 @@ fun ProblemHistoryScreen(nav: Nav, problemId: String) {
     val list = all.filter { it.problemId == problemId }.sortedByDescending { it.occurredAt }
     val label = app.catalogue.problem(problemId)?.label ?: problemId
     val days = (13 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
-    val counts = days.map { d -> list.filter { localDate(it.occurredAt) == d }.sumOf { it.count ?: 1 } }
-    val total = list.sumOf { it.count ?: 1 }
+    // the timeline below still lists "getting better" taps; the chart and the total do not count them (B19)
+    val real = list.occurrences()
+    val counts = days.map { d -> real.filter { localDate(it.occurredAt) == d }.sumOf { it.count ?: 1 } }
+    val total = real.sumOf { it.count ?: 1 }
     Screen(label, "$label: noted $total times in the last 3 months.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {

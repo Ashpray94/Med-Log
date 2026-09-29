@@ -12,6 +12,8 @@ import com.suryaprakash.medlog.clinical.Describe
 import com.suryaprakash.medlog.data.MedDb
 import com.suryaprakash.medlog.data.Repo
 import com.suryaprakash.medlog.data.SettingsStore
+import com.suryaprakash.medlog.data.followOwnProfile
+import com.suryaprakash.medlog.data.movePersonSettings
 import com.suryaprakash.medlog.nlu.Parser
 import com.suryaprakash.medlog.speech.Speaker
 import kotlinx.coroutines.CoroutineScope
@@ -28,13 +30,22 @@ class MedLogApp : Application() {
     val catalogue by lazy { Catalogue.parse(assets.open("clinical/catalogue.json").bufferedReader().use { it.readText() }) }
     val parser by lazy { Parser(catalogue) }
     val describe by lazy { Describe(catalogue) }
-    val db by lazy { MedDb.open(this) }
-    val repo by lazy { Repo(db, catalogue, describe) }
+    /** This phone's own database: everything in the background (alarms, SOS, falls, check-in, alerts, widget, sync of its own data) uses it. */
+    val ownDb by lazy { MedDb.open(this) }
+    val ownRepo by lazy { Repo(ownDb, catalogue, describe) }
+    val replicas by lazy { com.suryaprakash.medlog.data.Replicas(this) }
+    /** Which database the screens show. A helper phone can open a replica of a person it helps (plan B.5). */
+    val viewing = com.suryaprakash.medlog.data.Viewing()
+    /** What the SCREENS read and write: the replica while one is open, else the own database. */
+    val db: MedDb get() = viewing.state.value?.let { replicas.db(it.pairId) } ?: ownDb
+    val repo: Repo get() = viewing.state.value?.let { replicas.repo(it.pairId) } ?: ownRepo
+    val sync by lazy { com.suryaprakash.medlog.sync.SyncHub(this) }
     val speaker by lazy { Speaker(this) { settings.value.speechRate } }
     override fun onCreate() {
         super.onCreate()
         app = this
         com.suryaprakash.medlog.speech.I18n.use(this, settings.value.languages.firstOrNull() ?: "en-IN")
+        scope.launch { runCatching { followOwnProfile() } }   // the person's settings follow the shared profile (see data/PersonSettings.kt)
         scope.launch { settings.flow.collect { com.suryaprakash.medlog.speech.I18n.use(this@MedLogApp, it.languages.firstOrNull() ?: "en-IN"); refreshWidgets() } }
         channels()
         speaker.init()
@@ -42,7 +53,9 @@ class MedLogApp : Application() {
             runCatching { com.suryaprakash.medlog.help.Nearby.startListening(this@MedLogApp) }
             runCatching { Updater.dailyCheck(this@MedLogApp) }
             catalogue
-            runCatching { repo.purgeRemoved() }
+            runCatching { ownRepo.purgeRemoved() }
+            runCatching { com.suryaprakash.medlog.nutrition.Nutrition.migrateFeedInfo(this@MedLogApp) }
+            runCatching { movePersonSettings() }
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }
             refreshWidgets()

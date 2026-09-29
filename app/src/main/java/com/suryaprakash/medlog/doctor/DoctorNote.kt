@@ -8,6 +8,7 @@ import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Kind
 import com.suryaprakash.medlog.data.Medicine
 import com.suryaprakash.medlog.data.Note
+import com.suryaprakash.medlog.data.occurrences
 import com.suryaprakash.medlog.data.Profile
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.factsFromJson
@@ -64,8 +65,10 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
     fun build(profile: Profile, from: Long, to: Long, notes: List<Note>, meds: List<Medicine>, doses: List<Dose>, translit: (String) -> String = { it }, now: Long = System.currentTimeMillis()): DoctorNote {
         val symptoms = notes.filter { it.kind == Kind.SYMPTOM && it.problemId != null }
         val facts = symptoms.associate { it.id to factsFromJson(it.details) }
+        // "Yes, better" taps stay in each group (they say "now better") but are never counted as occurrences (B19)
         val byProblem = symptoms.groupBy { it.problemId!! }
-            .entries.sortedWith(compareByDescending<Map.Entry<String, List<Note>>> { e -> e.value.maxOf { rank(it.triage) } }.thenByDescending { e -> e.value.sumOf { it.count ?: 1 } })
+            .entries.filter { e -> e.value.occurrences().isNotEmpty() }
+            .sortedWith(compareByDescending<Map.Entry<String, List<Note>>> { e -> e.value.maxOf { rank(it.triage) } }.thenByDescending { e -> e.value.occurrences().sumOf { it.count ?: 1 } })
 
         // ── patient ──
         val age = runCatching { Period.between(LocalDate.parse(profile.dob), LocalDate.now()).years }.getOrNull()
@@ -80,15 +83,16 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         byProblem.forEachIndexed { i, (pid, list) ->
             val n = i + 1
             val fs = list.sortedBy { it.occurredAt }.map { facts.getValue(it.id) }
-            val total = list.sumOf { it.count ?: 1 }
-            val first = list.minOf { it.occurredAt }; val last = list.maxOf { it.occurredAt }
-            val days = list.map { day(it.occurredAt) }.distinct().size
+            val real = list.occurrences()
+            val total = real.sumOf { it.count ?: 1 }
+            val first = real.minOf { it.occurredAt }; val last = real.maxOf { it.occurredAt }
+            val days = real.map { day(it.occurredAt) }.distinct().size
             val started = fs.firstNotNullOfOrNull { it["started"]?.value as? String }
             val whenText = buildString {
                 append(if (total > 1) "$total times in $days day${if (days == 1) "" else "s"}" else "Once")
                 append(" (${d(first)}${if (day(first) != day(last)) " to ${d(last)}" else ""})")
                 if (started != null) append("; started ${com.suryaprakash.medlog.ui.screens.softStart(com.suryaprakash.medlog.ui.screens.startedWords(started, first, alwaysDate = true))}")
-                trend(list)?.let { append("; $it") }
+                trend(real)?.let { append("; $it") }
                 if (fs.any { it["better"]?.value == true }) append("; now better")
             }
             val sites = fs.mapNotNull { it["site"]?.value?.toString()?.lowercase() }.distinct()
@@ -120,7 +124,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             fs.firstNotNullOfOrNull { it["note"]?.value?.toString() }?.let { key += "“${translit(it).take(80)}”" }
             val urgent = list.maxByOrNull { rank(it.triage) }?.triage ?: "GREEN"
             val periodDays = generateSequence(day(from)) { it.plusDays(1) }.takeWhile { !it.isAfter(day(to - 1)) }.toList()
-            val perDay = list.groupBy { day(it.occurredAt) }.mapValues { (_, l) -> l.sumOf { it.count ?: 1 } }
+            val perDay = real.groupBy { day(it.occurredAt) }.mapValues { (_, l) -> l.sumOf { it.count ?: 1 } }
             val flags = LinkedHashSet<String>()
             for ((k, v) in latest) {
                 val field = cat.field(k) ?: continue
@@ -131,7 +135,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             val sevAll = fs.mapNotNull { (it["severity"]?.value as? Number)?.toInt() }
             rows += DoctorNote.Row(n, cat.problem(pid)?.label ?: pid, urgent, whenText, where, nature, key.take(4).joinToString("; ").ifBlank { "–" },
                 problemId = pid, total = total, daysWith = days, sevLow = sevAll.minOrNull(), sevHigh = sevAll.maxOrNull(), sevLast = sevAll.lastOrNull(),
-                daily = periodDays.map { perDay[it] ?: 0 }, trend = trend(list) ?: if (fs.any { it["better"]?.value == true }) "better" else null,
+                daily = periodDays.map { perDay[it] ?: 0 }, trend = trend(real) ?: if (fs.any { it["better"]?.value == true }) "better" else null,
                 began = started?.let { com.suryaprakash.medlog.ui.screens.startedWords(it, first, alwaysDate = true) },
                 places = (sites + depths).map { it.replaceFirstChar(Char::uppercase) },
                 feels = (chars + listOfNotNull(fs.firstNotNullOfOrNull { it["pattern"]?.value?.toString() })).map { it.replaceFirstChar(Char::uppercase) },

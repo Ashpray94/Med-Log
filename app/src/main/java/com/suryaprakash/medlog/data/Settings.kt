@@ -70,7 +70,12 @@ data class Settings(
     val voiceEngine: String = "auto",
     /** let the phone's speech service use the internet when it has no offline pack for a language */
     val voiceOnline: Boolean = true,
+    /** null until the person chooses: then it follows the role (on for a helper's phone, off for the person's, where tremor would trigger it) */
+    val shakeToReport: Boolean? = null,
 ) {
+    /** Whether shaking the phone opens the report page. */
+    val shakeOn: Boolean get() = shakeToReport ?: (role == "helper")
+
     companion object {
         /** Ready-made messages the person can choose from (plan 13.2). */
         val MESSAGE_OPTIONS = listOf(
@@ -147,6 +152,7 @@ class SettingsStore(ctx: Context) {
             languages = p.getString("languages", null)?.split(",")?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() } ?: d.languages,
             voiceEngine = p.getString("voiceEngine", d.voiceEngine)!!,
             voiceOnline = p.getBoolean("voiceOnline", d.voiceOnline),
+            shakeToReport = if (p.contains("shakeToReport")) p.getBoolean("shakeToReport", false) else null,
             messages = p.getString("messages", null)?.let { s -> JSONArray(s).let { a -> (0 until a.length()).map { a.getString(it) } } } ?: d.messages,
         )
     }
@@ -174,6 +180,7 @@ class SettingsStore(ctx: Context) {
             putBoolean("internetLink", s.internetLink); putString("relayUrl", s.relayUrl)
             putString("messages", JSONArray(s.messages).toString())
             putString("languages", s.languages.joinToString(",")); putString("voiceEngine", s.voiceEngine); putBoolean("voiceOnline", s.voiceOnline)
+            if (s.shakeToReport == null) remove("shakeToReport") else putBoolean("shakeToReport", s.shakeToReport)
         }.apply()
         _flow.value = s
     }
@@ -196,6 +203,12 @@ class SettingsStore(ctx: Context) {
     /** Small non-medical counters (widget order day, last weekly summary...). */
     fun getLong(key: String, def: Long = 0) = p.getLong("x_$key", def)
     fun putLong(key: String, v: Long) = p.edit().putLong("x_$key", v).apply()
+    /** Forgets the family: the phone's own family key, the people it helps, what it sent to whom and where it stopped listening (after "Delete everything"). */
+    fun forgetFamily() {
+        val e = p.edit()
+        p.all.keys.filter { k -> listOf("x_family_sent_", "x_sync_sent_").any { k.startsWith(it) } || k in listOf("x_own_family_key", "x_family_key", "x_people", "x_relay_since", "x_pair_id", "x_pair_key") }.forEach { e.remove(it) }
+        e.commit()
+    }
     fun getString(key: String): String? = p.getString("x_$key", null)
     fun putString(key: String, v: String?) = p.edit().putString("x_$key", v).apply()
 }

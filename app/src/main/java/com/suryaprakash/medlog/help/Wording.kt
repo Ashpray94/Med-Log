@@ -16,13 +16,22 @@ object Wording {
         append(if (where != null) " Where they are: $where" else " Their location could not be found.")
     }
 
-    /** A note the app's safety rules say needs medical help straight away. */
-    fun seeDoctorNow(name: String, problem: String) =
-        "MedLog: ${n(name)} noted \"$problem\". MedLog suggested getting medical help straight away. Please call or go to them."
+    /** The first reason, in calm words, in brackets after the problem: ` (Fever during cancer treatment (100.2 °F))`. Empty when there is none (B60). */
+    private fun why(reason: String) = calm(reason).trim().trimEnd('.').takeIf { it.isNotBlank() }?.let { " ($it)" }.orEmpty()
+
+    /** The doctor page's reasons can say "severe" or "worst-ever"; a message to family must not (see [check]). */
+    fun calm(reason: String): String = reason
+        .replace(Regex("(?i)worst[- ]ever"), "very bad")
+        .replace(Regex("(?i)\\bsevere\\b")) { m -> if (m.value[0].isUpperCase()) "Strong" else "strong" }
+        .replace("!", "")
+
+    /** A note the app's safety rules say needs medical help straight away. [reason] is the first reason (B60). */
+    fun seeDoctorNow(name: String, problem: String, reason: String = "") =
+        "MedLog: ${n(name)} noted \"$problem\"${why(reason)}. MedLog suggested getting medical help straight away. Please call or go to them."
 
     /** A note the app's rules say is worth a call to the doctor today. */
-    fun seeDoctorToday(name: String, problem: String) =
-        "MedLog: ${n(name)} noted \"$problem\". MedLog suggested calling their doctor today. You may want to check in with them."
+    fun seeDoctorToday(name: String, problem: String, reason: String = "") =
+        "MedLog: ${n(name)} noted \"$problem\"${why(reason)}. MedLog suggested calling their doctor today. You may want to check in with them."
 
     fun missedDose(name: String, time: String, medicine: String) =
         "MedLog: ${n(name)} hasn't marked the $time medicine ($medicine) as taken yet. A quick call may help."

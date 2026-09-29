@@ -106,13 +106,17 @@ fun HomeScreen(nav: Nav) {
     var remindersBlocked by remember { mutableStateOf(false) }
     var version by remember { mutableStateOf(0) }
 
-    LaunchedEffect(version) {
+    // a change made on another phone (profile, medicines, doses) shows without reopening the page
+    val pv by app.db.profile().flow().collectAsState(null)
+    val liveDoses by app.db.doses().betweenFlow(Scheduler.today().first, Scheduler.today().second).collectAsState(emptyList())
+    val liveMeds by app.db.medicines().activeFlow().collectAsState(emptyList())
+    LaunchedEffect(version, pv, liveDoses, liveMeds) {
         name = app.repo.profile().name
         recent = app.repo.recentProblems(3)
-        next = Scheduler.nextDose(ctx)
+        next = Scheduler.nextDose(ctx, app.db)
         val (from, to) = Scheduler.today()
         val meds = app.db.medicines().all().associateBy { it.id }
-        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
+        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.takeIf { it.active || d.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }?.let { d to it } }
         val now = System.currentTimeMillis()
         askBetter = recent.firstOrNull { it.ongoing && now - it.lastAt > 20 * 3600_000L && app.settings.getString("asked_better_${it.problemId}") != java.time.LocalDate.now().toString() }?.problemId
         remindersBlocked = !Perms.exactAlarmsOk(ctx) || !Perms.has(ctx, *Perms.NOTIFY)
@@ -126,7 +130,6 @@ fun HomeScreen(nav: Nav) {
     val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
     Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
-        PersonaSwitch(nav)
         // ── the one main action ──
         HeroTell { nav.go(Route.Tell()) }
 
@@ -164,8 +167,8 @@ fun HomeScreen(nav: Nav) {
             if (todays.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
             todays.forEach { (d, m) ->
                 DoseCard(d, m, onOpen = { nav.go(Route.Meds) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); version++ } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id); version++ } })
+                    onTaken = { scope.launch { Scheduler.take(ctx, d.id, db = app.db); savedFeedback(ctx); version++ } },
+                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id, db = app.db); version++ } })
             }
         }
 

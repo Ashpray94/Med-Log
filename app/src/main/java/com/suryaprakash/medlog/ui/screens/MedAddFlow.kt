@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import com.suryaprakash.medlog.data.DAY
 import com.suryaprakash.medlog.data.Medicine
+import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.integration.CalendarSync
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.importer.Ocr
@@ -134,6 +135,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
     val times = remember { mutableStateListOf<String>() }
     var daysCount by remember { mutableStateOf("") }
     var pills by remember { mutableStateOf("") }
+    var pillsShown by remember { mutableStateOf("") }        // what the count showed when the page opened (worked out from the doses taken since)
     var step by remember { mutableStateOf(if (id == null) M.NAME else M.REVIEW) }
     var backTo by remember { mutableStateOf<M?>(null) }      // set when a review row opened a step
     var ocrLines by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -144,7 +146,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
     LaunchedEffect(id) {
         if (id != null) app.db.medicines().get(id)?.let { e ->
             m = e; original = e; times.clear(); times.addAll(e.times.split(",").map { it.trim() }.filter { it.isNotBlank() })
-            pills = e.pillsLeft?.toInt()?.toString() ?: ""; someDays = e.days.isNotBlank()
+            pills = app.repo.pillsLeft()[e.id]?.toInt()?.toString() ?: ""; pillsShown = pills; someDays = e.days.isNotBlank()
         }
     }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
@@ -335,11 +337,14 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                             times = if (m.asNeeded) "" else times.sorted().joinToString(","),
                             days = if (m.asNeeded || !someDays) "" else m.days,
                             endDate = daysCount.toIntOrNull()?.let { now + it * DAY } ?: m.endDate,
-                            pillsLeft = pills.toDoubleOrNull(),
+                            // a new count starts here (the count is this number minus the doses taken after now); an untouched one stays as it is
+                            pillsLeft = if (id == null || pills != pillsShown) pills.toDoubleOrNull() else m.pillsLeft,
+                            pillsAt = if (id == null || pills != pillsShown) now else m.pillsAt,
                             changedAt = if (original == null || change != original?.changeNote) now else m.changedAt,
                             changeNote = change,
                         )
-                        val mid = if (id == null) app.db.medicines().insert(saved) else { app.db.medicines().update(saved); id }
+                        // an edit writes onto the freshest row only what this page changed, so a change from another phone made meanwhile stays
+                        val mid = if (id == null) app.db.medicines().insert(saved) else { app.repo.updateMedicine(id) { fresh -> saved.onto(original ?: saved, fresh) }; id }
                         app.db.doses().dropFuture(mid, now)
                         Scheduler.reschedule(ctx)
                         app.db.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
@@ -400,10 +405,10 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                         .steady("Stop this medicine") {
                             scope.launch {
                                 val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
-                                app.db.medicines().update(stopped)
+                                app.repo.updateMedicine(stopped.id) { it.copy(active = false, changedAt = stopped.changedAt, changeNote = "stopped") }
                                 app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
                                 CalendarSync.removeMedicine(ctx, stopped)
-                                Scheduler.reschedule(ctx); nav.back()
+                                Scheduler.stopMedicine(ctx, stopped, app.db); nav.back()
                             }
                         }.wrapContentHeight(Alignment.CenterVertically))
             }

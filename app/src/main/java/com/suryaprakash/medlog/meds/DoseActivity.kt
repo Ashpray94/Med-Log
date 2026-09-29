@@ -82,8 +82,8 @@ class DoseActivity : ComponentActivity() {
 
         LaunchedEffect(version) {
             val now = System.currentTimeMillis()
-            val meds = medlog.db.medicines().all().associateBy { it.id }
-            due = medlog.db.doses().between(now - 3 * 3600_000L, now + 60_000)
+            val meds = medlog.ownDb.medicines().all().associateBy { it.id }
+            due = medlog.ownDb.doses().between(now - 3 * 3600_000L, now + 60_000)
                 .filter { (it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED) && (it.snoozeUntil == null || it.snoozeUntil <= now + 60_000) }
                 .mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
             loaded = true
@@ -138,7 +138,7 @@ class DoseActivity : ComponentActivity() {
                     } else BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = {
                         scope.launch {
                             val r = Scheduler.take(this@DoseActivity, d.id)
-                            if (r == Scheduler.Taken.ALREADY) confirmDouble = medlog.db.doses().get(d.id) else { savedFeedback(this@DoseActivity); medlog.speaker.say("Well done."); version++ }
+                            if (r == Scheduler.Taken.ALREADY) confirmDouble = medlog.ownDb.doses().get(d.id) else { savedFeedback(this@DoseActivity); medlog.speaker.say("Well done."); version++ }
                         }
                     })
                     if (m.form != "feed") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

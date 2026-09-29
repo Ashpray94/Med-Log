@@ -69,6 +69,7 @@ import com.suryaprakash.medlog.clinical.Interview.Ask
 import com.suryaprakash.medlog.clinical.Interview.Kind
 import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.Problem
+import com.suryaprakash.medlog.clinical.Told
 import com.suryaprakash.medlog.clinical.Triage
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
@@ -105,7 +106,10 @@ import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private enum class Phase { CONFIRM, PICK, ASK, SUMMARY, DANGER }
+private enum class Phase { CONFIRM, PICK, ASK, SUMMARY, DANGER, COUNTDOWN }
+
+/** Which countdown page: the person's own emergency (calls helpers), or a RED note (texts helpers, B62). */
+private enum class Countdown { PLAN, TELL }
 
 /**
  * "Tell how you feel", tap first: choose the problem (suggestions and search), then one short question at a
@@ -133,12 +137,16 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     var parsed by remember { mutableStateOf<Parsed?>(null) }
     var pins by remember { mutableStateOf<List<Pin>>(emptyList()) }
     var reAsk by remember { mutableStateOf(false) }
+    var countdown by remember { mutableStateOf(Countdown.PLAN) }
+    // the person tapped "Cancel – I'm OK": this note never texts the helpers again from this screen
+    var declined by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) { onDispose { app.speaker.stop() } }
 
     suspend fun evaluate(): Triage {
         val p = problem ?: return Triage.OK
-        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.repo.recentForRules(), app.repo.person())
+        // this note is already saved, so it is left out of "recent": the rules add its own count once (B06, B07)
+        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.repo.recentForRules(excludeId = noteId), app.repo.person())
     }
 
     /** Saves progress: the note exists from the start, so nothing is ever lost. */
@@ -149,11 +157,29 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         triage = t
         app.repo.updateTriage(id, t)
         app.refreshWidgets()
-        if (t.level == Level.RED && phase != Phase.DANGER) {
-            Alerts.dangerToHelpers(ctx, problem?.label.orEmpty(), t)
+        // AMBER: only the helpers the person opted in are told, once per note (B59)
+        if (t.level == Level.AMBER && !app.viewing.active) Alerts.tellOnce(ctx, id, problem?.label.orEmpty(), t)
+        if (t.level == Level.RED && phase != Phase.DANGER && phase != Phase.COUNTDOWN) {
             savedFeedback(ctx)
-            phase = Phase.DANGER
+            val told = Told.level(factsFromJson(app.db.notes().get(id)?.details)) == Level.RED
+            val plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan)
+            val anyone = app.db.helpers().all().any { it.alerts || it.sos }
+            phase = when {
+                declined || told || app.viewing.active -> Phase.DANGER   // a replica: this runs on the person's phone, no countdown, no texts
+                t.mentalHealth -> { Alerts.tellOnce(ctx, id, problem?.label.orEmpty(), t); Phase.DANGER }   // the calm page comes first, no countdown
+                problem?.id in plan.emergencies -> { countdown = Countdown.PLAN; Phase.COUNTDOWN }
+                !anyone -> Phase.DANGER
+                else -> { countdown = Countdown.TELL; Phase.COUNTDOWN }   // a 10-second chance to cancel before helpers are texted (B62)
+            }
         }
+    }
+
+    /** Back: one question back; from the first question with nothing answered, the empty note is deleted (B62). */
+    fun backOut() {
+        if (index > 0) { index--; return }
+        val id = noteId
+        if (id == null || route.noteId != null) { nav.back(); return }
+        scope.launch { app.repo.removeIfUnanswered(id); app.refreshWidgets(); nav.back() }
     }
 
     fun toSummary() {
@@ -177,16 +203,32 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         when (a.id) {
             Interview.MORE.id -> {
                 if (value == true) { toldMore = true; problem?.let { p -> queue.addAll(Interview.extended(cat, p, facts)) } }
-                else noteId?.let { FollowUp.schedule(ctx, it) }
+                else noteId?.let { app.scope.launch { FollowUp.schedule(ctx, it) } }
             }
             Interview.TOOK_MED.id -> {
                 facts[a.field] = Fact(value, Source.ASKED)
                 if (value == true && queue.getOrNull(index + 1)?.id != Interview.WHICH_MED.id) queue.add(index + 1, Interview.WHICH_MED)
             }
-            Interview.WHEN.id -> facts[a.field] = Fact(label, Source.ASKED)   // the note keeps the time it was reported
-            else -> facts[a.field] = Fact(value, Source.ASKED)
+            Interview.WHEN.id -> {
+                facts[a.field] = Fact(label, Source.ASKED)   // the note keeps the time it was reported
+                // a cough for a week or more: how many weeks? (B54)
+                problem?.let { pr -> Interview.weeksAsk(cat, pr, facts)?.let { w -> if (queue.none { it.id == w.id }) queue.add(index + 1, w) } }
+            }
+            Interview.FLOOR.id -> facts[a.field] = Fact(value.toString().toIntOrNull() ?: 0, Source.ASKED)   // minutes on the floor
+            else -> {
+                facts[a.field] = Fact(value, Source.ASKED)
+                // could not get up: ask how long they were on the floor, right away (B50)
+                if (a.field == "couldGetUp" && value == false && queue.none { it.id == Interview.FLOOR.id } && !facts.containsKey(Interview.FLOOR.field)) queue.add(index + 1, Interview.FLOOR)
+            }
         }
         scope.launch { persist(); if (phase == Phase.ASK) { delay(450); advance() } }
+    }
+
+    /** After the emergency check: the normal questions (or the summary) carry on. */
+    fun carryOn() {
+        val p = problem ?: return
+        if (queue.isEmpty()) { offeredMore = true; val ext = Interview.extended(cat, p, facts); if (ext.isNotEmpty()) { queue.add(Interview.MORE); phase = Phase.ASK } else toSummary() }
+        else phase = Phase.ASK
     }
 
     /** Starts the conversation about [pid]: the note is created straight away. */
@@ -203,12 +245,16 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             } else app.repo.changeProblem(id, pid)
             queue.clear(); queue.addAll(Interview.core(cat, p, facts)); index = 0
             persist()
-            if (phase == Phase.DANGER) return@launch
+            if (phase == Phase.DANGER || phase == Phase.COUNTDOWN) return@launch
             // one of the person's own emergencies: their helpers are called now, without waiting for answers
             val plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan)
-            if (pid in plan.emergencies) { Alerts.emergency(ctx, p.label); triage = Triage(Level.RED, "Your helpers are being called.", listOf(p.label)); phase = Phase.DANGER; return@launch }
-            if (queue.isEmpty()) { offeredMore = true; val ext = Interview.extended(cat, p, facts); if (ext.isNotEmpty()) { queue.add(Interview.MORE); phase = Phase.ASK } else toSummary() }
-            else phase = Phase.ASK
+            // a 10-second countdown first, so a wrong tap can be cancelled; the note is RED in the database meanwhile (B08)
+            if (pid in plan.emergencies) {
+                triage = Triage(Level.RED, "Your helpers are being called.", listOf(p.label))
+                noteId?.let { app.repo.updateTriage(it, triage) }
+                countdown = Countdown.PLAN; phase = Phase.COUNTDOWN; return@launch
+            }
+            carryOn()
         }
     }
 
@@ -264,11 +310,12 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             if (pr == null || a == null) { Box(Modifier.fillMaxSize().background(p.paper)); return }
             val question = a.text
             LaunchedEffect(a.id, index) { if (s.autoRead && s.readAloud) speak(app, question, lang) }
+            androidx.activity.compose.BackHandler { backOut() }
             val coreCount = queue.count { it.core && it.id != Interview.MORE.id }
             val progress = if (a.core && a.id != Interview.MORE.id && !reAsk) "Question ${(index + 1).coerceAtMost(coreCount)} of $coreCount" else null
             Conversation(
                 title = pr.label, problem = pr, onChange = { phase = Phase.PICK },
-                onBack = { if (index > 0) index-- else nav.back() },
+                onBack = { backOut() },
                 progress = progress, question = question, lang = lang,
                 onSkip = if (a.id == Interview.MORE.id) null else ({ advance() }),
                 onDone = { toSummary() },
@@ -327,9 +374,58 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             }
         }
 
+        // ───────────── "Calling your helpers in 10…" ─────────────
+        Phase.COUNTDOWN -> {
+            val label = problem?.label.orEmpty()
+            if (countdown == Countdown.PLAN) EmergencyCountdown(label, tell = false,
+                // the helpers are alerted by the SOS run, so the note counts as told (no second text later)
+                onCall = { Alerts.emergency(ctx, label); noteId?.let { id -> app.scope.launch { app.repo.markTold(id, Level.RED) } }; phase = Phase.DANGER },
+                onLeave = { Alerts.emergency(ctx, label); noteId?.let { id -> app.scope.launch { app.repo.markTold(id, Level.RED) } } },
+                onCancel = { declined = true; scope.launch { persist(); if (triage.level == Level.RED) phase = Phase.DANGER else carryOn() } })   // "I'm OK": the note gets its real triage back
+            else EmergencyCountdown(label, tell = true,
+                onCall = { noteId?.let { Alerts.tellOnce(ctx, it, label, triage) }; phase = Phase.DANGER },
+                onLeave = { noteId?.let { Alerts.tellOnce(ctx, it, label, triage) } },
+                onCancel = { declined = true; phase = Phase.DANGER })   // the note stays RED and the danger page shows, but nobody is texted
+        }
+
         Phase.DANGER -> DangerScreen(nav, triage, onChange = { phase = Phase.SUMMARY })
     }
 }
+
+/**
+ * Count down 10 seconds, then call ([tell] false: one of the person's own emergencies) or text ([tell] true: a RED note)
+ * the helpers, unless the person cancels. [onLeave] runs when the page is left any other way.
+ */
+@Composable
+private fun EmergencyCountdown(label: String, tell: Boolean, onCall: () -> Unit, onLeave: () -> Unit, onCancel: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    var left by remember { mutableStateOf(EMERGENCY_COUNTDOWN) }
+    var done by remember { mutableStateOf(false) }
+    fun callNow() { if (!done) { done = true; onCall() } }
+    // Back does not cancel: only "Cancel – I'm OK" does
+    androidx.activity.compose.BackHandler { }
+    // leaving this page any other way (a bottom-bar tab, Home) must not lose the call: the helpers are called anyway
+    DisposableEffect(Unit) { onDispose { if (!done) { done = true; onLeave() } } }
+    val verb = if (tell) "Telling" else "Calling"
+    LaunchedEffect(Unit) {
+        app.speaker.say("$verb your helpers in $EMERGENCY_COUNTDOWN seconds. Tap cancel if you are OK.")
+        while (left > 0 && !done) { delay(1000); left-- }
+        callNow()
+    }
+    Screen("$verb your helpers", "$verb your helpers in $EMERGENCY_COUNTDOWN seconds. Tap cancel if you are OK.", onHome = null) {
+        Text(label, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+        Text("$verb your helpers in $left …", fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.red,
+            modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+        BigButton("Cancel – I'm OK", tone = Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.4f, onClick = { done = true; onCancel() })
+        BigButton(if (tell) "Tell them now" else "Call now", tone = Tone.DANGER, height = sc.target * 1.4f, onClick = { callNow() })
+    }
+}
+
+/** Seconds before a plan emergency calls the helpers. */
+const val EMERGENCY_COUNTDOWN = 10
 
 // ───────────────────────── speaking and listening ─────────────────────────
 
@@ -452,7 +548,10 @@ private fun AnswerPad(a: Ask, pins: List<Pin>, region: String?, onPin: (Pin) -> 
                 Tile(c.label, m, onClick = { onAnswer(c.value.toInt(), c.label) }) { Text(label(c.label), fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, textAlign = TextAlign.Center) }
             } else NumberPad(unit = "", allowDecimal = false, range = 0.0..999.0) { onAnswer(it.toInt(), "${it.toInt()}") }
         }
-        Kind.TEMP -> NumberPad(unit = "°F", allowDecimal = true, range = 93.0..110.0) { onAnswer(it, "$it °F") }
+        // °F or °C: 34–43 is taken as °C and turned into °F (B22)
+        Kind.TEMP -> NumberPad(unit = "°F or °C", allowDecimal = true, range = 34.0..110.0, valid = { DangerRules.toFahrenheit(it) in 93.0..110.0 }) {
+            val f = DangerRules.toFahrenheit(it); onAnswer(f, "$f °F")
+        }
         Kind.BODY -> {
             var back by remember { mutableStateOf(false) }
             val close = com.suryaprakash.medlog.pictogram.viewFor(region)
@@ -540,12 +639,12 @@ const val ALL_OVER_PIN = "front:all"
 
 /** Big number keys for readings and counts. */
 @Composable
-fun NumberPad(unit: String, allowDecimal: Boolean, range: ClosedFloatingPointRange<Double>, initial: String = "", onDone: (Double) -> Unit) {
+fun NumberPad(unit: String, allowDecimal: Boolean, range: ClosedFloatingPointRange<Double>, initial: String = "", valid: ((Double) -> Boolean)? = null, onDone: (Double) -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     var text by remember { mutableStateOf(initial) }
     val v = text.toDoubleOrNull()
-    val ok = v != null && v in range
+    val ok = v != null && v in range && (valid?.invoke(v) ?: true)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.fillMaxWidth().heightIn(min = sc.target * 1.2f).clip(RoundedCornerShape(sc.radius)).background(p.paper).border(2.dp, p.line, RoundedCornerShape(sc.radius)), contentAlignment = Alignment.Center) {
             Text(if (text.isEmpty()) "–" else "$text $unit".trim(), fontSize = sc.huge, fontWeight = FontWeight.Bold, color = p.ink)

@@ -3,6 +3,7 @@ package com.suryaprakash.medlog.ui.screens
 import com.suryaprakash.medlog.ui.cardTitle
 import android.content.Context
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.MedicalServices
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Helper
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.saveCarePlan
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.help.Calls
 import com.suryaprakash.medlog.help.Nearby
@@ -101,9 +103,25 @@ import java.io.File
 
 /**
  * Sending a help message (plan 13.2): straight to paired phones, nearby and over the internet, all at once.
- * Any helper whose phone hasn't said "got it" within 15 seconds is sent a text message too. After 3 minutes
- * with no answer, a phone call is offered.
+ * No SMS (it costs money; only an SOS sends SMS, as the last resort). After 3 minutes with no answer, a phone call is offered.
  */
+/** The 3 seconds between tapping a message and it going out, so a slip of the finger can be taken back. */
+object SendCountdown {
+    const val MILLIS = 3000L
+    /** Whole seconds still to wait, 3 down to 0. */
+    fun secondsLeft(startedAt: Long, now: Long): Int = (((startedAt + MILLIS - now).coerceAtLeast(0) + 999) / 1000).toInt()
+    fun due(startedAt: Long, now: Long) = now - startedAt >= MILLIS
+    fun line(text: String, secondsLeft: Int) = "Sending \"$text\" in $secondsLeft\u2026"
+}
+
+/** The one message waiting out its countdown. take() hands it out exactly once, so leaving the page, cancelling and the timer can never send it twice. */
+class PendingSend {
+    private var text: String? = null
+    @Synchronized fun start(t: String) { text = t }
+    @Synchronized fun cancel() { text = null }
+    @Synchronized fun take(): String? { val t = text; text = null; return t }
+}
+
 object HelpMessages {
     data class Status(val text: String, val stage: String, val at: Long = System.currentTimeMillis(), val texted: List<String> = emptyList())
     val status = MutableStateFlow<Status?>(null)
@@ -111,12 +129,12 @@ object HelpMessages {
     fun send(ctx: Context, text: String, audio: File? = null) {
         val app = ctx.medlog
         app.scope.launch {
-            val helpers = app.db.helpers().all()
+            val helpers = app.ownDb.helpers().all()
             val paired = helpers.filter { it.pairKey != null }
-            val me = app.repo.profile().name
+            val me = app.ownRepo.profile().name
             Nearby.acks.value = emptyList()
             Nearby.reached.value = emptySet()
-            app.repo.addEvent(Kind.MESSAGE, "Sent: $text")
+            app.ownRepo.addEvent(Kind.MESSAGE, "Sent: $text")
             val started = System.currentTimeMillis()
             status.value = Status(text, "sending", started)
             if (paired.isNotEmpty() && (Nearby.allowed(ctx) || Relay.enabled(ctx))) {
@@ -124,10 +142,8 @@ object HelpMessages {
                 // most phones answer "got it" in a second or two; stop waiting once every paired phone has
                 for (t in 0 until 30) { if (paired.all { it.name in Nearby.reached.value }) break; delay(500) }
             }
-            // a text to everyone whose phone didn't get it, including helpers with no paired phone
-            val smsText = Wording.message(me, text, audio != null)
-            val texted = helpers.filter { (it.alerts || it.sos) && it.name !in Nearby.reached.value }.filter { Calls.sms(ctx, it.phone, smsText) }.map { it.name }
-            if (texted.isEmpty() && Nearby.reached.value.isEmpty()) { status.value = Status(text, "failed", started); return@launch }
+            val texted = emptyList<String>()   // never SMS for a help message
+            if (Nearby.reached.value.isEmpty()) { status.value = Status(text, "failed", started); return@launch }
             status.value = Status(text, "sent", started, texted)
             for (t in 0 until 360) { if (Nearby.acks.value.isNotEmpty()) { status.value = Status(text, "answered", started, texted); return@launch }; delay(500) }
             status.value = Status(text, "noanswer", started, texted)
@@ -166,6 +182,7 @@ fun HelpScreen(nav: Nav) {
     val sc = LocalScale.current
     val s = LocalSettings.current
     val scope = rememberCoroutineScope()
+    app.viewing.notice()?.let { n -> Screen("Family", n, onHome = { nav.home() }) { com.suryaprakash.medlog.ui.Card { Body(n, bold = true) } }; return }
     val helpers by app.db.helpers().flow().collectAsState(emptyList())
     val acks by Nearby.acks.collectAsState()
     val reached by Nearby.reached.collectAsState()
@@ -174,6 +191,20 @@ fun HelpScreen(nav: Nav) {
     var saveCustom by remember { mutableStateOf(true) }
     var smsOk by remember { mutableStateOf(Perms.has(ctx, *Perms.SMS)) }
     val ask = rememberPermissionAsker { smsOk = Perms.has(ctx, *Perms.SMS) }
+    // a tapped message waits 3 seconds and can be cancelled: (text, time tapped)
+    var waiting by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    var clock by remember { mutableStateOf(System.currentTimeMillis()) }
+    val pending = remember { PendingSend() }
+    // leaving the page (tab, Back, background) must not lose the message; only Cancel stops it
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { pending.take()?.let { HelpMessages.send(ctx, it) } } }
+    LaunchedEffect(waiting) {
+        val w = waiting ?: return@LaunchedEffect
+        while (true) {
+            clock = System.currentTimeMillis()
+            if (SendCountdown.due(w.second, clock)) { pending.take()?.let { HelpMessages.send(ctx, it) }; waiting = null; return@LaunchedEffect }
+            delay(200)
+        }
+    }
 
     val speak = "Tap a message to send it to your family. For an emergency, tap the red SOS button at the bottom. " + (if (helpers.isEmpty()) "You have no helpers yet. Add one first." else "")
     Screen("Family", speak, onHome = { nav.home() }, subtitle = "Tell your family what you need", eyebrow = "") {
@@ -181,7 +212,7 @@ fun HelpScreen(nav: Nav) {
             Body("Add at least one helper so MedLog knows who to ask.", bold = true)
             BigButton("Add a helper", onClick = { nav.go(Route.HelperEdit(null)) })
         }
-        if (!smsOk) Card(border = p.amber) { Body("Allow MedLog to send text messages, so your messages always get through."); BigButton("Allow", tone = Tone.QUIET, onClick = { ask(Perms.SMS + Perms.CALL) }) }
+        if (!smsOk) Card(border = p.amber) { Body("Allow MedLog to send SMS. It is used only in an SOS, and only when no helper answers in the app."); BigButton("Allow", tone = Tone.QUIET, onClick = { ask(Perms.SMS + Perms.CALL) }) }
 
         // ── what happened to the last message, person by person ──
         status?.let { st -> MessageStatus(st, acks, reached, helpers.firstOrNull()) }
@@ -204,9 +235,15 @@ fun HelpScreen(nav: Nav) {
             }
         } else {
             com.suryaprakash.medlog.ui.SectionHeader("Send a message", "${msgs.size} message${if (msgs.size == 1) "" else "s"} · tap one to send", "Change") { nav.go(Route.Messages) }
+            waiting?.let { w ->
+                Card(border = p.brand) {
+                    Body(SendCountdown.line(w.first, SendCountdown.secondsLeft(w.second, clock).coerceAtLeast(1)), bold = true)
+                    BigButton("Cancel", tone = Tone.SECONDARY, onClick = { pending.cancel(); waiting = null; app.speaker.say("Cancelled") })
+                }
+            }
             com.suryaprakash.medlog.ui.TileGrid(msgs, 2, aspect = 1.3f) { m, mod ->
                 val key = m.substringBefore('|'); val text = m.substringAfter('|')
-                com.suryaprakash.medlog.ui.Tile("Send: $text", mod, onClick = { HelpMessages.send(ctx, text); app.speaker.say("Sending: $text") }) {
+                com.suryaprakash.medlog.ui.Tile("Send: $text", mod, onClick = { pending.take()?.let { HelpMessages.send(ctx, it) }; pending.start(text); waiting = text to System.currentTimeMillis(); clock = System.currentTimeMillis(); app.speaker.say("Sending: $text in 3 seconds. Tap Cancel to stop.") }) {
                     com.suryaprakash.medlog.ui.OptionIcon(HelpMessages.icon(key), HelpMessages.tint(key, p), 56.dp)
                     Spacer(Modifier.height(10.dp))
                     Text(text, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2)
@@ -232,7 +269,7 @@ fun HelpScreen(nav: Nav) {
             com.suryaprakash.medlog.ui.Group {
                 helpers.forEachIndexed { i, h ->
                     if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                    Row(Modifier.fillMaxWidth().steady("Call ${h.name}") { Calls.call(ctx, h.phone) }.padding(horizontal = 16.dp, vertical = 14.dp),
+                    Row(Modifier.fillMaxWidth().steady("Call ${h.name}") { Calls.ui(ctx, h.phone) }.padding(horizontal = 16.dp, vertical = 14.dp),
                         verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(52.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(15.dp)).background(p.fill), contentAlignment = Alignment.Center) {
                             Text(h.name.trim().take(1).uppercase(), fontSize = 22.sp, fontWeight = FontWeight.Bold, color = p.inkSoft)
@@ -295,7 +332,7 @@ private fun MessageStatus(st: HelpMessages.Status, acks: List<Nearby.Ack>, reach
             }
         }
         if ((st.stage == "noanswer" || st.stage == "failed") && answered == null && first != null)
-            BigButton("Call ${first.name}", icon = Icons.Rounded.Call, height = 52.dp, onClick = { Calls.call(ctx, first.phone) })
+            BigButton("Call ${first.name}", icon = Icons.Rounded.Call, height = 52.dp, onClick = { Calls.ui(ctx, first.phone) })
     }
 }
 
@@ -366,8 +403,14 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
     val scope = rememberCoroutineScope()
     var h by remember { mutableStateOf(Helper(name = "", phone = "")) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // B59: helpers hear about RED notes; only the ones with this switch on also hear "call the doctor today" (kept in the care plan by phone number)
+    var tellAmber by remember { mutableStateOf(false) }
+    var savedPhone by remember { mutableStateOf("") }
     val pick = rememberContactPicker { n, ph -> h = h.copy(name = n, phone = ph) }
-    LaunchedEffect(id) { if (id != null) app.db.helpers().all().firstOrNull { it.id == id }?.let { h = it } }
+    LaunchedEffect(id) {
+        if (id != null) app.db.helpers().all().firstOrNull { it.id == id }?.let { h = it; savedPhone = it.phone }
+        tellAmber = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan).tellsAmber(savedPhone).takeIf { savedPhone.isNotBlank() } ?: false
+    }
     Screen(if (id == null) "Add a helper" else "Change helper", "Their name and phone number.", onHome = { nav.home() }, onBack = { nav.back() }) {
         BigButton("Choose from contacts", tone = Tone.QUIET, icon = Icons.Rounded.Contacts, onClick = pick)
         BigField("Name", h.name, { h = h.copy(name = it) })
@@ -375,15 +418,20 @@ fun HelperEditScreen(nav: Nav, id: Long?) {
         BigField("Relation (optional)", h.relation, { h = h.copy(relation = it) })
         Toggle("Call and message in an SOS", h.sos) { h = h.copy(sos = it) }
         Toggle("Tell them about missed medicines", h.alerts) { h = h.copy(alerts = it) }
+        Toggle("Tell them when MedLog says 'call the doctor today'", tellAmber, "Off: they are told only about the most serious notes") { tellAmber = it }
         Toggle("Let them see my notes", h.canSeeNotes, "Only used when you share your doctor page with them") { h = h.copy(canSeeNotes = it) }
         BigButton("Save", tone = Tone.OK, enabled = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6, onClick = {
-            scope.launch { if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h); app.refreshWidgets(); nav.back() }
+            scope.launch {
+                if (id == null) app.db.helpers().insert(h.copy(sortOrder = app.db.helpers().all().size)) else app.db.helpers().update(h)
+                app.repo.saveCarePlan { pl -> pl.withAmberHelper(savedPhone, false).withAmberHelper(h.phone, tellAmber) }
+                app.refreshWidgets(); nav.back()
+            }
         })
         if (id != null) {
             if (!confirmDelete) BigButton("Remove this helper", tone = Tone.SECONDARY, icon = Icons.Rounded.Delete, onClick = { confirmDelete = true })
             else Card(border = p.red) {
                 Body("Remove ${h.name}? They won't be called in an SOS.", bold = true)
-                YesNo(yes = "Remove", no = "Keep", onYes = { scope.launch { app.db.helpers().delete(id); nav.back() } }, onNo = { confirmDelete = false })
+                YesNo(yes = "Remove", no = "Keep", onYes = { scope.launch { app.db.helpers().delete(id); app.repo.saveCarePlan { pl -> pl.withAmberHelper(savedPhone, false) }; nav.back() } }, onNo = { confirmDelete = false })
             }
         }
     }
@@ -421,7 +469,8 @@ fun PairScreen(nav: Nav) {
                 Hint("Check both phones show the same number:")
                 Text(d, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = p.ink)
             }
-            BigButton("They match", tone = Tone.OK, onClick = { Nearby.confirmDigits(ctx) })
+            if (st.confirmed) Body("Waiting for the other phone to confirm…")
+            else BigButton("They match", tone = Tone.OK, onClick = { Nearby.confirmDigits(ctx) })
             BigButton("They don't match – stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
             return@Screen
         }
@@ -443,7 +492,7 @@ fun PairScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.Question("Which of your helpers is $name?")
                 helpers.forEach { h -> com.suryaprakash.medlog.ui.Choice(h.name, pick == h.id && !newOne, sub = h.relation.ifBlank { null }) { pick = h.id; newOne = false } }
                 com.suryaprakash.medlog.ui.Choice("Someone not in my list", newOne) { newOne = true; pick = null }
-                if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For a text message if the internet can't reach")
+                if (newOne) BigField("$name's phone number", phone, { phone = it }, keyboard = KeyboardType.Phone, hint = "For calls, and for SMS in an SOS if nobody answers in the app")
                 val h = helpers.firstOrNull { it.id == pick }
                 BigButton("Connect $name's phone", enabled = (h != null && !newOne) || phone.count(Char::isDigit) >= 6,
                     onClick = { if (h != null && !newOne) Nearby.pairWith(ctx, eid, h.name, h.phone) else Nearby.pairWith(ctx, eid, name, phone) })
@@ -464,7 +513,7 @@ fun HelperHomeScreen(nav: Nav) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val s = LocalSettings.current
-    val inbox by app.db.inbox().flow().collectAsState(emptyList())
+    val inbox by app.ownDb.inbox().flow().collectAsState(emptyList())
     LaunchedEffect(Unit) { Nearby.startListening(ctx) }
     // everyone this phone helps; with more than one, a switch at the top picks whose messages are shown
     val people = remember(s.pairedWith) { com.suryaprakash.medlog.data.People.all(ctx) }
@@ -497,7 +546,7 @@ fun HelperHomeScreen(nav: Nav) {
                 Hint("${dayLabel(latest.at)} ${timeLabel(latest.at)}")
                 Text(latest.text, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.15f)
                 if (!latest.acked) {
-                    fun reply(r: String) { com.suryaprakash.medlog.help.AlertSound.stop(); scope.launch { app.db.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
+                    fun reply(r: String) { com.suryaprakash.medlog.help.AlertSound.stop(); scope.launch { app.ownDb.inbox().ack(latest.id); Nearby.reply(ctx, r, pairId = person?.pairId) } }
                     BigButton("I'm coming", icon = Icons.Rounded.DirectionsWalk, onClick = { reply("coming") })
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         BigButton("In 5 min", Modifier.weight(1f), Tone.SECONDARY, onClick = { reply("5min") })
@@ -509,6 +558,11 @@ fun HelperHomeScreen(nav: Nav) {
         // ── check on them, before they have to ask ──
         BigButton("Ask $who how they are", tone = if (latest == null || latest.acked) Tone.PRIMARY else Tone.SECONDARY, icon = Icons.Rounded.ChatBubble,
             enabled = s.internetLink, onClick = { Nearby.ask(ctx, person?.pairId) })
+        person?.let { pe ->
+            BigButton("Open ${pe.name.ifBlank { "their" }.let { if (pe.name.isBlank()) it else "$it's" }} MedLog", tone = Tone.SECONDARY, icon = Icons.Rounded.MedicalServices,
+                onClick = { app.viewing.open(pe.pairId, pe.name); nav.home(Route.Home) })
+            if (pe.familyKey.isBlank()) Hint("$who's phone has not shared their MedLog yet. It fills in once their phone is online with the new MedLog.")
+        }
         asking?.takeIf { it.pairId.isEmpty() || it.pairId == person?.pairId }?.let { a ->
             com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("You asked at ${timeLabel(a.at)}", when {
@@ -531,6 +585,9 @@ fun HelperHomeScreen(nav: Nav) {
                 }
             }
         }
+        com.suryaprakash.medlog.ui.Group {
+            com.suryaprakash.medlog.ui.ValueRow("Report a problem with MedLog", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+        }
         Text("Help one more person", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                 .steady("Help one more person") { PairMode.helping = true; nav.go(Route.Pair) }.padding(vertical = 12.dp))
@@ -542,19 +599,40 @@ fun HelperHomeScreen(nav: Nav) {
 private fun HelperSettings(nav: Nav, onBack: () -> Unit) {
     val s = LocalSettings.current
     val link by Relay.link.collectAsState()
+    val ctx = LocalContext.current
     Screen("Settings", "How this phone hears ${s.pairedWith.ifBlank { "them" }}.", onHome = null, onBack = onBack) {
         com.suryaprakash.medlog.ui.Section("Connection")
         com.suryaprakash.medlog.ui.Group {
             com.suryaprakash.medlog.ui.ValueRow("Nearby", "Bluetooth", sub = "Works without internet")
             com.suryaprakash.medlog.ui.GroupLine()
             com.suryaprakash.medlog.ui.ValueRow("Far away", when {
-                !s.internetLink -> "Text messages only"
+                !s.internetLink -> "Nearby phones only (internet link off)"
                 link == Relay.Link.ON -> "Connected"
                 link == Relay.Link.NO_INTERNET -> "No internet"
                 else -> "Connecting…"
             }, sub = "Through the internet, encrypted")
             com.suryaprakash.medlog.ui.GroupLine()
             com.suryaprakash.medlog.ui.ValueRow("Connect again", null, sub = "If the other phone was reset") { nav.go(Route.Pair) }
+        }
+        com.suryaprakash.medlog.ui.Section("Problems with MedLog")
+        com.suryaprakash.medlog.ui.Group {
+            com.suryaprakash.medlog.ui.ValueRow("Report a problem", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+            com.suryaprakash.medlog.ui.GroupLine()
+            com.suryaprakash.medlog.ui.ValueRow("My reports", null) { nav.go(Route.MyReports) }
+        }
+        Toggle("Shake to report a problem", s.shakeOn, "Shake the phone twice to report what you see.") { on -> ctx.medlog.settings.update { it.copy(shakeToReport = on) } }
+        var stopFor by remember { mutableStateOf<com.suryaprakash.medlog.data.CaredFor?>(null) }
+        val people = remember(s.pairedWith) { com.suryaprakash.medlog.data.People.all(ctx) }
+        if (people.isNotEmpty()) com.suryaprakash.medlog.ui.Section("People you help")
+        people.forEach { pe ->
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Stop helping ${pe.name.ifBlank { "this person" }}", null, sub = "Removes their MedLog from this phone") { stopFor = pe }
+            }
+        }
+        stopFor?.let { pe ->
+            com.suryaprakash.medlog.ui.Card { Body("Stop helping ${pe.name.ifBlank { "this person" }}? Their MedLog is removed from this phone. Their own phone keeps everything.") }
+            YesNo(yes = "Stop helping", no = "Keep",
+                onYes = { stopFor = null; ctx.medlog.scope.launch { ctx.medlog.sync.unpair(ctx, pe.pairId) } }, onNo = { stopFor = null })
         }
     }
 }

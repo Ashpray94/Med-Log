@@ -13,6 +13,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Level
+import com.suryaprakash.medlog.clinical.Triage
 import com.suryaprakash.medlog.devices.Ble
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
@@ -38,6 +39,9 @@ fun DevicesScreen(nav: Nav) {
     val found by Ble.found.collectAsState()
     val status by Ble.status.collectAsState()
     var allowed by remember { mutableStateOf(Perms.has(ctx, *Perms.BLE)) }
+    // a RED reading from a machine shows the Danger page, like a typed reading (B21)
+    var danger by remember { mutableStateOf<Triage?>(null) }
+    danger?.let { t -> DangerScreen(nav, t) { danger = null }; return }
     val ask = rememberPermissionAsker { allowed = Perms.has(ctx, *Perms.BLE) }
     DisposableEffect(Unit) { onDispose { Ble.stop(ctx) } }
     Screen("BP and sugar machines", "Connect a Bluetooth blood pressure machine, thermometer, oximeter or scale. Readings are saved by themselves.", onHome = { nav.home() }, onBack = { nav.back() }) {
@@ -53,7 +57,7 @@ fun DevicesScreen(nav: Nav) {
                         savedFeedback(ctx)
                         val t = DangerRules.evaluate(null, emptyMap(), listOf(r), emptyList(), app.repo.person())
                         app.speaker.say("Saved. ${r.label()}. " + if (t.level != Level.GREEN) t.say else "")
-                        if (t.level == Level.RED) Alerts.dangerToHelpers(ctx, r.label(), t)
+                        if (t.level == Level.RED) { if (!app.viewing.active) Alerts.dangerToHelpers(ctx, r.label(), t); danger = t }
                     }
                 }
             })

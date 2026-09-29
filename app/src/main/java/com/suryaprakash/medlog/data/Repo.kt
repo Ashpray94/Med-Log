@@ -1,17 +1,21 @@
 package com.suryaprakash.medlog.data
 
 import com.suryaprakash.medlog.clinical.Catalogue
+import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Describe
 import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.PersonContext
 import com.suryaprakash.medlog.clinical.RecentNote
+import com.suryaprakash.medlog.clinical.Told
 import com.suryaprakash.medlog.clinical.Triage
+import com.suryaprakash.medlog.meds.Pills
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.Mention
 import com.suryaprakash.medlog.nlu.Reading
 import com.suryaprakash.medlog.nlu.Source
 import com.suryaprakash.medlog.nlu.factsFromJson
 import com.suryaprakash.medlog.nlu.factsToJson
+import androidx.room.withTransaction
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.Period
@@ -20,6 +24,18 @@ import kotlin.math.exp
 const val HOUR = 3600_000L
 const val DAY = 24 * HOUR
 
+/** A "Yes, better" tap: the fact better is `true` (a Boolean). The "what makes it better" answer is a List and is not this. */
+fun isBetterFacts(facts: Map<String, Fact>): Boolean = facts["better"]?.value == true
+
+fun Note.isBetterNote(): Boolean = kind == Kind.SYMPTOM && runCatching { isBetterFacts(factsFromJson(details)) }.getOrDefault(false)
+
+/** The notes that are real occurrences of a problem: everything except "better" taps. Use this before any count. */
+fun List<Note>.occurrences(): List<Note> = filter { !it.isBetterNote() }
+
+/** Notes as the danger rules see them: without the note being evaluated ([excludeId]) and without "better" taps. */
+fun rulesNotes(notes: List<Note>, excludeId: Long?): List<RecentNote> =
+    notes.filter { it.id != excludeId && !it.isBetterNote() }.map { RecentNote(it.problemId, it.occurredAt, factsFromJson(it.details), it.count) }
+
 /** Everything the screens do to data goes through here. */
 class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Describe) {
 
@@ -27,20 +43,55 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
 
     suspend fun profile(): Profile = db.profile().get() ?: Profile()
 
+    /**
+     * Changes the profile: [f] gets the freshest row, read inside the write, and returns it changed. Use it from every screen so a
+     * screen writes only what it edits (a helper's change on another phone that arrived while the screen was open is not undone by
+     * a Save of an old copy). Written in place, so only columns that really changed are shared as changed.
+     */
+    suspend fun updateProfile(f: (Profile) -> Profile) = db.withTransaction {
+        val cur = db.profile().get()
+        if (cur == null) db.profile().put(f(Profile())) else f(cur).let { if (it != cur) db.profile().update(it) }
+    }
+
+    /** The same for the care plan (limits, doctors, emergencies, the person's own settings...): [f] gets the freshest plan. */
+    suspend fun updatePlan(f: (CarePlan) -> CarePlan) = updateProfile { p -> p.copy(plan = f(CarePlan.parse(p.plan)).toJson()) }
+
+    /** The same for a medicine: [f] gets the freshest row (nothing is written when there is none). Use [Medicine.onto] to carry over only what a page changed. */
+    suspend fun updateMedicine(id: Long, f: (Medicine) -> Medicine) = db.withTransaction {
+        db.medicines().get(id)?.let { cur -> f(cur).let { if (it != cur) db.medicines().update(it) } }
+    }
+
+    /** Pills left of every medicine that has a count (see meds.Pills), by medicine id. */
+    suspend fun pillsLeft(): Map<Long, Double> {
+        val taken = db.doses().takenSincePillsAt().associate { it.medicineId to it.n }
+        return db.medicines().all().mapNotNull { m -> Pills.left(m, taken[m.id] ?: 0)?.let { m.id to it } }.toMap()
+    }
+
     suspend fun person(): PersonContext {
         val p = profile()
         val thinner = p.onBloodThinner || db.medicines().active().any { it.bloodThinner }
-        return PersonContext(ageYears(p.dob), thinner, p.conditions)
+        val plan = CarePlan.parse(p.plan)
+        return PersonContext(ageYears(p.dob), thinner, p.conditions, plan.limits, DangerRules.cancerCareOf(p.conditions, plan.treatments))
+    }
+
+    /** The cancer doctor to call first on the RED page, when the person is on cancer treatment and that doctor has a phone (B58). */
+    suspend fun cancerDoctor(): CarePlan.Doctor? {
+        val p = profile()
+        val plan = CarePlan.parse(p.plan)
+        if (!DangerRules.cancerCareOf(p.conditions, plan.treatments)) return null
+        return plan.doctorFor(null, true)?.takeIf { it.speciality == "Cancer" && it.phone.isNotBlank() }
     }
 
     fun ageYears(dob: String): Int? = runCatching { Period.between(LocalDate.parse(dob), LocalDate.now()).years }.getOrNull()
 
     // ───────── symptoms ─────────
 
-    suspend fun recentForRules(days: Int = 3): List<RecentNote> =
-        db.notes().symptomsSince(System.currentTimeMillis() - days * DAY).map {
-            RecentNote(it.problemId, it.occurredAt, factsFromJson(it.details), it.count)
-        }
+    /**
+     * Notes of the last [days] days for the danger rules. The note being evaluated ([excludeId]) is left out, because
+     * the rules add its own count themselves (B06, B07). "Better" taps are not occurrences and are left out too.
+     */
+    suspend fun recentForRules(days: Int = 3, excludeId: Long? = null): List<RecentNote> =
+        rulesNotes(db.notes().symptomsSince(System.currentTimeMillis() - days * DAY), excludeId)
 
     /**
      * Saves what the person confirmed: the main problem and anything told with it, linked as one group.
@@ -84,12 +135,34 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
 
     suspend fun updateFacts(id: Long, facts: Map<String, Fact>) {
         val n = db.notes().get(id) ?: return
+        // hidden markers (keys starting with "_", e.g. _toldLevel) belong to the database copy: the screen never edits them
+        val markers = factsFromJson(n.details).filterKeys { it.startsWith("_") }
+        val all = facts.filterKeys { !it.startsWith("_") } + markers
         db.notes().update(n.copy(
-            details = factsToJson(facts),
+            details = factsToJson(all),
             severity = (facts["severity"]?.value as? Number)?.toInt(),
             count = (facts["count"]?.value as? Number)?.toInt(),
             text = n.problemId?.let { describe.line(it, facts) } ?: n.text,
         ))
+    }
+
+    /**
+     * Records that helpers are being told about note [id] at [level]. Returns true only when the level is higher than
+     * what was told before, so a note texts its helpers at most once per level (B57, B59).
+     */
+    suspend fun markTold(id: Long, level: Level): Boolean {
+        val n = db.notes().get(id) ?: return false
+        val facts = factsFromJson(n.details)
+        if (!Told.shouldTell(facts, level)) return false
+        db.notes().update(n.copy(details = factsToJson(Told.mark(facts, level))))
+        return true
+    }
+
+    /** Deletes note [id] when nothing was answered (the person opened a problem and backed out) (B62). True when deleted. */
+    suspend fun removeIfUnanswered(id: Long): Boolean {
+        val n = db.notes().get(id) ?: return false
+        if (n.kind != Kind.SYMPTOM || factsFromJson(n.details).keys.any { !it.startsWith("_") }) return false
+        remove(listOf(id)); return true
     }
 
     suspend fun updateTriage(id: Long, t: Triage) {
@@ -109,7 +182,8 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     }
 
     suspend fun markBetter(problemId: String) {
-        db.notes().insert(Note(kind = Kind.SYMPTOM, problemId = problemId, occurredAt = System.currentTimeMillis(),
+        // count = 0 and better = true: it is a tap, not another occurrence, and every count skips it (B19)
+        db.notes().insert(Note(kind = Kind.SYMPTOM, problemId = problemId, occurredAt = System.currentTimeMillis(), count = 0,
             details = factsToJson(mapOf("better" to Fact(true, Source.TAPPED))), text = "${cat.problem(problemId)?.label}: better now"))
     }
 
@@ -160,7 +234,7 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
             val better = list.filter { factsFromJson(it.details)["better"]?.value == true }.maxOfOrNull { it.occurredAt } ?: 0
             val ongoing = now - last < 2 * DAY && better < last
             Triple(pid, score + (if (ongoing) 100.0 else 0.0) + (if (pid in watch) 50.0 else 0.0),
-                Recent(pid, list.filter { it.occurredAt >= todayStart }.sumOf { it.count ?: 1 }, last, ongoing))
+                Recent(pid, list.occurrences().filter { it.occurredAt >= todayStart }.sumOf { it.count ?: 1 }, last, ongoing))
         }.sortedByDescending { it.second }.map { it.third }
         // only what the person actually noted: nothing suggested or filled in, so recents never mislead
         return scored.take(limit)
