@@ -3,6 +3,7 @@ package com.suryaprakash.medlog.data
 import android.content.Context
 import android.net.Uri
 import com.suryaprakash.medlog.medlog
+import com.suryaprakash.medlog.sync.RestoreSql
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -13,7 +14,19 @@ import java.io.File
  * The person chooses where the file goes.
  */
 object Backup {
-    private val TABLES = listOf("profile", "helpers", "notes", "medicines", "doses", "appointments", "doc_lines", "inbox")
+    private fun columns(db: androidx.sqlite.db.SupportSQLiteDatabase, schema: String): Map<String, List<RestoreSql.ColInfo>> {
+        val tables = ArrayList<String>()
+        db.query("SELECT name FROM $schema.sqlite_master WHERE type = 'table'").use { while (it.moveToNext()) tables += it.getString(0) }
+        return tables.associateWith { t ->
+            val cols = ArrayList<RestoreSql.ColInfo>()
+            db.query("PRAGMA $schema.table_info(`$t`)").use { c ->
+                val n = c.getColumnIndexOrThrow("name"); val ty = c.getColumnIndexOrThrow("type")
+                val nn = c.getColumnIndexOrThrow("notnull"); val d = c.getColumnIndexOrThrow("dflt_value")
+                while (c.moveToNext()) cols += RestoreSql.ColInfo(c.getString(n), c.getString(ty), c.getInt(nn) != 0, !c.isNull(d))
+            }
+            cols
+        }
+    }
 
     private fun q(s: String) = "'" + s.replace("'", "''") + "'"
 
@@ -37,7 +50,8 @@ object Backup {
             db.query("SELECT count(*) FROM bk.sqlite_master").use { it.moveToFirst() }   // throws if the password is wrong
             db.beginTransaction()
             try {
-                for (t in TABLES) { db.execSQL("DELETE FROM main.$t"); db.execSQL("INSERT INTO main.$t SELECT * FROM bk.$t") }
+                // columns that exist in both databases only, so a backup from another version restores (B16)
+                for (sql in RestoreSql.statements(columns(db, "main"), columns(db, "bk").mapValues { e -> e.value.map { it.name } })) db.execSQL(sql)
                 db.setTransactionSuccessful()
             } finally { db.endTransaction() }
         } finally { db.execSQL("DETACH DATABASE bk"); tmp.delete() }
