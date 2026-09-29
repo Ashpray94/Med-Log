@@ -103,7 +103,7 @@ class SyncHub(private val app: MedLogApp) {
      */
     suspend fun refreshReplicas(ctx: Context) {
         val want = ReplicaPlan.wanted(People.all(ctx)).associateBy { ReplicaFiles.channel(it.pairId) }
-        val d = ReplicaPlan.diff(want.keys, chans.keys.filter { it.startsWith("p-") })
+        val d = ReplicaPlan.diffKeys(want.mapValues { it.value.familyKey }, chans.filterKeys { it.startsWith("p-") }.mapValues { Base64.encodeToString(it.value.key, Base64.NO_WRAP) })
         for (n in d.detach) detach(n)
         for (n in d.attach) want[n]?.let { p -> attach(n, p.familyBytes ?: return@let, app.replicas.db(p.pairId), SyncEffects.NONE) }
     }
