@@ -1,6 +1,7 @@
 package com.suryaprakash.medlog.data
 
 import com.suryaprakash.medlog.clinical.Catalogue
+import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Describe
 import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.PersonContext
@@ -20,6 +21,18 @@ import kotlin.math.exp
 const val HOUR = 3600_000L
 const val DAY = 24 * HOUR
 
+/** A "Yes, better" tap: the fact better is `true` (a Boolean). The "what makes it better" answer is a List and is not this. */
+fun isBetterFacts(facts: Map<String, Fact>): Boolean = facts["better"]?.value == true
+
+fun Note.isBetterNote(): Boolean = kind == Kind.SYMPTOM && runCatching { isBetterFacts(factsFromJson(details)) }.getOrDefault(false)
+
+/** The notes that are real occurrences of a problem: everything except "better" taps. Use this before any count. */
+fun List<Note>.occurrences(): List<Note> = filter { !it.isBetterNote() }
+
+/** Notes as the danger rules see them: without the note being evaluated ([excludeId]) and without "better" taps. */
+fun rulesNotes(notes: List<Note>, excludeId: Long?): List<RecentNote> =
+    notes.filter { it.id != excludeId && !it.isBetterNote() }.map { RecentNote(it.problemId, it.occurredAt, factsFromJson(it.details), it.count) }
+
 /** Everything the screens do to data goes through here. */
 class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Describe) {
 
@@ -30,17 +43,20 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     suspend fun person(): PersonContext {
         val p = profile()
         val thinner = p.onBloodThinner || db.medicines().active().any { it.bloodThinner }
-        return PersonContext(ageYears(p.dob), thinner, p.conditions)
+        val plan = CarePlan.parse(p.plan)
+        return PersonContext(ageYears(p.dob), thinner, p.conditions, plan.limits, DangerRules.cancerCareOf(p.conditions, plan.treatments))
     }
 
     fun ageYears(dob: String): Int? = runCatching { Period.between(LocalDate.parse(dob), LocalDate.now()).years }.getOrNull()
 
     // ───────── symptoms ─────────
 
-    suspend fun recentForRules(days: Int = 3): List<RecentNote> =
-        db.notes().symptomsSince(System.currentTimeMillis() - days * DAY).map {
-            RecentNote(it.problemId, it.occurredAt, factsFromJson(it.details), it.count)
-        }
+    /**
+     * Notes of the last [days] days for the danger rules. The note being evaluated ([excludeId]) is left out, because
+     * the rules add its own count themselves (B06, B07). "Better" taps are not occurrences and are left out too.
+     */
+    suspend fun recentForRules(days: Int = 3, excludeId: Long? = null): List<RecentNote> =
+        rulesNotes(db.notes().symptomsSince(System.currentTimeMillis() - days * DAY), excludeId)
 
     /**
      * Saves what the person confirmed: the main problem and anything told with it, linked as one group.
@@ -109,7 +125,8 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     }
 
     suspend fun markBetter(problemId: String) {
-        db.notes().insert(Note(kind = Kind.SYMPTOM, problemId = problemId, occurredAt = System.currentTimeMillis(),
+        // count = 0 and better = true: it is a tap, not another occurrence, and every count skips it (B19)
+        db.notes().insert(Note(kind = Kind.SYMPTOM, problemId = problemId, occurredAt = System.currentTimeMillis(), count = 0,
             details = factsToJson(mapOf("better" to Fact(true, Source.TAPPED))), text = "${cat.problem(problemId)?.label}: better now"))
     }
 
@@ -160,7 +177,7 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
             val better = list.filter { factsFromJson(it.details)["better"]?.value == true }.maxOfOrNull { it.occurredAt } ?: 0
             val ongoing = now - last < 2 * DAY && better < last
             Triple(pid, score + (if (ongoing) 100.0 else 0.0) + (if (pid in watch) 50.0 else 0.0),
-                Recent(pid, list.filter { it.occurredAt >= todayStart }.sumOf { it.count ?: 1 }, last, ongoing))
+                Recent(pid, list.occurrences().filter { it.occurredAt >= todayStart }.sumOf { it.count ?: 1 }, last, ongoing))
         }.sortedByDescending { it.second }.map { it.third }
         // only what the person actually noted: nothing suggested or filled in, so recents never mislead
         return scored.take(limit)

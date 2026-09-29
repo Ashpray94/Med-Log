@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.DAY
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.occurrences
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.nlu.fmt1
 import com.suryaprakash.medlog.ui.Group
@@ -130,7 +131,8 @@ fun ReportsScreen(nav: Nav) {
         }.groupBy({ it.first }, { it.second }).mapValues { e -> e.value.sortedBy { it.at } }
         fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
         val water = app.db.notes().kindSince(Kind.WATER, since).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
-        val symptoms = app.db.notes().symptomsSince(since).groupBy { day(it.occurredAt) }.mapValues { it.value.size.toDouble() }
+        // the total number of times per day (Σ count), not the number of notes; "Yes, better" taps add nothing (B19)
+        val symptoms = app.db.notes().symptomsSince(since).occurrences().groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
         val meds = app.db.doses().between(since, now).filter { it.scheduledAt <= now }.groupBy { day(it.scheduledAt) }
             .mapValues { e -> 100.0 * e.value.count { it.status == DoseStatus.TAKEN } / e.value.size }
         daily = mapOf("water" to water, "symptoms" to symptoms, "meds" to meds)
