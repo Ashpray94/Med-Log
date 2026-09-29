@@ -361,10 +361,15 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
 private fun EmergencyCountdown(label: String, onCall: () -> Unit, onCancel: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val app = LocalContext.current.medlog
+    val ctx = LocalContext.current
+    val app = ctx.medlog
     var left by remember { mutableStateOf(EMERGENCY_COUNTDOWN) }
     var done by remember { mutableStateOf(false) }
     fun callNow() { if (!done) { done = true; onCall() } }
+    // Back does not cancel: only "Cancel – I'm OK" does
+    androidx.activity.compose.BackHandler { }
+    // leaving this page any other way (a bottom-bar tab, Home) must not lose the call: the helpers are called anyway
+    DisposableEffect(Unit) { onDispose { if (!done) { done = true; Alerts.emergency(ctx, label) } } }
     LaunchedEffect(Unit) {
         app.speaker.say("Calling your helpers in $EMERGENCY_COUNTDOWN seconds. Tap cancel if you are OK.")
         while (left > 0 && !done) { delay(1000); left-- }

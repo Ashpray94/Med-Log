@@ -24,6 +24,15 @@ data class Band(val amberLow: Double? = null, val redLow: Double? = null, val am
 }
 
 /**
+ * The lines to use: each of the four lines comes from the helper's [helper] band when the helper set it,
+ * otherwise from the general [defaults]. So a helper who sets only the high lines never switches off the low ones.
+ */
+fun effective(helper: Band?, defaults: Band): Band = Band(
+    amberLow = helper?.amberLow ?: defaults.amberLow, redLow = helper?.redLow ?: defaults.redLow,
+    amberHigh = helper?.amberHigh ?: defaults.amberHigh, redHigh = helper?.redHigh ?: defaults.redHigh,
+)
+
+/**
  * The lines a helper sets for one person, with the doctor's agreement. Kept inside the care plan (so it is
  * encrypted, backed up and synced). Where a line is set, it replaces the general number.
  */

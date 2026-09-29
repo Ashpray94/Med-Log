@@ -95,8 +95,9 @@ class ClinicalRulesTest {
         assertEquals(Level.AMBER, eval("fever", facts("temperature" to 101.4), who = who).level)
         assertEquals(Level.RED, eval("fever", facts("temperature" to 102.4), who = who).level)
         assertEquals(Level.RED, eval("fever", facts("temperature" to 102.0), who = who).level)
-        // an elderly person's own line beats "fever in an older person" too
-        assertEquals(Level.GREEN, eval("fever", facts("temperature" to 101.0), who = person(limits = band("temp" to Band(redHigh = 102.0)))).level)
+        // an unset amber line keeps the general one: 101 in an older person is AMBER even with only a red line set
+        assertEquals(Level.AMBER, eval("fever", facts("temperature" to 101.0), who = person(limits = band("temp" to Band(redHigh = 102.0)))).level)
+        assertEquals(Level.GREEN, eval("fever", facts("temperature" to 101.0), who = person(limits = band("temp" to Band(amberHigh = 101.5, redHigh = 102.0)))).level)
         // the low line and fever with confusion stay
         assertEquals(Level.RED, eval("fever", facts("temperature" to 94.5), who = who).level)
         assertEquals(Level.RED, eval("fever", facts("temperature" to 100.6, "confusion" to true), who = who).level)
@@ -152,7 +153,9 @@ class ClinicalRulesTest {
         assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 91.0, unit = "%")), who = who).level)
         assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 92.0, unit = "%")), who = who).level)
         // a helper's line is used for younger people too
-        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 89.0, unit = "%")), who = person(40, limits = band("spo2" to Band(redLow = 85.0)))).level)
+        // (under 55, a helper who sets only the red line keeps the general amber line at 94)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 89.0, unit = "%")), who = person(40, limits = band("spo2" to Band(redLow = 85.0)))).level)
+        assertEquals(Level.RED, eval(null, readings = listOf(Reading("spo2", 84.0, unit = "%")), who = person(40, limits = band("spo2" to Band(redLow = 85.0)))).level)
     }
 
     // ───────── BP ─────────
@@ -202,8 +205,8 @@ class ClinicalRulesTest {
         assertEquals(Level.AMBER, sugar(260.0).level)
         assertEquals(Level.RED, sugar(360.0).level)
         assertNull(sugar(120.0).needsLimit)
-        // general sugar numbers do not apply once a band is set: 310 is only a limit-crossing at 250
-        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("sugar", 310.0, unit = "mg/dL")), who = person(67, limits = band("sugar" to Band(redLow = 60.0)))).level)
+        // a line the helper left unset keeps the general number: 310 is still AMBER
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("sugar", 310.0, unit = "mg/dL")), who = person(67, limits = band("sugar" to Band(redLow = 60.0)))).level)
         fun pulse(v: Double) = eval(null, readings = listOf(Reading("pulse", v, unit = "per minute")), who = who)
         assertEquals(Level.GREEN, pulse(80.0).level)
         assertEquals(Level.AMBER, pulse(115.0).level)
@@ -406,6 +409,91 @@ class ClinicalRulesTest {
     @Test fun constipationAsksHowManyDays() {
         assertTrue(coreIds("constipation").toString(), "q_nomotion" in coreIds("constipation"))
         assertEquals("daysNoMotion", CAT.questions["q_nomotion"]!!.field)
+    }
+
+    // ───────── an unset line keeps the general number (per-line fallback) ─────────
+
+    @Test fun effectiveTakesEachLineFromTheHelperElseTheDefault() {
+        val e = com.suryaprakash.medlog.clinical.effective(Band(amberHigh = 250.0), Band(amberLow = 70.0, redLow = 54.0, amberHigh = 300.0, redHigh = 400.0))
+        assertEquals(Band(amberLow = 70.0, redLow = 54.0, amberHigh = 250.0, redHigh = 400.0), e)
+        assertEquals(Band(redLow = 1.0), com.suryaprakash.medlog.clinical.effective(null, Band(redLow = 1.0)))
+    }
+
+    @Test fun sugarBandWithOnlyHighLinesStillCatchesLowSugar() {
+        val who = person(67, limits = band("sugar" to Band(amberHigh = 250.0, redHigh = 350.0)))
+        val low = eval(null, readings = listOf(Reading("sugar", 45.0, unit = "mg/dL")), who = who)
+        assertEquals(Level.RED, low.level)
+        assertEquals(DangerRules.SUGAR_AID, low.firstAid)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("sugar", 65.0, unit = "mg/dL")), who = who).level)
+        assertEquals(Level.RED, eval("dizzy", facts("sweating" to true), readings = listOf(Reading("sugar", 65.0, unit = "mg/dL")), who = who).level)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("sugar", 260.0, unit = "mg/dL")), who = who).level)
+        // and a band with only low lines keeps 400 as RED, 301 as AMBER
+        val lows = person(67, limits = band("sugar" to Band(amberLow = 80.0)))
+        assertEquals(Level.RED, eval(null, readings = listOf(Reading("sugar", 400.0, unit = "mg/dL")), who = lows).level)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("sugar", 301.0, unit = "mg/dL")), who = lows).level)
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("sugar", 300.0, unit = "mg/dL")), who = lows).level)
+    }
+
+    @Test fun pulseBandWithOnlyHighLinesStillCatchesSlowPulse() {
+        val who = person(67, limits = band("pulse" to Band(amberHigh = 110.0, redHigh = 150.0)))
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("pulse", 35.0, unit = "per minute")), who = who).level)
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("pulse", 100.0, unit = "per minute")), who = who).level)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("pulse", 120.0, unit = "per minute")), who = who).level)
+        // the general 130 no longer applies once the helper's own high line is set higher
+        val high = person(67, limits = band("pulse" to Band(amberHigh = 140.0)))
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("pulse", 135.0, unit = "per minute")), who = high).level)
+    }
+
+    @Test fun temperatureFloorsAndCeilingsNoHelperCanRemove() {
+        val who = person(45, limits = band("temp" to Band(amberHigh = 101.0)))
+        assertEquals(Level.RED, eval("fever", facts("temperature" to 105.0), who = who).level)     // 104 default red still there
+        assertEquals(Level.RED, eval("fever", facts("temperature" to 94.5), who = who).level)
+        assertEquals(Level.AMBER, eval("fever", facts("temperature" to 101.5), who = who).level)
+        // even a helper red line above 104 cannot lift the ceiling
+        val high = person(45, limits = band("temp" to Band(redHigh = 106.0)))
+        assertEquals(Level.RED, eval("fever", facts("temperature" to 104.5), who = high).level)
+        assertEquals(Level.RED, eval("fever", facts("temperature" to 94.0), who = high).level)
+        // fever with confusion stays RED whatever the band
+        assertEquals(Level.RED, eval("fever", facts("temperature" to 100.5, "confusion" to true), who = person(45, limits = band("temp" to Band(amberHigh = 103.0, redHigh = 104.0)))).level)
+        // the same limits from a reading, not a spoken fact
+        assertEquals(Level.RED, eval(null, readings = listOf(Reading("temp", 105.0, unit = "°F")), who = who).level)
+    }
+
+    @Test fun spo2OverFiftyFiveBandWithOnlyAmberLow() {
+        val who = person(67, limits = band("spo2" to Band(amberLow = 92.0)))
+        val t = eval(null, readings = listOf(Reading("spo2", 91.0, unit = "%")), who = who)
+        assertEquals(Level.AMBER, t.level)
+        assertEquals("spo2", t.needsLimit)                    // no red line from the helper yet
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("spo2", 92.0, unit = "%")), who = who).level)
+        // very low is still only AMBER for over 55 until the helper sets a red line
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("spo2", 80.0, unit = "%")), who = who).level)
+    }
+
+    @Test fun bpOverFiftyFiveBandWithOnlySysRedHigh() {
+        val who = person(67, limits = band("bpSys" to Band(redHigh = 180.0)))
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("bp", 170.0, 95.0, "mmHg")), who = who).level)
+        assertEquals(Level.RED, eval(null, readings = listOf(Reading("bp", 182.0, 90.0, "mmHg")), who = who).level)
+        // unset lines mean no alarm for over 55, even very low
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("bp", 80.0, 50.0, "mmHg")), who = who).level)
+    }
+
+    @Test fun bpYoungerBandWithOnlySysAmberHighKeepsTheOtherGeneralLines() {
+        val who = person(45, limits = band("bpSys" to Band(amberHigh = 150.0)))
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("bp", 152.0, 80.0, "mmHg")), who = who).level)
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("bp", 185.0, 85.0, "mmHg")), who = who).level)   // >= 180 default, and 150 line
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("bp", 120.0, 112.0, "mmHg")), who = who).level)  // dia 110 default
+        assertEquals(Level.AMBER, eval(null, readings = listOf(Reading("bp", 85.0, 55.0, "mmHg")), who = who).level)    // sys < 90 default
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("bp", 120.0, 80.0, "mmHg")), who = who).level)
+        // helper lines above the general ones lift them: sys 185 with amberHigh 190 is fine
+        val lifted = person(45, limits = band("bpSys" to Band(amberHigh = 190.0)))
+        assertEquals(Level.GREEN, eval(null, readings = listOf(Reading("bp", 185.0, 85.0, "mmHg")), who = lifted).level)
+    }
+
+    @Test fun vomitBandWithOnlyRedKeepsTheGeneralAmberLine() {
+        val who = person(45, limits = band("vomit" to Band(redHigh = 10.0)))
+        assertEquals(Level.AMBER, eval("vomiting", facts("count" to 6), who = who).level)
+        assertEquals(Level.RED, eval("vomiting", facts("count" to 11), who = who).level)
+        assertEquals(Level.AMBER, eval("vomiting", facts("count" to 5), who = person(cancer = true, limits = band("vomit" to Band(redHigh = 10.0)))).level)
     }
 
     @Test fun coreStaysShort() {

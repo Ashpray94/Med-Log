@@ -2,6 +2,8 @@ package com.suryaprakash.medlog.clinical
 
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.Reading
+import kotlin.math.nextDown
+import kotlin.math.nextUp
 
 enum class Level { GREEN, AMBER, RED }
 
@@ -144,88 +146,76 @@ object DangerRules {
         // ── temperature ──
         val temp = num(facts, "temperature") ?: readings.firstOrNull { it.type == "temp" }?.v1
         if (temp != null) {
-            val tb = lim.band("temp")
+            val th = lim.band("temp")
+            // the helper's lines replace the general ones one by one; 104 °F is a red line nobody can raise
+            val tb = effective(th, Band(amberHigh = if (elderly) 100.4 else 102.0, redHigh = if (person.cancerCare) 100.0 else 104.0))
+            val redAt = minOf(tb.redHigh ?: 104.0, 104.0)
+            val amberAt = tb.amberHigh ?: Double.MAX_VALUE
             when {
+                // always, whatever the helper set
                 temp <= 95.0 -> red += "Very low body temperature (${fmt(temp)} °F)"
-                temp >= 100.4 && yes(facts, "confusion") -> red += "Fever with confusion"
-                // the helper's own lines replace the general fever numbers
-                tb != null -> when {
-                    tb.redHigh != null && temp >= tb.redHigh -> red += "Fever of ${fmt(temp)} °F (above the limit set for you)"
-                    tb.amberHigh != null && temp >= tb.amberHigh -> amber += "Fever of ${fmt(temp)} °F (above the limit set for you)"
-                }
                 temp >= 104.0 -> red += "Very high fever (${fmt(temp)} °F)"
-                person.cancerCare && temp >= 100.0 -> red += "Fever during cancer treatment (${fmt(temp)} °F)"
-                temp >= 100.4 && elderly -> amber += "Fever of ${fmt(temp)} °F in an older person"
-                temp >= 102.0 -> amber += "High fever (${fmt(temp)} °F)"
+                temp >= 100.4 && yes(facts, "confusion") -> red += "Fever with confusion"
+                temp >= redAt -> red += if (th?.redHigh != null) "Fever of ${fmt(temp)} °F (above the limit set for you)" else "Fever during cancer treatment (${fmt(temp)} °F)"
+                temp >= amberAt -> amber += when {
+                    th?.amberHigh != null -> "Fever of ${fmt(temp)} °F (above the limit set for you)"
+                    elderly && temp < 102.0 -> "Fever of ${fmt(temp)} °F in an older person"
+                    else -> "High fever (${fmt(temp)} °F)"
+                }
             }
         }
         if (yes(facts, "confusion") && problemId != "confusion") red += "Confusion"
 
         // ── readings ──
         for (r in readings) when (r.type) {
-            "sugar" -> if (lim.band("sugar") != null) {
-                val b = lim.band("sugar")!!
+            "sugar" -> {
+                // helper lines first, the general ones for any line the helper left unset ("> 300" is 300.0.nextUp() with ">=")
+                val b = effective(lim.band("sugar"), Band(amberLow = 70.0, redLow = 54.0, amberHigh = 300.0.nextUp(), redHigh = 400.0))
+                val v = r.v1
                 when {
-                    b.redLow != null && r.v1 <= b.redLow -> { red += "Sugar ${r.v1.toInt()} (below the red line set for you)"; firstAid = SUGAR_AID }
-                    b.amberLow != null && r.v1 <= b.amberLow -> { amber += "Sugar ${r.v1.toInt()} (below the limit set for you)"; firstAid = SUGAR_AID }
-                    b.redHigh != null && r.v1 >= b.redHigh -> red += "Sugar ${r.v1.toInt()} (above the red line set for you)"
-                    b.amberHigh != null && r.v1 >= b.amberHigh -> amber += "Sugar ${r.v1.toInt()} (above the limit set for you)"
+                    b.redLow != null && v < b.redLow -> { red += "Very low sugar (${v.toInt()})"; firstAid = SUGAR_AID }
+                    b.amberLow != null && v < b.amberLow && (yes(facts, "confusion") || yes(facts, "sweating")) -> { red += "Low sugar (${v.toInt()}) with sweating or confusion"; firstAid = SUGAR_AID }
+                    b.amberLow != null && v < b.amberLow -> { amber += "Low sugar (${v.toInt()})"; firstAid = SUGAR_AID }
+                    b.redHigh != null && v >= b.redHigh -> red += "Very high sugar (${v.toInt()})"
+                    b.amberHigh != null && v >= b.amberHigh -> amber += "High sugar (${v.toInt()})"
                 }
-            } else when {
-                r.v1 < 54 -> { red += "Very low sugar (${r.v1.toInt()})"; firstAid = SUGAR_AID }
-                r.v1 < 70 && (yes(facts, "confusion") || yes(facts, "sweating")) -> { red += "Low sugar (${r.v1.toInt()}) with sweating or confusion"; firstAid = SUGAR_AID }
-                r.v1 < 70 -> { amber += "Low sugar (${r.v1.toInt()})"; firstAid = SUGAR_AID }
-                r.v1 >= 400 -> red += "Very high sugar (${r.v1.toInt()})"
-                r.v1 > 300 -> amber += "High sugar (${r.v1.toInt()})"
             }
             "spo2" -> {
-                val b = lim.band("spo2")
+                val h = lim.band("spo2")
+                // over 55 the person may live with a lower baseline: 90 is only AMBER and red comes only from the helper
+                val b = effective(h, if (over55) Band(amberLow = 90.0) else Band(amberLow = 94.0, redLow = 90.0))
+                if (over55 && h?.redLow == null) needsLimit = needsLimit ?: "spo2"
                 when {
-                    // the helper's lines replace the general numbers
-                    b != null -> when {
-                        b.redLow != null && r.v1 < b.redLow -> red += "Low oxygen (${r.v1.toInt()}%)"
-                        b.amberLow != null && r.v1 < b.amberLow -> amber += "Oxygen a little low (${r.v1.toInt()}%)"
-                    }
-                    // over 55: the person may live with a lower baseline, so 90 is only AMBER until the helper sets a red line
-                    over55 -> {
-                        needsLimit = needsLimit ?: "spo2"
-                        if (r.v1 < 90) amber += "Low oxygen (${r.v1.toInt()}%): please call your doctor"
-                    }
-                    r.v1 < 90 -> red += "Low oxygen (${r.v1.toInt()}%)"
-                    r.v1 < 94 -> amber += "Oxygen a little low (${r.v1.toInt()}%)"
+                    b.redLow != null && r.v1 < b.redLow -> red += "Low oxygen (${r.v1.toInt()}%)"
+                    b.amberLow != null && r.v1 < b.amberLow -> amber += if (over55) "Low oxygen (${r.v1.toInt()}%): please call your doctor" else "Oxygen a little low (${r.v1.toInt()}%)"
                 }
             }
             "bp" -> {
                 val s = r.v1; val d = r.v2 ?: 0.0
                 val symptoms = problemId in setOf("headache", "chest_pain", "chest_tight", "breathless", "blurred_vision", "confusion", "one_side_weak", "face_droop") ||
                     yes(facts, "visionChange") || yes(facts, "breathless") || yes(facts, "confusion")
-                val bs = lim.band("bpSys"); val bd = lim.band("bpDia")
+                val hs = lim.band("bpSys"); val hd = lim.band("bpDia")
+                // over 55, never assume: only the helper's lines count (an unset line is no alarm). 55 or younger: an unset line uses today's number
+                val bs = effective(hs, if (over55) Band() else Band(amberHigh = 180.0, amberLow = 90.0.nextDown()))
+                val bd = effective(hd, if (over55) Band() else Band(amberHigh = 110.0))
+                if (over55 && hs?.amberHigh == null && hs?.redHigh == null && hd?.amberHigh == null && hd?.redHigh == null) needsLimit = needsLimit ?: "bp"
+                val text = "${s.toInt()}/${d.toInt()}"
                 when {
                     // high BP with these symptoms is about the symptoms, so it stays for everyone
-                    (s >= 180 || d >= 120) && symptoms -> red += "Very high BP (${s.toInt()}/${d.toInt()}) with symptoms"
-                    // the helper's lines (top and bottom each) replace the general numbers
-                    bs != null || bd != null -> {
-                        val text = "${s.toInt()}/${d.toInt()}"
-                        when {
-                            (bs?.redHigh != null && s >= bs.redHigh) || (bd?.redHigh != null && d >= bd.redHigh) -> red += "High BP ($text), above the red line set for you"
-                            (bs?.redLow != null && s <= bs.redLow) || (bd?.redLow != null && d <= bd.redLow) -> red += "Low BP ($text), below the red line set for you"
-                            (bs?.amberHigh != null && s >= bs.amberHigh) || (bd?.amberHigh != null && d >= bd.amberHigh) -> amber += "High BP ($text), above the limit set for you"
-                            (bs?.amberLow != null && s <= bs.amberLow) || (bd?.amberLow != null && d <= bd.amberLow) -> amber += "Low BP ($text), below the limit set for you"
-                        }
-                    }
-                    // over 55, never assume: no alarm from the numbers alone until the helper sets the lines
-                    over55 -> needsLimit = needsLimit ?: "bp"
-                    s >= 180 || d >= 110 -> amber += "Very high BP (${s.toInt()}/${d.toInt()})"
-                    s < 90 && (problemId in setOf("dizzy", "fainted", "low_bp")) -> amber += "Low BP (${s.toInt()}/${d.toInt()}) with dizziness"
-                    s < 90 -> amber += "Low BP (${s.toInt()}/${d.toInt()})"
+                    (s >= 180 || d >= 120) && symptoms -> red += "Very high BP ($text) with symptoms"
+                    (bs.redHigh != null && s >= bs.redHigh) || (bd.redHigh != null && d >= bd.redHigh) -> red += "Very high BP ($text)"
+                    (bs.redLow != null && s <= bs.redLow) || (bd.redLow != null && d <= bd.redLow) -> red += "Very low BP ($text)"
+                    (bs.amberHigh != null && s >= bs.amberHigh) || (bd.amberHigh != null && d >= bd.amberHigh) -> amber += "High BP ($text)"
+                    (bs.amberLow != null && s <= bs.amberLow) || (bd.amberLow != null && d <= bd.amberLow) ->
+                        amber += if (problemId in setOf("dizzy", "fainted", "low_bp") && hs?.amberLow == null) "Low BP ($text) with dizziness" else "Low BP ($text)"
                 }
             }
             "pulse" -> {
-                val b = lim.band("pulse")
-                if (b != null) when {
-                    (b.redLow != null && r.v1 <= b.redLow) || (b.redHigh != null && r.v1 >= b.redHigh) -> red += "Pulse ${r.v1.toInt()} (outside the red lines set for you)"
-                    (b.amberLow != null && r.v1 <= b.amberLow) || (b.amberHigh != null && r.v1 >= b.amberHigh) -> amber += "Pulse ${r.v1.toInt()} (outside the limits set for you)"
-                } else if (r.v1 >= 130 || r.v1 < 40) amber += "Pulse ${r.v1.toInt()}"
+                val b = effective(lim.band("pulse"), Band(amberLow = 40.0, amberHigh = 130.0))
+                when {
+                    (b.redLow != null && r.v1 < b.redLow) || (b.redHigh != null && r.v1 >= b.redHigh) -> red += "Pulse ${r.v1.toInt()}"
+                    (b.amberLow != null && r.v1 < b.amberLow) || (b.amberHigh != null && r.v1 >= b.amberHigh) -> amber += "Pulse ${r.v1.toInt()}"
+                }
             }
         }
 
@@ -235,15 +225,13 @@ object DangerRules {
             // [recent] never holds the note being evaluated (Repo.recentForRules leaves it out), so its count is added once, here
             val last24 = recent.filter { it.problemId == problemId && now - it.at <= day }.sumOf { it.count ?: 1 } + ((num(facts, "count") ?: 1.0).toInt())
             val what = if (problemId == "vomiting") "Vomiting" else "Loose motions"
-            val fb = lim.band(if (problemId == "vomiting") "vomit" else "loose")
+            val fh = lim.band(if (problemId == "vomiting") "vomit" else "loose")
+            // helper lines first; an unset line uses the general number (more than 5, or more than 4 in cancer care)
+            val fb = effective(fh, Band(amberHigh = if (person.cancerCare) 4.0 else 5.0))
             when {
-                // the helper's lines replace the general number
-                fb != null -> when {
-                    fb.redHigh != null && last24 > fb.redHigh -> red += "$what $last24 times in 24 hours (more than the limit set for you)"
-                    fb.amberHigh != null && last24 > fb.amberHigh -> amber += "$what $last24 times in 24 hours (more than the limit set for you)"
-                }
-                person.cancerCare && last24 > 4 -> amber += "$what $last24 times in 24 hours during cancer treatment: call your doctor"
-                last24 >= 6 -> amber += "$what $last24 times in 24 hours"
+                fb.redHigh != null && last24 > fb.redHigh -> red += "$what $last24 times in 24 hours"
+                fb.amberHigh != null && last24 > fb.amberHigh ->
+                    amber += if (fh?.amberHigh == null && person.cancerCare) "$what $last24 times in 24 hours during cancer treatment: call your doctor" else "$what $last24 times in 24 hours"
             }
             if (no(facts, "keepWater")) amber += "Cannot keep water down"
             if (no(facts, "urineToday")) amber += "No urine for 8 hours or more"
@@ -255,13 +243,12 @@ object DangerRules {
         // ── constipation: days without a motion ──
         if (problemId == "constipation") {
             val days = num(facts, "daysNoMotion")
-            val cb = lim.band("constipationDays")
+            val ch = lim.band("constipationDays")
+            val cb = effective(ch, Band(amberHigh = if (person.cancerCare) 2.0 else null))
             if (days != null) when {
-                cb != null -> when {
-                    cb.redHigh != null && days > cb.redHigh -> red += "No motion for ${fmt(days)} days (more than the limit set for you)"
-                    cb.amberHigh != null && days > cb.amberHigh -> amber += "No motion for ${fmt(days)} days (more than the limit set for you)"
-                }
-                person.cancerCare && days > 2 -> amber += "No motion for ${fmt(days)} days during cancer treatment: call your doctor"
+                cb.redHigh != null && days > cb.redHigh -> red += "No motion for ${fmt(days)} days"
+                cb.amberHigh != null && days > cb.amberHigh ->
+                    amber += if (ch?.amberHigh == null) "No motion for ${fmt(days)} days during cancer treatment: call your doctor" else "No motion for ${fmt(days)} days"
             }
         }
 
