@@ -190,8 +190,7 @@ object Scheduler {
         val d = db.doses().get(doseId) ?: return Taken.OK
         if (d.status == DoseStatus.TAKEN && !force) return Taken.ALREADY
         db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
-        if (own) db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
-        else db.medicines().get(d.medicineId)?.let { m -> m.pillsLeft?.let { left -> db.medicines().update(m.copy(pillsLeft = (left - (m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0)).coerceAtLeast(0.0))) } }
+        if (own) db.medicines().get(d.medicineId)?.let { m -> refillWarning(ctx, m) }
         if (own && force && d.status == DoseStatus.TAKEN) {
             val m = db.medicines().get(d.medicineId)
             Alerts.send(ctx, Alerts.Type.MESSAGE, com.suryaprakash.medlog.help.Wording.takenTwice(app.ownRepo.profile().name, m?.name ?: "a medicine"))
@@ -205,10 +204,7 @@ object Scheduler {
         val app = ctx.medlog
         val d = db.doses().get(doseId) ?: return
         if (d.status != DoseStatus.TAKEN) return
-        db.doses().update(d.copy(status = DoseStatus.DUE, actedAt = null))
-        db.medicines().get(d.medicineId)?.let { m ->
-            m.pillsLeft?.let { left -> db.medicines().update(m.copy(pillsLeft = left + (m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0))) }
-        }
+        db.doses().update(d.copy(status = DoseStatus.DUE, actedAt = null)) // the pill count is worked out from the TAKEN doses (Pills), so it goes back up by itself
         if (db === app.ownDb) { app.refreshWidgets(); reschedule(ctx) }
     }
 
@@ -227,14 +223,10 @@ object Scheduler {
         if (db === app.ownDb) { DoseAlert.cancel(ctx, doseId); app.refreshWidgets(); reschedule(ctx) }
     }
 
-    /** Pill count and refill warning (plan 12.1). */
-    private suspend fun countDown(ctx: Context, m: Medicine) {
-        val left = m.pillsLeft ?: return
-        val per = m.amount.replace("½", "0.5").toDoubleOrNull() ?: 1.0
-        val now = (left - per).coerceAtLeast(0.0)
-        ctx.medlog.ownDb.medicines().update(m.copy(pillsLeft = now))
-        val perDay = per * m.times.split(",").count { it.isNotBlank() }.coerceAtLeast(1)
-        val days = (now / perDay).toInt()
+    /** Refill warning (plan 12.1) after a dose was taken: the count is worked out from the doses taken since it was made (see [Pills]). */
+    private suspend fun refillWarning(ctx: Context, m: Medicine) {
+        val left = ctx.medlog.ownRepo.pillsLeft()[m.id] ?: return
+        val days = Pills.daysLeft(m, left)
         if (days in listOf(5, 2, 0)) Care.refill(ctx, m.name, days)
     }
 

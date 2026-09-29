@@ -178,7 +178,7 @@ fun FoodScreen(nav: Nav) {
         FeedMenu(m.name, onDelete = {
             feedMenu = null
             scope.launch {
-                app.db.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
+                app.repo.updateMedicine(m.id) { it.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped") }
                 app.db.doses().dropFuture(m.id, System.currentTimeMillis())
                 com.suryaprakash.medlog.meds.Scheduler.stopMedicine(ctx, m.copy(active = false), app.db)
             }
