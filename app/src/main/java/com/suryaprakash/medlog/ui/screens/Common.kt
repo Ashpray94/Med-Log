@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -118,7 +119,8 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
 fun DoctorCallButton(dept: String? = null) {
     val ctx = LocalContext.current
     var profile by remember { mutableStateOf<Profile?>(null) }
-    LaunchedEffect(Unit) { profile = ctx.medlog.repo.profile() }
+    val pv by ctx.medlog.db.profile().flow().collectAsState(null)
+    LaunchedEffect(pv) { profile = ctx.medlog.repo.profile() }
     val pr = profile ?: return
     val plan = com.suryaprakash.medlog.data.CarePlan.parse(pr.plan)
     val d = plan.doctorFor(dept, com.suryaprakash.medlog.clinical.DangerRules.cancerCareOf(pr.conditions, plan.treatments))

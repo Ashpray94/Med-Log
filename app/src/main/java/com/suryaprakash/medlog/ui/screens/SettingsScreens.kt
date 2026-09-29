@@ -84,6 +84,8 @@ fun SettingsScreen(nav: Nav) {
     var pinText by remember { mutableStateOf("") }
     var locked by remember { mutableStateOf(s.helperPin.isNotBlank() && System.currentTimeMillis() > unlockedUntil) }
     LaunchedEffect(Unit) { profile = app.repo.profile() }
+    val pv by app.db.profile().flow().collectAsState(null)
+    LaunchedEffect(pv) { if (section == null) pv?.let { profile = it } }   // the person's profile changed on another phone
 
     if (locked) {
         Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }, onBack = { nav.back() }) {
@@ -251,7 +253,8 @@ private fun DoctorsSection(onBack: () -> Unit) {
     val app = ctx.medlog
     val scope = rememberCoroutineScope()
     var plan by remember { mutableStateOf(com.suryaprakash.medlog.data.CarePlan()) }
-    LaunchedEffect(Unit) { plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan) }
+    val pv by app.db.profile().flow().collectAsState(null)
+    LaunchedEffect(pv) { plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan) }
     fun save(list: List<com.suryaprakash.medlog.data.CarePlan.Doctor>) { plan = plan.copy(doctors = list); scope.launch { app.repo.saveCarePlan { it.copy(doctors = list) } } }
     var editing by remember { mutableStateOf<Int?>(null) }
     var name by remember { mutableStateOf("") }

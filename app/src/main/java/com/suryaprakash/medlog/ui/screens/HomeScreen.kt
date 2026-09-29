@@ -106,7 +106,11 @@ fun HomeScreen(nav: Nav) {
     var remindersBlocked by remember { mutableStateOf(false) }
     var version by remember { mutableStateOf(0) }
 
-    LaunchedEffect(version) {
+    // a change made on another phone (profile, medicines, doses) shows without reopening the page
+    val pv by app.db.profile().flow().collectAsState(null)
+    val liveDoses by app.db.doses().betweenFlow(Scheduler.today().first, Scheduler.today().second).collectAsState(emptyList())
+    val liveMeds by app.db.medicines().activeFlow().collectAsState(emptyList())
+    LaunchedEffect(version, pv, liveDoses, liveMeds) {
         name = app.repo.profile().name
         recent = app.repo.recentProblems(3)
         next = Scheduler.nextDose(ctx, app.db)

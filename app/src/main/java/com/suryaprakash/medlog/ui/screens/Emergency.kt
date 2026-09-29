@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -78,7 +79,9 @@ fun EmergencyScreen(nav: Nav) {
     val sc = LocalScale.current
     var helpers by remember { mutableStateOf<List<Helper>>(emptyList()) }
     var profile by remember { mutableStateOf<Profile?>(null) }
-    LaunchedEffect(Unit) { helpers = app.db.helpers().all(); profile = app.repo.profile() }
+    val pv by app.db.profile().flow().collectAsState(null)
+    val hv by app.db.helpers().flow().collectAsState(emptyList())
+    LaunchedEffect(pv, hv) { helpers = app.db.helpers().all(); profile = app.repo.profile() }
     Screen("Emergency", "Three choices. One: the big red card calls ${s.emergencyNumber} for an ambulance. Two: hold the dark card to alert all your family. Three: tap a face to call one person.",
         onHome = { nav.home() }, onBack = { nav.back() }) {
         CallAmbulanceCard(s.emergencyNumber)
