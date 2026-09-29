@@ -45,6 +45,7 @@ sealed interface Route {
     data object HelperLock : Route
     data object Feedback : Route
     data object MyReports : Route
+    data object Limits : Route
 }
 
 /** A plain back stack. Back always goes one step back; Home always goes home (plan 4.3 #13). */

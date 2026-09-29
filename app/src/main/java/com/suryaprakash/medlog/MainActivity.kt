@@ -210,6 +210,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Devices -> DevicesScreen(nav)
             Route.Feedback -> com.suryaprakash.medlog.feedback.FeedbackScreen(nav)
             Route.MyReports -> com.suryaprakash.medlog.feedback.MyReportsScreen(nav)
+            Route.Limits -> LimitsScreen(nav)
         }
     }
 }

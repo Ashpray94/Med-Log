@@ -493,6 +493,7 @@ fun ReadingsScreen(nav: Nav) {
     Screen("BP, sugar & more", "Tap what you measured. Type the number. Weight comes from your scale.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "Tap what you measured") {
         result?.takeIf { it.level == Level.AMBER }?.let { t -> Card(border = p.amber) { Text("▲ " + t.say, color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body); t.firstAid?.let { Body(it, bold = true) } }; DoctorCallButton() }
+        result?.let { NeedsLimitLine(nav, it.needsLimit) }
         com.suryaprakash.medlog.ui.SectionHeader("Readings", if (recent.isEmpty()) "None in 2 weeks" else "${recent.size} in 2 weeks", "Trends") { nav.go(Route.Reports) }
         com.suryaprakash.medlog.ui.TileGrid(kinds, 2, aspect = 1.25f) { (k, label, look), mod ->
             val last = latest[k]

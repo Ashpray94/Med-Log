@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -133,11 +134,11 @@ private object Onboard {
 }
 
 private enum class S { WELCOME, WHO, ORDER, SIZE, READ, LANGS, NAME, BORN, SEX, CONDITIONS, SYMPTOMS, MEDS, TREATMENTS, ALLERGY, RISKS,
-    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, CHECKIN, PERMISSIONS, WIDGET, DONE }
+    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, LIMITS, CHECKIN, PERMISSIONS, WIDGET, DONE }
 
 /** Pages that count in the progress bar. */
 private val COUNTED = listOf(S.WHO, S.SIZE, S.LANGS, S.NAME, S.BORN, S.SEX, S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS,
-    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
+    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.LIMITS, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
 
 @Composable
 fun OnboardingScreen(nav: Nav) {
@@ -489,6 +490,18 @@ fun OnboardingScreen(nav: Nav) {
             step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
             SymptomGrid(CarePlan.EMERGENCIES.filter { app.catalogue.problem(it) != null }, plan.emergencies.toList()) { id ->
                 savePlan { it.copy(emergenciesAsked = true, emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+            }
+        }
+
+        // ───────────── personal limits (the helper sets them; opens the limits page, which comes back here) ─────────────
+        S.LIMITS -> {
+            val isSet = com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)
+            FlowScreen(task, "Personal limits, for the helper",
+                hint = "If you are the helper, set the numbers the doctor agreed for blood pressure, oxygen, sugar and temperature. MedLog then warns only when they are crossed. You can do this later in Settings → Helper controls.",
+                step = n, steps = total, onBack = { back() },
+                primary = if (isSet) "Next" else "Set limits now", onPrimary = { if (isSet) next() else nav.go(Route.Limits) },
+                secondary = if (isSet) "Change limits" else "Later", onSecondary = { if (isSet) nav.go(Route.Limits) else next() }) {
+                if (isSet) Body("Limits are set. ${com.suryaprakash.medlog.clinical.LimitsForm.summary(plan.limits)}.", bold = true)
             }
         }
 
@@ -857,6 +870,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
             Triple("Illnesses", count(illnesses), Icons.Rounded.MonitorHeart to p.tintPink),
             Triple("Emergencies", count(plan.emergencies.size), Icons.Rounded.Sos to p.red),
             Triple("Check-in", checkIn, Icons.Rounded.Alarm to p.tintOrange),
+            Triple("Limits", if (com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)) "Set" else "Not set", Icons.Rounded.Tune to p.tintTeal),
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             facts.chunked(2).forEach { row ->
@@ -1009,7 +1023,7 @@ private val SECTIONS = listOf(
     "about you" to setOf(S.NAME, S.BORN, S.SEX),
     "health questions" to setOf(S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS),
     "doctors" to setOf(S.DOCTORS, S.DOCTOR_FORM),
-    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES),
+    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES, S.LIMITS),
     "daily check-in" to setOf(S.CHECKIN),
     "phone settings" to setOf(S.PERMISSIONS, S.WIDGET),
 )
