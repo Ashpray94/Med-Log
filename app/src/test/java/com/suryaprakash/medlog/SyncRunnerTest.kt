@@ -31,7 +31,7 @@ class SyncRunnerTest {
     @After fun close() { pools.forEach { it.shutdownNow() }; conns.forEach { runCatching { it.close() } }; files.forEach { it.delete() } }
 
     private fun schema(): org.json.JSONArray {
-        val f = listOf("schemas", "app/schemas").map { File("$it/com.suryaprakash.medlog.data.MedDb/4.json") }.first { it.exists() }
+        val f = listOf("schemas", "app/schemas").map { File("$it/com.suryaprakash.medlog.data.MedDb/5.json") }.first { it.exists() }
         return JSONObject(f.readText()).getJSONObject("database").getJSONArray("entities")
     }
 

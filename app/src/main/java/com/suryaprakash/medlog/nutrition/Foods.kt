@@ -496,17 +496,22 @@ object Feeds {
         val protein get() = parts.sumOf { it.protein }
     }
 
-    fun infoFrom(json: String?, medId: Long): Info? = runCatching {
-        JSONObject(json ?: "{}").optJSONObject("$medId")?.let { o ->
+    /** A feed's contents as kept in the medicine row ([com.suryaprakash.medlog.data.Medicine.feedInfo]), so every phone that holds the medicine has them. Null for "" or bad JSON. */
+    fun infoOf(feedInfo: String?): Info? = runCatching {
+        if (feedInfo.isNullOrBlank()) null else JSONObject(feedInfo).let { o ->
             val a = o.getJSONArray("parts")
             Info((0 until a.length()).map { i -> a.getJSONObject(i).let { Part(it.getString("name"), it.optString("amount"), it.getDouble("kcal"), it.getDouble("protein")) } }, o.optBoolean("tube"))
         }
     }.getOrNull()
 
-    fun infoWith(json: String?, medId: Long, i: Info): String {
+    /** The text kept in [com.suryaprakash.medlog.data.Medicine.feedInfo]. */
+    fun toJson(i: Info): String {
         val a = JSONArray(); i.parts.forEach { p -> a.put(JSONObject().put("name", p.name).put("amount", p.amount).put("kcal", p.kcal).put("protein", p.protein)) }
-        return JSONObject(json ?: "{}").put("$medId", JSONObject().put("parts", a).put("tube", i.tube)).toString()
+        return JSONObject().put("parts", a).put("tube", i.tube).toString()
     }
+
+    /** The old phone-wide store (settings feed_info, keyed by the LOCAL medicine id): only the migration reads it. */
+    fun infoFrom(json: String?, medId: Long): Info? = runCatching { JSONObject(json ?: "{}").optJSONObject("$medId")?.let { infoOf(it.toString()) } }.getOrNull()
 
     /** "200 ml" → 200. */
     fun ml(amount: String): Double = amount.filter { it.isDigit() || it == '.' }.toDoubleOrNull() ?: 0.0

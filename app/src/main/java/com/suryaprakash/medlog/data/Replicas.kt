@@ -39,6 +39,15 @@ object ReplicaPlan {
     fun wanted(people: List<CaredFor>): List<CaredFor> = people.filter { it.familyKey.isNotBlank() }
     fun diff(wantedIds: Collection<String>, attached: Collection<String>) =
         Diff(wantedIds.filter { it !in attached }.distinct(), attached.filter { it !in wantedIds })
+    /**
+     * Same, but a channel whose family key changed (the person wiped and restored, so she has a NEW key) is in both lists: detach the runner
+     * with the old key, then attach one with the new key (B78). [want] and [attached] map channel name to the family key (base64).
+     */
+    fun diffKeys(want: Map<String, String>, attached: Map<String, String>): Diff {
+        val changed = want.filter { (n, k) -> attached[n]?.let { it != k } == true }.keys
+        val d = diff(want.keys, attached.keys)
+        return Diff((d.attach + changed).distinct(), (d.detach + changed).distinct())
+    }
 }
 
 /** Opens (lazily) and drops the replica databases. Same key, schema and triggers as the own database. */

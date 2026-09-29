@@ -49,6 +49,15 @@ class ReplicaTest {
         assertEquals(ReplicaPlan.Diff(emptyList(), emptyList()), ReplicaPlan.diff(listOf("p-a"), listOf("p-a")))
     }
 
+    @Test fun aChannelWhoseFamilyKeyChangedIsDetachedAndAttachedAgainWithTheNewKey_B78() {
+        // Kamala wiped and restored: her family key is new, the channel p-a is still attached with the old one
+        val d = ReplicaPlan.diffKeys(mapOf("p-a" to "newKey", "p-c" to "k2"), mapOf("p-a" to "oldKey", "p-c" to "k2", "p-old" to "x"))
+        assertEquals(listOf("p-a"), d.attach)
+        assertEquals(listOf("p-old", "p-a"), d.detach)
+        assertEquals(ReplicaPlan.Diff(emptyList(), emptyList()), ReplicaPlan.diffKeys(mapOf("p-a" to "k"), mapOf("p-a" to "k")))
+        assertEquals(ReplicaPlan.Diff(listOf("p-n"), emptyList()), ReplicaPlan.diffKeys(mapOf("p-n" to "k"), emptyMap()))
+    }
+
     @Test fun unpairDeletesTheReplicaAndItsSideFilesAndNothingElse() {
         val dir = java.nio.file.Files.createTempDirectory("dbs").toFile().also { it.deleteOnExit() }
         val own = File(dir, "medlog.db").also { it.writeText("own") }
@@ -83,7 +92,7 @@ class ReplicaTest {
     // ───────── both directions over real SQLite ─────────
 
     private fun schema(): org.json.JSONArray {
-        val f = listOf("schemas", "app/schemas").map { File("$it/com.suryaprakash.medlog.data.MedDb/4.json") }.first { it.exists() }
+        val f = listOf("schemas", "app/schemas").map { File("$it/com.suryaprakash.medlog.data.MedDb/5.json") }.first { it.exists() }
         return JSONObject(f.readText()).getJSONObject("database").getJSONArray("entities")
     }
 

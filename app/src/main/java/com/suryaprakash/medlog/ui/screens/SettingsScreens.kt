@@ -41,6 +41,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Backup
 import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.editPerson
+import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.data.saveCarePlan
 import com.suryaprakash.medlog.help.FallService
 import com.suryaprakash.medlog.help.WhatsAppCallService
@@ -81,11 +83,12 @@ fun SettingsScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     var section by remember { mutableStateOf<String?>(null) }
     var profile by remember { mutableStateOf(Profile()) }
+    var opened by remember { mutableStateOf(Profile()) }   // the profile as the page last loaded it: Save writes only what differs from this
     var pinText by remember { mutableStateOf("") }
     var locked by remember { mutableStateOf(s.helperPin.isNotBlank() && System.currentTimeMillis() > unlockedUntil) }
-    LaunchedEffect(Unit) { profile = app.repo.profile() }
+    LaunchedEffect(Unit) { profile = app.repo.profile(); opened = profile }
     val pv by app.db.profile().flow().collectAsState(null)
-    LaunchedEffect(pv) { if (section == null) pv?.let { profile = it } }   // the person's profile changed on another phone
+    LaunchedEffect(pv) { if (section == null) pv?.let { profile = it; opened = it } }   // the person's profile changed on another phone
 
     if (locked) {
         Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }, onBack = { nav.back() }) {
@@ -111,13 +114,13 @@ fun SettingsScreen(nav: Nav) {
             BigField("Illnesses", profile.conditions, { profile = profile.copy(conditions = it) }, lines = 2)
             BigField("Allergies", profile.allergies, { profile = profile.copy(allergies = it) }, lines = 2)
             Toggle("I take a blood thinner", profile.onBloodThinner) { profile = profile.copy(onBloodThinner = it) }
-            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
+            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.repo.updateProfile { fresh -> profile.onto(opened, fresh) }; section = null } })
         }
         "reminders" -> Screen("Medicine reminders", "How reminders work.", onHome = { nav.home() }, onBack = { section = null }) {
             Body("Remind again after", bold = true)
-            run { val o = listOf(5, 10, 15); com.suryaprakash.medlog.ui.Segmented(o.map { "$it min" }, o.indexOf(s.snoozeMinutes)) { i -> app.settings.update { it.copy(snoozeMinutes = o[i]) } } }
+            run { val o = listOf(5, 10, 15); com.suryaprakash.medlog.ui.Segmented(o.map { "$it min" }, o.indexOf(s.snoozeMinutes)) { i -> app.editPerson { it.copy(snoozeMinutes = o[i]) } } }
             Body("Tell my helpers if not taken after", bold = true)
-            run { val o = listOf(20, 30, 45, 60); com.suryaprakash.medlog.ui.Segmented(o.map { "$it min" }, o.indexOf(s.escalateMinutes)) { i -> app.settings.update { it.copy(escalateMinutes = o[i]) } } }
+            run { val o = listOf(20, 30, 45, 60); com.suryaprakash.medlog.ui.Segmented(o.map { "$it min" }, o.indexOf(s.escalateMinutes)) { i -> app.editPerson { it.copy(escalateMinutes = o[i]) } } }
             Hint("Important medicines: after ${s.escalateCriticalMinutes} minutes.")
             Title("Google Calendar")
             CalendarPicker()
@@ -129,20 +132,20 @@ fun SettingsScreen(nav: Nav) {
             if (mt) BigButton("Open Meeting Timer", tone = Tone.SECONDARY, onClick = { CalendarSync.openMeetingTimer(ctx) })
         }
         "care" -> Screen("Looking after you", "Morning check-in, fall detection and more.", onHome = { nav.home() }, onBack = { section = null }) {
-            Toggle("Morning check-in", s.checkInEnabled, "Asks how you are each morning. If you don't answer in 2 hours, your helpers are told.") { on -> app.settings.update { it.copy(checkInEnabled = on) }; scope.launch { Scheduler.reschedule(ctx) } }
-            if (s.checkInEnabled) run { val o = listOf("08:00", "09:00", "10:00", "11:00"); com.suryaprakash.medlog.ui.Segmented(o, o.indexOf(s.checkInTime)) { i -> app.settings.update { it.copy(checkInTime = o[i]) }; scope.launch { Scheduler.reschedule(ctx) } } }
+            Toggle("Morning check-in", s.checkInEnabled, "Asks how you are each morning. If you don't answer in 2 hours, your helpers are told.") { on -> app.editPerson { it.copy(checkInEnabled = on) }; scope.launch { Scheduler.reschedule(ctx) } }
+            if (s.checkInEnabled) run { val o = listOf("08:00", "09:00", "10:00", "11:00"); com.suryaprakash.medlog.ui.Segmented(o, o.indexOf(s.checkInTime)) { i -> app.editPerson { it.copy(checkInTime = o[i]) }; scope.launch { Scheduler.reschedule(ctx) } } }
             Toggle("Fall detection", s.fallDetection, "Asks \"Did you fall?\" after a hard fall, then starts SOS if you don't answer. Uses more battery. Can be wrong.") { on -> app.settings.update { it.copy(fallDetection = on) }; FallService.sync(ctx) }
             Toggle("Sunday summary", s.weeklySummary, "A short spoken summary of your week.") { on -> app.settings.update { it.copy(weeklySummary = on) } }
             Toggle("Always-there buttons", s.persistentNotification, "Tell and Help buttons in your notifications, even on the lock screen.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
-            Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.settings.update { it.copy(diabetic = on) } }
+            Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.editPerson { it.copy(diabetic = on) } }
             Body("Glasses of water a day", bold = true)
-            run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
+            run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it" }, o.indexOf(s.waterGoal)) { i -> app.editPerson { it.copy(waterGoal = o[i]) } } }
         }
         "sos" -> Screen("SOS", "What happens when you press SOS.", onHome = { nav.home() }, onBack = { section = null }) {
             Card { Body("When you press SOS: a message with where you are goes to your helpers, their MedLog phones ring (nearby or far away), then MedLog calls each helper in turn, then ${s.emergencyNumber}.") }
-            BigField("Emergency number", s.emergencyNumber, { v -> app.settings.update { it.copy(emergencyNumber = v.filter { c -> c.isDigit() }.take(4)) } }, keyboard = KeyboardType.Phone, hint = "India: 108 ambulance, 112 all emergencies")
+            BigField("Emergency number", s.emergencyNumber, { v -> app.editPerson { it.copy(emergencyNumber = v.filter { c -> c.isDigit() }.take(4)) } }, keyboard = KeyboardType.Phone, hint = "India: 108 ambulance, 112 all emergencies")
             Body("Seconds before SOS starts", bold = true)
-            run { val o = listOf(5, 10, 15); com.suryaprakash.medlog.ui.Segmented(o.map { "$it sec" }, o.indexOf(s.sosCountdown)) { i -> app.settings.update { it.copy(sosCountdown = o[i]) } } }
+            run { val o = listOf(5, 10, 15); com.suryaprakash.medlog.ui.Segmented(o.map { "$it sec" }, o.indexOf(s.sosCountdown)) { i -> app.editPerson { it.copy(sosCountdown = o[i]) } } }
             Title("Helper phones far away")
             Toggle("Reach helper phones over the internet", s.internetLink, "When a helper is out of Bluetooth range, alerts go through the internet. They are locked so only their phone can read them. Your notes never go.") { on -> app.settings.update { it.copy(internetLink = on) } }
             if (s.internetLink) {

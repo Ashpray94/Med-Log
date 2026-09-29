@@ -203,7 +203,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         when (a.id) {
             Interview.MORE.id -> {
                 if (value == true) { toldMore = true; problem?.let { p -> queue.addAll(Interview.extended(cat, p, facts)) } }
-                else noteId?.let { FollowUp.schedule(ctx, it) }
+                else noteId?.let { app.scope.launch { FollowUp.schedule(ctx, it) } }
             }
             Interview.TOOK_MED.id -> {
                 facts[a.field] = Fact(value, Source.ASKED)

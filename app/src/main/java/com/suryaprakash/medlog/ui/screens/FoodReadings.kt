@@ -65,6 +65,7 @@ import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.Triage
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.editPerson
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.nlu.Reading
@@ -173,12 +174,12 @@ fun FoodScreen(nav: Nav) {
             }
         }
     }
-    if (goalSheet) WaterGoalSheet(s.waterGoal, onDone = { g -> app.settings.update { it.copy(waterGoal = g) }; goalSheet = false }, onDismiss = { goalSheet = false })
+    if (goalSheet) WaterGoalSheet(s.waterGoal, onDone = { g -> app.editPerson { it.copy(waterGoal = g) }; goalSheet = false }, onDismiss = { goalSheet = false })
     feedMenu?.let { m ->
         FeedMenu(m.name, onDelete = {
             feedMenu = null
             scope.launch {
-                app.db.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
+                app.repo.updateMedicine(m.id) { it.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped") }
                 app.db.doses().dropFuture(m.id, System.currentTimeMillis())
                 com.suryaprakash.medlog.meds.Scheduler.stopMedicine(ctx, m.copy(active = false), app.db)
             }
@@ -315,10 +316,10 @@ fun FeedNewScreen(nav: Nav) {
         actions = {
             BigButton("Save feed", enabled = ok, onClick = {
                 scope.launch {
-                    val id = app.db.medicines().insert(com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed", amount = "$ml ml", times = times.joinToString(","),
-                        purpose = if (tube == 1) "Feed by tube" else "Feed by mouth", critical = tube == 1))
-                    app.settings.putString("feed_info", com.suryaprakash.medlog.nutrition.Feeds.infoWith(app.settings.getString("feed_info"), id,
-                        com.suryaprakash.medlog.nutrition.Feeds.Info(parts.toList(), tube == 1)))
+                    // the contents are a column of the medicine row, so they reach every phone that holds the feed
+                    app.db.medicines().insert(com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed", amount = "$ml ml", times = times.joinToString(","),
+                        purpose = if (tube == 1) "Feed by tube" else "Feed by mouth", critical = tube == 1,
+                        feedInfo = com.suryaprakash.medlog.nutrition.Feeds.toJson(com.suryaprakash.medlog.nutrition.Feeds.Info(parts.toList(), tube == 1))))
                     com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
                     nav.back()
                 }

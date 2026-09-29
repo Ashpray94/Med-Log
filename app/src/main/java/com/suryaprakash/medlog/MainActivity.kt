@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import com.suryaprakash.medlog.data.withPerson
 import com.suryaprakash.medlog.help.Sos
 import com.suryaprakash.medlog.ui.MedTheme
 import com.suryaprakash.medlog.ui.Nav
@@ -58,8 +59,20 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             val settings by medlog.settings.flow.collectAsState()
-            MedTheme(settings) { App(nav) }
+            MedTheme(shownSettings(settings)) { App(nav) }
         }
+    }
+
+    /**
+     * The settings the screens read. While a helper looks at a person's replica, what describes the PERSON (water goal, emergency number,
+     * check-in ...) is the replica's, not the helper's own; everything about this phone stays the helper's.
+     */
+    @Composable
+    private fun shownSettings(own: com.suryaprakash.medlog.data.Settings): com.suryaprakash.medlog.data.Settings {
+        val viewed by medlog.viewing.state.collectAsState()
+        val v = viewed ?: return own
+        val p by medlog.replicas.db(v.pairId).profile().flow().collectAsState(null)
+        return own.withPerson(p, unset = com.suryaprakash.medlog.data.Settings())
     }
 
     private fun rootRoute(): Route {

@@ -24,12 +24,61 @@ data class Version(val at: Long, val by: String, val origin: String, val oseq: L
     }
 }
 
-/** One changed row, as it travels. A delete has [del] = true and no [row]. Foreign keys inside [row] are uids. */
+/**
+ * One changed row, as it travels. A delete has [del] = true and no [row]. Foreign keys inside [row] are uids.
+ * Every column has its own version (per-column last write wins, see [Merge]): the op's own version is the version of the columns not
+ * listed in [cv]; [cv] holds the others (a row edited twice by two phones has columns of different ages). A peer that sends no [cv]
+ * (an older app) simply gives every column the op's version.
+ */
 data class Op(
     val tbl: String, val uid: String, val origin: String, val oseq: Long,
     val at: Long, val by: String, val del: Boolean, val row: JSONObject?,
+    val cv: Map<String, Version> = emptyMap(),
 ) {
     val version: Version get() = Version(at, by, origin, oseq, del)
+    /** The version of column [c] (its wire name) in this op. */
+    fun colVersion(c: String): Version = cv[c] ?: version.copy(del = false)
+    /** The newest version of anything in this op: what the row's own version becomes when the op is merged. */
+    val top: Version get() = if (del) version else cv.values.fold(version) { a, b -> if (b > a) b else a }
+}
+
+/**
+ * The merge rule, shared by [InMemorySyncStore] and [SqlSyncStore] so both do the same.
+ * A live row is merged column by column: a column of the op is taken when its version is greater than the held column's. The row's own
+ * version is the newest of all its columns' (and of its delete). A delete wins only when it is newer than every column (that is, than the
+ * row's version); an edit newer than a delete brings the row back with the op's columns.
+ * Known limit: a delete D, an edit X older than D and a stale copy E newer than D can arrive in different orders on different phones; the
+ * phones then can differ in the columns X and E both changed (the deleted row's column values are not kept, only its tombstone).
+ */
+object Merge {
+    /** [delete]: remove the row. [create]: the row is new (or was deleted): write every column. Else write the [take] columns. [rowVersion] is the row's new version. */
+    class Plan(val delete: Boolean, val create: Boolean, val take: List<String>, val rowVersion: Version)
+
+    /** [cols] are the wire names of the columns present in the op's row. Null = the op changes nothing here. */
+    fun plan(cur: Version?, curCols: Map<String, Version>, o: Op, cols: List<String>): Plan? {
+        if (o.del) return if (cur == null || o.version > cur) Plan(true, false, emptyList(), o.version) else null
+        val top = o.top
+        if (cur == null || cur.del) return if (cur == null || top > cur) Plan(false, true, cols, top) else null
+        val held = cur.copy(del = false)
+        val take = cols.filter { c -> o.colVersion(c) > (curCols[c] ?: held) }
+        val nv = if (top > cur) top else cur
+        return if (take.isEmpty() && nv == cur) null else Plan(false, false, take, nv)
+    }
+
+    /**
+     * The ops a phone sends for one row: for each origin that has something newer than [have] in the row (the row's own version or a
+     * column's), one op numbered with that origin's highest number there, carrying the whole row and every column's version. So "every
+     * current change of origin X above n" stays true also for a row whose columns come from several phones.
+     */
+    fun opsFor(tbl: String, uid: String, rv: Version, cols: Map<String, Version>, row: JSONObject?, have: Map<String, Long>): List<Op> {
+        if (rv.del) return if (rv.oseq > (have[rv.origin] ?: 0L)) listOf(Op(tbl, uid, rv.origin, rv.oseq, rv.at, rv.by, true, null)) else emptyList()
+        if (row == null) return emptyList()
+        val best = HashMap<String, Version>()
+        for (v in cols.values + rv) if (v.oseq > (have[v.origin] ?: 0L)) best.merge(v.origin, v) { a, b -> if (b.oseq > a.oseq) b else a }
+        return best.values.sortedBy { it.oseq }.map { v ->
+            Op(tbl, uid, v.origin, v.oseq, v.at, v.by, false, JSONObject(row.toString()), cols.filterValues { it != v.copy(del = false) })
+        }
+    }
 }
 
 /** What happened to a batch: written, ignored because the phone already had the same or a newer version, or waiting for a parent row. */

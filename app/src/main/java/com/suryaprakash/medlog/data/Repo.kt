@@ -8,12 +8,14 @@ import com.suryaprakash.medlog.clinical.PersonContext
 import com.suryaprakash.medlog.clinical.RecentNote
 import com.suryaprakash.medlog.clinical.Told
 import com.suryaprakash.medlog.clinical.Triage
+import com.suryaprakash.medlog.meds.Pills
 import com.suryaprakash.medlog.nlu.Fact
 import com.suryaprakash.medlog.nlu.Mention
 import com.suryaprakash.medlog.nlu.Reading
 import com.suryaprakash.medlog.nlu.Source
 import com.suryaprakash.medlog.nlu.factsFromJson
 import com.suryaprakash.medlog.nlu.factsToJson
+import androidx.room.withTransaction
 import org.json.JSONObject
 import java.time.LocalDate
 import java.time.Period
@@ -40,6 +42,30 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     // ───────── person ─────────
 
     suspend fun profile(): Profile = db.profile().get() ?: Profile()
+
+    /**
+     * Changes the profile: [f] gets the freshest row, read inside the write, and returns it changed. Use it from every screen so a
+     * screen writes only what it edits (a helper's change on another phone that arrived while the screen was open is not undone by
+     * a Save of an old copy). Written in place, so only columns that really changed are shared as changed.
+     */
+    suspend fun updateProfile(f: (Profile) -> Profile) = db.withTransaction {
+        val cur = db.profile().get()
+        if (cur == null) db.profile().put(f(Profile())) else f(cur).let { if (it != cur) db.profile().update(it) }
+    }
+
+    /** The same for the care plan (limits, doctors, emergencies, the person's own settings...): [f] gets the freshest plan. */
+    suspend fun updatePlan(f: (CarePlan) -> CarePlan) = updateProfile { p -> p.copy(plan = f(CarePlan.parse(p.plan)).toJson()) }
+
+    /** The same for a medicine: [f] gets the freshest row (nothing is written when there is none). Use [Medicine.onto] to carry over only what a page changed. */
+    suspend fun updateMedicine(id: Long, f: (Medicine) -> Medicine) = db.withTransaction {
+        db.medicines().get(id)?.let { cur -> f(cur).let { if (it != cur) db.medicines().update(it) } }
+    }
+
+    /** Pills left of every medicine that has a count (see meds.Pills), by medicine id. */
+    suspend fun pillsLeft(): Map<Long, Double> {
+        val taken = db.doses().takenSincePillsAt().associate { it.medicineId to it.n }
+        return db.medicines().all().mapNotNull { m -> Pills.left(m, taken[m.id] ?: 0)?.let { m.id to it } }.toMap()
+    }
 
     suspend fun person(): PersonContext {
         val p = profile()

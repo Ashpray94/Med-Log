@@ -87,9 +87,10 @@ object Care {
             mark(w)
             notify(ctx, 8002, "Your week", "Tap to hear how your week went", "medlog://reports?speak=1")
         }
-        for ((noteId, t) in FollowUp.pending(ctx)) if (now >= t) {
-            FollowUp.remove(ctx, noteId)
-            val n = app.ownDb.notes().get(noteId) ?: continue
+        for ((uid, t) in FollowUp.pending(ctx)) if (now >= t) {
+            FollowUp.remove(app.ownRepo, uid)
+            val n = app.ownDb.notes().byUid(uid) ?: continue
+            val noteId = n.id
             if (n.deletedAt != null) continue
             val label = app.catalogue.problem(n.problemId)?.label?.lowercase() ?: "how you feel"
             notify(ctx, 8400 + (noteId % 500).toInt(), "Can you tell me a bit more?", "A few more details about your $label help your doctor. Tap when you're ready.", "medlog://tell?note=$noteId")
@@ -123,18 +124,32 @@ object Care {
     @Suppress("unused") private val keepDay = DAY
 }
 
-/** "Tell me more later": one gentle reminder, 30 minutes after a short answer (plan: don't pester). */
+/**
+ * "Tell me more later": one gentle reminder, 30 minutes after a short answer (plan: don't pester). The pending reminders are a column of the
+ * person's profile ("noteUid:dueAt;..."), so a note told on a helper's replica also reminds the person, on her own phone.
+ */
 object FollowUp {
     const val DELAY = 30 * 60_000L
-    fun pending(ctx: Context): List<Pair<Long, Long>> = ctx.medlog.settings.getString("followups").orEmpty().split(";").mapNotNull {
-        val p = it.split(":"); if (p.size == 2) (p[0].toLongOrNull() ?: return@mapNotNull null) to (p[1].toLongOrNull() ?: return@mapNotNull null) else null
+    private fun parse(s: String?): List<Pair<String, Long>> = s.orEmpty().split(";").mapNotNull {
+        val p = it.split(":"); if (p.size == 2) p[0] to (p[1].toLongOrNull() ?: return@mapNotNull null) else null
     }
-    fun schedule(ctx: Context, noteId: Long) {
-        val list = pending(ctx).filter { it.first != noteId } + (noteId to System.currentTimeMillis() + DELAY)
-        ctx.medlog.settings.putString("followups", list.joinToString(";") { "${it.first}:${it.second}" })
+    private fun join(l: List<Pair<String, Long>>) = l.joinToString(";") { "${it.first}:${it.second}" }.takeIf { it.isNotEmpty() }
+
+    /** What is pending for the person whose phone this is: (note uid, due time). */
+    suspend fun pending(ctx: Context): List<Pair<String, Long>> = parse(ctx.medlog.ownRepo.profile().followups)
+
+    /** Asks for a reminder about note [noteId] of the data on screen (this phone's own, or the replica's). */
+    suspend fun schedule(ctx: Context, noteId: Long) {
+        val app = ctx.medlog
+        val uid = app.db.notes().get(noteId)?.uid?.takeIf { it.isNotEmpty() } ?: return
+        app.repo.updateProfile { p -> p.copy(followups = join(parse(p.followups).filter { it.first != uid } + (uid to System.currentTimeMillis() + DELAY))) }
     }
-    fun remove(ctx: Context, noteId: Long) {
-        ctx.medlog.settings.putString("followups", pending(ctx).filter { it.first != noteId }.joinToString(";") { "${it.first}:${it.second}" })
+    suspend fun remove(ctx: Context, noteId: Long) {
+        val app = ctx.medlog
+        app.db.notes().get(noteId)?.uid?.takeIf { it.isNotEmpty() }?.let { uid -> remove(app.repo, uid) }
+    }
+    suspend fun remove(repo: com.suryaprakash.medlog.data.Repo, uid: String) {
+        repo.updateProfile { p -> p.copy(followups = join(parse(p.followups).filter { it.first != uid })) }
     }
 }
 

@@ -46,6 +46,11 @@ open class SqlSyncStore(private val db: SqlDb) : SyncStore {
         db.exec("INSERT INTO sync_have(origin, seq) VALUES(?, ?) ON CONFLICT(origin) DO UPDATE SET seq = excluded.seq WHERE excluded.seq > sync_have.seq", listOf(origin, seq))
     }
 
+    /** The version of every column of a live row, by wire name (sync_cols). */
+    private fun colVersions(tbl: String, uid: String): Map<String, Version> =
+        db.query("SELECT col, origin, oseq, at, `by` FROM sync_cols WHERE tbl = ? AND uid = ?", listOf(tbl, uid))
+            .associate { it["col"] as String to Version(it["at"] as Long, it["by"] as String, it["origin"] as String, it["oseq"] as Long, false) }
+
     override fun changedSince(have: Map<String, Long>): List<Op> {
         val args = ArrayList<Any?>()
         val where = if (have.isEmpty()) "1" else {
@@ -53,16 +58,17 @@ open class SqlSyncStore(private val db: SqlDb) : SyncStore {
             args.addAll(have.keys)
             "$per OR origin NOT IN (${have.keys.joinToString(",") { "?" }})"
         }
-        val rows = db.query("SELECT tbl, uid, origin, oseq, at, `by`, del FROM sync_rows WHERE $where ORDER BY oseq, tbl, uid", args)
+        // a row is sent when its own version or any of its columns' versions is newer than what the asker has
+        val keys = db.query("SELECT tbl, uid FROM sync_rows WHERE $where UNION SELECT tbl, uid FROM sync_cols WHERE $where", args + args)
         val out = ArrayList<Op>()
-        for (r in rows) {
-            val tbl = r["tbl"] as String; val uid = r["uid"] as String
-            val v = version(r)
-            if (v.del) { out += Op(tbl, uid, v.origin, v.oseq, v.at, v.by, true, null); continue }
+        for (k in keys) {
+            val tbl = k["tbl"] as String; val uid = k["uid"] as String
+            val rv = version(tbl, uid) ?: continue
+            if (rv.del) { out += Merge.opsFor(tbl, uid, rv, emptyMap(), null, have); continue }
             val row = readRow(tbl, uid) ?: continue // a live version whose row is gone (should not happen): nothing to send
-            out += Op(tbl, uid, v.origin, v.oseq, v.at, v.by, false, row)
+            out += Merge.opsFor(tbl, uid, rv, colVersions(tbl, uid), row, have)
         }
-        return out
+        return out.sortedWith(compareBy({ it.oseq }, { it.tbl }, { it.uid }))
     }
 
     /** The shared columns of one row as JSON, with the foreign key as a uid; null if there is no such row. */
@@ -87,34 +93,45 @@ open class SqlSyncStore(private val db: SqlDb) : SyncStore {
             var applied = 0; var skipped = 0
             val tables = LinkedHashSet<String>(); val written = ArrayList<Op>()
             for (o in ops) {
-                raiseClock(o.at)
+                raiseClock(o.top.at)
                 val spec = SyncSql.spec(o.tbl)
+                if (spec == null) { skipped++; continue }
                 val cur = version(o.tbl, o.uid)
-                if (spec == null || (cur != null && !(o.version > cur)) || !write(spec, o)) { skipped++; continue }
+                val names = o.row?.let { r -> spec.keys.filter { r.has(it) } }.orEmpty()
+                val plan = Merge.plan(cur, if (cur != null && !cur.del) colVersions(o.tbl, o.uid) else emptyMap(), o, names)
+                if (plan == null || !write(spec, o, plan)) { skipped++; continue }
                 db.exec("INSERT OR REPLACE INTO sync_rows(tbl, uid, origin, oseq, at, `by`, del) VALUES(?, ?, ?, ?, ?, ?, ?)",
-                    listOf(o.tbl, o.uid, o.origin, o.oseq, o.at, o.by, if (o.del) 1L else 0L))
-                applied++; tables += o.tbl; written += o
+                    listOf(o.tbl, o.uid, plan.rowVersion.origin, plan.rowVersion.oseq, plan.rowVersion.at, plan.rowVersion.by, if (plan.delete) 1L else 0L))
+                applied++; tables += o.tbl; written += if (o.del) o else o.copy(row = readRow(o.tbl, o.uid) ?: o.row)
             }
             db.exec("UPDATE sync_state SET v = '0' WHERE k = 'applying'")
             Applied(applied, skipped, 0, tables, written)
         }
     }
 
-    /** The highest edit time seen from any phone; a local edit is stamped above it (see [SyncSql.STAMP]), so a phone whose clock ran ahead can't keep winning. */
+    /**
+     * The highest edit time seen from any phone; a local edit is stamped above it (see [SyncSql.STAMP]), so a phone whose clock ran
+     * ahead can't keep winning. (Not capped: a cap, e.g. now + 10 min, would let a phone that is an hour ahead keep winning over edits
+     * made after receiving its change, which is what this clock is for.)
+     */
     private fun raiseClock(at: Long) =
         db.exec("INSERT INTO sync_state(k, v) VALUES('hlc', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v WHERE CAST(excluded.v AS INTEGER) > CAST(sync_state.v AS INTEGER)", listOf(at.toString()))
 
-    /** Writes one op into its table. False = could not (the row's parent is missing, or the dose clashes with another), nothing written. */
-    private fun write(s: TableSpec, o: Op): Boolean {
-        if (o.del) {
+    /** Writes what [plan] says into the op's table and column versions. False = could not (the row's parent is missing, or the dose clashes with another), nothing written. */
+    private fun write(s: TableSpec, o: Op, plan: Merge.Plan): Boolean {
+        if (plan.delete) {
             if (s.hasUid) db.exec("DELETE FROM `${s.name}` WHERE uid = ?", listOf(o.uid)) // the profile is never deleted
+            db.exec("DELETE FROM sync_cols WHERE tbl = ? AND uid = ?", listOf(o.tbl, o.uid))
             return true
         }
         val row = o.row ?: return false
         val cols = ArrayList<String>(); val vals = ArrayList<Any?>()
-        for (c in s.cols) { cols += c.n; vals += arg(c, row) }
         val fk = s.fk
-        if (fk != null) {
+        val take = if (plan.create) s.keys else plan.take // a new row also gets a default for a column the sender left out
+        for (k in take) {
+            val c = s.cols.firstOrNull { it.n == k }
+            if (c != null) { cols += c.n; vals += arg(c, row); continue }
+            if (fk == null || k != fk.json) continue
             val pu = if (row.isNull(fk.json)) "" else row.optString(fk.json, "")
             val local = if (pu.isEmpty()) null else db.query("SELECT id FROM `${fk.parent}` WHERE uid = ?", listOf(pu)).firstOrNull()?.get("id")
             // a dose without its medicine cannot be kept; a note whose group is gone just loses the link
@@ -123,20 +140,29 @@ open class SqlSyncStore(private val db: SqlDb) : SyncStore {
         }
         val id: Long? = if (s.hasUid) db.query("SELECT id FROM `${s.name}` WHERE uid = ?", listOf(o.uid)).firstOrNull()?.get("id") as Long?
         else db.query("SELECT id FROM `${s.name}` WHERE id = 1").firstOrNull()?.get("id") as Long?
-        if (s.name == "doses") { // the unique index on (medicineId, scheduledAt): a different row already holds that slot
-            val med = vals[cols.indexOf("medicineId")]; val at = vals[cols.indexOf("scheduledAt")]
+        if (s.name == "doses" && ("medicineId" in cols || "scheduledAt" in cols || id == null)) { // the unique index on (medicineId, scheduledAt): a different row already holds that slot
+            val held = if (id == null) null else db.query("SELECT medicineId, scheduledAt FROM doses WHERE id = ?", listOf(id)).firstOrNull()
+            val med = if ("medicineId" in cols) vals[cols.indexOf("medicineId")] else held?.get("medicineId")
+            val at = if ("scheduledAt" in cols) vals[cols.indexOf("scheduledAt")] else held?.get("scheduledAt")
             val clash = db.query("SELECT id FROM doses WHERE medicineId = ? AND scheduledAt = ? AND uid <> ?", listOf(med, at, o.uid)).firstOrNull()
             if (clash != null) return false
         }
+        val rv = plan.rowVersion
         if (id != null) {
-            val set = cols.joinToString(", ") { "`$it` = ?" } + if (s.hasUid) ", updatedAt = ?, updatedBy = ?" else ""
-            val args = ArrayList(vals); if (s.hasUid) { args += o.at; args += o.by }
-            args += id
-            db.exec("UPDATE `${s.name}` SET $set WHERE id = ?", args)
+            val set = (cols.map { "`$it` = ?" } + if (s.hasUid) listOf("updatedAt = ?", "updatedBy = ?") else emptyList()).joinToString(", ")
+            if (set.isNotEmpty()) {
+                val args = ArrayList(vals); if (s.hasUid) { args += rv.at; args += rv.by }
+                args += id
+                db.exec("UPDATE `${s.name}` SET $set WHERE id = ?", args)
+            }
         } else {
             val names = ArrayList(cols); val args = ArrayList(vals)
-            if (s.hasUid) { names += listOf("uid", "updatedAt", "updatedBy"); args.addAll(listOf(o.uid, o.at, o.by)) } else { names += "id"; args += 1L }
+            if (s.hasUid) { names += listOf("uid", "updatedAt", "updatedBy"); args.addAll(listOf(o.uid, rv.at, rv.by)) } else { names += "id"; args += 1L }
             db.exec("INSERT INTO `${s.name}`(${names.joinToString(", ") { "`$it`" }}) VALUES(${names.joinToString(", ") { "?" }})", args)
+        }
+        for (k in take) {
+            val v = o.colVersion(k)
+            db.exec("INSERT OR REPLACE INTO sync_cols(tbl, uid, col, at, `by`, origin, oseq) VALUES(?, ?, ?, ?, ?, ?, ?)", listOf(o.tbl, o.uid, k, v.at, v.by, v.origin, v.oseq))
         }
         return true
     }

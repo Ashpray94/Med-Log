@@ -125,7 +125,5 @@ data class CarePlan(
 
 /** Reads and writes the plan inside the profile. */
 suspend fun Repo.carePlan(): CarePlan = CarePlan.parse(profile().plan)
-suspend fun Repo.saveCarePlan(f: (CarePlan) -> CarePlan) {
-    val p = profile()
-    db.profile().put(p.copy(plan = f(CarePlan.parse(p.plan)).toJson()))
-}
+/** Changes the plan on the freshest row, inside the write (see [Repo.updatePlan]). */
+suspend fun Repo.saveCarePlan(f: (CarePlan) -> CarePlan) = updatePlan(f)

@@ -5,7 +5,7 @@ import org.json.JSONObject
 
 /**
  * The messages that go over the relay:
- *   {"kind":"ops","from":dev,"ops":[{"t":tbl,"u":uid,"o":origin,"s":oseq,"a":at,"b":by,"d":1?,"r":{row}?}, ...]}
+ *   {"kind":"ops","from":dev,"ops":[{"t":tbl,"u":uid,"o":origin,"s":oseq,"a":at,"b":by,"d":1?,"r":{row}?,"c":[[at,by,origin,oseq,[col,...]],...]?}, ...]}
  *   {"kind":"hello","from":dev,"have":{origin:oseq, ...}}
  */
 object WireJson {
@@ -15,6 +15,12 @@ object WireJson {
         put("t", o.tbl); put("u", o.uid); put("o", o.origin); put("s", o.oseq); put("a", o.at); put("b", o.by)
         if (o.del) put("d", 1)
         if (!o.del && o.row != null) put("r", o.row)
+        if (!o.del && o.cv.isNotEmpty()) {
+            // columns grouped by version: [[at, by, origin, oseq, [col, ...]], ...]
+            val g = LinkedHashMap<Version, MutableList<String>>()
+            for ((c, v) in o.cv.toSortedMap()) g.getOrPut(v) { ArrayList() } += c
+            put("c", JSONArray().also { a -> g.forEach { (v, cs) -> a.put(JSONArray().put(v.at).put(v.by).put(v.origin).put(v.oseq).put(JSONArray(cs))) } })
+        }
     }
 
     fun readOp(j: JSONObject): Op? {
@@ -23,7 +29,15 @@ object WireJson {
         val del = j.optInt("d", 0) == 1
         val row = if (del) null else j.optJSONObject("r")
         if (!del && row == null) return null
-        return Op(tbl, uid, origin, j.getLong("s"), j.getLong("a"), j.optString("b"), del, row)
+        val cv = HashMap<String, Version>()
+        val groups = j.optJSONArray("c")
+        if (!del && groups != null) for (i in 0 until groups.length()) {
+            val g = groups.optJSONArray(i) ?: continue
+            val cs = g.optJSONArray(4) ?: continue
+            val v = Version(g.optLong(0), g.optString(1), g.optString(2), g.optLong(3), false)
+            for (k in 0 until cs.length()) cv[cs.getString(k)] = v
+        }
+        return Op(tbl, uid, origin, j.getLong("s"), j.getLong("a"), j.optString("b"), del, row, cv)
     }
 
     /**
