@@ -41,6 +41,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.Backup
 import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.data.saveCarePlan
 import com.suryaprakash.medlog.help.FallService
 import com.suryaprakash.medlog.help.WhatsAppCallService
@@ -81,11 +82,12 @@ fun SettingsScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     var section by remember { mutableStateOf<String?>(null) }
     var profile by remember { mutableStateOf(Profile()) }
+    var opened by remember { mutableStateOf(Profile()) }   // the profile as the page last loaded it: Save writes only what differs from this
     var pinText by remember { mutableStateOf("") }
     var locked by remember { mutableStateOf(s.helperPin.isNotBlank() && System.currentTimeMillis() > unlockedUntil) }
-    LaunchedEffect(Unit) { profile = app.repo.profile() }
+    LaunchedEffect(Unit) { profile = app.repo.profile(); opened = profile }
     val pv by app.db.profile().flow().collectAsState(null)
-    LaunchedEffect(pv) { if (section == null) pv?.let { profile = it } }   // the person's profile changed on another phone
+    LaunchedEffect(pv) { if (section == null) pv?.let { profile = it; opened = it } }   // the person's profile changed on another phone
 
     if (locked) {
         Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }, onBack = { nav.back() }) {
@@ -111,7 +113,7 @@ fun SettingsScreen(nav: Nav) {
             BigField("Illnesses", profile.conditions, { profile = profile.copy(conditions = it) }, lines = 2)
             BigField("Allergies", profile.allergies, { profile = profile.copy(allergies = it) }, lines = 2)
             Toggle("I take a blood thinner", profile.onBloodThinner) { profile = profile.copy(onBloodThinner = it) }
-            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
+            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.repo.updateProfile { fresh -> profile.onto(opened, fresh) }; section = null } })
         }
         "reminders" -> Screen("Medicine reminders", "How reminders work.", onHome = { nav.home() }, onBack = { section = null }) {
             Body("Remind again after", bold = true)

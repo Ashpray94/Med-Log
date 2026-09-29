@@ -88,6 +88,7 @@ import com.suryaprakash.medlog.clinical.Suggest
 import com.suryaprakash.medlog.data.CarePlan
 import com.suryaprakash.medlog.data.Helper
 import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.meds.Scheduler
 import com.suryaprakash.medlog.ui.BigButton
@@ -150,7 +151,11 @@ fun OnboardingScreen(nav: Nav) {
     LaunchedEffect(Unit) { if (profile == null) profile = app.repo.profile() }
     val pr = profile ?: Profile()
     val plan = CarePlan.parse(pr.plan)
-    fun save(p: Profile) { profile = p; scope.launch { app.db.profile().put(p) } }
+    // writes onto the freshest row only what this tap changed (Repo.updateProfile), never a whole old copy
+    fun save(p: Profile) {
+        val old = profile ?: Profile(); profile = p
+        scope.launch { app.repo.updateProfile { fresh -> p.onto(old, fresh).let { if (p.plan != old.plan) it.copy(plan = p.plan) else it } } }
+    }
     // read the latest answers at the moment of the tap, never a copy from when the page was drawn
     // (quick taps in a row used to overwrite each other)
     fun update(f: (Profile) -> Profile) = save(f(profile ?: Profile()))

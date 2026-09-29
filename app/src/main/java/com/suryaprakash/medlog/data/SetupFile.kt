@@ -51,12 +51,12 @@ object SetupFile {
         val o = JSONObject(ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().toString(Charsets.UTF_8) })
         require(o.optString("type") == TYPE) { "Not a MedLog setup file" }
         o.optJSONObject("profile")?.let { j ->
-            app.ownDb.profile().put(app.ownRepo.profile().copy(
+            app.ownRepo.updateProfile { it.copy(
                 name = j.optString("name"), dob = j.optString("dob"), sex = j.optString("sex"), bloodGroup = j.optString("bloodGroup"),
                 hospitalId = j.optString("hospitalId"), conditions = j.optString("conditions"), allergies = j.optString("allergies"),
                 doctorName = j.optString("doctorName"), doctorPhone = j.optString("doctorPhone"), onBloodThinner = j.optBoolean("onBloodThinner"),
                 notes = j.optString("notes"),
-            ))
+            ) }
         }
         o.optJSONObject("settings")?.let { j ->
             val values = HashMap<String, Any>()
