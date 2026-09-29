@@ -65,6 +65,7 @@ import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Level
 import com.suryaprakash.medlog.clinical.Triage
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.editPerson
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.nlu.Reading
@@ -173,7 +174,7 @@ fun FoodScreen(nav: Nav) {
             }
         }
     }
-    if (goalSheet) WaterGoalSheet(s.waterGoal, onDone = { g -> app.settings.update { it.copy(waterGoal = g) }; goalSheet = false }, onDismiss = { goalSheet = false })
+    if (goalSheet) WaterGoalSheet(s.waterGoal, onDone = { g -> app.editPerson { it.copy(waterGoal = g) }; goalSheet = false }, onDismiss = { goalSheet = false })
     feedMenu?.let { m ->
         FeedMenu(m.name, onDelete = {
             feedMenu = null

@@ -32,7 +32,10 @@ object SyncSql {
     private fun i(n: String, nullable: Boolean = false) = Col(n, K.I, nullable)
 
     val PROFILE = TableSpec("profile", listOf(t("name"), t("dob"), t("sex"), t("bloodGroup"), t("hospitalId"), t("conditions"), t("allergies"),
-        t("doctorName"), t("doctorPhone"), i("onBloodThinner"), t("notes"), t("plan")), hasUid = false)
+        t("doctorName"), t("doctorPhone"), i("onBloodThinner"), t("notes"), t("plan"),
+        i("waterGoal", true), i("diabetic", true), t("emergencyNumber", true), i("checkInEnabled", true), t("checkInTime", true), i("snoozeMinutes", true),
+        i("escalateMinutes", true), i("escalateCriticalMinutes", true), i("sosCountdown", true), Col("kcalTarget", K.R, true), Col("proteinTarget", K.R, true),
+        t("customFoods", true), t("followups", true)), hasUid = false)
     val HELPERS = TableSpec("helpers", listOf(t("name"), t("phone"), t("relation"), i("sos"), i("alerts"), i("canSeeNotes"), i("sortOrder")))
     val NOTES = TableSpec("notes", listOf(t("kind"), t("problemId", true), i("occurredAt"), i("createdAt"), t("transcript", true), t("details"),
         i("severity", true), i("count", true), t("triage"), t("triageReasons"), i("deletedAt", true), t("text")), Fk("groupUid", "groupId", "notes"))
@@ -183,14 +186,14 @@ object SyncSql {
 
     /**
      * Migration 4 -> 5: a version per column (sync_cols, filled from the rows' versions), the feed's contents and the pill count's baseline
-     * on the medicine. The baseline time of an existing count is the row's own edit time, the same on every phone, so the doses taken
+     * on the medicine, and the person's settings on the profile. The baseline time of an existing count is the row's own edit time, the same on every phone, so the doses taken
      * since then are what the count still has to subtract.
      */
     fun migration4to5(): List<String> = dropTriggers() + CREATE_TABLES + listOf(
         "ALTER TABLE `medicines` ADD COLUMN `pillsAt` INTEGER NOT NULL DEFAULT 0",
         "ALTER TABLE `medicines` ADD COLUMN `feedInfo` TEXT NOT NULL DEFAULT ''",
         "UPDATE `medicines` SET pillsAt = updatedAt WHERE pillsLeft IS NOT NULL",
-    ) + backfillCols() + triggers()
+    ) + PROFILE.cols.takeLast(13).map { c -> "ALTER TABLE `profile` ADD COLUMN `${c.n}` ${when (c.k) { K.I -> "INTEGER"; K.R -> "REAL"; K.T -> "TEXT" }}" } + backfillCols() + triggers()
 
     /** Every time the database opens: fill what is missing (a fresh install, or tables wiped) and make sure the triggers exist. */
     fun onOpen(): List<String> = seedState() + dropTriggers() + triggers()

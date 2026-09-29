@@ -32,6 +32,23 @@ data class Profile(
     val notes: String = "",
     /** The care plan from setup, as JSON ([CarePlan]): doctors, current symptoms, treatments, risks, emergencies. */
     @androidx.room.ColumnInfo(defaultValue = "") val plan: String = "",
+    // Settings that describe the PERSON, shared with every phone (database version 5), one column each so each merges on its own.
+    // null = not chosen yet: the phone's default applies. See data/PersonSettings.kt.
+    val waterGoal: Int? = null,
+    val diabetic: Boolean? = null,
+    val emergencyNumber: String? = null,
+    val checkInEnabled: Boolean? = null,
+    val checkInTime: String? = null,
+    val snoozeMinutes: Int? = null,
+    val escalateMinutes: Int? = null,
+    val escalateCriticalMinutes: Int? = null,
+    val sosCountdown: Int? = null,
+    val kcalTarget: Double? = null,
+    val proteinTarget: Double? = null,
+    /** foods the person added (JSON, see nutrition.Foods.customWith) */
+    val customFoods: String? = null,
+    /** pending "tell me more" reminders: "noteUid:dueAt;..." */
+    val followups: String? = null,
 )
 
 /** Family, neighbours, carers. */
@@ -249,6 +266,7 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND kind = :kind AND occurredAt >= :from ORDER BY occurredAt DESC") fun kindSinceFlow(kind: String, from: Long): Flow<List<Note>>
     @Query("SELECT * FROM notes WHERE deletedAt IS NOT NULL ORDER BY deletedAt DESC") fun removedFlow(): Flow<List<Note>>
     @Query("SELECT * FROM notes WHERE id = :id") suspend fun get(id: Long): Note?
+    @Query("SELECT * FROM notes WHERE uid = :uid") suspend fun byUid(uid: String): Note?
     @Query("SELECT * FROM notes WHERE id = :id") fun flow(id: Long): Flow<Note?>
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND (text LIKE '%' || :q || '%' OR transcript LIKE '%' || :q || '%') ORDER BY occurredAt DESC LIMIT 50") suspend fun search(q: String): List<Note>
     @Query("SELECT * FROM notes") suspend fun everything(): List<Note>

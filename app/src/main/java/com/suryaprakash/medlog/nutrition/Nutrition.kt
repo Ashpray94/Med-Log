@@ -55,8 +55,9 @@ object Nutrition {
         app.settings.putString("feed_info", null)
     }
 
-    fun targetKcal(ctx: Context) = ctx.medlog.settings.getString("kcal_target")?.toDoubleOrNull()
-    fun targetProtein(ctx: Context) = ctx.medlog.settings.getString("protein_target")?.toDoubleOrNull()
+    /** The doctor's targets of the person whose data is shown (they are in the shared profile). */
+    suspend fun targetKcal(ctx: Context) = ctx.medlog.repo.profile().kcalTarget
+    suspend fun targetProtein(ctx: Context) = ctx.medlog.repo.profile().proteinTarget
 
     private val dfmt = SimpleDateFormat("d MMMM", Locale.getDefault())
     private fun d(t: Long) = dfmt.format(Date(t))

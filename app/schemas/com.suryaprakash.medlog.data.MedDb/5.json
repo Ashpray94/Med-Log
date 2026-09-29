@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 5,
-    "identityHash": "1d88afc25723d6081843a61ab754b7df",
+    "identityHash": "ecb38142575f8367790560431d7d88c2",
     "entities": [
       {
         "tableName": "profile",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `dob` TEXT NOT NULL, `sex` TEXT NOT NULL, `bloodGroup` TEXT NOT NULL, `hospitalId` TEXT NOT NULL, `conditions` TEXT NOT NULL, `allergies` TEXT NOT NULL, `doctorName` TEXT NOT NULL, `doctorPhone` TEXT NOT NULL, `onBloodThinner` INTEGER NOT NULL, `notes` TEXT NOT NULL, `plan` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `name` TEXT NOT NULL, `dob` TEXT NOT NULL, `sex` TEXT NOT NULL, `bloodGroup` TEXT NOT NULL, `hospitalId` TEXT NOT NULL, `conditions` TEXT NOT NULL, `allergies` TEXT NOT NULL, `doctorName` TEXT NOT NULL, `doctorPhone` TEXT NOT NULL, `onBloodThinner` INTEGER NOT NULL, `notes` TEXT NOT NULL, `plan` TEXT NOT NULL DEFAULT '', `waterGoal` INTEGER, `diabetic` INTEGER, `emergencyNumber` TEXT, `checkInEnabled` INTEGER, `checkInTime` TEXT, `snoozeMinutes` INTEGER, `escalateMinutes` INTEGER, `escalateCriticalMinutes` INTEGER, `sosCountdown` INTEGER, `kcalTarget` REAL, `proteinTarget` REAL, `customFoods` TEXT, `followups` TEXT, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -86,6 +86,84 @@
             "affinity": "TEXT",
             "notNull": true,
             "defaultValue": "''"
+          },
+          {
+            "fieldPath": "waterGoal",
+            "columnName": "waterGoal",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "diabetic",
+            "columnName": "diabetic",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "emergencyNumber",
+            "columnName": "emergencyNumber",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "checkInEnabled",
+            "columnName": "checkInEnabled",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "checkInTime",
+            "columnName": "checkInTime",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "snoozeMinutes",
+            "columnName": "snoozeMinutes",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "escalateMinutes",
+            "columnName": "escalateMinutes",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "escalateCriticalMinutes",
+            "columnName": "escalateCriticalMinutes",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sosCountdown",
+            "columnName": "sosCountdown",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "kcalTarget",
+            "columnName": "kcalTarget",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "proteinTarget",
+            "columnName": "proteinTarget",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "customFoods",
+            "columnName": "customFoods",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "followups",
+            "columnName": "followups",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -1060,7 +1138,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '1d88afc25723d6081843a61ab754b7df')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ecb38142575f8367790560431d7d88c2')"
     ]
   }
 }

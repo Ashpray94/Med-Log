@@ -742,6 +742,32 @@ class PersonaSharingTest {
         same(f.kamala, ravi)
     }
 
+    // ───────── 12. settings that describe the person are columns of the profile ─────────
+
+    @Test fun s12_raviSetsKamalasWaterGoalAndTargetsOnHerReplica_andTheyReachHerPhone_whileSheChangesAnotherAtTheSameTime() {
+        val f = Fam(); val ravi = f.ravisPhonePairs()
+        pause(); xa(ravi.c, "UPDATE profile SET waterGoal = 10, kcalTarget = 1800.0, proteinTarget = 60.0, customFoods = '[{\"n\":\"Ragi ambali\"}]'")     // what editPerson writes on the replica
+        pause(); xa(f.kamala.c, "UPDATE profile SET sosCountdown = 15, checkInEnabled = 1, checkInTime = '09:00'")                                        // she, before hearing him
+        ravi.push(); f.kamala.push(); f.relay.pump()
+        same(f.kamala, ravi)
+        for (p in listOf(f.kamala, ravi)) {
+            val r = profileRow(p.c)
+            assertEquals(10L, r["waterGoal"]); assertEquals(1800.0, r["kcalTarget"]); assertEquals(60.0, r["proteinTarget"])
+            assertEquals(15L, r["sosCountdown"]); assertEquals(1L, r["checkInEnabled"]); assertEquals("09:00", r["checkInTime"])
+            assertEquals("[{\"n\":\"Ragi ambali\"}]", r["customFoods"])
+            assertNull(r["diabetic"])                                                                                                                       // never chosen: stays unset
+        }
+    }
+
+    @Test fun s12_aFollowUpAskedOnRavisReplicaIsAColumnOfHerProfile_keyedByTheNotesSharedId() {
+        val f = Fam(); val ravi = f.ravisPhonePairs()
+        val noteUid = one(ravi.c, "SELECT uid FROM notes WHERE text = 'Vomited twice'") as String
+        pause(); xa(ravi.c, "UPDATE profile SET followups = ?", "$noteUid:${base + hour}")
+        ravi.push(); f.relay.pump()
+        assertEquals("$noteUid:${base + hour}", one(f.kamala.c, "SELECT followups FROM profile"))
+        assertEquals("Vomited twice", one(f.kamala.c, "SELECT text FROM notes WHERE uid = '$noteUid'"))            // her phone can find the note by that id
+    }
+
     // ───────── whole-system convergence ─────────
 
     @Test fun fuzz_threePhonesRandomEditsWithLossAndOfflineTime_allEndIdentical() {

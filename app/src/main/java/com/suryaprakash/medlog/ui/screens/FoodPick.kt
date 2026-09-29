@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.editPerson
 import com.suryaprakash.medlog.ui.savedFeedback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +25,7 @@ import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -67,7 +69,9 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
-    var custom by remember { mutableStateOf(Foods.customFrom(app.settings.getString("custom_foods"))) }
+    // the foods the person added are in the shared profile, so a helper sees (and adds to) the same list
+    val pv by app.db.profile().flow().collectAsState(null)
+    val custom = remember(pv) { Foods.customFrom(pv?.customFoods) }
     val basket = remember { mutableStateMapOf<String, Double>() }
     val sizes = remember { mutableStateMapOf<String, String>() }
     var query by remember { mutableStateOf("") }
@@ -164,8 +168,7 @@ fun FoodPickScreen(nav: Nav, noteId: Long? = null) {
     }
     if (cuisineSheet) CuisineSheet(cuisine, { cuisine = it; cuisineSheet = false }) { cuisineSheet = false }
     if (adding) NewFoodSheet(query, meal, onDone = { f ->
-        val json = Foods.customWith(app.settings.getString("custom_foods"), f)
-        app.settings.putString("custom_foods", json); custom = Foods.customFrom(json)
+        app.editPerson { p -> p.copy(customFoods = Foods.customWith(p.customFoods, f)) }
         basket[f.name] = f.start; adding = false; query = ""
     }, onDismiss = { adding = false })
 }

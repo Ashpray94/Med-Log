@@ -88,6 +88,7 @@ import com.suryaprakash.medlog.clinical.Suggest
 import com.suryaprakash.medlog.data.CarePlan
 import com.suryaprakash.medlog.data.Helper
 import com.suryaprakash.medlog.data.Profile
+import com.suryaprakash.medlog.data.editPerson
 import com.suryaprakash.medlog.data.onto
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.meds.Scheduler
@@ -518,10 +519,10 @@ fun OnboardingScreen(nav: Nav) {
                 opts.forEach { (t, l) ->
                     val part = com.suryaprakash.medlog.ui.dayPart(t.substringBefore(":").toInt())
                     Choice(l.first, s.checkInEnabled && s.checkInTime == t, sub = l.second, icon = part.icon, tint = part.tint) {
-                        app.settings.update { it.copy(checkInEnabled = true, checkInTime = t) } }
+                        app.editPerson { it.copy(checkInEnabled = true, checkInTime = t) } }
                 }
                 Choice("Don't ask me every day", !s.checkInEnabled, icon = Icons.Rounded.NotificationsOff, tint = com.suryaprakash.medlog.ui.LocalPalette.current.inkSoft) {
-                    app.settings.update { it.copy(checkInEnabled = false) } }
+                    app.editPerson { it.copy(checkInEnabled = false) } }
             }
         }
 

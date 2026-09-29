@@ -12,6 +12,8 @@ import com.suryaprakash.medlog.clinical.Describe
 import com.suryaprakash.medlog.data.MedDb
 import com.suryaprakash.medlog.data.Repo
 import com.suryaprakash.medlog.data.SettingsStore
+import com.suryaprakash.medlog.data.followOwnProfile
+import com.suryaprakash.medlog.data.movePersonSettings
 import com.suryaprakash.medlog.nlu.Parser
 import com.suryaprakash.medlog.speech.Speaker
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +45,7 @@ class MedLogApp : Application() {
         super.onCreate()
         app = this
         com.suryaprakash.medlog.speech.I18n.use(this, settings.value.languages.firstOrNull() ?: "en-IN")
+        scope.launch { runCatching { followOwnProfile() } }   // the person's settings follow the shared profile (see data/PersonSettings.kt)
         scope.launch { settings.flow.collect { com.suryaprakash.medlog.speech.I18n.use(this@MedLogApp, it.languages.firstOrNull() ?: "en-IN"); refreshWidgets() } }
         channels()
         speaker.init()
@@ -52,6 +55,7 @@ class MedLogApp : Application() {
             catalogue
             runCatching { ownRepo.purgeRemoved() }
             runCatching { com.suryaprakash.medlog.nutrition.Nutrition.migrateFeedInfo(this@MedLogApp) }
+            runCatching { movePersonSettings() }
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }
             refreshWidgets()
