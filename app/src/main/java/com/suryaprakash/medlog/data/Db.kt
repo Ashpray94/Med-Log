@@ -50,6 +50,10 @@ data class Helper(
     val pairKey: String? = null,
     val canSeeNotes: Boolean = false,
     val sortOrder: Int = 0,
+    /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "") val updatedBy: String = "",
 )
 
 /**
@@ -75,6 +79,10 @@ data class Note(
     val groupId: Long? = null,
     val deletedAt: Long? = null,
     val text: String = "",            // plain summary line, also used for search
+    /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "") val updatedBy: String = "",
 )
 
 object Kind {
@@ -119,6 +127,10 @@ data class Medicine(
     /** what it looks like, so it can be told apart from the others: "round", "oval", "capsule", "oblong" … and a colour name */
     val shape: String = "",
     val color: String = "",
+    /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "") val updatedBy: String = "",
 )
 
 object DoseStatus { const val DUE = "DUE"; const val TAKEN = "TAKEN"; const val SKIPPED = "SKIPPED"; const val MISSED = "MISSED"; const val SNOOZED = "SNOOZED" }
@@ -135,6 +147,10 @@ data class Dose(
     val reminded: Int = 0,
     val helperAlerted: Boolean = false,
     val shownBy: String? = null,      // "medlog" / "meetingtimer"
+    /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "") val updatedBy: String = "",
 )
 
 @Entity(tableName = "appointments")
@@ -146,6 +162,10 @@ data class Appointment(
     val purpose: String = "",
     val calendarEventId: Long? = null,
     val done: Boolean = false,
+    /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "") val updatedBy: String = "",
 )
 
 /** Lines from imported old reports (retrieval-only search, carried over from MedLog v1). */
@@ -156,7 +176,23 @@ data class DocLine(
     val content: String,
     val importedAt: Long = System.currentTimeMillis(),
     val reportDate: Long? = null,
+    /** Two-way sharing (database version 4): a stable id for this row on every phone, and who last changed it and when. Stamped by triggers. */
+    @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
+    @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
+    @androidx.room.ColumnInfo(defaultValue = "") val updatedBy: String = "",
 )
+
+/** The version of every shared row this phone holds (see sync/SyncSql). One row per (table, uid), tombstones included. */
+@Entity(tableName = "sync_rows", primaryKeys = ["tbl", "uid"], indices = [Index(value = ["origin", "oseq"])])
+data class SyncRow(val tbl: String, val uid: String, val origin: String, val oseq: Long, val at: Long, val by: String, val del: Long)
+
+/** device (this phone's id), seq (last local number), applying ("1" while incoming changes are written). */
+@Entity(tableName = "sync_state")
+data class SyncState(@PrimaryKey val k: String, val v: String)
+
+/** The highest number this phone completely holds from each other device. */
+@Entity(tableName = "sync_have")
+data class SyncHave(@PrimaryKey val origin: String, val seq: Long)
 
 /** Alerts received on a helper's phone. */
 @Entity(tableName = "inbox")
@@ -260,8 +296,8 @@ interface InboxDao {
 }
 
 @Database(
-    entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 3,
+    entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class, SyncRow::class, SyncState::class, SyncHave::class],
+    version = 4,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -281,8 +317,20 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, "medlog.db")
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2, M2_3)
+                .addMigrations(M1_2, M2_3, M3_4)
+                .addCallback(object : androidx.room.RoomDatabase.Callback() {
+                    override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                        for (sql in com.suryaprakash.medlog.sync.SyncSql.onOpen()) db.execSQL(sql)
+                    }
+                })
                 .build()
+        }
+
+        /** Two-way sharing: uid/updatedAt/updatedBy, the sync tables, the first seeding of what is already there, the triggers. */
+        private val M3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                for (sql in com.suryaprakash.medlog.sync.SyncSql.migration3to4()) db.execSQL(sql)
+            }
         }
 
         /** 2.9: what a medicine looks like. */
