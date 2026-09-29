@@ -111,9 +111,12 @@ object Nearby {
         // "got" is sent by the helper's phone itself as soon as the alert is on its screen
         if (reply == "got") { if (re == currentMid) reached.value = reached.value + h.name; return }
         if (re == currentMid) reached.value = reached.value + h.name
-        acks.value = acks.value + Ack(h.name, reply)
-        ctx.medlog.speaker.say("${h.name}: ${replyWords(reply)}")
-        ctx.medlog.scope.launch { ctx.medlog.repo.addEvent(com.suryaprakash.medlog.data.Kind.MESSAGE, "${h.name} replied: ${replyWords(reply)}") }
+        // "ask" says who was asked ("Ravi asked Meena to go")
+        val shown = if (reply == "ask" && o.optString("to").isNotBlank()) "ask:${o.optString("to")}" else reply
+        val line = if (shown.startsWith("ask:")) "${h.name} ${replyWords(shown)}" else "${h.name}: ${replyWords(shown)}"
+        acks.value = acks.value + Ack(h.name, shown)
+        ctx.medlog.speaker.say(line)
+        ctx.medlog.scope.launch { ctx.medlog.repo.addEvent(com.suryaprakash.medlog.data.Kind.MESSAGE, if (shown.startsWith("ask:")) line else "${h.name} replied: ${replyWords(shown)}") }
     }
 
     /** One helper asked another to go: the other helper's phone rings with the message, and it's noted here. */
@@ -192,9 +195,7 @@ object Nearby {
         c.stopAllEndpoints()
     }
 
-    fun replyWords(r: String) = when (r) {
-        "coming" -> "I'm coming"; "5min" -> "In 5 minutes"; "call" -> "I'll call you"; "cant" -> "Can't come now, I'll call"; "got" -> "Got it"; else -> r
-    }
+    fun replyWords(r: String) = AlertReplies.words(r)
 
     // ───────────────────── "How are you?" from a helper ─────────────────────
 
@@ -250,15 +251,17 @@ object Nearby {
         People.all(ctx).let { all -> all.firstOrNull { it.pairId == (pairId ?: lastPerson) } ?: all.firstOrNull() }
 
     /** From the helper's alert screen: "I'm coming". Goes back both ways; the person's phone counts it once. */
-    fun reply(ctx: Context, r: String, re: String = lastMid, pairId: String? = null) {
+    fun reply(ctx: Context, r: String, re: String = lastMid, pairId: String? = null, to: String? = null) {
         val msg = JSONObject().put("reply", r).put("re", re).put("at", System.currentTimeMillis())
+        // "ask": whom the helper asked to go
+        if (!to.isNullOrBlank()) msg.put("to", to)
         // remembered, so the helper's page can say what was answered ("Can't come now"), not just that it was
         ctx.medlog.settings.putString("my_last_reply", "$r|${System.currentTimeMillis()}")
         replyTo?.let { (id, key) -> runCatching { client(ctx).sendPayload(id, Payload.fromBytes(Keys.seal(key, msg.toString().toByteArray()))) } }
         val p = person(ctx, pairId) ?: return
         ctx.medlog.scope.launch { Relay.post(ctx, p.keyBytes, Relay.UP, msg) }
         // the other helpers see who answered, so nobody is left wondering who went
-        if (r != "got") FamilyChat.announceReply(ctx, r, lastText, p, re)
+        if (r != "got") FamilyChat.announceReply(ctx, if (r == "ask" && !to.isNullOrBlank()) "ask:$to" else r, lastText, p, re)
     }
 
     /** The helper's "How are you?" and what came of it, shown on the helper's home screen. */
@@ -407,29 +410,35 @@ object Nearby {
                 runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(Loud.alertId(id), n) }
                 return@launch
             }
-            val urgent = kind in setOf("SOS", "DANGER", "FALL")
             Loud.rang(ctx, mid, id)
-            AlertSound.start(ctx, urgent = urgent)
             audio?.let { runCatching { android.media.MediaPlayer().apply { setDataSource(it.absolutePath); prepare(); start() } } }
-            val open = Intent(ctx, AlertActivity::class.java).putExtra(AlertActivity.MODE, AlertActivity.HELPER)
-                .putExtra("from", o.optString("from")).putExtra("text", o.optString("text")).putExtra("kind", kind).putExtra("id", id)
-                .putExtra("mid", mid).putExtra("pairId", pairId)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            val pi = PendingIntent.getActivity(ctx, id.toInt(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-            val nid = Loud.alertId(id)
-            // loud, but never pinned: a swipe (even of the pop-up) silences it and leaves a quiet reminder until answered
-            val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
-                .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.alertTitle(o.optString("from"), urgent))).setContentText(com.suryaprakash.medlog.ui.tr(o.optString("text")))
-                .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(false)
-                .setDeleteIntent(SilenceReceiver.intent(ctx, nid, "${o.optString("from")}: ${o.optString("text")}", "Not answered yet. Tap to answer.", pi))
-                .addAction(0, com.suryaprakash.medlog.ui.tr("I'm coming"), AlertReplyReceiver.intent(ctx, id, "coming", mid, pairId.ifEmpty { null }))
-                .addAction(0, com.suryaprakash.medlog.ui.tr("I'll call"), AlertReplyReceiver.intent(ctx, id, "call", mid, pairId.ifEmpty { null }))
-                .build()
-            runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(nid, n) }
-            runCatching { ctx.startActivity(open) }
+            ring(ctx, id, mid, pairId, o.optString("from"), o.optString("text"), kind)
         }
+    }
+
+    /** The helper's alarm: sound, the full-screen alert and a notification with the three answers for this kind of alert. */
+    internal fun ring(ctx: Context, id: Long, mid: String, pairId: String, from: String, text: String, kind: String) {
+        val urgent = AlertReplies.urgent(kind)
+        AlertSound.start(ctx, urgent = urgent)
+        val open = Intent(ctx, AlertActivity::class.java).putExtra(AlertActivity.MODE, AlertActivity.HELPER)
+            .putExtra("from", from).putExtra("text", text).putExtra("kind", kind).putExtra("id", id)
+            .putExtra("mid", mid).putExtra("pairId", pairId)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val pi = PendingIntent.getActivity(ctx, id.toInt(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val nid = Loud.alertId(id)
+        // loud, but never pinned: a swipe (even of the pop-up) silences it and leaves a quiet reminder until answered
+        val b = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
+            .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.alertTitle(from, urgent))).setContentText(com.suryaprakash.medlog.ui.tr(text))
+            .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(false)
+            .setDeleteIntent(SilenceReceiver.intent(ctx, nid, "$from: $text", "Not answered yet. Tap to answer.", pi))
+        // the same three answers as the alert screen
+        AlertReplies.forKind(kind).forEachIndexed { slot, r ->
+            b.addAction(0, com.suryaprakash.medlog.ui.tr(r.words), AlertReplyReceiver.intent(ctx, id, r.code, mid, pairId.ifEmpty { null }, slot, kind, text, from))
+        }
+        runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(nid, b.build()) }
+        runCatching { ctx.startActivity(open) }
     }
 
     // ───────────────────── pairing, face to face ─────────────────────

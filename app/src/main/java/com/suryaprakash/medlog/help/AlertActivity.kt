@@ -1,6 +1,16 @@
 package com.suryaprakash.medlog.help
 
+import android.annotation.SuppressLint
 import android.app.KeyguardManager
+import android.webkit.JavascriptInterface
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.runtime.DisposableEffect
+import com.suryaprakash.medlog.ui.tr
+import org.json.JSONArray
+import org.json.JSONObject
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -249,80 +259,83 @@ class AlertActivity : ComponentActivity() {
     }
 
     /**
-     * On a helper's phone: someone needs you. Built like Meeting Timer's alert: a dark card at the bottom with a
-     * status dot and "Answer within", the message as the title, who and when, a big 0:30 countdown with a bar,
-     * one big "I'm coming", and smaller replies under it. The card turns red in the last ten seconds and stays
-     * red while the alarm rings. Answering anything stops it and tells the other helpers.
+     * On a helper's phone: someone needs you. This is Meeting Timer's reminder, unchanged in look (its own page, in
+     * assets/alert/): a dark card at the bottom with a status dot, the alert's title, who and when, a flip-clock
+     * countdown, one big answer and two smaller ones. The three answers are [AlertReplies] 1, 2 and 3. The card turns
+     * red in the last ten seconds (and all the time for SOS, danger and a fall) and stays red while the alarm rings.
+     * The sound and buzzing are [AlertSound], not the page. Answering anything stops it and tells the other helpers.
      */
+    @SuppressLint("SetJavaScriptEnabled")
     @Composable
     private fun HelperAlertPanel(from: String, text: String, kind: String, id: Long, onClose: () -> Unit) {
-        val sc = LocalScale.current
-        val urgent = kind in setOf("SOS", "DANGER", "FALL")
+        val urgent = AlertReplies.urgent(kind)
+        val replies = remember(kind) { AlertReplies.forKind(kind) }
         val deadline by AlertSound.deadline.collectAsState()
         val screaming by AlertSound.screaming.collectAsState()
-        var now by remember { mutableStateOf(System.currentTimeMillis()) }
-        LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(200) } }
-        val left = deadline?.let { ((it - now + 999) / 1000).toInt().coerceAtLeast(0) } ?: 0
-        val red = urgent || screaming || (deadline != null && left <= 10)
-        val card = if (red) Color(0xFFB3261E) else Color(0xFF1F2023)
         val at = remember { java.text.SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(java.util.Date()) }
-        fun reply(r: String) {
-            Loud.done(this@AlertActivity, Loud.alertId(id))
+        val dm = resources.displayMetrics
+        val cardWidth = minOf((dm.widthPixels / dm.density).toInt() - 24, 420)
+        var ready by remember { mutableStateOf(false) }
+        var answered by remember { mutableStateOf(false) }
+        fun reply(i: Int) {
+            if (answered) return
+            answered = true
             val mid = intent.getStringExtra("mid").orEmpty(); val pairId = intent.getStringExtra("pairId")?.ifEmpty { null }
-            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); if (mid.isNotEmpty()) Nearby.reply(this@AlertActivity, r, re = mid, pairId = pairId) else Nearby.reply(this@AlertActivity, r, pairId = pairId) }
+            val app = applicationContext
+            medlog.scope.launch {
+                val say = AlertAnswer.perform(app, replies[i].code, kind, text, from, id, mid, pairId)
+                say?.let { s -> android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(app, tr(s), android.widget.Toast.LENGTH_LONG).show() } }
+            }
             onClose()
         }
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000)).padding(12.dp), contentAlignment = Alignment.BottomCenter) {
-            androidx.compose.foundation.layout.Column(
-                Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(card).padding(22.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
-            ) {
-                // status line
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.layout.Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (red) Color.White else Color(0xFF4ADE80)))
-                    Spacer(Modifier.width(10.dp))
-                    Text(when { screaming -> "Nobody has answered"; deadline == null -> "Message"; else -> "Answer within" }, color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold)
-                }
-                // the message, then who and when
-                Text(text, color = Color.White, fontSize = sc.question, fontWeight = FontWeight.Bold, lineHeight = sc.question * 1.15f)
-                Text("$from · $at", color = Color.White.copy(alpha = 0.75f), fontSize = sc.body)
-                // flip-clock countdown and bar
-                if (deadline != null || screaming) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                        listOf("0", ":", "%02d".format(left).take(1), "%02d".format(left).drop(1)).forEach { d ->
-                            if (d == ":") Text(":", color = Color.White, fontSize = sc.huge * 1.2f, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
-                            else androidx.compose.foundation.layout.Box(
-                                Modifier.padding(horizontal = 3.dp).size(width = 64.dp, height = 84.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(d, color = Color.White, fontSize = sc.huge * 1.2f, fontWeight = FontWeight.Bold)
-                                androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.35f)))
-                            }
-                        }
-                    }
-                    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(6.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.2f))) {
-                        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth(left / AlertSound.WINDOW.toFloat()).height(6.dp).background(Color.White))
+        // what the page shows: the alert where Meeting Timer had a meeting; the countdown runs to the app's own deadline
+        fun alertJson(): JSONObject {
+            val start = deadline ?: System.currentTimeMillis()
+            return JSONObject().put("key", "alert").put("title", tr(AlertReplies.title(kind, from, text))).put("start", start).put("end", start + 3_600_000L)
+                .put("who", from).put("at", at).put("text", tr(text)).put("link", JSONObject.NULL).put("attendees", JSONArray())
+                .put("clock", deadline != null || screaming)
+                .put("replies", JSONArray(replies.map { JSONObject().put("code", it.code).put("words", tr(it.words)) }))
+                .put("words", JSONObject()
+                    .put("status", JSONObject().put("normal", tr("Answer within")).put("warn", tr("Answer now")).put("late", tr("Nobody has answered")))
+                    .put("min", tr("Minutes")).put("sec", tr("Seconds")).put("minLate", tr("Minutes late")).put("secLate", tr("Seconds late")))
+        }
+        fun js(name: String, payload: String) = "window.__hostEmit && window.__hostEmit('$name', ${payload.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")})"
+        val web = remember {
+            WebView(this@AlertActivity).apply {
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                isVerticalScrollBarEnabled = false; isHorizontalScrollBarEnabled = false; overScrollMode = android.view.View.OVER_SCROLL_NEVER
+                settings.javaScriptEnabled = true
+                settings.allowFileAccess = false; settings.allowContentAccess = false
+                addJavascriptInterface(AlertBridge { i -> runOnUiThread { reply(i) } }, "AndroidHost")
+                webViewClient = object : WebViewClient() {
+                    override fun onPageFinished(view: WebView, url: String) {
+                        val m = alertJson()
+                        evaluateJavascript(js("init", JSONObject().put("meeting", m).put("platform", "android").put("pad", 12).put("systemGlass", false)
+                            .put("cardWidth", cardWidth).put("miniSize", 34).put("lead", 0).put("warn", if (urgent) 3_600_000L else 10_000L)
+                            .put("sound", false).put("snoozeMinutes", AlertSnooze.MINUTES).toString()), null)
+                        evaluateJavascript(js("meeting", m.toString()), null)
+                        postDelayed({ evaluateJavascript(js("enter", "null"), null) }, 60)
+                        ready = true
                     }
                 }
-                // one big answer, smaller ones under it
-                AlertButton("I'm coming", Color.White, card, sc.target * 1.3f, Modifier.fillMaxWidth()) { reply("coming") }
-                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-                    AlertButton("In 5 min", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("5min") }
-                    AlertButton("I'll call", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
-                    AlertButton("Can't now", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
-                }
-                Text("Open the app", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open the app") { Loud.silence(); openApp("helper") }.padding(vertical = 12.dp))
+                loadUrl("file:///android_asset/alert/widget.html")
             }
+        }
+        DisposableEffect(Unit) { onDispose { web.destroy() } }
+        // the deadline arrives (or the alarm turns continuous) after the page is up: show it
+        LaunchedEffect(ready, deadline, screaming) { if (ready) web.evaluateJavascript(js("meeting", alertJson().toString()), null) }
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000))) {
+            androidx.compose.ui.viewinterop.AndroidView(factory = { web }, modifier = Modifier.fillMaxSize().navigationBarsPadding())
+            Text("Open the app", color = Color.White.copy(alpha = 0.85f), fontSize = LocalScale.current.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                    .steady("Open the app") { Loud.silence(); openApp("helper") }.padding(horizontal = 20.dp, vertical = 12.dp))
         }
     }
 
-    @Composable
-    private fun AlertButton(label: String, bg: Color, fg: Color, height: androidx.compose.ui.unit.Dp, modifier: Modifier, onClick: () -> Unit) {
-        androidx.compose.foundation.layout.Box(
-            modifier.height(height).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(bg).steady(label, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) { Text(label, color = fg, fontSize = LocalScale.current.button, fontWeight = FontWeight.Bold, maxLines = 1) }
+    /** The page's answers: `action('join')` is answer 1, `'snooze'` answer 2, `'dismiss'` answer 3. */
+    class AlertBridge(val onAnswer: (Int) -> Unit) {
+        @JavascriptInterface
+        fun action(type: String, minutes: Int) = onAnswer(when (type) { "join" -> 0; "snooze" -> 1; else -> 2 })
     }
 
     /** On the person's phone: a helper asked "How are you?". One tap answers them. */
