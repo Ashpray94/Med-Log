@@ -51,6 +51,7 @@ class MedLogApp : Application() {
             runCatching { Updater.dailyCheck(this@MedLogApp) }
             catalogue
             runCatching { ownRepo.purgeRemoved() }
+            runCatching { com.suryaprakash.medlog.nutrition.Nutrition.migrateFeedInfo(this@MedLogApp) }
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }
             refreshWidgets()

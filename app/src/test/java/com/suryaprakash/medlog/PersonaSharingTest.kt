@@ -29,7 +29,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 import java.sql.Connection
@@ -717,23 +716,30 @@ class PersonaSharingTest {
         assertEquals(0L, n(ravi.c, "SELECT count(*) FROM inbox"))
     }
 
-    /** BUG B77: a feed's contents live in the phone's settings, keyed by the local medicine id (FoodReadings.kt:319-321). */
-    @Ignore("BUG B77: the parts (kcal, protein) of a feed are kept in phone-wide settings 'feed_info' under the local medicine id (FoodReadings.kt:319-321), so a feed made on one phone shows no kcal on the other")
+    /** B77 (fixed): a feed's contents used to live in phone-wide settings under the LOCAL medicine id; now they are a column of the medicine row. */
     @Test fun s11_aFeedKamalaMadeShowsItsKcalOnRavisPhone_andNotSomeoneElsesFeed() {
         val f = Fam()
-        val kSettings = Feeds.infoWith(null, medicine(f.kamala.c, "Ensure feed", "08:00,14:00", form = "feed"),
-            Feeds.Info(listOf(Feeds.Part("Ensure", "200 ml", 300.0, 12.0)), tube = true))
+        val feed = Feeds.Info(listOf(Feeds.Part("Ensure", "200 ml", 300.0, 12.0)), tube = true)
+        val kId = medicine(f.kamala.c, "Ensure feed", "08:00,14:00", form = "feed")
+        xa(f.kamala.c, "UPDATE medicines SET feedInfo = ? WHERE id = ?", Feeds.toJson(feed), kId)         // what FeedNewScreen saves (in the same insert)
         f.kamala.push()
         val ravi = f.ravisPhonePairs()
-        // Ravi has his own feed with the same local id 1 on his own phone (his settings are his own)
+        // Ravi has his own feed with the same local id on his own phone: his own database, his own contents
         val raviOwn = freshDb("ravi-own")
         val raviOwnFeedId = medicine(raviOwn, "Ravi shake", "08:00", form = "feed")
-        val raviSettings = Feeds.infoWith(null, raviOwnFeedId, Feeds.Info(listOf(Feeds.Part("Protein shake", "250 ml", 180.0, 25.0)), tube = false))
-        val replicaFeedId = medId(ravi.c, "Ensure feed")
-        val seen = Feeds.infoFrom(raviSettings, replicaFeedId)      // what Nutrition.kt:73-76 does on Ravi's phone for the replica's feed
-        assertTrue("Ravi's phone shows his own shake as Kamala's feed: $seen", seen == null || seen.parts.single().name == "Ensure")
+        xa(raviOwn, "UPDATE medicines SET feedInfo = ? WHERE id = ?", Feeds.toJson(Feeds.Info(listOf(Feeds.Part("Protein shake", "250 ml", 180.0, 25.0)), tube = false)), raviOwnFeedId)
+        // what Nutrition.build does on the replica's feed, from the medicine row it holds
+        val seen = Feeds.infoOf(one(ravi.c, "SELECT feedInfo FROM medicines WHERE name = 'Ensure feed'") as String)
         assertEquals("Ensure feed's kcal must be readable on Ravi's phone", 300.0, seen?.kcal ?: -1.0, 0.0)
-        assertNotEquals("", kSettings)
+        assertEquals("Ensure", seen!!.parts.single().name)
+        assertEquals(12.0, seen.protein, 0.0); assertTrue(seen.tube)
+        assertEquals("Ravi's own shake is not confused with hers", 180.0, Feeds.infoOf(one(raviOwn, "SELECT feedInfo FROM medicines") as String)!!.kcal, 0.0)
+        same(f.kamala, ravi)
+        // and back: Ravi corrects the protein on her replica, it reaches her phone
+        pause(); xa(ravi.c, "UPDATE medicines SET feedInfo = ? WHERE name = 'Ensure feed'", Feeds.toJson(feed.copy(parts = listOf(Feeds.Part("Ensure", "200 ml", 300.0, 14.0)))))
+        ravi.push(); f.relay.pump()
+        assertEquals(14.0, Feeds.infoOf(one(f.kamala.c, "SELECT feedInfo FROM medicines WHERE name = 'Ensure feed'") as String)!!.protein, 0.0)
+        same(f.kamala, ravi)
     }
 
     // ───────── whole-system convergence ─────────

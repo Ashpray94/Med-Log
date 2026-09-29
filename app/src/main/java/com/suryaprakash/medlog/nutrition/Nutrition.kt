@@ -40,6 +40,21 @@ object Nutrition {
         val proteinPct get() = proteinTarget?.let { (100 * avgProtein / it).roundToInt() }
     }
 
+    /**
+     * One time, on the person's phone: a feed's contents used to be kept in the phone's settings under the LOCAL medicine id. They move to
+     * the medicine row (Medicine.feedInfo), which is shared with the family. A helper phone only forgets the old key (its entries were
+     * keyed by ids of replicas and can't be told apart from its own).
+     */
+    suspend fun migrateFeedInfo(app: com.suryaprakash.medlog.MedLogApp) {
+        val json = app.settings.getString("feed_info") ?: return
+        val all = runCatching { JSONObject(json) }.getOrNull()
+        if (all != null && app.settings.value.role != "helper") for (m in app.ownDb.medicines().all()) {
+            val o = all.optJSONObject("${m.id}") ?: continue
+            if (m.feedInfo.isEmpty() && Feeds.infoOf(o.toString()) != null) app.ownRepo.updateMedicine(m.id) { it.copy(feedInfo = o.toString()) }
+        }
+        app.settings.putString("feed_info", null)
+    }
+
     fun targetKcal(ctx: Context) = ctx.medlog.settings.getString("kcal_target")?.toDoubleOrNull()
     fun targetProtein(ctx: Context) = ctx.medlog.settings.getString("protein_target")?.toDoubleOrNull()
 
@@ -70,13 +85,12 @@ object Nutrition {
 
         // feeds: scheduled like medicines, counted when given
         val meds = app.db.medicines().all().filter { it.form == "feed" }.associateBy { it.id }
-        val infoJson = app.settings.getString("feed_info")
         val doses = app.db.doses().between(from, now).filter { it.medicineId in meds }
         val missed = mutableListOf<Missed>()
         doses.forEach { dz ->
             val m = meds[dz.medicineId] ?: return@forEach
             val ml = Feeds.ml(m.amount)
-            val info = Feeds.infoFrom(infoJson, m.id)
+            val info = Feeds.infoOf(m.feedInfo)
             when {
                 dz.status == DoseStatus.TAKEN -> add(day(dz.actedAt ?: dz.scheduledAt), info?.kcal ?: 0.0, info?.protein ?: 0.0, "${m.name} ${ml.roundToInt()} ml")
                 dz.status == DoseStatus.MISSED || dz.status == DoseStatus.SKIPPED || dz.scheduledAt < now - 2 * 3600_000L -> missed.add(Missed(dz.scheduledAt, m.name, ml))
@@ -150,7 +164,7 @@ object Nutrition {
             else "${m.name}: ${m.changeNote.ifBlank { "changed" }}, ${d(m.changedAt)}"
         }
         val feeds = meds.values.filter { it.active }.map { m ->
-            val info = Feeds.infoFrom(infoJson, m.id)
+            val info = Feeds.infoOf(m.feedInfo)
             "${m.name}, ${m.amount} × ${m.times.split(",").count { it.isNotBlank() }} a day" + if (info?.tube == true) " by tube" else " by mouth"
         }
 
