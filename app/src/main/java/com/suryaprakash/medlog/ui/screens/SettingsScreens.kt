@@ -84,6 +84,8 @@ fun SettingsScreen(nav: Nav) {
     var pinText by remember { mutableStateOf("") }
     var locked by remember { mutableStateOf(s.helperPin.isNotBlank() && System.currentTimeMillis() > unlockedUntil) }
     LaunchedEffect(Unit) { profile = app.repo.profile() }
+    val pv by app.db.profile().flow().collectAsState(null)
+    LaunchedEffect(pv) { if (section == null) pv?.let { profile = it } }   // the person's profile changed on another phone
 
     if (locked) {
         Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }, onBack = { nav.back() }) {
@@ -251,7 +253,8 @@ private fun DoctorsSection(onBack: () -> Unit) {
     val app = ctx.medlog
     val scope = rememberCoroutineScope()
     var plan by remember { mutableStateOf(com.suryaprakash.medlog.data.CarePlan()) }
-    LaunchedEffect(Unit) { plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan) }
+    val pv by app.db.profile().flow().collectAsState(null)
+    LaunchedEffect(pv) { plan = com.suryaprakash.medlog.data.CarePlan.parse(app.repo.profile().plan) }
     fun save(list: List<com.suryaprakash.medlog.data.CarePlan.Doctor>) { plan = plan.copy(doctors = list); scope.launch { app.repo.saveCarePlan { it.copy(doctors = list) } } }
     var editing by remember { mutableStateOf<Int?>(null) }
     var name by remember { mutableStateOf("") }
@@ -303,7 +306,7 @@ private fun CalendarPicker() {
     val cals = remember { CalendarSync.calendars(ctx) }
     if (cals.isEmpty()) { Hint("No calendar found. Add your Google account to this phone first."); return }
     FlowRowOf {
-        Chip("Off", s.calendarId <= 0) { app.settings.update { it.copy(calendarId = -1) }; scope.launch { app.db.medicines().all().forEach { CalendarSync.removeMedicine(ctx, it) } } }
+        Chip("Off", s.calendarId <= 0) { app.settings.update { it.copy(calendarId = -1) }; scope.launch { CalendarSync.removeAll(ctx) } }
         cals.forEach { c -> Chip("${c.name}${if (c.google) "" else " (phone only)"}", s.calendarId == c.id) { app.settings.update { it.copy(calendarId = c.id) }; scope.launch { CalendarSync.syncAll(ctx) } } }
     }
     Toggle("Plain titles (\"Medicine time\")", s.calendarNeutralTitles, "Keeps medicine names off Google's servers.") { on -> app.settings.update { it.copy(calendarNeutralTitles = on) }; scope.launch { CalendarSync.syncAll(ctx) } }

@@ -166,9 +166,9 @@ fun FoodScreen(nav: Nav) {
                 feedDoses.forEach { d ->
                     val m = feeds.firstOrNull { it.id == d.medicineId } ?: return@forEach
                     DoseCard(d, m, onOpen = { feedMenu = m },
-                        onTaken = { scope.launch { com.suryaprakash.medlog.meds.Scheduler.take(ctx, d.id); savedFeedback(ctx) } },
-                        onUndo = { scope.launch { com.suryaprakash.medlog.meds.Scheduler.untake(ctx, d.id) } },
-                        onNotGiven = { scope.launch { com.suryaprakash.medlog.meds.Scheduler.skip(ctx, d.id, "Not given") } })
+                        onTaken = { scope.launch { com.suryaprakash.medlog.meds.Scheduler.take(ctx, d.id, db = app.db); savedFeedback(ctx) } },
+                        onUndo = { scope.launch { com.suryaprakash.medlog.meds.Scheduler.untake(ctx, d.id, db = app.db) } },
+                        onNotGiven = { scope.launch { com.suryaprakash.medlog.meds.Scheduler.skip(ctx, d.id, "Not given", db = app.db) } })
                 }
             }
         }
@@ -180,7 +180,7 @@ fun FoodScreen(nav: Nav) {
             scope.launch {
                 app.db.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
                 app.db.doses().dropFuture(m.id, System.currentTimeMillis())
-                com.suryaprakash.medlog.meds.Scheduler.stopMedicine(ctx, m.copy(active = false))
+                com.suryaprakash.medlog.meds.Scheduler.stopMedicine(ctx, m.copy(active = false), app.db)
             }
         }, onDismiss = { feedMenu = null })
     }
@@ -475,7 +475,7 @@ fun ReadingsScreen(nav: Nav) {
             val problem = if (r.type == "temp" && r.v1 >= 100.4) "fever" else null
             val t = DangerRules.evaluate(problem, emptyMap(), listOf(r), emptyList(), app.repo.person())
             savedFeedback(ctx)
-            if (t.level == Level.RED) Alerts.dangerToHelpers(ctx, r.label(), t)
+            if (t.level == Level.RED && !app.viewing.active) Alerts.dangerToHelpers(ctx, r.label(), t)
             result = t
             app.speaker.say("Saved. ${r.label()}. " + if (t.level == Level.GREEN) "" else t.say + " " + t.reasons.joinToString(". "))
             v1 = ""; v2 = ""; type = null

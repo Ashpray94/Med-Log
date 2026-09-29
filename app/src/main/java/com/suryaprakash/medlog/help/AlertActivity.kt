@@ -195,12 +195,12 @@ class AlertActivity : ComponentActivity() {
         LaunchedEffect(Unit) {
             medlog.speaker.say("Did you fall? Are you OK? Tap I'm OK. If you don't, I will call for help in one minute.")
             while (left > 0 && !done) { delay(1000); left-- ; if (left % 15 == 0 && left > 0) medlog.speaker.say("Are you OK? Calling for help in $left seconds.") }
-            if (!done) { done = true; medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: no answer, SOS started"); Sos.start(this@AlertActivity, "Possible fall, no answer", countdown = false); onClose() }
+            if (!done) { done = true; medlog.ownRepo.addEvent(Kind.FALL_ALERT, "Possible fall: no answer, SOS started"); Sos.start(this@AlertActivity, "Possible fall, no answer", countdown = false); onClose() }
         }
         Screen("Did you fall?", "Did you fall? Are you OK?", onHome = null, background = p.redSoft) {
             Text("$left", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = p.red)
             BigButton("I'm OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
-                done = true; medlog.scope.launch { medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
+                done = true; medlog.scope.launch { medlog.ownRepo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
             })
             BigButton("I fell – I need help", tone = Tone.DANGER, height = sc.target * 1.5f, onClick = { done = true; Sos.start(this@AlertActivity, "I fell", countdown = false); onClose() })
             BigButton("I fell but I'm OK – note it", tone = Tone.SECONDARY, onClick = { done = true; openApp("tell?problem=fall") })
@@ -212,12 +212,12 @@ class AlertActivity : ComponentActivity() {
     private fun CheckInPanel(onClose: () -> Unit) {
         val sc = LocalScale.current
         val name = remember { mutableStateOf("") }
-        LaunchedEffect(Unit) { name.value = medlog.repo.profile().name }
+        LaunchedEffect(Unit) { name.value = medlog.ownRepo.profile().name }
         val hello = "Good morning${if (name.value.isNotBlank()) ", ${name.value}" else ""}! How are you today?"
         Screen("How are you today?", hello, onHome = null) {
             Body(hello, bold = true)
             fun answer(word: String, route: String?) {
-                medlog.scope.launch { medlog.repo.addEvent(Kind.CHECKIN, "Check-in: $word") }
+                medlog.scope.launch { medlog.ownRepo.addEvent(Kind.CHECKIN, "Check-in: $word") }
                 com.suryaprakash.medlog.care.CheckIn.answered(this@AlertActivity)
                 savedFeedback(this@AlertActivity)
                 if (route != null) openApp(route) else { medlog.speaker.say("Thank you. Have a good day."); onClose() }
@@ -249,7 +249,7 @@ class AlertActivity : ComponentActivity() {
         val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
         fun reply(r: String) {
             AlertSound.stop()
-            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
+            medlog.scope.launch { if (id > 0) medlog.ownDb.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
             onClose()
         }
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000)).padding(12.dp), contentAlignment = Alignment.BottomCenter) {

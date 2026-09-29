@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -78,18 +79,20 @@ fun EmergencyScreen(nav: Nav) {
     val sc = LocalScale.current
     var helpers by remember { mutableStateOf<List<Helper>>(emptyList()) }
     var profile by remember { mutableStateOf<Profile?>(null) }
-    LaunchedEffect(Unit) { helpers = app.db.helpers().all(); profile = app.repo.profile() }
+    val pv by app.db.profile().flow().collectAsState(null)
+    val hv by app.db.helpers().flow().collectAsState(emptyList())
+    LaunchedEffect(pv, hv) { helpers = app.db.helpers().all(); profile = app.repo.profile() }
     Screen("Emergency", "Three choices. One: the big red card calls ${s.emergencyNumber} for an ambulance. Two: hold the dark card to alert all your family. Three: tap a face to call one person.",
         onHome = { nav.home() }, onBack = { nav.back() }) {
         CallAmbulanceCard(s.emergencyNumber)
-        AlertFamilyCard(helpers.size) { Sos.start(ctx, "SOS") }
+        AlertFamilyOrNotice(helpers.size) { Sos.start(ctx, "SOS") }
         val people = buildList {
             helpers.take(3).forEach { add(Person(it.name, it.relation.ifBlank { "Family" }, it.phone)) }
             profile?.takeIf { it.doctorPhone.isNotBlank() }?.let { add(Person(it.doctorName.ifBlank { "Doctor" }, "Doctor", it.doctorPhone)) }
         }.take(4)
         CallOnePerson(people) { nav.go(Route.HelperEdit(null)) }
         Text("Feeling low? Free helpline $MENTAL_HEALTH_LINE", fontSize = sc.small, color = p.brand, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).steady("Call the helpline $MENTAL_HEALTH_LINE") { Calls.call(ctx, MENTAL_HEALTH_LINE) }.padding(vertical = 8.dp))
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).steady("Call the helpline $MENTAL_HEALTH_LINE") { Calls.ui(ctx, MENTAL_HEALTH_LINE) }.padding(vertical = 8.dp))
     }
 }
 
@@ -107,7 +110,7 @@ fun CallAmbulanceCard(number: String, modifier: Modifier = Modifier) {
     Box(
         modifier.fillMaxWidth().heightIn(min = 236.dp).clip(RoundedCornerShape(sc.radius + 6.dp))
             .background(Brush.verticalGradient(listOf(Color(0xFFE5392F), Color(0xFFB3211A))))
-            .steady("Call $number now, ambulance") { Calls.call(ctx, number) }
+            .steady("Call $number now, ambulance") { Calls.ui(ctx, number) }
             .padding(20.dp),
     ) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -125,6 +128,13 @@ fun CallAmbulanceCard(number: String, modifier: Modifier = Modifier) {
 }
 
 /** Choice 2: hold to alert everyone. Dark, so it never looks like the ambulance card; a hold, so it never starts by accident. */
+/** Hold-to-alert card on the person's own MedLog; on a replica it says where this runs instead (nothing texts or calls from the helper's phone). */
+@Composable
+fun AlertFamilyOrNotice(helpers: Int, onStart: () -> Unit) {
+    val n = LocalContext.current.medlog.viewing.notice()
+    if (n != null) com.suryaprakash.medlog.ui.Card { com.suryaprakash.medlog.ui.Body(n, bold = true) } else AlertFamilyCard(helpers, onStart = onStart)
+}
+
 @Composable
 fun AlertFamilyCard(helpers: Int, modifier: Modifier = Modifier, onStart: () -> Unit) {
     val sc = LocalScale.current
@@ -192,7 +202,7 @@ fun CallOnePerson(people: List<Person>, onAdd: () -> Unit) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             people.forEachIndexed { i, who ->
                 Column(
-                    Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).steady("Call ${who.name}") { Calls.call(ctx, who.phone) }.padding(vertical = 4.dp),
+                    Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).steady("Call ${who.name}") { Calls.ui(ctx, who.phone) }.padding(vertical = 4.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {

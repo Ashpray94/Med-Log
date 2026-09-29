@@ -134,7 +134,7 @@ class SosService : Service() {
     private suspend fun run(reason: String, countdown: Boolean) {
         val app = medlog
         val s = app.settings.value
-        val profile = app.repo.profile()
+        val profile = app.ownRepo.profile()
         val name = profile.name
 
         // ── countdown, spoken ──
@@ -146,7 +146,7 @@ class SosService : Service() {
         Sos.set(Sos.Phase.Messaging)
         Sos.note("SOS started: $reason")
         app.speaker.say("Getting help. Messaging your helpers.")
-        val helpers = app.db.helpers().all().filter { it.sos }
+        val helpers = app.ownDb.helpers().all().filter { it.sos }
 
         // ── location, taken on this phone ──
         val loc = withTimeoutOrNull(12_000) { location() } ?: lastKnown()
@@ -154,7 +154,7 @@ class SosService : Service() {
         Sos.note(if (where != null) "Location found" else "Location not available")
 
         // ── SMS to everyone ──
-        val recent = app.db.notes().symptomsSince(System.currentTimeMillis() - 6 * 3600_000L).firstOrNull()?.text
+        val recent = app.ownDb.notes().symptomsSince(System.currentTimeMillis() - 6 * 3600_000L).firstOrNull()?.text
         val text = Wording.sos(name, reason, recent, where)
         val sent = ArrayList<String>()
         for (h in helpers) if (Calls.sms(this, h.phone, text)) sent += h.name
@@ -219,7 +219,7 @@ class SosService : Service() {
     }
 
     private suspend fun saveLog(reason: String, where: String?) {
-        medlog.repo.addEvent(Kind.SOS, "SOS" + if (reason.isNotBlank()) ": $reason" else "",
+        medlog.ownRepo.addEvent(Kind.SOS, "SOS" + if (reason.isNotBlank()) ": $reason" else "",
             JSONObject().put("log", JSONArray(Sos.log.value)).put("where", where ?: "").toString())
     }
 

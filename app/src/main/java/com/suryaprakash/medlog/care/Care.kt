@@ -53,7 +53,7 @@ object Care {
             list += at(today().plusDays(1), LocalTime.parse(app.settings.value.checkInTime))
         }
         if (app.settings.value.weeklySummary && app.settings.value.role == "self") list += weeklyAt()
-        for (a in app.db.appointments().upcoming(now)) {
+        for (a in app.ownDb.appointments().upcoming(now)) {
             val eveBefore = at(java.time.Instant.ofEpochMilli(a.at).atZone(zone()).toLocalDate().minusDays(1), LocalTime.of(19, 0))
             list += eveBefore; list += a.at - 2 * HOUR
         }
@@ -78,7 +78,7 @@ object Care {
             val late = t + 2 * HOUR
             if (!doneToday && due(late)) {
                 mark(late)
-                val name = app.repo.profile().name.ifBlank { "Your family member" }
+                val name = app.ownRepo.profile().name.ifBlank { "Your family member" }
                 Alerts.send(ctx, Alerts.Type.CHECKIN, com.suryaprakash.medlog.help.Wording.noCheckIn(name))
             }
         }
@@ -89,12 +89,12 @@ object Care {
         }
         for ((noteId, t) in FollowUp.pending(ctx)) if (now >= t) {
             FollowUp.remove(ctx, noteId)
-            val n = app.db.notes().get(noteId) ?: continue
+            val n = app.ownDb.notes().get(noteId) ?: continue
             if (n.deletedAt != null) continue
             val label = app.catalogue.problem(n.problemId)?.label?.lowercase() ?: "how you feel"
             notify(ctx, 8400 + (noteId % 500).toInt(), "Can you tell me a bit more?", "A few more details about your $label help your doctor. Tap when you're ready.", "medlog://tell?note=$noteId")
         }
-        for (a in app.db.appointments().upcoming(now - 3 * HOUR)) {
+        for (a in app.ownDb.appointments().upcoming(now - 3 * HOUR)) {
             val eve = at(java.time.Instant.ofEpochMilli(a.at).atZone(zone()).toLocalDate().minusDays(1), LocalTime.of(19, 0))
             if (due(eve)) { mark(eve); notify(ctx, 8100 + a.id.toInt(), "Doctor visit tomorrow", "Your doctor page is ready. Take your medicines with you.", "medlog://doctor") }
             val soon = a.at - 2 * HOUR
@@ -109,7 +109,7 @@ object Care {
         notify(ctx, 8300 + name.hashCode() % 100, "Time to buy more medicine", text, "medlog://meds")
         if (daysLeft <= 2) {
             val app = ctx.medlog
-            app.scope.launchIo { Alerts.send(ctx, Alerts.Type.REFILL, com.suryaprakash.medlog.help.Wording.refill(app.repo.profile().name, text), alsoNearby = false) }
+            app.scope.launchIo { Alerts.send(ctx, Alerts.Type.REFILL, com.suryaprakash.medlog.help.Wording.refill(app.ownRepo.profile().name, text), alsoNearby = false) }
         }
     }
 

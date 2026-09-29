@@ -403,7 +403,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                                 app.db.medicines().update(stopped)
                                 app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
                                 CalendarSync.removeMedicine(ctx, stopped)
-                                Scheduler.stopMedicine(ctx, stopped); nav.back()
+                                Scheduler.stopMedicine(ctx, stopped, app.db); nav.back()
                             }
                         }.wrapContentHeight(Alignment.CenterVertically))
             }

@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -75,19 +76,19 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
                 Body("Thank you for telling me. You matter.", bold = true)
                 Body("Talking to someone helps. You can call the free helpline any time, day or night.")
             }
-            BigButton("Call helpline $MENTAL_HEALTH_LINE", icon = Icons.Rounded.Call, height = sc.target * 1.4f, onClick = { Calls.call(ctx, MENTAL_HEALTH_LINE) })
-            helpers.firstOrNull()?.let { h -> BigButton("Call ${h.name}", tone = Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { Calls.call(ctx, h.phone) }) }
+            BigButton("Call helpline $MENTAL_HEALTH_LINE", icon = Icons.Rounded.Call, height = sc.target * 1.4f, onClick = { Calls.ui(ctx, MENTAL_HEALTH_LINE) })
+            helpers.firstOrNull()?.let { h -> BigButton("Call ${h.name}", tone = Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { Calls.ui(ctx, h.phone) }) }
             BigButton("I'm safe for now", tone = Tone.QUIET, onClick = { nav.home() })
         }
         return
     }
     val say = (t.firstAid?.let { "$it " } ?: "") + t.say + " " + t.reasons.joinToString(". ") + ". Call ${s.emergencyNumber} now." +
-        if (helpers.isNotEmpty()) " Your helpers have been sent a message." else ""
+        if (helpers.isNotEmpty() && !app.viewing.active) " Your helpers have been sent a message." else ""
     Screen("Get help now", say, onHome = { nav.home() }) {
         Text(t.say, color = p.red, fontSize = sc.headline, fontWeight = FontWeight.Bold, lineHeight = sc.headline * 1.25f)
         cancerDoctor?.let { d ->
             Body("Call your cancer team now", bold = true)
-            BigButton("Call ${d.name}, your cancer doctor", icon = Icons.Rounded.Call, height = sc.target * 1.4f, onClick = { Calls.call(ctx, d.phone) })
+            BigButton("Call ${d.name}, your cancer doctor", icon = Icons.Rounded.Call, height = sc.target * 1.4f, onClick = { Calls.ui(ctx, d.phone) })
         }
         CallAmbulanceCard(s.emergencyNumber)
         t.firstAid?.let {
@@ -96,7 +97,7 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
                 Body(it, bold = true)
             }
         }
-        AlertFamilyCard(helpers.size) { Sos.start(ctx, "Danger sign: " + t.reasons.firstOrNull().orEmpty(), countdown = false) }
+        AlertFamilyOrNotice(helpers.size) { Sos.start(ctx, "Danger sign: " + t.reasons.firstOrNull().orEmpty(), countdown = false) }
         if (helpers.isNotEmpty()) HelperCalls(helpers)
         SectionLabel("Why")
         Card(color = p.card) {
@@ -107,7 +108,7 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
                     Body(r)
                 }
             }
-            if (helpers.isNotEmpty()) Hint("Your helpers have been sent a message.")
+            if (helpers.isNotEmpty() && !app.viewing.active) Hint("Your helpers have been sent a message.")
         }
         BigButton("This is wrong – change it", tone = Tone.QUIET, onClick = onChange)
     }
@@ -118,12 +119,13 @@ fun DangerScreen(nav: Nav, t: Triage, onChange: () -> Unit) {
 fun DoctorCallButton(dept: String? = null) {
     val ctx = LocalContext.current
     var profile by remember { mutableStateOf<Profile?>(null) }
-    LaunchedEffect(Unit) { profile = ctx.medlog.repo.profile() }
+    val pv by ctx.medlog.db.profile().flow().collectAsState(null)
+    LaunchedEffect(pv) { profile = ctx.medlog.repo.profile() }
     val pr = profile ?: return
     val plan = com.suryaprakash.medlog.data.CarePlan.parse(pr.plan)
     val d = plan.doctorFor(dept, com.suryaprakash.medlog.clinical.DangerRules.cancerCareOf(pr.conditions, plan.treatments))
     val (name, phone) = if (d != null && d.phone.isNotBlank()) d.name to d.phone else pr.doctorName.ifBlank { "my doctor" } to pr.doctorPhone
-    if (phone.isNotBlank()) BigButton("Call $name", icon = Icons.Rounded.Call, sub = d?.speciality, onClick = { Calls.call(ctx, phone) })
+    if (phone.isNotBlank()) BigButton("Call $name", icon = Icons.Rounded.Call, sub = d?.speciality, onClick = { Calls.ui(ctx, phone) })
     else Hint("Add your doctors in Settings to call them with one tap.")
 }
 

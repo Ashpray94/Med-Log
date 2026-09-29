@@ -21,12 +21,12 @@ object SetupFile {
 
     suspend fun export(ctx: Context, uri: Uri) = withContext(Dispatchers.IO) {
         val app = ctx.medlog
-        val p = app.repo.profile()
+        val p = app.ownRepo.profile()
         val profile = JSONObject().put("name", p.name).put("dob", p.dob).put("sex", p.sex).put("bloodGroup", p.bloodGroup)
             .put("hospitalId", p.hospitalId).put("conditions", p.conditions).put("allergies", p.allergies)
             .put("doctorName", p.doctorName).put("doctorPhone", p.doctorPhone).put("onBloodThinner", p.onBloodThinner).put("notes", p.notes)
         val helpers = JSONArray()
-        app.db.helpers().all().forEach { h ->
+        app.ownDb.helpers().all().forEach { h ->
             helpers.put(JSONObject().put("name", h.name).put("phone", h.phone).put("relation", h.relation).put("sos", h.sos)
                 .put("alerts", h.alerts).put("canSeeNotes", h.canSeeNotes))
         }
@@ -51,7 +51,7 @@ object SetupFile {
         val o = JSONObject(ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().toString(Charsets.UTF_8) })
         require(o.optString("type") == TYPE) { "Not a MedLog setup file" }
         o.optJSONObject("profile")?.let { j ->
-            app.db.profile().put(app.repo.profile().copy(
+            app.ownDb.profile().put(app.ownRepo.profile().copy(
                 name = j.optString("name"), dob = j.optString("dob"), sex = j.optString("sex"), bloodGroup = j.optString("bloodGroup"),
                 hospitalId = j.optString("hospitalId"), conditions = j.optString("conditions"), allergies = j.optString("allergies"),
                 doctorName = j.optString("doctorName"), doctorPhone = j.optString("doctorPhone"), onBloodThinner = j.optBoolean("onBloodThinner"),
@@ -74,19 +74,19 @@ object SetupFile {
             }
             app.settings.putAll(values)
         }
-        val existing = app.db.helpers().all()
+        val existing = app.ownDb.helpers().all()
         o.optJSONArray("helpers")?.let { a ->
             for (i in 0 until a.length()) {
                 val j = a.getJSONObject(i)
                 val phone = j.optString("phone")
                 if (phone.isBlank() || existing.any { it.phone.filter(Char::isDigit).takeLast(10) == phone.filter(Char::isDigit).takeLast(10) }) continue
-                app.db.helpers().insert(Helper(name = j.optString("name"), phone = phone, relation = j.optString("relation"),
+                app.ownDb.helpers().insert(Helper(name = j.optString("name"), phone = phone, relation = j.optString("relation"),
                     sos = j.optBoolean("sos", true), alerts = j.optBoolean("alerts", true), canSeeNotes = j.optBoolean("canSeeNotes"), sortOrder = existing.size + i))
             }
         }
         app.settings.update { it.copy(role = "self", onboarded = true) }
         runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx) }
         app.refreshWidgets()
-        app.repo.profile().name
+        app.ownRepo.profile().name
     }
 }

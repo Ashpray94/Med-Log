@@ -43,7 +43,7 @@ object FamilyChat {
         val app = ctx.medlog
         if (app.settings.value.role != "self" || !Relay.enabled(ctx)) return
         val key = familyKey(ctx)
-        for (h in app.db.helpers().all()) {
+        for (h in app.ownDb.helpers().all()) {
             val pk = h.pairKey ?: continue
             val mark = "family_sent_${h.pairId}"
             if (app.settings.getString(mark) == key) continue
@@ -81,7 +81,7 @@ object FamilyChat {
         val key = key(ctx, p) ?: return
         val me = myName(ctx).ifBlank { "Helper" }
         app.scope.launch {
-            app.db.inbox().insert(InboxItem(fromName = "You", text = text, kind = KIND, acked = true))
+            app.ownDb.inbox().insert(InboxItem(fromName = "You", text = text, kind = KIND, acked = true))
             Relay.post(ctx, key, DIR, JSONObject().put("from", me).put("text", text).put("at", System.currentTimeMillis())
                 .put("mid", Keys.randomB64(9)).put("dev", device(ctx)))
         }
@@ -92,7 +92,7 @@ object FamilyChat {
         if (o.optString("dev") == device(ctx)) return
         val app = ctx.medlog
         app.scope.launch {
-            val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from", "Helper"), text = o.optString("text"), kind = KIND,
+            val id = app.ownDb.inbox().insert(InboxItem(fromName = o.optString("from", "Helper"), text = o.optString("text"), kind = KIND,
                 at = o.optLong("at", System.currentTimeMillis()), acked = true))
             val pi = PendingIntent.getActivity(ctx, 6000 + (id % 500).toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
             val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
