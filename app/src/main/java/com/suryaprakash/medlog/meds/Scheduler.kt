@@ -123,6 +123,8 @@ object Scheduler {
         var louder = false
         for (d in app.db.doses().open()) {
             val m = medsById[d.medicineId] ?: continue
+            // a stopped medicine never rings or alerts anyone: close its open dose
+            if (!m.active) { app.db.doses().update(d.copy(status = DoseStatus.SKIPPED, reason = "Stopped", actedAt = now, snoozeUntil = null)); DoseAlert.cancel(ctx, d.id); continue }
             var dose = d
             // missed
             if (now >= d.scheduledAt + MISS_AFTER) {
@@ -151,6 +153,17 @@ object Scheduler {
         if (toShow.isNotEmpty()) DoseAlert.show(ctx, toShow, louder)
         Care.tick(ctx, now)
         runCatching { com.suryaprakash.medlog.care.HelperCare.tick(ctx, now) }
+        reschedule(ctx)
+    }
+
+    /** A medicine was stopped: its open doses are skipped ("Stopped"), so nothing rings or alerts for them. */
+    suspend fun stopMedicine(ctx: Context, m: Medicine) {
+        val app = ctx.medlog
+        val db = app.viewDb
+        val open = db.doses().open().filter { it.medicineId == m.id }
+        db.doses().skipOpen(m.id, "Stopped", System.currentTimeMillis())
+        open.forEach { DoseAlert.cancel(ctx, it.id) }
+        app.refreshWidgets()
         reschedule(ctx)
     }
 
@@ -238,7 +251,7 @@ object Scheduler {
         return app.db.doses().between(now - 3 * HOUR, now + 2 * DAY)
             .filter { it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED }
             .sortedBy { it.scheduledAt }
-            .firstNotNullOfOrNull { d -> meds[d.medicineId]?.let { d to it } }
+            .firstNotNullOfOrNull { d -> meds[d.medicineId]?.takeIf { it.active }?.let { d to it } }
     }
 
     fun today(zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {

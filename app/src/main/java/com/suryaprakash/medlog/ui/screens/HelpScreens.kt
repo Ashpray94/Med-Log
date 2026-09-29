@@ -429,10 +429,15 @@ fun PairScreen(nav: Nav) {
                 Hint("Check both phones show the same number:")
                 Text(d, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = p.ink)
             }
-            // connecting goes on by itself; a different number means the wrong phone, so it can be stopped here
-            if (st.incoming == null) {
-                Body("Connecting… This takes a few seconds.")
+            // nothing is accepted until "They match" is tapped; a different number means the wrong phone
+            if (!st.confirmed) {
+                BigButton("They match", tone = Tone.PRIMARY, onClick = { Nearby.confirmDigits(ctx) })
                 BigButton("The numbers don't match – stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
+                return@Screen
+            }
+            if (st.incoming == null) {
+                Body("Waiting for the other phone… This takes a few seconds.")
+                BigButton("Stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
                 return@Screen
             }
         }

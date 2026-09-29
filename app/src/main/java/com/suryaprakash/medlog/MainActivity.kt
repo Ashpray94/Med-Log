@@ -85,13 +85,16 @@ class MainActivity : ComponentActivity() {
             medlog.settings.putString("${src}_ask", null)
             medlog.scope.launch { com.suryaprakash.medlog.widget.MedLogWidget.refresh(this@MainActivity) }
         }
+        // links that do something (call, SOS, send a message) only act when MedLog made the link itself
+        val trusted = com.suryaprakash.medlog.integration.TrustedLinks.isTrusted(i, this)
+        val action = com.suryaprakash.medlog.integration.LinkPolicy.linkAction(host, uri.getQueryParameter("send") != null, trusted)
         val route: Route? = when (host) {
             "tell" -> Route.Tell(uri.getQueryParameter("problem"), uri.getQueryParameter("text"), noteId = uri.getQueryParameter("note")?.toLongOrNull())
             "meds" -> Route.Meds
             "speak" -> Route.Tell(speak = true)
             "help" -> {
                 // from the family widget: send the chosen message straight away, then show who got it
-                uri.getQueryParameter("send")?.let { key ->
+                uri.getQueryParameter("send")?.takeIf { action == com.suryaprakash.medlog.integration.LinkPolicy.SEND }?.let { key ->
                     medlog.settings.value.messages.firstOrNull { it.substringBefore('|') == key }?.let { m ->
                         com.suryaprakash.medlog.ui.screens.HelpMessages.send(this, m.substringAfter('|'))
                         medlog.speaker.say("Sending: ${m.substringAfter('|')}")
@@ -100,9 +103,9 @@ class MainActivity : ComponentActivity() {
                 Route.Help
             }
             "messages" -> Route.Messages
-            "call" -> { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
+            "call" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.CALL) Route.Emergency else { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
             "emergency" -> Route.Emergency
-            "sos" -> { Sos.start(this, "SOS"); null }
+            "sos" -> if (action != com.suryaprakash.medlog.integration.LinkPolicy.SOS) Route.Emergency else { Sos.start(this, "SOS"); null }
             "doctor" -> Route.Doctor
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {

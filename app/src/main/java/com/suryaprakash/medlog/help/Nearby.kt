@@ -441,9 +441,12 @@ object Nearby {
      * [found]: nearby phones (endpoint id, name). [incoming]: a helper's phone asking the person's phone to connect.
      */
     data class PairState(val found: List<Pair<String, String>> = emptyList(), val digits: String? = null, val done: String? = null, val error: String? = null,
-                         val incoming: Pair<String, String>? = null, val connecting: String? = null)
+                         val incoming: Pair<String, String>? = null, val connecting: String? = null,
+                         val confirmed: Boolean = false)
     val pair = MutableStateFlow(PairState())
     private var pendingPair: String? = null
+    // Held until the person taps "They match": no connection is accepted before the two numbers have been compared.
+    private var pendingAccept: (() -> Unit)? = null
 
     // ── the helper's phone ──
 
@@ -470,8 +473,8 @@ object Nearby {
         override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
             val c = client(ctx)
             pendingPair = id
-            pair.value = pair.value.copy(digits = info.authenticationDigits)
-            c.acceptConnection(id, object : PayloadCallback() {
+            pair.value = pair.value.copy(digits = info.authenticationDigits, confirmed = false)
+            val cb = object : PayloadCallback() {
                 override fun onPayloadReceived(eid: String, p: Payload) {
                     val o = JSONObject(String(p.asBytes() ?: return))
                     val s = ctx.medlog.settings
@@ -488,7 +491,8 @@ object Nearby {
                     startListening(ctx)
                 }
                 override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
-            })
+            }
+            pendingAccept = { c.acceptConnection(id, cb).addOnFailureListener { pair.value = pair.value.copy(digits = null, connecting = null, confirmed = false, error = "Pairing did not finish. Try again.") } }
         }
         override fun onConnectionResult(id: String, r: ConnectionResolution) {
             if (!r.status.isSuccess) pair.value = pair.value.copy(digits = null, connecting = null, error = "Pairing did not finish. Try again.")
@@ -538,6 +542,7 @@ object Nearby {
     /** A helper's phone asked this phone to connect; the person said which helper it is. */
     fun acceptIncoming(ctx: Context, helperName: String, helperPhone: String, helperId: Long?) {
         val (id, _) = pair.value.incoming ?: return
+        if (!pair.value.confirmed) return
         chosen = Chosen(helperName, helperPhone, helperId)
         pair.value = pair.value.copy(connecting = helperName)
         client(ctx).acceptConnection(id, object : PayloadCallback() {
@@ -555,11 +560,12 @@ object Nearby {
                 pair.value = pair.value.copy(incoming = id to info.endpointName.removePrefix("PH|"), digits = info.authenticationDigits)
                 return
             }
-            pair.value = pair.value.copy(digits = info.authenticationDigits)
-            client(ctx).acceptConnection(id, object : PayloadCallback() {
+            pair.value = pair.value.copy(digits = info.authenticationDigits, confirmed = false)
+            val cb = object : PayloadCallback() {
                 override fun onPayloadReceived(eid: String, p: Payload) {}
                 override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
-            })
+            }
+            pendingAccept = { client(ctx).acceptConnection(id, cb).addOnFailureListener { pair.value = pair.value.copy(digits = null, connecting = null, confirmed = false, error = "Pairing did not finish. Try again.") } }
         }
         override fun onConnectionResult(id: String, r: ConnectionResolution) {
             if (!r.status.isSuccess) { pair.value = pair.value.copy(digits = null, incoming = null, connecting = null, error = "Pairing did not finish. Try again."); return }
@@ -593,11 +599,17 @@ object Nearby {
         }
     }
 
-    /** Both people said the digits match. */
-    fun confirmDigits(ctx: Context) { /* acceptance already requested on both sides; kept for clarity of the flow */ }
+    /** This person said the two numbers match: only now is the connection accepted (it finishes when both phones have). */
+    fun confirmDigits(ctx: Context) {
+        pair.value = pair.value.copy(confirmed = true)
+        val go = pendingAccept ?: return   // a helper's request: accepted when the person has said which helper it is
+        pendingAccept = null
+        go()
+    }
 
     fun cancelPairing(ctx: Context) {
         pendingPair?.let { client(ctx).rejectConnection(it) }
+        pendingPair = null; pendingAccept = null
         client(ctx).stopAdvertising(); client(ctx).stopDiscovery()
         pair.value = PairState()
     }

@@ -302,7 +302,7 @@ private fun OldMedEditScreen(nav: Nav, id: Long?) {
                 app.viewDb.medicines().update(stopped)
                 app.viewDb.doses().dropFuture(stopped.id, System.currentTimeMillis())
                 CalendarSync.removeMedicine(ctx, stopped)
-                Scheduler.reschedule(ctx)
+                Scheduler.stopMedicine(ctx, stopped)
                 nav.back()
             }
         })
