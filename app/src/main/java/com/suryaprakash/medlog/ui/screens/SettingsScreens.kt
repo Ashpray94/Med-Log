@@ -467,7 +467,8 @@ fun PrivacyScreen(nav: Nav) {
             Body("This deletes all notes, medicines and helpers from this phone. It cannot be undone.", bold = true)
             BigButton("Yes, delete everything", tone = Tone.DANGER, onClick = {
                 scope.launch {
-                    app.db.clearAllTables()
+                    // wiping the database must not run on the main thread
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.db.clearAllTables() }
                     java.io.File(ctx.filesDir, "audio").deleteRecursively(); java.io.File(ctx.filesDir, "photos").deleteRecursively()
                     app.settings.update { com.suryaprakash.medlog.data.Settings() }
                     Scheduler.reschedule(ctx)

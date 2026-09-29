@@ -387,9 +387,11 @@ object Nearby {
 
     // ───────────────────── pairing, face to face ─────────────────────
 
-    data class PairState(val found: List<Pair<String, String>> = emptyList(), val digits: String? = null, val done: String? = null, val error: String? = null)
+    data class PairState(val found: List<Pair<String, String>> = emptyList(), val digits: String? = null, val done: String? = null, val error: String? = null, val confirmed: Boolean = false)
     val pair = MutableStateFlow(PairState())
     private var pendingPair: String? = null
+    // Held until the person taps "They match": nothing is accepted before the digits are compared.
+    private var pendingPayload: PayloadCallback? = null
 
     /** Helper's phone: be findable for pairing, showing [myName]. */
     fun pairAsHelper(ctx: Context, myName: String) {
@@ -399,8 +401,8 @@ object Nearby {
         c.startAdvertising("P|$myName", SERVICE, object : ConnectionLifecycleCallback() {
             override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
                 pendingPair = id
-                pair.value = pair.value.copy(digits = info.authenticationDigits)
-                c.acceptConnection(id, object : PayloadCallback() {
+                pair.value = pair.value.copy(digits = info.authenticationDigits, confirmed = false)
+                pendingPayload = object : PayloadCallback() {
                     override fun onPayloadReceived(eid: String, p: Payload) {
                         val o = JSONObject(String(p.asBytes() ?: return))
                         val s = ctx.medlog.settings
@@ -415,7 +417,7 @@ object Nearby {
                         startListening(ctx)
                     }
                     override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
-                })
+                }
             }
             override fun onConnectionResult(id: String, r: ConnectionResolution) { if (!r.status.isSuccess) pair.value = pair.value.copy(error = "Pairing did not finish. Try again.") }
             override fun onDisconnected(id: String) {}
@@ -446,11 +448,11 @@ object Nearby {
             c.requestConnection("PU|$me", endpointId, object : ConnectionLifecycleCallback() {
                 override fun onConnectionInitiated(id: String, info: ConnectionInfo) {
                     pendingPair = id
-                    pair.value = pair.value.copy(digits = info.authenticationDigits)
-                    c.acceptConnection(id, object : PayloadCallback() {
+                    pair.value = pair.value.copy(digits = info.authenticationDigits, confirmed = false)
+                    pendingPayload = object : PayloadCallback() {
                         override fun onPayloadReceived(eid: String, p: Payload) {}
                         override fun onPayloadTransferUpdate(eid: String, u: PayloadTransferUpdate) {}
-                    })
+                    }
                 }
                 override fun onConnectionResult(id: String, r: ConnectionResolution) {
                     if (!r.status.isSuccess) { pair.value = pair.value.copy(error = "Pairing did not finish. Try again."); return }
@@ -471,11 +473,18 @@ object Nearby {
         }
     }
 
-    /** Both people said the digits match. */
-    fun confirmDigits(ctx: Context) { /* acceptance already requested on both sides; kept for clarity of the flow */ }
+    /** This person said the digits match: only now accept. The connection finishes when both phones have accepted. */
+    fun confirmDigits(ctx: Context) {
+        val id = pendingPair ?: return
+        val cb = pendingPayload ?: return
+        pendingPayload = null
+        pair.value = pair.value.copy(confirmed = true)
+        client(ctx).acceptConnection(id, cb).addOnFailureListener { pair.value = pair.value.copy(error = "Pairing did not finish. Try again.", confirmed = false) }
+    }
 
     fun cancelPairing(ctx: Context) {
         pendingPair?.let { client(ctx).rejectConnection(it) }
+        pendingPair = null; pendingPayload = null
         client(ctx).stopAdvertising(); client(ctx).stopDiscovery()
         pair.value = PairState()
     }

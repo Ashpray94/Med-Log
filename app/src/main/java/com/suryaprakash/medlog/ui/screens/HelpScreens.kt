@@ -421,7 +421,8 @@ fun PairScreen(nav: Nav) {
                 Hint("Check both phones show the same number:")
                 Text(d, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = p.ink)
             }
-            BigButton("They match", tone = Tone.OK, onClick = { Nearby.confirmDigits(ctx) })
+            if (st.confirmed) Body("Waiting for the other phone to confirm…")
+            else BigButton("They match", tone = Tone.OK, onClick = { Nearby.confirmDigits(ctx) })
             BigButton("They don't match – stop", tone = Tone.SECONDARY, onClick = { Nearby.cancelPairing(ctx); started = false })
             return@Screen
         }
