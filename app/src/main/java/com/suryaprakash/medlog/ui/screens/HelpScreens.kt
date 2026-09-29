@@ -104,6 +104,15 @@ import java.io.File
  * Any helper whose phone hasn't said "got it" within 15 seconds is sent a text message too. After 3 minutes
  * with no answer, a phone call is offered.
  */
+/** The 3 seconds between tapping a message and it going out, so a slip of the finger can be taken back. */
+object SendCountdown {
+    const val MILLIS = 3000L
+    /** Whole seconds still to wait, 3 down to 0. */
+    fun secondsLeft(startedAt: Long, now: Long): Int = (((startedAt + MILLIS - now).coerceAtLeast(0) + 999) / 1000).toInt()
+    fun due(startedAt: Long, now: Long) = now - startedAt >= MILLIS
+    fun line(text: String, secondsLeft: Int) = "Sending \"$text\" in $secondsLeft\u2026"
+}
+
 object HelpMessages {
     data class Status(val text: String, val stage: String, val at: Long = System.currentTimeMillis(), val texted: List<String> = emptyList())
     val status = MutableStateFlow<Status?>(null)
@@ -174,6 +183,17 @@ fun HelpScreen(nav: Nav) {
     var saveCustom by remember { mutableStateOf(true) }
     var smsOk by remember { mutableStateOf(Perms.has(ctx, *Perms.SMS)) }
     val ask = rememberPermissionAsker { smsOk = Perms.has(ctx, *Perms.SMS) }
+    // a tapped message waits 3 seconds and can be cancelled: (text, time tapped)
+    var waiting by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    var clock by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(waiting) {
+        val w = waiting ?: return@LaunchedEffect
+        while (true) {
+            clock = System.currentTimeMillis()
+            if (SendCountdown.due(w.second, clock)) { HelpMessages.send(ctx, w.first); waiting = null; return@LaunchedEffect }
+            delay(200)
+        }
+    }
 
     val speak = "Tap a message to send it to your family. For an emergency, tap the red SOS button at the bottom. " + (if (helpers.isEmpty()) "You have no helpers yet. Add one first." else "")
     Screen("Family", speak, onHome = { nav.home() }, subtitle = "Tell your family what you need", eyebrow = "") {
@@ -204,9 +224,15 @@ fun HelpScreen(nav: Nav) {
             }
         } else {
             com.suryaprakash.medlog.ui.SectionHeader("Send a message", "${msgs.size} message${if (msgs.size == 1) "" else "s"} · tap one to send", "Change") { nav.go(Route.Messages) }
+            waiting?.let { w ->
+                Card(border = p.brand) {
+                    Body(SendCountdown.line(w.first, SendCountdown.secondsLeft(w.second, clock).coerceAtLeast(1)), bold = true)
+                    BigButton("Cancel", tone = Tone.SECONDARY, onClick = { waiting = null; app.speaker.say("Cancelled") })
+                }
+            }
             com.suryaprakash.medlog.ui.TileGrid(msgs, 2, aspect = 1.3f) { m, mod ->
                 val key = m.substringBefore('|'); val text = m.substringAfter('|')
-                com.suryaprakash.medlog.ui.Tile("Send: $text", mod, onClick = { HelpMessages.send(ctx, text); app.speaker.say("Sending: $text") }) {
+                com.suryaprakash.medlog.ui.Tile("Send: $text", mod, onClick = { waiting?.let { HelpMessages.send(ctx, it.first) }; waiting = text to System.currentTimeMillis(); clock = System.currentTimeMillis(); app.speaker.say("Sending: $text in 3 seconds. Tap Cancel to stop.") }) {
                     com.suryaprakash.medlog.ui.OptionIcon(HelpMessages.icon(key), HelpMessages.tint(key, p), 56.dp)
                     Spacer(Modifier.height(10.dp))
                     Text(text, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2)
@@ -531,6 +557,9 @@ fun HelperHomeScreen(nav: Nav) {
                     com.suryaprakash.medlog.ui.ValueRow(m.text, "${dayLabel(m.at)} ${timeLabel(m.at)}".trim(), valueColor = if (m.kind in setOf("SOS", "DANGER", "FALL")) p.red else null)
                 }
             }
+        }
+        com.suryaprakash.medlog.ui.Group {
+            com.suryaprakash.medlog.ui.ValueRow("Report a problem with MedLog", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
         }
         Text("Help one more person", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.brand, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))

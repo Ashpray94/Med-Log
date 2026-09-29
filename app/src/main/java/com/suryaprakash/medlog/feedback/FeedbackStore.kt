@@ -17,7 +17,7 @@ enum class Category(val label: String, val slug: String) {
 }
 
 /** Where a report is in its life. Only the phone can say VERIFIED, when the person taps "It works now". */
-enum class Status { QUEUED, SENT, CLOSED, VERIFIED }
+enum class Status { QUEUED, SENT, CLOSED, CLOSED_NO_FIX, VERIFIED }
 
 /** One report, as saved in meta.json next to its picture. */
 data class Report(

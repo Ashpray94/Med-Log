@@ -9,6 +9,8 @@ import com.suryaprakash.medlog.feedback.Report
 import com.suryaprakash.medlog.feedback.ReportJson
 import com.suryaprakash.medlog.feedback.ShakeLogic
 import com.suryaprakash.medlog.feedback.Status
+import com.suryaprakash.medlog.feedback.statusLine
+import com.suryaprakash.medlog.ui.screens.SendCountdown
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -163,5 +165,50 @@ class FeedbackTest {
         val s = samples(0L to 3f, 200L to 3f, 1000L to 3f, 1200L to 3f, 3300L to 3f, 3500L to 3f)
         // shake at 200; 1200 is inside the cooldown; the pair at 3300/3500 is after it
         assertEquals(listOf(200L, 3500L), ShakeLogic.detect(s))
+    }
+
+    // ── plain words, closed without a fix, sharing, and the send countdown ──
+    @Test fun notPlannedAndDuplicateAreClosedWithoutAFix() {
+        assertEquals(Status.CLOSED_NO_FIX, Github.statusFor(Status.SENT, "closed", "not_planned"))
+        assertEquals(Status.CLOSED_NO_FIX, Github.statusFor(Status.SENT, "closed", "duplicate"))
+        assertEquals(Status.CLOSED, Github.statusFor(Status.SENT, "closed", "completed"))
+        assertEquals(Status.CLOSED, Github.statusFor(Status.SENT, "closed", ""))
+        assertEquals(Status.VERIFIED, Github.statusFor(Status.VERIFIED, "closed", "not_planned"))
+        assertEquals(Status.SENT, Github.statusFor(Status.CLOSED_NO_FIX, "open", "reopened"))
+    }
+
+    @Test fun refreshReadsStateReason() {
+        val http = Http { m, _, _, _ -> if (m == "GET") HttpResult(200, """{"state":"closed","state_reason":"not_planned"}""") else HttpResult(200, "{}") }
+        val s = FeedbackSender(http, "o/r", "t") { "" }
+        assertEquals(Status.CLOSED_NO_FIX, s.refresh(report().copy(issue = 5, status = Status.SENT)).status)
+        val nul = Http { _, _, _, _ -> HttpResult(200, """{"state":"closed","state_reason":null}""") }
+        assertEquals(Status.CLOSED, FeedbackSender(nul, "o/r", "t") { "" }.refresh(report().copy(issue = 5, status = Status.SENT)).status)
+    }
+
+    @Test fun statusWordsAreShortAndPlain() {
+        val r = report().copy(issue = 7)
+        assertEquals("Waiting to send", statusLine(r))
+        assertEquals("Sent, the team will look at it", statusLine(r.copy(status = Status.SENT)))
+        assertEquals("The team says it's fixed", statusLine(r.copy(status = Status.CLOSED)))
+        assertEquals("Closed without a fix", statusLine(r.copy(status = Status.CLOSED_NO_FIX)))
+        assertEquals("You checked it works", statusLine(r.copy(status = Status.VERIFIED)))
+    }
+
+    @Test fun shareTextHasWordsAndDetails() {
+        val t = Github.shareText(report())
+        assertTrue(t.contains("The button is too small"))
+        for (d in listOf("HelperHome", "2.9.0", "helper", "Google Pixel", "Android 14 (API 34)", "1700000000000-1234", "Hard to use")) assertTrue(d, t.contains(d))
+        assertTrue(Github.shareText(report(note = " ")).contains("no words"))
+    }
+
+    @Test fun sendCountdownGoesThreeTwoOneThenSends() {
+        assertEquals(3, SendCountdown.secondsLeft(1000, 1000))
+        assertEquals(3, SendCountdown.secondsLeft(1000, 1500))
+        assertEquals(2, SendCountdown.secondsLeft(1000, 2100))
+        assertEquals(1, SendCountdown.secondsLeft(1000, 3500))
+        assertEquals(0, SendCountdown.secondsLeft(1000, 4000))
+        assertFalse(SendCountdown.due(1000, 3999))
+        assertTrue(SendCountdown.due(1000, 4000))
+        assertEquals("Sending \"I need water\" in 3…", SendCountdown.line("I need water", 3))
     }
 }

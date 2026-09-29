@@ -61,9 +61,13 @@ object Github {
         repoResult.ok && runCatching { JSONObject(repoResult.body).optBoolean("private", false) }.getOrDefault(false)
 
     /** Open, or closed. A closed one the person has confirmed stays VERIFIED; one that is open again is just SENT. */
-    fun statusFor(current: Status, issueState: String): Status = when {
+    fun statusFor(current: Status, issueState: String, reason: String = ""): Status = when {
         issueState == "open" -> Status.SENT
-        issueState == "closed" -> if (current == Status.VERIFIED) Status.VERIFIED else Status.CLOSED
+        issueState == "closed" -> when {
+            current == Status.VERIFIED -> Status.VERIFIED
+            reason == "not_planned" || reason == "duplicate" -> Status.CLOSED_NO_FIX
+            else -> Status.CLOSED
+        }
         else -> current
     }
 
@@ -94,6 +98,21 @@ object Github {
     fun uploadJson(id: String, base64: String): String = JSONObject().apply {
         put("message", "Feedback picture $id"); put("content", base64)
     }.toString()
+
+    /** The words and details a person can hand to someone else, when this build cannot send by itself. */
+    fun shareText(r: Report): String = buildString {
+        appendLine("MedLog problem report (${r.category.label})")
+        appendLine()
+        appendLine(r.note.ifBlank { "(no words, see the picture)" })
+        appendLine()
+        appendLine("Page: ${r.route}")
+        appendLine("App version: ${r.version}")
+        appendLine("Role: ${r.role}")
+        appendLine("Device: ${r.device}")
+        appendLine("Android: ${r.android}")
+        appendLine("Time: ${java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.US).format(java.util.Date(r.createdAt))}")
+        append("Report id: ${r.id}")
+    }
 
     fun commentJson(text: String) = JSONObject().put("body", text).toString()
     fun labelsJson(vararg labels: String) = JSONObject().put("labels", JSONArray(labels.toList())).toString()
@@ -150,8 +169,10 @@ class FeedbackSender(
         if (r.issue <= 0) return r
         val res = http.call("GET", url("/issues/${r.issue}"), token, null)
         if (!res.ok) return r
-        val state = runCatching { JSONObject(res.body).getString("state") }.getOrDefault("")
-        return r.copy(status = Github.statusFor(r.status, state))
+        val o = runCatching { JSONObject(res.body) }.getOrNull()
+        val state = o?.optString("state").orEmpty()
+        val reason = if (o == null || o.isNull("state_reason")) "" else o.optString("state_reason")
+        return r.copy(status = Github.statusFor(r.status, state, reason))
     }
 
     /** "It works now": a comment and the label `verified`. */
