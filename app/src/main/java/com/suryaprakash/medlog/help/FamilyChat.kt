@@ -91,10 +91,8 @@ object FamilyChat {
 
     /** Another helper wrote. A quiet notification, not an alarm. */
     fun received(ctx: Context, o: JSONObject) {
-        if (o.optInt("sync") == 1) {
-            com.suryaprakash.medlog.data.Sync.receive(ctx, o)
-            return
-        }
+        // Health records use authenticated patient pairing topics, never the helpers-only chat mailbox.
+        if (o.has("sync") || o.has("syncAsk")) return
         if (o.optString("dev") == device(ctx)) return
         val app = ctx.medlog
         app.scope.launch {

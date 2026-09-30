@@ -121,12 +121,23 @@ object Nearby {
     /** Everything a helper's phone sends to the person's phone: receipts, replies and "How are you?". */
     internal fun fromHelper(ctx: Context, h: Helper, o: JSONObject) {
         when {
+            o.has("sync") || o.has("syncAsk") -> h.pairId?.let { pairId ->
+                ctx.medlog.scope.launch { com.suryaprakash.medlog.data.Sync.received(ctx, pairId, o) }
+            }
             o.has("reply") -> onReply(ctx, h, o)
             o.optString("ask").isNotEmpty() -> askedByHelper(ctx, h, o)
         }
     }
 
-    private suspend fun nearbySend(ctx: Context, helpers: List<Helper>, body: JSONObject) {
+    private suspend fun nearbySend(ctx: Context, helpers: List<Helper>, body: JSONObject) =
+        nearbySendEach(ctx, helpers.associateWith { body })
+
+    /**
+     * Bluetooth / Wi-Fi Direct to helper phones in range, a different note for each ([bodies]); [onSent] for each
+     * phone that took its note. Looks for 20 seconds, then keeps the line open 40 seconds for replies.
+     */
+    suspend fun nearbySendEach(ctx: Context, bodies: Map<Helper, JSONObject>, onSent: (Helper) -> Unit = {}) {
+        val helpers = bodies.keys.toList()
         val c = client(ctx)
         val connected = HashMap<String, Helper>()
         val lifecycle = object : ConnectionLifecycleCallback() {
@@ -143,8 +154,9 @@ object Nearby {
             override fun onConnectionResult(id: String, r: ConnectionResolution) {
                 val h = connected[id] ?: return
                 if (r.status.isSuccess) {
+                    val body = bodies[h] ?: return
                     c.sendPayload(id, Payload.fromBytes(Keys.seal(key(h), body.toString().toByteArray())))
-                    reached.value = reached.value + h.name
+                    if (body.has("sync")) onSent(h) else reached.value = reached.value + h.name
                 }
             }
             override fun onDisconnected(id: String) {}
@@ -289,6 +301,12 @@ object Nearby {
 
     internal suspend fun onRelayNote(ctx: Context, topic: String, o: JSONObject) {
         val app = ctx.medlog
+        if (o.has("sync") || o.has("syncAsk")) {
+            val peer = People.all(ctx).firstOrNull { topic == Relay.topic(it.keyBytes, Relay.DOWN) }?.pairId
+                ?: app.db.helpers().all().firstOrNull { it.pairKey != null && Relay.topic(key(it), Relay.UP) == topic }?.pairId ?: return
+            com.suryaprakash.medlog.data.Sync.received(ctx, peer, o)
+            return
+        }
         for (p in People.all(ctx)) {
             if (topic == Relay.topic(p.keyBytes, Relay.DOWN)) { received(ctx, o, viaNearby = false, pairId = p.pairId); return }
             if (p.familyBytes?.let { Relay.topic(it, "family") } == topic) { FamilyChat.received(ctx, o); return }
@@ -324,6 +342,10 @@ object Nearby {
     /** Helper's phone: something arrived from the person's phone. */
     internal fun received(ctx: Context, o: JSONObject, viaNearby: Boolean, pairId: String = "") {
         val app = ctx.medlog
+        if ((o.has("sync") || o.has("syncAsk")) && pairId.isNotEmpty()) {
+            app.scope.launch { com.suryaprakash.medlog.data.Sync.received(ctx, pairId, o) }
+            return
+        }
         if (o.optString("kind") == "FAMILY_KEY") { FamilyChat.gotKey(ctx, o, pairId); return }
         // a receipt for the helper's own "How are you?"
         if (o.has("reply")) {
@@ -483,6 +505,7 @@ object Nearby {
                         val existing = app.db.helpers().all().firstOrNull { it.phone.filter(Char::isDigit).takeLast(10) == helperPhone.filter(Char::isDigit).takeLast(10) && helperPhone.isNotBlank() }
                         if (existing != null) app.db.helpers().update(existing.copy(pairId = pairId, pairKey = key))
                         else app.db.helpers().insert(Helper(name = helperName, phone = helperPhone, pairId = pairId, pairKey = key))
+                        com.suryaprakash.medlog.data.Sync.forget(ctx, pairId)
                         pair.value = pair.value.copy(done = helperName)
                         startListening(ctx); Relay.reconnect()
                         delay(2000); c.disconnectFromEndpoint(id); c.stopDiscovery()
@@ -523,6 +546,11 @@ class NearbyService : Service() {
         if (helper && Nearby.allowed(this)) Nearby.advertise(this)
         val ctx = this
         Relay.listen(this, medlog.scope, { Nearby.listenTopics(ctx) }) { topic, o -> Nearby.onRelayNote(ctx, topic, o) }
+        medlog.scope.launch {
+            kotlinx.coroutines.delay(5_000)
+            People.all(ctx).forEach { com.suryaprakash.medlog.data.Sync.askSince(ctx, it.pairId) }
+            com.suryaprakash.medlog.data.Sync.push(ctx)
+        }
         return START_STICKY
     }
     override fun onDestroy() { runCatching { Nearby.client(this).stopAdvertising() }; Relay.stop(); super.onDestroy() }

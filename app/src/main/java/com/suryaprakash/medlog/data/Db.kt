@@ -199,7 +199,7 @@ interface HelperDao {
 
 @Dao
 interface NoteDao {
-    @Query("SELECT * FROM notes WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Note>
+    @Query("SELECT * FROM notes WHERE updatedAt > :since AND updatedAt <= (SELECT MAX(boundary.updatedAt) FROM (SELECT updatedAt FROM notes WHERE updatedAt > :since ORDER BY updatedAt, id LIMIT :limit) AS boundary) ORDER BY updatedAt, id") suspend fun changedSince(since: Long, limit: Int): List<Note>
     @Query("SELECT * FROM notes WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Note?
     @Query("SELECT * FROM notes WHERE deletedAt IS NULL AND kind = :kind AND IFNULL(problemId, '') = :problemId AND occurredAt = :at AND createdAt = :created AND text = :text LIMIT 1")
     suspend fun sameEntry(kind: String, problemId: String, at: Long, created: Long, text: String): Note?
@@ -226,7 +226,7 @@ interface NoteDao {
 
 @Dao
 interface MedicineDao {
-    @Query("SELECT * FROM medicines WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Medicine>
+    @Query("SELECT * FROM medicines WHERE updatedAt > :since AND updatedAt <= (SELECT MAX(boundary.updatedAt) FROM (SELECT updatedAt FROM medicines WHERE updatedAt > :since ORDER BY updatedAt, id LIMIT :limit) AS boundary) ORDER BY updatedAt, id") suspend fun changedSince(since: Long, limit: Int): List<Medicine>
     @Query("SELECT * FROM medicines WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Medicine?
     @Query("SELECT MAX(updatedAt) FROM medicines") suspend fun lastChange(): Long?
     @Query("SELECT * FROM medicines WHERE active = 1 ORDER BY name") fun activeFlow(): Flow<List<Medicine>>
@@ -239,7 +239,7 @@ interface MedicineDao {
 
 @Dao
 interface DoseDao {
-    @Query("SELECT * FROM doses WHERE updatedAt > :since ORDER BY updatedAt LIMIT :limit") suspend fun changedSince(since: Long, limit: Int): List<Dose>
+    @Query("SELECT * FROM doses WHERE updatedAt > :since AND updatedAt <= (SELECT MAX(boundary.updatedAt) FROM (SELECT updatedAt FROM doses WHERE updatedAt > :since ORDER BY updatedAt, id LIMIT :limit) AS boundary) ORDER BY updatedAt, id") suspend fun changedSince(since: Long, limit: Int): List<Dose>
     @Query("SELECT * FROM doses WHERE uid = :uid LIMIT 1") suspend fun byUid(uid: String): Dose?
     @Query("SELECT * FROM doses WHERE medicineId = :med AND scheduledAt = :at LIMIT 1") suspend fun at(med: Long, at: Long): Dose?
     @Query("SELECT MAX(updatedAt) FROM doses") suspend fun lastChange(): Long?

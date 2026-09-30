@@ -170,6 +170,18 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
     }
     suspend fun purgeRemoved() = db.notes().purge(System.currentTimeMillis() - 30 * DAY)
 
+    /** Shipped reconciliation: copies of the same event converge on one shared identity. */
+    suspend fun mergeCopies(): Int {
+        var merged = 0
+        db.notes().between(0, Long.MAX_VALUE).groupBy { listOf(it.kind, it.problemId.orEmpty(), it.occurredAt, it.createdAt, it.text) }.values
+            .filter { it.size > 1 }.forEach { same ->
+                val keep = same.minBy { it.uid }
+                same.filter { it.id != keep.id }.forEach { db.notes().remove(it.id); merged++ }
+                db.notes().get(keep.id)?.let { db.notes().update(it) }
+            }
+        return merged
+    }
+
     // ───────── widget / home: which problems to show (plan 6.2) ─────────
 
     data class Recent(val problemId: String, val todayCount: Int, val lastAt: Long, val ongoing: Boolean)
