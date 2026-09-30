@@ -38,14 +38,21 @@ import com.suryaprakash.medlog.data.Medicine
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.notify.NotifySpec
 import com.suryaprakash.medlog.pictogram.Picture
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Modifier
 import com.suryaprakash.medlog.ui.BigButton
 import com.suryaprakash.medlog.ui.Body
 import com.suryaprakash.medlog.ui.Card
 import com.suryaprakash.medlog.ui.Hint
 import com.suryaprakash.medlog.ui.LocalPalette
 import com.suryaprakash.medlog.ui.LocalScale
+import com.suryaprakash.medlog.ui.LocalSettings
 import com.suryaprakash.medlog.ui.MedTheme
 import com.suryaprakash.medlog.ui.Screen
+import com.suryaprakash.medlog.ui.Senior
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.YesNo
 import com.suryaprakash.medlog.ui.savedFeedback
@@ -106,6 +113,7 @@ class DoseActivity : ComponentActivity() {
             Screen("No medicine due", "Nothing is due right now.", onHome = null) { BigButton("Close", onClick = onClose) }
             return
         }
+        val settings by medlog.settings.flow.collectAsState()
         val feeding = due.all { it.second.form == "feed" }
         val say = if (feeding) "Time to give the feed. " + due.joinToString(". ") { (_, m) -> "${m.name}, ${m.amount}" } else "Time for your medicine. " + due.joinToString(". ") { (_, m) -> describe(m) }
         LaunchedEffect(say) { AlarmTone.stop(); medlog.speaker.say(say) }
@@ -122,22 +130,35 @@ class DoseActivity : ComponentActivity() {
         Screen(if (feeding) "Feed time" else if (due.size == 1) "Medicine time" else "Medicine time (${due.size})", say, onHome = null) {
             due.forEach { (d, m) ->
                 Card(border = if (m.critical) p.red else p.brand) {
+                    val medicineDesc = describe(m)
+                    LaunchedEffect(Unit) {
+                        if (settings.readAloud) {
+                            medlog.speaker.say(medicineDesc, queue = true)
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val photo = remember(m.photoPath) { m.photoPath?.let { runCatching { BitmapFactory.decodeFile(it) }.getOrNull() } }
                         if (photo != null) Image(photo.asImageBitmap(), "Photo of ${m.name}", Modifier.size(sc.target * 1.8f).clip(RoundedCornerShape(16.dp)), contentScale = ContentScale.Crop)
                         else Picture("mouth", "pill", sc.target * 1.6f)
                         Spacer(Modifier.width(16.dp))
-                        androidx.compose.foundation.layout.Column {
-                            Text(m.name, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink)
-                            Body("${m.amount} ${m.form}${if (m.strength.isNotBlank()) " · ${m.strength}" else ""}")
-                            Hint(foodWords(m.food) + " · due ${time(d.scheduledAt)}")
-                            if (m.critical) Text("Important medicine", color = p.red, fontSize = sc.small, fontWeight = FontWeight.Bold)
+                        Column(Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(m.name, fontSize = sc.title, fontWeight = FontWeight.Bold, color = p.ink)
+                                    Body("${m.amount} ${m.form}${if (m.strength.isNotBlank()) " · ${m.strength}" else ""}")
+                                    Hint(foodWords(m.food) + " · due ${time(d.scheduledAt)}")
+                                    if (m.critical) Text("Important medicine", color = p.red, fontSize = sc.small, fontWeight = FontWeight.Bold)
+                                }
+                                IconButton(onClick = { medlog.speaker.say(medicineDesc) }, modifier = Modifier.size(48.dp)) {
+                                    Icon(Icons.Rounded.VolumeUp, "Speak", tint = p.brand)
+                                }
+                            }
                         }
                     }
                     if (m.form == "feed") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        BigButton("Given", Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.take(this@DoseActivity, d.id); savedFeedback(this@DoseActivity); version++ } })
-                        BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = sc.target * 1.3f, onClick = { scope.launch { Scheduler.skip(this@DoseActivity, d.id, "Not given"); version++ } })
-                    } else BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = {
+                        BigButton("Given", Modifier.weight(1f), Tone.OK, icon = Icons.Rounded.Check, height = Senior.Main, onClick = { scope.launch { Scheduler.take(this@DoseActivity, d.id); savedFeedback(this@DoseActivity); version++ } })
+                        BigButton("Not given", Modifier.weight(1f), Tone.SECONDARY, height = Senior.Main, onClick = { scope.launch { Scheduler.skip(this@DoseActivity, d.id, "Not given"); version++ } })
+                    } else BigButton("I took it", tone = Tone.OK, icon = Icons.Rounded.Check, height = Senior.Main, onClick = {
                         scope.launch {
                             val r = Scheduler.take(this@DoseActivity, d.id)
                             if (r == Scheduler.Taken.ALREADY) confirmDouble = medlog.db.doses().get(d.id) else { savedFeedback(this@DoseActivity); medlog.speaker.say("Well done."); version++ }
@@ -149,10 +170,10 @@ class DoseActivity : ComponentActivity() {
                     }
                 }
             }
-            BigButton(NotifySpec.label(NotifySpec.Type.DOSE_DUE, "later"), tone = Tone.QUIET, onClick = {
+            BigButton(NotifySpec.label(NotifySpec.Type.DOSE_DUE, "later"), tone = Tone.QUIET, height = Senior.Main, onClick = {
                 scope.launch { due.forEach { Scheduler.notNow(this@DoseActivity, it.first.id) }; onClose() }
             })
-            if (due.size > 1) BigButton("I took them all", tone = Tone.OK, onClick = {
+            if (due.size > 1) BigButton("I took them all", tone = Tone.OK, height = Senior.Main, onClick = {
                 scope.launch { due.forEach { Scheduler.take(this@DoseActivity, it.first.id) }; savedFeedback(this@DoseActivity); version++ }
             })
         }

@@ -80,6 +80,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -359,18 +360,24 @@ fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
     val ordered = if (s.leftHand) tabs.reversed() else tabs
     Column(Modifier.fillMaxWidth().background(p.paper)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp)) {
             ordered.forEach { (t, go) ->
                 val (label, icon, on) = t
-                val tint = if (on) Hs.Blue else Hs.Ink
                 Column(
-                    Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = Hs.TargetPrimary).clip(RoundedCornerShape(Hs.Radius))
-                        .background(if (on) Hs.Blue.copy(alpha = 0.12f) else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
+                    Modifier.weight(1f).padding(horizontal = 4.dp).heightIn(min = 72.dp).clip(RoundedCornerShape(24.dp))
+                        .background(if (on) Hs.Blue.copy(alpha = 0.15f) else Color.Transparent)
+                        .steady(label, onClick = go)
+                        .padding(vertical = 8.dp)
+                        .drawBehind {
+                            if (on) {
+                                drawLine(color = Hs.Blue, strokeWidth = 3.dp.toPx(), start = androidx.compose.ui.geometry.Offset(0f, size.height - 2.dp.toPx()), end = androidx.compose.ui.geometry.Offset(size.width, size.height - 2.dp.toPx()))
+                            }
+                        },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
-                    Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
-                    Spacer(Modifier.height(3.dp))
-                    Text(label, fontSize = Hs.Label, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Medium, color = tint, maxLines = 1)
+                    Icon(icon, null, tint = Hs.Blue, modifier = Modifier.size(32.dp))
+                    Spacer(Modifier.height(4.dp))
+                    Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Hs.Ink, maxLines = 1)
                 }
             }
         }

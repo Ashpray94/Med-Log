@@ -34,6 +34,7 @@ import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.LocalHospital
 import androidx.compose.material.icons.rounded.Medication
+import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.MonitorHeart
 import androidx.compose.material.icons.rounded.Restaurant
@@ -80,6 +81,7 @@ import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Perms
 import com.suryaprakash.medlog.ui.Hs
 import com.suryaprakash.medlog.ui.Route
+import com.suryaprakash.medlog.ui.Senior
 import com.suryaprakash.medlog.ui.RoundIcon
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Tile
@@ -126,32 +128,73 @@ fun HomeScreen(nav: Nav) {
             }
         }
 
-        // every feature, one flat grid: one icon, one or two words
-        val tiles = listOfNotNull(
-            HomeTile("How do you feel", Icons.Rounded.ChatBubble, Hs.Blue) { nav.go(Route.Tell()) },
-            if ("meds" !in s.hidden) HomeTile("Medicines", Icons.Rounded.Medication, Hs.Ink) { nav.go(Route.Meds) } else null,
+        // Hero tiles: 2x2 grid with large icons and labels
+        val heroTiles = listOf(
+            HomeTile("How do I feel", Icons.Rounded.ChatBubble, Hs.Blue) { nav.go(Route.Tell()) },
+            HomeTile("Medicines", Icons.Rounded.Medication, Hs.Ink) { nav.go(Route.Meds) },
+            HomeTile("Food & water", Icons.Rounded.Restaurant, Hs.Green) { nav.go(Route.Food) },
+            HomeTile("SOS", Icons.Rounded.Sos, Hs.Red) { nav.go(Route.Emergency) },
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Senior.Gap)) {
+            heroTiles.take(2).forEach { t ->
+                val sh = RoundedCornerShape(Hs.Radius)
+                Column(
+                    Modifier.weight(1f).heightIn(min = 150.dp).clip(sh).background(t.tint).steady(t.label, onClick = t.onClick).padding(Senior.Gap),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(Senior.HeroIcon))
+                    Spacer(Modifier.height(8.dp))
+                    Text(t.label, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center, maxLines = 2)
+                }
+            }
+        }
+        Spacer(Modifier.height(Senior.Gap))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Senior.Gap)) {
+            heroTiles.drop(2).forEach { t ->
+                val sh = RoundedCornerShape(Hs.Radius)
+                Column(
+                    Modifier.weight(1f).heightIn(min = 150.dp).clip(sh).background(t.tint).steady(t.label, onClick = t.onClick).padding(Senior.Gap),
+                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(t.icon, null, tint = Color.White, modifier = Modifier.size(Senior.HeroIcon))
+                    Spacer(Modifier.height(8.dp))
+                    Text(t.label, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center, maxLines = 2)
+                }
+            }
+        }
+
+        // More section heading
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.MoreHoriz, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("More", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Hs.Ink)
+        }
+
+        // Other tiles: 2 per row with min height 96.dp
+        val otherTiles = listOfNotNull(
             if ("meds" !in s.hidden) HomeTile("Did I take it", Icons.Rounded.Checklist, Hs.Ink) { nav.go(Route.DidITake) } else null,
-            if ("food" !in s.hidden) HomeTile("Food & water", Icons.Rounded.Restaurant, Hs.Ink) { nav.go(Route.Food) } else null,
             if ("readings" !in s.hidden) HomeTile("BP & sugar", Icons.Rounded.MonitorHeart, Hs.Ink) { nav.go(Route.Readings) } else null,
             if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, Hs.Ink) { nav.go(Route.Doctor) } else null,
             if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, Hs.Ink) { nav.go(Route.Reports) } else null,
             HomeTile("History", Icons.Rounded.History, Hs.Ink) { nav.go(Route.Notes) },
             HomeTile("Appointments", Icons.Rounded.CalendarMonth, Hs.Ink) { nav.go(Route.Appointments) },
             HomeTile("Helpers", Icons.Rounded.Groups, Hs.Ink) { nav.go(Route.HelpTab) },
-            HomeTile("SOS", Icons.Rounded.Sos, Hs.Red) { nav.go(Route.Emergency) },
         )
-        TileGrid(tiles, 2, aspect = 1.45f) { t, m ->
-            val sh = RoundedCornerShape(Hs.Radius)
-            val sos = t.label == "SOS"
-            val solid = sos || t.tint == Hs.Blue
-            val fg = if (solid) Color.White else Hs.Ink
-            Column(
-                m.clip(sh).background(if (solid) t.tint else Hs.Paper).border(2.dp, if (solid) t.tint else Hs.Ink, sh).steady(t.label, onClick = t.onClick).padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(t.icon, null, tint = if (solid) Color.White else t.tint, modifier = Modifier.size(40.dp))
-                Spacer(Modifier.height(6.dp))
-                Text(t.label, fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = fg, textAlign = TextAlign.Center, maxLines = 2)
+        for (i in otherTiles.indices step 2) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Hs.Gutter)) {
+                (i until minOf(i + 2, otherTiles.size)).forEach { idx ->
+                    val t = otherTiles[idx]
+                    val sh = RoundedCornerShape(Hs.Radius)
+                    Column(
+                        Modifier.weight(1f).heightIn(min = 96.dp).clip(sh).background(Hs.Paper).border(2.dp, Hs.Ink, sh).steady(t.label, onClick = t.onClick).padding(8.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(t.icon, null, tint = Hs.Ink, modifier = Modifier.size(40.dp))
+                        Spacer(Modifier.height(4.dp))
+                        Text(t.label, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Hs.Ink, textAlign = TextAlign.Center, maxLines = 2)
+                    }
+                }
             }
         }
     }

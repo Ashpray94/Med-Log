@@ -9,10 +9,10 @@ object Hs {
     // colour: every text/background pair here is at least 7:1
     val Ink = Color(0xFF0B0F14)
     val Paper = Color(0xFFFFFFFF)
-    val Blue = Color(0xFF0057B8)
-    val Green = Color(0xFF007A3D)
-    val Red = Color(0xFFC8102E)
-    val Amber = Color(0xFFB26A00)
+    val Blue = Color(0xFF004C99)
+    val Green = Color(0xFF00622F)
+    val Red = Color(0xFFA50E26)
+    val Amber = Color(0xFF7A4A00)
 
     // size
     val TargetMin = 48.dp
@@ -25,4 +25,14 @@ object Hs {
     val Label = 16.sp
     val Title = 24.sp
     val Headline = 28.sp
+}
+
+/** Senior-friendly sizing and typography for patient screens. */
+object Senior {
+    val Body = 20.sp
+    val Label = 16.sp
+    val Main = 88.dp
+    val Target = 56.dp
+    val Gap = 12.dp
+    val HeroIcon = 64.dp
 }

@@ -20,12 +20,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.AppointmentNew
+import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.NightsStay
 import androidx.compose.material.icons.rounded.Restaurant
 import androidx.compose.material.icons.rounded.Medication
 import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.icons.rounded.WbCloudy
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material.icons.rounded.WbTwilight
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -52,9 +59,11 @@ import com.suryaprakash.medlog.meds.Scheduler
 import com.suryaprakash.medlog.ui.Announce
 import com.suryaprakash.medlog.ui.Hs
 import com.suryaprakash.medlog.ui.LocalPalette
+import com.suryaprakash.medlog.ui.LocalSettings
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.Screen
+import com.suryaprakash.medlog.ui.Senior
 import com.suryaprakash.medlog.ui.Text
 import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.launch
@@ -68,14 +77,16 @@ fun TimelineScreen(nav: Nav) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val p = LocalPalette.current
+    val s = LocalSettings.current
     val scope = rememberCoroutineScope()
     val now = System.currentTimeMillis()
 
     var dayOffset by rememberSaveable { mutableStateOf(0) }
     var filters by rememberSaveable { mutableStateOf(setOf(TlFilter.ALL)) }
     val openSegments = remember { mutableStateMapOf<Segment, Boolean>() }
+    val isHelper = s.role == "helper"
 
-    val (from, to) = TimelineLogic.dayBounds(dayOffset, now)
+    val (from, to) = TimelineLogic.dayBounds(if (isHelper) dayOffset else 0, now)
 
     val notesFlow by app.repo.db.notes().betweenFlow(from, to).collectAsState(initial = emptyList())
     val dosesFlow by app.repo.db.doses().betweenFlow(from, to).collectAsState(initial = emptyList())
@@ -155,43 +166,47 @@ fun TimelineScreen(nav: Nav) {
 
     Screen("Timeline", "Today and what happened.", onHome = { nav.home() }) {
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            // Day selector
-            item {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
-                    Box(Modifier.size(56.dp).clip(RoundedCornerShape(Hs.Radius)).steady("Yesterday") { dayOffset-- }.padding(8.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.ChevronLeft, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Text(if (dayOffset == 0) "Today" else if (dayOffset == -1) "Yesterday" else if (dayOffset == 1) "Tomorrow" else "Day $dayOffset",
-                        fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = Hs.Ink)
-                    Spacer(Modifier.width(8.dp))
-                    Box(Modifier.size(56.dp).clip(RoundedCornerShape(Hs.Radius)).steady("Tomorrow") { dayOffset++ }.padding(8.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.ChevronRight, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
+            // Day selector: show only for helpers
+            if (isHelper) {
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                        Box(Modifier.size(56.dp).clip(RoundedCornerShape(Hs.Radius)).steady("Yesterday") { dayOffset-- }.padding(8.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.ChevronLeft, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(if (dayOffset == 0) "Today" else if (dayOffset == -1) "Yesterday" else if (dayOffset == 1) "Tomorrow" else "Day $dayOffset",
+                            fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = Hs.Ink)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.size(56.dp).clip(RoundedCornerShape(Hs.Radius)).steady("Tomorrow") { dayOffset++ }.padding(8.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.ChevronRight, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
+                        }
                     }
                 }
             }
 
-            // Filter chips
-            item {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TlFilter.values().forEach { f ->
-                        val selected = filters.contains(f)
-                        val bg = if (selected) Hs.Blue else Hs.Paper
-                        val fg = if (selected) Color.White else Hs.Ink
-                        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(bg).border(1.dp, if (selected) Hs.Blue else Hs.Ink, RoundedCornerShape(20.dp))
-                            .steady(f.label) {
-                                filters = if (f == TlFilter.ALL) {
-                                    setOf(TlFilter.ALL)
-                                } else if (selected && filters.size == 1) {
-                                    setOf(TlFilter.ALL)
-                                } else if (f == TlFilter.ALL && filters.contains(TlFilter.ALL)) {
-                                    TlFilter.values().filterNot { it == TlFilter.ALL }.toSet()
-                                } else {
-                                    val newFilters = filters - TlFilter.ALL
-                                    (if (selected) newFilters - f else newFilters + f).ifEmpty { setOf(TlFilter.ALL) }
-                                }
-                            }.padding(horizontal = 12.dp, vertical = 6.dp)) {
-                            Text(f.label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = fg)
+            // Filter chips: show only for helpers
+            if (isHelper) {
+                item {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TlFilter.values().forEach { f ->
+                            val selected = filters.contains(f)
+                            val bg = if (selected) Hs.Blue else Hs.Paper
+                            val fg = if (selected) Color.White else Hs.Ink
+                            Box(Modifier.clip(RoundedCornerShape(20.dp)).background(bg).border(1.dp, if (selected) Hs.Blue else Hs.Ink, RoundedCornerShape(20.dp))
+                                .steady(f.label) {
+                                    filters = if (f == TlFilter.ALL) {
+                                        setOf(TlFilter.ALL)
+                                    } else if (selected && filters.size == 1) {
+                                        setOf(TlFilter.ALL)
+                                    } else if (f == TlFilter.ALL && filters.contains(TlFilter.ALL)) {
+                                        TlFilter.values().filterNot { it == TlFilter.ALL }.toSet()
+                                    } else {
+                                        val newFilters = filters - TlFilter.ALL
+                                        (if (selected) newFilters - f else newFilters + f).ifEmpty { setOf(TlFilter.ALL) }
+                                    }
+                                }.padding(horizontal = 12.dp, vertical = 6.dp)) {
+                                Text(f.label, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = fg)
+                            }
                         }
                     }
                 }
@@ -209,12 +224,26 @@ fun TimelineScreen(nav: Nav) {
                         else -> Hs.Paper
                     }
 
+                    // Map segment names to icons
+                    val segmentIcon = when (seg.label) {
+                        "Early morning" -> Icons.Rounded.WbTwilight
+                        "Morning" -> Icons.Rounded.WbSunny
+                        "Noon" -> Icons.Rounded.LightMode
+                        "Afternoon" -> Icons.Rounded.WbCloudy
+                        "Evening" -> Icons.Rounded.WbTwilight
+                        "Night" -> Icons.Rounded.NightsStay
+                        "Late night" -> Icons.Rounded.Bedtime
+                        else -> Icons.Rounded.Schedule
+                    }
+
                     Column {
                         Row(Modifier.fillMaxWidth().heightIn(min = 64.dp).clip(RoundedCornerShape(Hs.Radius)).background(Hs.Paper)
                             .border(1.dp, Hs.Ink.copy(alpha = 0.1f), RoundedCornerShape(Hs.Radius))
                             .steady(seg.label) { segmentsToShow[seg] = !isOpen }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically) {
+                            Icon(segmentIcon, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
+                            Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(seg.label, fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = Hs.Ink)
                                 Text(seg.range, fontSize = 13.sp, color = Hs.Ink.copy(alpha = 0.6f))
@@ -308,11 +337,11 @@ private fun TimelineRow(
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
             if (entry.alert) Box(Modifier.fillMaxWidth().height(3.dp).background(Hs.Red))
             Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.Top) {
-                Text(time, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Hs.Ink.copy(alpha = 0.7f), modifier = Modifier.width(50.dp))
-                Icon(icon, null, tint = iconTint, modifier = Modifier.size(20.dp).padding(top = 2.dp))
+                Text(time, fontSize = 18.sp, fontWeight = FontWeight.Medium, color = Hs.Ink.copy(alpha = 0.7f), modifier = Modifier.width(60.dp))
+                Icon(icon, null, tint = iconTint, modifier = Modifier.size(36.dp).padding(top = 2.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(entry.title, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Hs.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(entry.title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Hs.Ink, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     if (entry.line.isNotBlank()) {
                         Text(entry.line, fontSize = 14.sp, color = Hs.Ink.copy(alpha = 0.6f), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
