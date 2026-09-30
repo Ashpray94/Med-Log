@@ -1661,6 +1661,92 @@
   ],
   "openSore": [
    "appearance"
+  ],
+  "sputumAmount": [
+   "amount"
+  ],
+  "sputumConsistency": [
+   "consistency"
+  ],
+  "sputumSmell": [
+   "smell"
+  ],
+  "sputumWhen": [
+   "timing"
+  ],
+  "coughBreathTalk": [
+   "danger"
+  ],
+  "coughBreathWalk": [
+   "exertion_tolerance"
+  ],
+  "coughWheeze": [
+   "wheeze"
+  ],
+  "vomitAmount": [
+   "amount"
+  ],
+  "vomitColour": [
+   "colour"
+  ],
+  "vomitShade": [
+   "shade"
+  ],
+  "vomitFaecal": [
+   "smell",
+   "danger"
+  ],
+  "stoolShape": [
+   "consistency"
+  ],
+  "stoolColour": [
+   "colour"
+  ],
+  "stoolShade": [
+   "shade"
+  ],
+  "stoolBloodWhere": [
+   "blood"
+  ],
+  "stoolBloodPlace": [
+   "blood"
+  ],
+  "stoolSmell": [
+   "smell"
+  ],
+  "urineColour": [
+   "colour"
+  ],
+  "urineAmount": [
+   "amount"
+  ],
+  "urineSmell": [
+   "smell"
+  ],
+  "dischargeAmount": [
+   "amount"
+  ],
+  "fluidColour": [
+   "colour"
+  ],
+  "fluidShade": [
+   "shade"
+  ],
+  "fluidConsistency": [
+   "consistency"
+  ],
+  "fluidSmell": [
+   "smell"
+  ],
+  "fluidBlood": [
+   "blood"
+  ],
+  "bleedVolume": [
+   "amount",
+   "danger"
+  ],
+  "bleedColour": [
+   "colour"
   ]
  },
  "questions": {
@@ -3293,6 +3379,160 @@
   ],
   "q_openSore": [
    "appearance"
+  ],
+  "q_coughTalk": [
+   "danger"
+  ],
+  "q_coughWalk": [
+   "exertion_tolerance"
+  ],
+  "q_coughWheeze": [
+   "wheeze"
+  ],
+  "q_dryWet": [
+   "cough"
+  ],
+  "q_phlegm": [
+   "any"
+  ],
+  "q_sputumAmount": [
+   "amount"
+  ],
+  "q_phlegmColour": [
+   "colour"
+  ],
+  "q_sputumShade": [
+   "shade"
+  ],
+  "q_sputumConsistency": [
+   "consistency"
+  ],
+  "q_sputumSmell": [
+   "smell"
+  ],
+  "q_sputumWhen": [
+   "timing"
+  ],
+  "q_vomitAmount": [
+   "amount"
+  ],
+  "q_vomitColour": [
+   "colour"
+  ],
+  "q_vomitShade": [
+   "shade"
+  ],
+  "q_vomitFaecal": [
+   "smell",
+   "danger"
+  ],
+  "q_stoolShape": [
+   "consistency"
+  ],
+  "q_stoolColour": [
+   "colour"
+  ],
+  "q_stoolShade": [
+   "shade"
+  ],
+  "q_stoolBloodWhere": [
+   "blood"
+  ],
+  "q_stoolBloodPlace": [
+   "blood"
+  ],
+  "q_stoolMucus": [
+   "consistency"
+  ],
+  "q_stoolSmell": [
+   "smell"
+  ],
+  "q_stoolPain": [
+   "pain_passing"
+  ],
+  "q_urineColour": [
+   "colour"
+  ],
+  "q_urineColourLast": [
+   "colour"
+  ],
+  "q_urineAmount": [
+   "amount"
+  ],
+  "q_urineSmell": [
+   "smell"
+  ],
+  "q_urineBlood": [
+   "blood",
+   "danger"
+  ],
+  "q_urineBurn": [
+   "pain_passing"
+  ],
+  "q_urineFlank": [
+   "site",
+   "danger"
+  ],
+  "q_dAmount": [
+   "amount"
+  ],
+  "q_dConsist": [
+   "consistency"
+  ],
+  "q_dSmell": [
+   "smell"
+  ],
+  "q_dBlood": [
+   "blood"
+  ],
+  "q_dColour_n": [
+   "colour"
+  ],
+  "q_dShade_n": [
+   "shade"
+  ],
+  "q_dShade_ear": [
+   "shade"
+  ],
+  "q_dShade_v": [
+   "shade"
+  ],
+  "q_dAmount_w": [
+   "amount"
+  ],
+  "q_dConsist_w": [
+   "consistency"
+  ],
+  "q_dBlood_w": [
+   "blood"
+  ],
+  "q_dShade_w": [
+   "shade"
+  ],
+  "q_dAmount_e": [
+   "amount"
+  ],
+  "q_dColour_e": [
+   "colour"
+  ],
+  "q_dShade_e": [
+   "shade"
+  ],
+  "q_dConsist_e": [
+   "consistency"
+  ],
+  "q_dSmell_e": [
+   "smell"
+  ],
+  "q_dBlood_e": [
+   "blood"
+  ],
+  "q_bleedVolume": [
+   "amount",
+   "danger"
+  ],
+  "q_bleedColour": [
+   "colour"
   ]
  }
 }
