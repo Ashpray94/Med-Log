@@ -68,7 +68,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/medlog-system-audit'
         run: |
           echo "DEV_VERSION_CODE=$((300000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
-          echo "DEV_VERSION_NAME=2.15.0.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+          echo "DEV_VERSION_NAME=2.15.1.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
 
       - name: Test and build
         run: gradle --no-daemon :app:testProdDebugUnitTest :app:assembleProdRelease :app:assembleDevRelease
