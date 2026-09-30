@@ -8,7 +8,7 @@ MedLog has two product flavors for parallel installation and testing.
 |--------|-----|------|
 | Application ID | `com.suryaprakash.medlog.dev` | `com.suryaprakash.medlog` |
 | Display Name | MedLog Dev | MedLog |
-| Updater | Disabled | Enabled |
+| Updater | Signed `dev-latest` prerelease channel | Production latest release |
 | Relay (internet messages) | Disabled | Enabled |
 | Signing Key | Same as prod | Shared with Meeting Timer |
 | Data Isolation | Separate database | Separate database |
@@ -20,6 +20,8 @@ MedLog has two product flavors for parallel installation and testing.
 gradle :app:installDevDebug
 ```
 Targets x86_64 ABI for emulators; can run alongside prod.
+
+The first updater-enabled dev APK must be installed manually once. After that, Settings → Check for updates reads `latest-dev.json` from the `dev-latest` GitHub prerelease, verifies its SHA-256 and signing certificate, and asks Android to install it. Only signed manual builds from `codex/medlog-system-audit` publish this channel. Dev updates never replace or mark the production release as latest.
 
 **Prod build (release, CI/CD):**
 ```

@@ -32,6 +32,7 @@ object Updater {
         "https://github.com/Ashpray94/Med-Log/releases/latest/download/latest.json",
         "https://raw.githubusercontent.com/Ashpray94/Med-Log/downloads/latest.json",
     )
+    private const val DEV_SOURCE = "https://github.com/Ashpray94/Med-Log/releases/download/dev-latest/latest-dev.json"
     private const val TAG = "MedLogUpdate"
 
     data class Release(val code: Int, val name: String, val notes: String, val url: String, val sha256: String)
@@ -60,10 +61,10 @@ object Updater {
 
     /** Looks for a newer version. [quiet] leaves the screen alone when there is none (the daily check). */
     suspend fun check(ctx: Context, quiet: Boolean = false): Release? = withContext(Dispatchers.IO) {
-        if (BuildConfig.ENV == "dev") return@withContext null
         if (!allowed(ctx)) return@withContext null
         if (!quiet) state.value = State.Checking
-        val r = SOURCES.mapNotNull { src ->
+        val sources = if (BuildConfig.ENV == "dev") listOf(DEV_SOURCE) else SOURCES
+        val r = sources.mapNotNull { src ->
             runCatching {
                 val c = get(src)
                 val o = try { JSONObject(c.inputStream.bufferedReader().readText()) } finally { c.disconnect() }

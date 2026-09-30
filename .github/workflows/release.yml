@@ -1,4 +1,4 @@
-# Builds on pushes and manual runs; publishing requires PUBLISH=yes on main, master or master-ejlvhp.
+# Builds on pushes/manual runs; prod publishes require PUBLISH=yes on main/master/master-ejlvhp. Signed manual codex/medlog-system-audit runs publish dev-latest.
 # Published releases include latest.json, which the app's updater reads (Settings → Check for updates).
 #
 # Signing: one Actions secret, MEDLOG_SIGNING, holding
@@ -22,6 +22,9 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/medlog-system-audit' && 'medlog-dev-latest' || format('medlog-release-{0}', github.ref) }}
+      cancel-in-progress: false
     env:
       SIGNING: ${{ secrets.MEDLOG_SIGNING }}
     steps:
@@ -64,6 +67,12 @@ jobs:
           python3 tools/merge_audit.py --check
           python3 tools/lint_completeness.py || echo "::warning::clinical completeness gaps remain (see docs/HANDOFF.md); make this step blocking once the gap count is zero"
 
+      - name: Set signed dev version code
+        if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/medlog-system-audit'
+        run: |
+          echo "DEV_VERSION_CODE=$((300000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_ENV"
+          echo "DEV_VERSION_NAME=2.15.0.$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
       - name: Test and build
         run: gradle --no-daemon :app:testProdDebugUnitTest :app:assembleProdRelease :app:assembleDevRelease
 
@@ -95,10 +104,45 @@ jobs:
           mkdir dev-out
           cp "$(ls app/build/outputs/apk/dev/release/*arm64-v8a*.apk | head -1)" dev-out/MedLog-dev-arm64.apk
           cp "$(ls app/build/outputs/apk/dev/release/*x86_64*.apk | head -1)" dev-out/MedLog-dev-x86_64-emulator.apk
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ] && [ "$GITHUB_REF" = refs/heads/codex/medlog-system-audit ]; then
+            VCODE=$((300000 + GITHUB_RUN_NUMBER))
+            python3 - "$VCODE" <<'PY'
+          import hashlib, json, os, pathlib, sys
+          code = int(sys.argv[1])
+          apk = {}
+          for name, abi in (("MedLog-dev-arm64.apk", "arm64-v8a"), ("MedLog-dev-x86_64-emulator.apk", "x86_64")):
+              path = pathlib.Path("dev-out") / name
+              apk[abi] = {
+                  "url": f"https://github.com/{os.environ['GITHUB_REPOSITORY']}/releases/download/dev-latest/{name}",
+                  "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                  "size": path.stat().st_size,
+              }
+          manifest = {
+              "versionCode": code,
+              "versionName": f"{os.environ['DEV_VERSION_NAME']}-dev",
+              "notes": "Latest signed MedLog development test build.",
+              "apk": apk,
+          }
+          pathlib.Path("dev-out/latest-dev.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          PY
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: MedLog-dev
-          path: dev-out/*.apk
+          path: dev-out/*
+
+      - name: Publish signed dev prerelease
+        if: env.PUBLISH == 'yes' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/medlog-system-audit'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: MedLog Dev (latest audit build)
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          files: dev-out/*
+          body: Signed development builds for the system audit branch. This prerelease does not update the production latest release.
 
       # the app files stay with the run even when nothing is published
       - uses: actions/upload-artifact@v4

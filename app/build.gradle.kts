@@ -69,7 +69,8 @@ android {
         create("dev") {
             dimension = "env"
             applicationIdSuffix = ".dev"
-            versionNameSuffix = "-dev"
+            versionCode = System.getenv("DEV_VERSION_CODE")?.toIntOrNull() ?: defaultConfig.versionCode
+            versionName = "${System.getenv("DEV_VERSION_NAME") ?: defaultConfig.versionName}-dev"
             buildConfigField("String", "ENV", "\"dev\"")
             resValue("string", "app_name", "MedLog Dev")
         }

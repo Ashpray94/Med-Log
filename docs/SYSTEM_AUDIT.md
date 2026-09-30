@@ -67,4 +67,4 @@ Still required: finish source parity and lost safety suites; connect helper scre
 
 Keep the real phone on 2.14.1. Test dev first. Settings → Backup before any real-app upgrade. No production installation or completed source merge is claimed.
 
-UI continuation: `29903e1` isolates simple patient help, connects helper selection to mirror timeline reads, prevents mirror editing through screens that still target the phone's own DB, repairs chat date indexing and functional send controls. This is an interim read-only mirror view; full helper CRUD and live chat remain unfinished. Actions run `36720071073` pending. Review `docs/DEV_ACCEPTANCE.md` before device testing.
+UI continuation: `29903e1` isolates simple patient help, connects helper selection to mirror timeline reads, prevents mirror editing through screens that still target the phone's own DB, repairs chat date indexing and functional send controls. This is an interim read-only mirror view; full helper CRUD and live chat remain unfinished. Actions run `36720071073` passed with 99 tests and zero failures/errors/skips; prod and dev APK artifacts were built. Review `docs/DEV_ACCEPTANCE.md` before device testing.
