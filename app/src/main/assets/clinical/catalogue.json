@@ -1,5 +1,5 @@
 {
- "version": "0.1.2",
+ "version": "0.1.3",
  "reviewed": false,
  "reviewNote": "Draft content written from published red-flag guidance. Must be reviewed and signed off by a licensed clinician (plan D6) before real-world use.",
  "groups": [
@@ -9521,6 +9521,7 @@
     "noUrine8h"
    ],
    "fu": [
+    "q_blood_vomit",
     "q_vomitAmount",
     "q_vomitColour",
     "q_vomitShade",

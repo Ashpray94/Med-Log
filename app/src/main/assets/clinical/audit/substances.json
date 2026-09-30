@@ -894,6 +894,7 @@
     "noUrine8h"
    ],
    "fu": [
+    "q_blood_vomit",
     "q_vomitAmount",
     "q_vomitColour",
     "q_vomitShade",

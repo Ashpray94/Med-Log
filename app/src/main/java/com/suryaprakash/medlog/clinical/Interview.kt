@@ -183,7 +183,7 @@ object Interview {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
-        dangerQuestions(cat, p).take(2).forEach(::add)
+        coreDanger(cat, p).forEach(::add)
         if (locatable(p)) add(WHERE)
         if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
         // Core is at most 5 and always keeps severity (last). Burn size moves to "Tell more" if room is short.
@@ -204,7 +204,7 @@ object Interview {
         if (p.id in COUNTABLE) add(COUNT)
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
-        dangerQuestions(cat, p).drop(2).forEach(::add)
+        dangerQuestions(cat, p).filterNot { a -> coreDanger(cat, p).any { it.field == a.field } }.forEach(::add)
         p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q ->
             if (!isAgeExcluded(q.minAge, q.maxAge)) fromQuestion(cat, q)?.let(::add)
         }
@@ -240,8 +240,18 @@ object Interview {
         return out
     }
 
-    private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> =
-        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority >= 85 }.sortedByDescending { it.priority }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
+    private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> {
+        val fromFollowUps = p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority >= 85 }.sortedByDescending { it.priority }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
+        // audited problems keep their danger yes/no questions as fields flagged `danger`
+        val fromFields = p.fields.mapNotNull { f ->
+            val fd = cat.field(f) ?: return@mapNotNull null
+            if (fd.danger && fd.type == FieldType.YESNO) Ask("f_$f", f, yesNoText(fd.label), Kind.YESNO, core = true, danger = true, help = fd.help ?: Help.of("f_$f", f), gate = fd.gate) else null
+        }
+        return (fromFollowUps + fromFields).distinctBy { it.field }
+    }
+
+    /** The (at most two) ungated danger questions asked first. */
+    private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> = dangerQuestions(cat, p).filter { it.gate == null }.take(2)
 
     private fun fromQuestion(cat: Catalogue, q: Question): Ask? {
         val help = q.help ?: Help.of(q.id, q.field)
