@@ -1,0 +1,415 @@
+{
+ "universal": [
+  "onset",
+  "course",
+  "severity",
+  "impact",
+  "tried",
+  "danger"
+ ],
+ "archetypes": {
+  "pain": {
+   "label": "Pain",
+   "dimensions": [
+    "site",
+    "onset",
+    "character",
+    "radiation",
+    "associated",
+    "timing",
+    "aggravating",
+    "relieving",
+    "severity"
+   ],
+   "standard": "SOCRATES pain history (Site, Onset, Character, Radiation, Associations, Time course, Exacerbating/relieving, Severity); NICE CKS symptom histories"
+  },
+  "substance": {
+   "label": "Anything that comes out (phlegm, vomit, stool, urine, discharge)",
+   "dimensions": [
+    "any",
+    "amount",
+    "colour",
+    "shade",
+    "consistency",
+    "smell",
+    "blood",
+    "timing"
+   ],
+   "standard": "Bristol Stool Form Scale for stool; standard clinical history of sputum/vomit/urine/discharge (amount, colour, consistency, smell, blood, timing); WHO IMCI for vomit and diarrhoea; Med-Log spec CLAUDE.md 4b chain"
+  },
+  "bleeding": {
+   "label": "Bleeding",
+   "dimensions": [
+    "site",
+    "amount",
+    "duration_of_bleeding",
+    "stops_with_pressure",
+    "cause_trigger",
+    "anticoagulant",
+    "faint_from_loss",
+    "other_bleeding"
+   ],
+   "standard": "NICE CKS bleeding/epistaxis; WHO Emergency Triage Assessment and Treatment (ETAT) shock signs; first-aid haemorrhage control (direct pressure)"
+  },
+  "skin": {
+   "label": "Skin problem",
+   "dimensions": [
+    "distribution",
+    "appearance",
+    "colour",
+    "itch_pain",
+    "spread",
+    "triggers",
+    "fever",
+    "contacts"
+   ],
+   "standard": "British Association of Dermatologists / NICE CKS rash history (distribution, morphology, itch, spread, triggers, systemic features, contacts)"
+  },
+  "swelling": {
+   "label": "Swelling or lump",
+   "dimensions": [
+    "site",
+    "size",
+    "colour_warmth",
+    "tenderness",
+    "change",
+    "systemic"
+   ],
+   "standard": "NICE CKS lumps and swellings; NICE NG12 suspected cancer recognition (size, change, systemic features)"
+  },
+  "breathing": {
+   "label": "Breathing",
+   "dimensions": [
+    "exertion_tolerance",
+    "at_rest",
+    "lying_flat",
+    "wheeze",
+    "cough",
+    "chest_pain",
+    "swelling",
+    "fever"
+   ],
+   "standard": "MRC dyspnoea scale and NYHA (exertion tolerance, orthopnoea); BTS/SIGN asthma and NICE CKS breathlessness histories; WHO IMCI cough or difficult breathing"
+  },
+  "neuro": {
+   "label": "Brain and nerves",
+   "dimensions": [
+    "speed_of_onset",
+    "duration_each",
+    "pattern",
+    "trigger",
+    "one_sided",
+    "vision_speech",
+    "consciousness",
+    "associated"
+   ],
+   "standard": "FAST/BE-FAST stroke screen; ABCD2 for TIA; ILAE seizure history; NICE CKS headache and dizziness"
+  },
+  "collapse": {
+   "label": "Faint, fit or blackout",
+   "dimensions": [
+    "warning_before",
+    "duration_unresponsive",
+    "position_trigger",
+    "recovery",
+    "heart_symptoms",
+    "injury_from",
+    "first_time"
+   ],
+   "standard": "NICE CG109 transient loss of consciousness; ESC syncope guideline history"
+  },
+  "systemic": {
+   "label": "Whole-body symptom",
+   "dimensions": [
+    "duration",
+    "trend",
+    "amount_of_change",
+    "associated",
+    "fluids_intake"
+   ],
+   "standard": "NICE CKS fever, fatigue, weight loss and dehydration; WHO IMCI general danger signs and hydration"
+  },
+  "mind": {
+   "label": "Mood, worry or thoughts",
+   "dimensions": [
+    "duration",
+    "mood_anxiety",
+    "sleep",
+    "function",
+    "safety"
+   ],
+   "standard": "PHQ-9, GAD-7 and PHQ-2 domains; NICE CG90/CG113; Columbia suicide-risk screen (safety)"
+  },
+  "sleep": {
+   "label": "Sleep",
+   "dimensions": [
+    "sleep_pattern",
+    "hours_slept",
+    "daytime_effect",
+    "breathing_in_sleep",
+    "night_waking",
+    "substances"
+   ],
+   "standard": "Consensus Sleep Diary items; STOP-BANG and Epworth Sleepiness Scale; NICE CKS insomnia"
+  },
+  "injury": {
+   "label": "Injury",
+   "dimensions": [
+    "mechanism",
+    "time_since",
+    "consciousness",
+    "weight_bearing",
+    "deformity",
+    "bleeding",
+    "anticoagulant"
+   ],
+   "standard": "Ottawa ankle/knee rules; Canadian CT Head and NICE NG232 head injury; ATLS mechanism-of-injury history"
+  },
+  "sensation": {
+   "label": "Numbness, tingling or weakness",
+   "dimensions": [
+    "site",
+    "constant_or_comes_and_goes",
+    "trigger",
+    "weakness",
+    "spread"
+   ],
+   "standard": "Neurological symptom history (distribution, pattern, weakness, progression); NICE CKS peripheral neuropathy and spinal cord compression red flags"
+  },
+  "eye_ear_nose_throat": {
+   "label": "Eye or ear",
+   "dimensions": [
+    "side",
+    "vision_hearing_change",
+    "discharge",
+    "pain",
+    "swelling_redness",
+    "associated"
+   ],
+   "standard": "NICE CKS red eye, otitis, hearing loss, tinnitus; Royal College of Ophthalmologists red-eye triage"
+  },
+  "nose_throat": {
+   "label": "Nose and throat",
+   "dimensions": [
+    "side",
+    "discharge_or_blockage",
+    "pain",
+    "voice_or_swallow",
+    "smell_taste",
+    "trigger_or_allergy",
+    "associated"
+   ],
+   "standard": "NICE CKS sore throat (FeverPAIN/Centor), sinusitis, rhinitis, hoarseness, epistaxis"
+  },
+  "mouth_teeth": {
+   "label": "Mouth and teeth",
+   "dimensions": [
+    "site",
+    "pain",
+    "swelling_redness",
+    "bleeding",
+    "eating_drinking",
+    "ulcer_or_patch"
+   ],
+   "standard": "NICE CKS dental abscess, mouth ulcers, oral cancer red flags (3-week rule)"
+  },
+  "urinary_bowel_function": {
+   "label": "Passing urine or stool",
+   "dimensions": [
+    "frequency",
+    "control",
+    "pain_passing",
+    "night",
+    "associated"
+   ],
+   "standard": "NICE CKS lower urinary tract symptoms, UTI, constipation, diarrhoea; Bristol Stool Form Scale; IPSS symptom domains"
+  },
+  "digestive": {
+   "label": "Stomach and swallowing",
+   "dimensions": [
+    "meal_relation",
+    "frequency",
+    "duration",
+    "trigger",
+    "swallowing",
+    "appetite_weight"
+   ],
+   "standard": "Rome IV functional GI symptom domains; NICE CG184 dyspepsia/GORD; NICE CKS dysphagia and nausea"
+  },
+  "womens": {
+   "label": "Women's health",
+   "dimensions": [
+    "cycle_or_bleeding_pattern",
+    "pain",
+    "discharge",
+    "age_context"
+   ],
+   "standard": "FIGO abnormal uterine bleeding (PALM-COEIN) history; NICE CKS menorrhagia, menopause, breast symptoms; NICE NG12 post-menopausal bleeding"
+  },
+  "heart": {
+   "label": "Heart rate and rhythm",
+   "dimensions": [
+    "rate_regularity",
+    "duration_each",
+    "exertion_link",
+    "faint_dizzy",
+    "chest_pain",
+    "trigger"
+   ],
+   "standard": "EHRA symptom classification; NICE CG180 atrial fibrillation; ESC palpitation history"
+  },
+  "reading_monitoring": {
+   "label": "Home reading (BP, sugar, oxygen)",
+   "dimensions": [
+    "reading",
+    "known_condition",
+    "on_treatment",
+    "missed_treatment",
+    "symptoms_with",
+    "recent_change"
+   ],
+   "standard": "NICE NG136 hypertension, NG17/NG28 diabetes hypo/hyperglycaemia, BTS oxygen saturation guidance; NEWS2 bands"
+  },
+  "daily_function": {
+   "label": "Managing daily life",
+   "dimensions": [
+    "activity_affected",
+    "cause_or_pain",
+    "aids_or_help",
+    "safety_risk",
+    "since_when"
+   ],
+   "standard": "Barthel Index / Katz ADL and Lawton IADL domains; NICE NG249 falls and frailty"
+  },
+  "medicine_effect": {
+   "label": "Medicine effect",
+   "dimensions": [
+    "which_medicine",
+    "timing_vs_dose",
+    "new_or_changed",
+    "stopped_helps"
+   ],
+   "standard": "WHO-UMC causality assessment and Naranjo adverse-drug-reaction questions (drug, timing, dechallenge)"
+  }
+ },
+ "dimensions": {
+  "onset": "When and how fast it began (sudden or gradual).",
+  "course": "Whether it is getting better, worse or staying the same.",
+  "severity": "How bad it is, on a 0-10 scale or simple bands.",
+  "impact": "How it affects daily life: sleep, walking, eating, work, bathing.",
+  "tried": "What the person has already taken or done for it, and whether it helped.",
+  "danger": "Screens for a danger sign that needs urgent care.",
+  "site": "Where exactly on the body it is.",
+  "character": "What it feels like or how it behaves (sharp, dull, burning, forceful).",
+  "radiation": "Whether it spreads or moves to another place.",
+  "associated": "Other symptoms that come with it.",
+  "timing": "When in the day or in relation to events it happens and for how long.",
+  "aggravating": "What makes it worse.",
+  "relieving": "What makes it better.",
+  "any": "Whether anything actually came out or was seen.",
+  "amount": "How much, or how many times.",
+  "colour": "What colour it is.",
+  "shade": "Whether the colour is pale or dark.",
+  "consistency": "Thick, thin, watery, hard, soft, mucus, clots.",
+  "smell": "Whether it has an unusual or bad smell.",
+  "blood": "Whether there is blood in it, and how much.",
+  "duration_of_bleeding": "How long the bleeding has gone on.",
+  "stops_with_pressure": "Whether bleeding stops with firm pressure.",
+  "cause_trigger": "What caused or set off the bleeding.",
+  "anticoagulant": "Whether they take a blood thinner or aspirin.",
+  "faint_from_loss": "Whether they feel faint, dizzy or weak from blood loss.",
+  "other_bleeding": "Bleeding or bruising anywhere else.",
+  "distribution": "Where on the body it is and whether it is one side or both.",
+  "appearance": "What it looks like (flat, raised, blistered, open, dead-looking).",
+  "itch_pain": "Whether it itches, burns or hurts.",
+  "spread": "Whether it is spreading to other places.",
+  "triggers": "What set it off (food, sting, medicine, sun, contact).",
+  "fever": "Whether there is fever or shivering, and the temperature.",
+  "contacts": "Whether others around them have the same problem.",
+  "size": "How big it is (coin, palm, growing).",
+  "colour_warmth": "Whether the area is red or hot.",
+  "tenderness": "Whether it is sore when touched.",
+  "change": "Whether it is getting bigger, smaller or changing shape.",
+  "systemic": "Whole-body signs with it such as fever, weight loss, night sweats.",
+  "exertion_tolerance": "How much walking or climbing brings on breathlessness.",
+  "at_rest": "Whether it happens even when resting.",
+  "lying_flat": "Whether it is worse lying flat, or how many pillows are needed.",
+  "wheeze": "Whether there is wheezing or noisy breathing.",
+  "cough": "Whether there is cough, dry or wet, and for how long.",
+  "chest_pain": "Whether there is chest pain or pressure with it.",
+  "swelling": "Whether legs, ankles or face are swollen.",
+  "speed_of_onset": "How quickly it came on: seconds, minutes, hours, days.",
+  "duration_each": "How long each episode lasts.",
+  "pattern": "Whether it is constant or comes and goes, and the pattern of episodes.",
+  "trigger": "What brings on an episode.",
+  "one_sided": "Whether it affects only one side of the body.",
+  "vision_speech": "Changes in eyesight or speech.",
+  "consciousness": "Whether there was loss of consciousness, confusion or drowsiness.",
+  "warning_before": "Whether there was warning first (sweat, sick, sight dimming).",
+  "duration_unresponsive": "How long they were out or unresponsive.",
+  "position_trigger": "Whether it happens on standing up or changing position.",
+  "recovery": "How they recovered, and whether they could get up alone.",
+  "heart_symptoms": "Chest pain, racing heart or effort with it.",
+  "injury_from": "Whether they were hurt during the episode.",
+  "first_time": "Whether this is the first time it has happened.",
+  "duration": "How long the problem has been present.",
+  "trend": "Whether the overall direction is better, worse or unchanged.",
+  "amount_of_change": "How much weight or appetite has changed.",
+  "fluids_intake": "How much they are drinking and keeping down, and urine passed.",
+  "mood_anxiety": "Mood, worry, interest and enjoyment.",
+  "sleep": "Hours and quality of sleep.",
+  "function": "Whether they can manage usual tasks and social contact.",
+  "safety": "Thoughts of harm to self or others, and whether they are safe now.",
+  "sleep_pattern": "Trouble falling asleep, waking at night or waking too early.",
+  "hours_slept": "How many hours they sleep.",
+  "daytime_effect": "Sleepiness or function problems in the day.",
+  "breathing_in_sleep": "Snoring, pauses in breathing or waking breathless.",
+  "night_waking": "Waking at night and what wakes them.",
+  "substances": "Caffeine, alcohol, nicotine or sedative use around sleep.",
+  "mechanism": "How the injury or event happened.",
+  "time_since": "How long ago it happened.",
+  "weight_bearing": "Whether they can stand, walk or use the part.",
+  "deformity": "Whether it looks bent, out of shape or has an open wound.",
+  "bleeding": "Whether there is bleeding.",
+  "constant_or_comes_and_goes": "Whether it is always there or comes and goes.",
+  "weakness": "Whether there is weakness and where.",
+  "side": "Which side: left, right or both.",
+  "vision_hearing_change": "Change in vision or hearing.",
+  "discharge": "Fluid, pus or other discharge.",
+  "pain": "Whether there is pain and how much.",
+  "swelling_redness": "Whether the area is swollen or red.",
+  "discharge_or_blockage": "Runny or blocked nose, and what comes out.",
+  "voice_or_swallow": "Voice change or trouble swallowing.",
+  "smell_taste": "Loss or change of smell or taste.",
+  "trigger_or_allergy": "Allergy or what sets it off (dust, pollen, pets, cold).",
+  "eating_drinking": "Whether it stops eating, drinking or opening the mouth.",
+  "ulcer_or_patch": "Ulcers, sores or white or red patches and how many.",
+  "frequency": "How often it happens, or how many times.",
+  "control": "Whether they can hold or control urine or stool, or empty fully.",
+  "pain_passing": "Pain or burning when passing urine or stool.",
+  "night": "Whether it happens at night or wakes them.",
+  "meal_relation": "How it relates to eating (before, after, early fullness).",
+  "swallowing": "Whether swallowing is hard, painful or food sticks.",
+  "appetite_weight": "Changes in appetite or weight.",
+  "cycle_or_bleeding_pattern": "Periods: timing, length, flow, late or absent.",
+  "age_context": "Age, pregnancy, menopause or hormone use that changes meaning.",
+  "rate_regularity": "Pulse rate and whether the beat is steady or uneven.",
+  "exertion_link": "Whether it comes on with effort.",
+  "faint_dizzy": "Whether they feel faint or dizzy with it.",
+  "reading": "The measured number (BP, sugar, oxygen, pulse, temperature).",
+  "known_condition": "Known diagnosis such as diabetes or high blood pressure.",
+  "on_treatment": "Whether they take regular treatment for it.",
+  "missed_treatment": "Whether doses were missed.",
+  "symptoms_with": "Symptoms that came with the reading.",
+  "recent_change": "Recent change in treatment, diet or health.",
+  "activity_affected": "Which daily activity is hard.",
+  "cause_or_pain": "What makes the activity hard: pain, weakness, breathlessness.",
+  "aids_or_help": "Aids or help used or needed.",
+  "safety_risk": "Risk of falls, choking or accidents.",
+  "since_when": "How long daily function has been affected.",
+  "which_medicine": "Which medicine or tablet.",
+  "timing_vs_dose": "When it began compared with taking the medicine.",
+  "new_or_changed": "Whether a medicine or routine is new or changed.",
+  "stopped_helps": "Whether it eases when the medicine is stopped or held."
+ }
+}
