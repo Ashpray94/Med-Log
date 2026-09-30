@@ -1,5 +1,5 @@
-# Builds MedLog on every push to main and publishes it as a GitHub release with latest.json, which the app's
-# updater reads (Settings → Check for updates).
+# Builds on pushes and manual runs; publishing requires PUBLISH=yes on main, master or master-ejlvhp.
+# Published releases include latest.json, which the app's updater reads (Settings → Check for updates).
 #
 # Signing: one Actions secret, MEDLOG_SIGNING, holding
 #     storePassword=...
@@ -98,7 +98,7 @@ jobs:
           path: out/*.apk
 
       - uses: softprops/action-gh-release@v2
-        if: env.PUBLISH == 'yes'
+        if: env.PUBLISH == 'yes' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/master-ejlvhp')
         # some repositories don't let workflows make releases; the build itself still counts
         continue-on-error: true
         with:
