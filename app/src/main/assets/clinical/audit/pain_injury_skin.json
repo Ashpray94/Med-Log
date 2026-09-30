@@ -1,0 +1,5862 @@
+{
+ "fields": {
+  "onsetWhen": {
+   "label": "When it started",
+   "type": "choice",
+   "help": "How long you have had this.\nSudden or new problems need faster care.",
+   "choices": [
+    "today",
+    "1 to 3 days ago",
+    "4 to 14 days ago",
+    "over 2 weeks ago"
+   ]
+  },
+  "happenedWhen": {
+   "label": "When it happened",
+   "type": "choice",
+   "help": "How long ago it happened.\nSome care must start within hours.",
+   "choices": [
+    "minutes ago",
+    "today",
+    "1 to 3 days ago",
+    "over 3 days ago"
+   ]
+  },
+  "injuryFirst": {
+   "label": "Hurt in a fall or injury",
+   "type": "yesno",
+   "help": "A fall, hit or twist before the pain.\nInjuries need different checks."
+  },
+  "cannotWalk": {
+   "label": "Cannot stand on it",
+   "type": "yesno",
+   "help": "You cannot put weight on it.\nThis can mean a broken bone."
+  },
+  "cannotBend": {
+   "label": "Cannot bend knee right angle",
+   "type": "yesno",
+   "help": "The knee will not bend like a sitting knee.\nThis can mean a bone or joint injury.",
+   "gate": {
+    "field": "injuryFirst",
+    "any": [
+     true
+    ]
+   }
+  },
+  "boneTender": {
+   "label": "Bone hurts when pressed",
+   "type": "yesno",
+   "help": "Pain over the bone, not the soft part.\nThis helps decide if an X-ray is needed."
+  },
+  "looksBent": {
+   "label": "Looks bent or out of shape",
+   "type": "yesno",
+   "help": "The limb or joint has a wrong shape.\nThis can mean a break or dislocation.",
+   "danger": true
+  },
+  "boneThrough": {
+   "label": "Bone or wound through skin",
+   "type": "yesno",
+   "help": "Skin is open over the injury.\nOpen breaks get infected and need care now.",
+   "danger": true
+  },
+  "cannotUse": {
+   "label": "Cannot use or move it",
+   "type": "yesno",
+   "help": "You cannot move it as usual.\nLost use may mean a break."
+  },
+  "numbTingle": {
+   "label": "Numb or pins and needles",
+   "type": "yesno",
+   "help": "Loss of feeling or pins and needles.\nNerves or blood flow may be hurt."
+  },
+  "armNumbWeak": {
+   "label": "Numb or weak arm or hand",
+   "type": "yesno",
+   "help": "Loss of feeling or strength in arm or hand.\nThe nerves in the neck may be pinched.",
+   "danger": true
+  },
+  "coldPale": {
+   "label": "Limb cold, pale or blue",
+   "type": "yesno",
+   "help": "The skin looks white, grey or blue and feels cold.\nBlood flow may be cut off.",
+   "danger": true
+  },
+  "legWeak": {
+   "label": "New weakness in legs",
+   "type": "yesno",
+   "help": "Legs give way or feel hard to lift.\nThis can mean pressure on the spine nerves.",
+   "danger": true
+  },
+  "numbGroin": {
+   "label": "Numb around bottom or private parts",
+   "type": "yesno",
+   "help": "No feeling where you sit on a saddle.\nThis can mean pressure on spine nerves.",
+   "danger": true
+  },
+  "bladderBowel": {
+   "label": "Trouble with urine or stool",
+   "type": "yesno",
+   "help": "Cannot pass, or leaking without knowing.\nThis can mean pressure on spine nerves.",
+   "danger": true
+  },
+  "feverish": {
+   "label": "Fever or shivering",
+   "type": "yesno",
+   "help": "Hot, sweaty or shaking with cold.\nFever can mean infection."
+  },
+  "weightLoss": {
+   "label": "Cancer before or weight loss",
+   "type": "yesno",
+   "help": "Past cancer, or weight falling with no diet.\nSome serious causes show this way."
+  },
+  "steroidBone": {
+   "label": "Weak bones or long-term steroids",
+   "type": "yesno",
+   "help": "Thin bones, or steroid tablets for months.\nBones break more easily.",
+   "minAge": 50
+  },
+  "diabetes": {
+   "label": "Has diabetes",
+   "type": "yesno",
+   "help": "A sugar problem that needs tablets or insulin.\nHealing and infection risk are higher."
+  },
+  "chestTight": {
+   "label": "Chest pain, tightness or sweating",
+   "type": "yesno",
+   "help": "A heavy or tight chest, or sweating.\nPain here can come from the heart.",
+   "danger": true
+  },
+  "calfSwollen": {
+   "label": "One leg swollen or calf sore",
+   "type": "yesno",
+   "help": "One leg bigger than the other, or a tender calf.\nThis can mean a blood clot."
+  },
+  "clotRisk": {
+   "label": "Long trip, surgery or bed rest lately",
+   "type": "yesno",
+   "help": "Long sitting or lying in recent weeks.\nThis raises the chance of a clot."
+  },
+  "jointStuck": {
+   "label": "Cannot move the joint at all",
+   "type": "yesno",
+   "help": "The joint is stuck, even gently.\nA very stiff hot joint needs urgent care."
+  },
+  "stiffLength": {
+   "label": "Morning stiffness lasts",
+   "type": "choice",
+   "help": "Time until you loosen up.\nOver an hour points to a joint problem.",
+   "choices": [
+    "under 30 minutes",
+    "30 to 60 minutes",
+    "over 1 hour"
+   ]
+  },
+  "jointSwollen": {
+   "label": "Swollen, warm joints",
+   "type": "yesno",
+   "help": "Puffy joints such as fingers or wrists.\nThis helps tell the cause."
+  },
+  "shoulderHip": {
+   "label": "Shoulder or hip muscles stiff",
+   "type": "yesno",
+   "help": "Both shoulders or hips ache and feel stiff.\nA common cause after age 50.",
+   "minAge": 50
+  },
+  "headScalpJaw": {
+   "label": "New headache, scalp pain or sore jaw chewing",
+   "type": "yesno",
+   "help": "A new kind of headache, or jaw ache on eating.\nThis can harm eyesight if late.",
+   "danger": true
+  },
+  "visionLoss": {
+   "label": "Vision blurred or lost",
+   "type": "yesno",
+   "help": "Seeing less or seeing double.\nEyesight can be lost if not treated today.",
+   "danger": true
+  },
+  "atNight": {
+   "label": "Mostly at night",
+   "type": "yesno",
+   "help": "Cramps wake you from sleep.\nNight cramps are usually harmless."
+  },
+  "lowFluids": {
+   "label": "Drinking little, vomiting or loose stools",
+   "type": "yesno",
+   "help": "Low fluids or fluid loss.\nLow water causes cramps."
+  },
+  "firstTime": {
+   "label": "First time like this",
+   "type": "yesno",
+   "help": "You never had this before.\nA first attack needs a doctor's check."
+  },
+  "nonBlanching": {
+   "label": "Spots stay red under a glass",
+   "type": "yesno",
+   "help": "Dark red or purple spots that do not fade.\nThis can mean a serious blood infection.",
+   "danger": true
+  },
+  "stiffNeckLight": {
+   "label": "Stiff neck with headache or light hurts",
+   "type": "yesno",
+   "help": "Chin will not touch chest, or light hurts.\nThis can mean infection around the brain.",
+   "danger": true
+  },
+  "lowUrine": {
+   "label": "Passing little or dark urine",
+   "type": "yesno",
+   "help": "Much less urine, or brown colour.\nLow fluids and muscle damage show this way."
+  },
+  "rashNearEye": {
+   "label": "Rash near eye or on nose",
+   "type": "yesno",
+   "help": "Blisters on the forehead, eyelid or nose.\nThe eye can be harmed.",
+   "danger": true,
+   "gate": {
+    "field": "blisters",
+    "any": [
+     true
+    ]
+   }
+  },
+  "mouthEyeSores": {
+   "label": "Sores in mouth or eyes, or skin peeling",
+   "type": "yesno",
+   "help": "Raw mouth, sore red eyes or sheets of skin lifting.\nThis can be a severe drug or skin reaction.",
+   "danger": true
+  },
+  "skinMarks": {
+   "label": "Any rash or marks on skin",
+   "type": "yesno",
+   "help": "Red, raised or scratched skin.\nItching with no rash has other causes."
+  },
+  "yellowSkin": {
+   "label": "Skin or eyes yellow",
+   "type": "yesno",
+   "help": "Yellow tint to skin or eye whites.\nThis can mean a liver problem."
+  },
+  "throatTight": {
+   "label": "Throat tight, hoarse or noisy breathing",
+   "type": "yesno",
+   "help": "Tight throat, odd voice or noisy breath.\nThe airway may be closing.",
+   "danger": true
+  },
+  "faintDizzy": {
+   "label": "Dizzy, faint or pale",
+   "type": "yesno",
+   "help": "Light-headed, weak legs or grey face.\nBlood pressure may be falling.",
+   "danger": true
+  },
+  "bellyVomit": {
+   "label": "Belly pain or vomiting",
+   "type": "yesno",
+   "help": "Cramps in the belly or being sick.\nWith rash this can be a serious allergy.",
+   "danger": true
+  },
+  "trigger": {
+   "label": "Soon after food, sting or medicine",
+   "type": "yesno",
+   "help": "Within an hour of something new.\nThis points to the cause."
+  },
+  "hasPen": {
+   "label": "Has an adrenaline pen",
+   "type": "yesno",
+   "help": "A pen you use for bad allergy.\nHaving one means past serious reactions.",
+   "danger": true
+  },
+  "rubbedBurnt": {
+   "label": "From rubbing, burn or sun",
+   "type": "yesno",
+   "help": "A clear cause such as a tight shoe.\nBlisters with no cause need a check."
+  },
+  "oneSideBand": {
+   "label": "Band of pain or blisters on one side",
+   "type": "yesno",
+   "help": "Burning pain and blisters in a stripe.\nEarly treatment works best."
+  },
+  "sunArea": {
+   "label": "Sunburn covers",
+   "type": "choice",
+   "help": "The size of the burnt skin.\nLarge burns make you unwell.",
+   "choices": [
+    "small patch",
+    "one limb or back",
+    "most of the body"
+   ]
+  },
+  "woundDischarge": {
+   "label": "Fluid or pus from it",
+   "type": "yesno",
+   "help": "Wet or oozing from the wound.\nColour and smell are asked next."
+  },
+  "woundColour": {
+   "label": "Colour of the fluid",
+   "type": "choice",
+   "help": "Colour of what comes out.\nYellow or green can mean infection.",
+   "choices": [
+    "clear",
+    "cloudy white",
+    "yellow",
+    "green",
+    "brown",
+    "red or bloody"
+   ],
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   }
+  },
+  "woundSmell": {
+   "label": "Bad smell",
+   "type": "yesno",
+   "help": "An unpleasant smell from the wound.\nA bad smell can mean infection.",
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   }
+  },
+  "blackSkin": {
+   "label": "Black or dead-looking skin",
+   "type": "yesno",
+   "help": "Black, grey or hard skin on or near it.\nDead skin needs a doctor to remove."
+  },
+  "sorePhase": {
+   "label": "Skin looks",
+   "type": "choice",
+   "help": "The look of the sore spot.\nIt shows how deep the damage is.",
+   "choices": [
+    "red, fades when pressed",
+    "red, stays red when pressed",
+    "open skin or blister",
+    "deep hole, fat or bone seen",
+    "black or dead skin"
+   ]
+  },
+  "moleChange": {
+   "label": "Mole changes",
+   "type": "multi",
+   "help": "Tick all that apply.\nThese changes need a skin check.",
+   "choices": [
+    "getting bigger",
+    "darker or uneven colour",
+    "uneven edge",
+    "bleeds or crusts",
+    "itchy or sore"
+   ]
+  },
+  "moleNew": {
+   "label": "Mole is new in last year",
+   "type": "yesno",
+   "help": "It was not there a year ago.\nNew moles in adults get checked."
+  },
+  "skinCancerBefore": {
+   "label": "Skin cancer before or in family",
+   "type": "yesno",
+   "help": "Past skin cancer, or a close relative had it.\nThis raises the risk."
+  },
+  "hairPattern": {
+   "label": "Hair loss pattern",
+   "type": "choice",
+   "help": "The pattern of hair loss.\nPatches and thinning have different causes.",
+   "choices": [
+    "thinning all over",
+    "bald patches",
+    "clumps falling out"
+   ]
+  },
+  "scalpSore": {
+   "label": "Scalp red, sore or scaly",
+   "type": "yesno",
+   "help": "Skin on the head looks unwell.\nSore scalp can scar the hair roots."
+  },
+  "recentStress": {
+   "label": "Illness, birth or big stress lately",
+   "type": "yesno",
+   "help": "A big event in recent months.\nHair often falls months after."
+  },
+  "tiredCold": {
+   "label": "Tired, cold or weight change",
+   "type": "yesno",
+   "help": "Low energy or always cold.\nThyroid or iron problems cause hair loss."
+  },
+  "noKnock": {
+   "label": "Bruises with no knock",
+   "type": "yesno",
+   "help": "Bruises that appear by themselves.\nThis can mean a blood problem."
+  },
+  "otherBleeding": {
+   "label": "Bleeding gums, nose, urine or stool",
+   "type": "yesno",
+   "help": "Blood from anywhere else.\nIt may mean blood does not clot well."
+  },
+  "tinyDots": {
+   "label": "Tiny red or purple dots",
+   "type": "yesno",
+   "help": "Pin-head dots that do not fade.\nThis can mean low platelets."
+  },
+  "tiredPale": {
+   "label": "Tired and pale",
+   "type": "yesno",
+   "help": "No energy and a pale face.\nLow blood count can cause this."
+  },
+  "newMedSteroid": {
+   "label": "New medicine lately",
+   "type": "yesno",
+   "help": "Such as aspirin, steroids or tablets.\nSome medicines cause bruising."
+  },
+  "stuckOnFloor": {
+   "label": "Could not get up alone",
+   "type": "yesno",
+   "help": "You needed help or could not rise.\nA long lie or a broken hip is possible.",
+   "danger": true
+  },
+  "longOnFloor": {
+   "label": "Lay on floor over 1 hour",
+   "type": "yesno",
+   "help": "A long time lying after the fall.\nLong lies harm muscles and cause cold.",
+   "danger": true,
+   "gate": {
+    "field": "stuckOnFloor",
+    "any": [
+     true
+    ]
+   }
+  },
+  "standingDizzy": {
+   "label": "Dizzy on standing up",
+   "type": "yesno",
+   "help": "Head spins on rising from a chair.\nLow blood pressure causes falls.",
+   "gate": {
+    "field": "dizzyBefore",
+    "any": [
+     true
+    ]
+   }
+  },
+  "nearFaint": {
+   "label": "Felt faint or nearly blacked out",
+   "type": "yesno",
+   "help": "Vision narrows or you almost pass out.\nThis can come from the heart.",
+   "danger": true
+  },
+  "heartRacing": {
+   "label": "Heart racing or chest pain",
+   "type": "yesno",
+   "help": "Fast, fluttering or uneven heartbeat.\nA heart rhythm problem can cause falls.",
+   "danger": true
+  },
+  "weakSide": {
+   "label": "Face droop, arm weak or speech odd",
+   "type": "yesno",
+   "help": "One side of face or body is weak.\nThis can mean a stroke.",
+   "danger": true
+  },
+  "fallsBefore": {
+   "label": "Fallen before in past year",
+   "type": "yesno",
+   "help": "Any other fall in 12 months.\nMore falls mean a higher risk."
+  },
+  "vomitedMore": {
+   "label": "Vomited more than once",
+   "type": "yesno",
+   "help": "Vomiting two or more times after the knock.\nThis can mean pressure in the head.",
+   "danger": true
+  },
+  "seizure": {
+   "label": "Had a fit",
+   "type": "yesno",
+   "help": "Shaking or blank staring spell.\nThis can mean a brain injury.",
+   "danger": true
+  },
+  "headacheBad": {
+   "label": "Headache getting worse",
+   "type": "yesno",
+   "help": "Pain in the head that keeps growing.\nThis can mean bleeding in the head.",
+   "danger": true
+  },
+  "weakVision": {
+   "label": "Weak, numb, vision or speech change",
+   "type": "yesno",
+   "help": "A new change in strength, sight or speech.\nThis can mean brain injury.",
+   "danger": true
+  },
+  "clearFluid": {
+   "label": "Blood or clear fluid from nose or ear",
+   "type": "yesno",
+   "help": "Watery or bloody drip from nose or ear.\nThis can mean a skull break.",
+   "danger": true
+  },
+  "bleedingContinues": {
+   "label": "Bleeding goes on after 10 minutes of pressure",
+   "type": "yesno",
+   "help": "It still bleeds after pressing hard for 10 minutes.\nThis needs a doctor to stop it.",
+   "danger": true
+  },
+  "cutDeep": {
+   "label": "Deep, gaping or fat or bone seen",
+   "type": "yesno",
+   "help": "The edges will not close, or flesh shows.\nIt may need stitches."
+  },
+  "dirtInside": {
+   "label": "Dirt or glass inside",
+   "type": "yesno",
+   "help": "Something stuck in the wound.\nIt raises the chance of infection."
+  },
+  "tetanusOld": {
+   "label": "No tetanus jab in 10 years",
+   "type": "yesno",
+   "help": "No booster in the last 10 years.\nDirty wounds may need a booster."
+  },
+  "bleedSite": {
+   "label": "Bleeding from",
+   "type": "choice",
+   "help": "The place the blood comes from.\nSome places are more dangerous.",
+   "choices": [
+    "cut or skin",
+    "nose",
+    "mouth or gums",
+    "vomit",
+    "stool or bottom",
+    "urine",
+    "vagina"
+   ]
+  },
+  "heavyBleed": {
+   "label": "Soaking towel or clothes fast",
+   "type": "yesno",
+   "help": "Clothes or towels soaked quickly.\nHeavy bleeding can drop blood pressure.",
+   "danger": true
+  },
+  "burnCause": {
+   "label": "Caused by",
+   "type": "choice",
+   "help": "How the burn happened.\nChemical and electric burns go deeper.",
+   "choices": [
+    "hot water or steam",
+    "fire or hot oil",
+    "chemical",
+    "electric",
+    "other"
+   ]
+  },
+  "burnSite": {
+   "label": "Burn is on",
+   "type": "choice",
+   "help": "The part of the body burnt.\nFace, hands, feet and private parts need experts.",
+   "choices": [
+    "face, neck or mouth",
+    "hand, foot or joint",
+    "private parts",
+    "other"
+   ]
+  },
+  "smokeFace": {
+   "label": "Smoke, singed hair or hoarse voice",
+   "type": "yesno",
+   "help": "Breathed smoke or burnt the face.\nThe airway can swell shut.",
+   "danger": true
+  },
+  "coolWater": {
+   "label": "Cooled under cool water 20 minutes",
+   "type": "yesno",
+   "help": "Running water soon after the burn.\nCooling limits how deep it goes."
+  },
+  "tightLump": {
+   "label": "Swelling growing or feels tight",
+   "type": "yesno",
+   "help": "A hard, growing lump.\nBleeding can build up and press on nerves.",
+   "danger": true
+  },
+  "swellSite": {
+   "label": "Swelling is in",
+   "type": "choice",
+   "help": "The body part that is swollen.\nThe place tells the cause.",
+   "choices": [
+    "foot or ankle",
+    "leg",
+    "arm or hand",
+    "face or tongue",
+    "belly",
+    "other"
+   ]
+  },
+  "sprainSite": {
+   "label": "Injured part",
+   "type": "choice",
+   "help": "The joint that was hurt.\nDifferent joints have different checks.",
+   "choices": [
+    "ankle",
+    "foot",
+    "knee",
+    "wrist",
+    "other"
+   ]
+  },
+  "boneSite": {
+   "label": "Which part",
+   "type": "choice",
+   "help": "The body part hurt.\nHip, back, neck and head need urgent care.",
+   "choices": [
+    "arm or wrist",
+    "leg or ankle",
+    "hip",
+    "back or neck",
+    "head or face",
+    "ribs",
+    "other"
+   ]
+  },
+  "biteBy": {
+   "label": "Bitten by",
+   "type": "choice",
+   "help": "The kind of animal.\nSome bites carry rabies or venom.",
+   "choices": [
+    "dog",
+    "cat",
+    "human",
+    "bat or wild animal",
+    "snake or spider",
+    "other"
+   ]
+  },
+  "skinBroken": {
+   "label": "Skin broken",
+   "type": "yesno",
+   "help": "Teeth went through the skin.\nBroken skin can get infected."
+  },
+  "biteSite": {
+   "label": "On face, hand, joint or private part",
+   "type": "yesno",
+   "help": "The bite is on a risky spot.\nThese sites are easily harmed."
+  },
+  "spreadSwell": {
+   "label": "Swelling bigger than a palm or spreading",
+   "type": "yesno",
+   "help": "Red swelling that keeps spreading.\nIt can be infection or a big reaction."
+  },
+  "hivesBody": {
+   "label": "Hives or itch away from the sting",
+   "type": "yesno",
+   "help": "Raised itchy patches on other skin.\nThis can be the start of a serious allergy.",
+   "danger": true
+  },
+  "coughStrong": {
+   "label": "Coughing strongly",
+   "type": "yesno",
+   "help": "A loud, forceful cough.\nA strong cough may clear it.",
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "cannotSpeak": {
+   "label": "Cannot speak, cough or breathe",
+   "type": "yesno",
+   "help": "No sound, no air.\nThe airway is blocked.",
+   "danger": true,
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "blueLips": {
+   "label": "Lips or face blue",
+   "type": "yesno",
+   "help": "Blue or grey colour.\nNot enough air is getting in.",
+   "danger": true,
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "lostResponse": {
+   "label": "Floppy or not responding",
+   "type": "yesno",
+   "help": "No answer when spoken to.\nThis is an emergency.",
+   "danger": true,
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "stuckFeeling": {
+   "label": "Still feels stuck",
+   "type": "yesno",
+   "help": "Food or object feels stuck in throat.\nIt may still block or scratch the gullet."
+  },
+  "legTurned": {
+   "label": "Leg shorter or turned outward",
+   "type": "yesno",
+   "help": "The foot points out or the leg looks short.\nThis is a sign of a broken hip.",
+   "danger": true,
+   "gate": {
+    "field": "injuryFirst",
+    "any": [
+     true
+    ]
+   }
+  },
+  "openSore": {
+   "label": "Open sore, blister or black skin",
+   "type": "yesno",
+   "help": "Broken skin on the foot.\nFoot sores can turn serious, especially with diabetes."
+  }
+ },
+ "questions": {
+  "q_onsetWhen": {
+   "field": "onsetWhen",
+   "ask": "When did it start?",
+   "type": "choice",
+   "priority": 50,
+   "help": "How long you have had this.\nSudden or new problems need faster care."
+  },
+  "q_happenedWhen": {
+   "field": "happenedWhen",
+   "ask": "When did it happen?",
+   "type": "choice",
+   "priority": 50,
+   "help": "How long ago it happened.\nSome care must start within hours."
+  },
+  "q_injuryFirst": {
+   "field": "injuryFirst",
+   "ask": "Did a fall or knock cause this?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A fall, hit or twist before the pain.\nInjuries need different checks."
+  },
+  "q_cannotWalk": {
+   "field": "cannotWalk",
+   "ask": "Can you not stand on it or take 4 steps?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "You cannot put weight on it.\nThis can mean a broken bone."
+  },
+  "q_cannotBend": {
+   "field": "cannotBend",
+   "ask": "Can you not bend the knee to a right angle?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The knee will not bend like a sitting knee.\nThis can mean a bone or joint injury.",
+   "gate": {
+    "field": "injuryFirst",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_boneTender": {
+   "field": "boneTender",
+   "ask": "Does it hurt when you press the bone?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Pain over the bone, not the soft part.\nThis helps decide if an X-ray is needed."
+  },
+  "q_looksBent": {
+   "field": "looksBent",
+   "ask": "Does it look bent or out of shape?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "The limb or joint has a wrong shape.\nThis can mean a break or dislocation."
+  },
+  "q_boneThrough": {
+   "field": "boneThrough",
+   "ask": "Is there an open wound near the break?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Skin is open over the injury.\nOpen breaks get infected and need care now."
+  },
+  "q_cannotUse": {
+   "field": "cannotUse",
+   "ask": "Can you not use or move it?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "You cannot move it as usual.\nLost use may mean a break."
+  },
+  "q_numbTingle": {
+   "field": "numbTingle",
+   "ask": "Is it numb or tingling?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Loss of feeling or pins and needles.\nNerves or blood flow may be hurt."
+  },
+  "q_armNumbWeak": {
+   "field": "armNumbWeak",
+   "ask": "Is an arm or hand numb or weak?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Loss of feeling or strength in arm or hand.\nThe nerves in the neck may be pinched."
+  },
+  "q_coldPale": {
+   "field": "coldPale",
+   "ask": "Is the limb cold, pale or blue?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "The skin looks white, grey or blue and feels cold.\nBlood flow may be cut off."
+  },
+  "q_legWeak": {
+   "field": "legWeak",
+   "ask": "Are your legs newly weak or heavy?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "Legs give way or feel hard to lift.\nThis can mean pressure on the spine nerves."
+  },
+  "q_numbGroin": {
+   "field": "numbGroin",
+   "ask": "Is it numb around your bottom or private parts?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "No feeling where you sit on a saddle.\nThis can mean pressure on spine nerves."
+  },
+  "q_bladderBowel": {
+   "field": "bladderBowel",
+   "ask": "Any new trouble passing or holding urine or stool?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Cannot pass, or leaking without knowing.\nThis can mean pressure on spine nerves."
+  },
+  "q_feverish": {
+   "field": "feverish",
+   "ask": "Do you have a fever or shivering?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Hot, sweaty or shaking with cold.\nFever can mean infection."
+  },
+  "q_weightLoss": {
+   "field": "weightLoss",
+   "ask": "Had cancer before, or losing weight without trying?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Past cancer, or weight falling with no diet.\nSome serious causes show this way."
+  },
+  "q_steroidBone": {
+   "field": "steroidBone",
+   "ask": "Do you have weak bones or take steroid tablets daily?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Thin bones, or steroid tablets for months.\nBones break more easily."
+  },
+  "q_diabetes": {
+   "field": "diabetes",
+   "ask": "Do you have diabetes?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A sugar problem that needs tablets or insulin.\nHealing and infection risk are higher."
+  },
+  "q_chestTight": {
+   "field": "chestTight",
+   "ask": "Any chest pain, tightness or cold sweat?",
+   "type": "yesno",
+   "priority": 99,
+   "help": "A heavy or tight chest, or sweating.\nPain here can come from the heart."
+  },
+  "q_calfSwollen": {
+   "field": "calfSwollen",
+   "ask": "Is one leg swollen or is the calf sore?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "One leg bigger than the other, or a tender calf.\nThis can mean a blood clot."
+  },
+  "q_clotRisk": {
+   "field": "clotRisk",
+   "ask": "Any long trip, operation or bed rest in the last month?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Long sitting or lying in recent weeks.\nThis raises the chance of a clot."
+  },
+  "q_jointStuck": {
+   "field": "jointStuck",
+   "ask": "Can you not move the joint at all?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The joint is stuck, even gently.\nA very stiff hot joint needs urgent care."
+  },
+  "q_stiffLength": {
+   "field": "stiffLength",
+   "ask": "How long is the stiffness in the morning?",
+   "type": "choice",
+   "priority": 50,
+   "help": "Time until you loosen up.\nOver an hour points to a joint problem."
+  },
+  "q_jointSwollen": {
+   "field": "jointSwollen",
+   "ask": "Are any joints swollen or warm?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Puffy joints such as fingers or wrists.\nThis helps tell the cause."
+  },
+  "q_shoulderHip": {
+   "field": "shoulderHip",
+   "ask": "Are your shoulders or hips stiff and sore?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Both shoulders or hips ache and feel stiff.\nA common cause after age 50."
+  },
+  "q_headScalpJaw": {
+   "field": "headScalpJaw",
+   "ask": "New headache, sore scalp or jaw pain when chewing?",
+   "type": "yesno",
+   "priority": 91,
+   "help": "A new kind of headache, or jaw ache on eating.\nThis can harm eyesight if late."
+  },
+  "q_visionLoss": {
+   "field": "visionLoss",
+   "ask": "Is your vision blurred, double or lost?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "Seeing less or seeing double.\nEyesight can be lost if not treated today."
+  },
+  "q_atNight": {
+   "field": "atNight",
+   "ask": "Does it happen mostly at night?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Cramps wake you from sleep.\nNight cramps are usually harmless."
+  },
+  "q_lowFluids": {
+   "field": "lowFluids",
+   "ask": "Are you drinking little, or being sick or loose?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Low fluids or fluid loss.\nLow water causes cramps."
+  },
+  "q_firstTime": {
+   "field": "firstTime",
+   "ask": "Is this the first time?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "You never had this before.\nA first attack needs a doctor's check."
+  },
+  "q_nonBlanching": {
+   "field": "nonBlanching",
+   "ask": "Do spots stay red when you press a glass on them?",
+   "type": "yesno",
+   "priority": 99,
+   "help": "Dark red or purple spots that do not fade.\nThis can mean a serious blood infection."
+  },
+  "q_stiffNeckLight": {
+   "field": "stiffNeckLight",
+   "ask": "Stiff neck, bad headache or light hurting eyes?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "Chin will not touch chest, or light hurts.\nThis can mean infection around the brain."
+  },
+  "q_lowUrine": {
+   "field": "lowUrine",
+   "ask": "Are you passing little or dark urine?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Much less urine, or brown colour.\nLow fluids and muscle damage show this way."
+  },
+  "q_rashNearEye": {
+   "field": "rashNearEye",
+   "ask": "Is the rash near your eye, forehead or nose tip?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Blisters on the forehead, eyelid or nose.\nThe eye can be harmed.",
+   "gate": {
+    "field": "blisters",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_mouthEyeSores": {
+   "field": "mouthEyeSores",
+   "ask": "Any sores in mouth or eyes, or skin peeling?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Raw mouth, sore red eyes or sheets of skin lifting.\nThis can be a severe drug or skin reaction."
+  },
+  "q_skinMarks": {
+   "field": "skinMarks",
+   "ask": "Can you see any rash or marks?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Red, raised or scratched skin.\nItching with no rash has other causes."
+  },
+  "q_yellowSkin": {
+   "field": "yellowSkin",
+   "ask": "Are your skin or eyes yellow?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Yellow tint to skin or eye whites.\nThis can mean a liver problem."
+  },
+  "q_throatTight": {
+   "field": "throatTight",
+   "ask": "Is your throat tight, or voice hoarse?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Tight throat, odd voice or noisy breath.\nThe airway may be closing."
+  },
+  "q_faintDizzy": {
+   "field": "faintDizzy",
+   "ask": "Do you feel dizzy, faint or very pale?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "Light-headed, weak legs or grey face.\nBlood pressure may be falling."
+  },
+  "q_bellyVomit": {
+   "field": "bellyVomit",
+   "ask": "Any belly pain or vomiting?",
+   "type": "yesno",
+   "priority": 86,
+   "help": "Cramps in the belly or being sick.\nWith rash this can be a serious allergy."
+  },
+  "q_trigger": {
+   "field": "trigger",
+   "ask": "Did it start soon after food, a sting or medicine?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Within an hour of something new.\nThis points to the cause."
+  },
+  "q_hasPen": {
+   "field": "hasPen",
+   "ask": "Do you have an adrenaline pen?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "A pen you use for bad allergy.\nHaving one means past serious reactions."
+  },
+  "q_rubbedBurnt": {
+   "field": "rubbedBurnt",
+   "ask": "Was it from rubbing, a burn or sun?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A clear cause such as a tight shoe.\nBlisters with no cause need a check."
+  },
+  "q_oneSideBand": {
+   "field": "oneSideBand",
+   "ask": "Is it a band on one side of the body?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Burning pain and blisters in a stripe.\nEarly treatment works best."
+  },
+  "q_sunArea": {
+   "field": "sunArea",
+   "ask": "How much skin is burnt?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The size of the burnt skin.\nLarge burns make you unwell."
+  },
+  "q_woundDischarge": {
+   "field": "woundDischarge",
+   "ask": "Is there any fluid or pus from it?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Wet or oozing from the wound.\nColour and smell are asked next."
+  },
+  "q_woundColour": {
+   "field": "woundColour",
+   "ask": "What colour is the fluid?",
+   "type": "choice",
+   "priority": 50,
+   "help": "Colour of what comes out.\nYellow or green can mean infection.",
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_woundSmell": {
+   "field": "woundSmell",
+   "ask": "Does it smell bad?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "An unpleasant smell from the wound.\nA bad smell can mean infection.",
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_blackSkin": {
+   "field": "blackSkin",
+   "ask": "Is any skin black or dead-looking?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Black, grey or hard skin on or near it.\nDead skin needs a doctor to remove."
+  },
+  "q_sorePhase": {
+   "field": "sorePhase",
+   "ask": "How does the skin look?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The look of the sore spot.\nIt shows how deep the damage is."
+  },
+  "q_moleChange": {
+   "field": "moleChange",
+   "ask": "What has changed?",
+   "type": "multi",
+   "priority": 50,
+   "help": "Tick all that apply.\nThese changes need a skin check."
+  },
+  "q_moleNew": {
+   "field": "moleNew",
+   "ask": "Is the mole new in the last year?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "It was not there a year ago.\nNew moles in adults get checked."
+  },
+  "q_skinCancerBefore": {
+   "field": "skinCancerBefore",
+   "ask": "Skin cancer in you or your family?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Past skin cancer, or a close relative had it.\nThis raises the risk."
+  },
+  "q_hairPattern": {
+   "field": "hairPattern",
+   "ask": "How is the hair falling?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The pattern of hair loss.\nPatches and thinning have different causes."
+  },
+  "q_scalpSore": {
+   "field": "scalpSore",
+   "ask": "Is your scalp red, sore or scaly?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Skin on the head looks unwell.\nSore scalp can scar the hair roots."
+  },
+  "q_recentStress": {
+   "field": "recentStress",
+   "ask": "Any illness, birth or big stress in 3 months?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A big event in recent months.\nHair often falls months after."
+  },
+  "q_tiredCold": {
+   "field": "tiredCold",
+   "ask": "Feeling tired, cold or weight changing?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Low energy or always cold.\nThyroid or iron problems cause hair loss."
+  },
+  "q_noKnock": {
+   "field": "noKnock",
+   "ask": "Do you get bruises with no knock?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Bruises that appear by themselves.\nThis can mean a blood problem."
+  },
+  "q_otherBleeding": {
+   "field": "otherBleeding",
+   "ask": "Bleeding from gums, nose, urine or stool?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Blood from anywhere else.\nIt may mean blood does not clot well."
+  },
+  "q_tinyDots": {
+   "field": "tinyDots",
+   "ask": "Any tiny red or purple dots on the skin?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Pin-head dots that do not fade.\nThis can mean low platelets."
+  },
+  "q_tiredPale": {
+   "field": "tiredPale",
+   "ask": "Are you very tired and pale?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "No energy and a pale face.\nLow blood count can cause this."
+  },
+  "q_newMedSteroid": {
+   "field": "newMedSteroid",
+   "ask": "Did you start a new medicine lately?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Such as aspirin, steroids or tablets.\nSome medicines cause bruising."
+  },
+  "q_stuckOnFloor": {
+   "field": "stuckOnFloor",
+   "ask": "Could you not get up by yourself?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "You needed help or could not rise.\nA long lie or a broken hip is possible."
+  },
+  "q_longOnFloor": {
+   "field": "longOnFloor",
+   "ask": "Were you on the floor for over an hour?",
+   "type": "yesno",
+   "priority": 87,
+   "help": "A long time lying after the fall.\nLong lies harm muscles and cause cold.",
+   "gate": {
+    "field": "stuckOnFloor",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_standingDizzy": {
+   "field": "standingDizzy",
+   "ask": "Do you feel dizzy when you stand up?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Head spins on rising from a chair.\nLow blood pressure causes falls.",
+   "gate": {
+    "field": "dizzyBefore",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_nearFaint": {
+   "field": "nearFaint",
+   "ask": "Did you feel faint or nearly black out?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Vision narrows or you almost pass out.\nThis can come from the heart."
+  },
+  "q_heartRacing": {
+   "field": "heartRacing",
+   "ask": "Did your heart race, or did your chest hurt?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Fast, fluttering or uneven heartbeat.\nA heart rhythm problem can cause falls."
+  },
+  "q_weakSide": {
+   "field": "weakSide",
+   "ask": "Is your face drooping, arm weak or speech odd?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "One side of face or body is weak.\nThis can mean a stroke."
+  },
+  "q_fallsBefore": {
+   "field": "fallsBefore",
+   "ask": "Have you fallen before in the last year?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Any other fall in 12 months.\nMore falls mean a higher risk."
+  },
+  "q_vomitedMore": {
+   "field": "vomitedMore",
+   "ask": "Have you been sick more than once since?",
+   "type": "yesno",
+   "priority": 91,
+   "help": "Vomiting two or more times after the knock.\nThis can mean pressure in the head."
+  },
+  "q_seizure": {
+   "field": "seizure",
+   "ask": "Did you have a fit since the knock?",
+   "type": "yesno",
+   "priority": 89,
+   "help": "Shaking or blank staring spell.\nThis can mean a brain injury."
+  },
+  "q_headacheBad": {
+   "field": "headacheBad",
+   "ask": "Is the headache getting worse?",
+   "type": "yesno",
+   "priority": 87,
+   "help": "Pain in the head that keeps growing.\nThis can mean bleeding in the head."
+  },
+  "q_weakVision": {
+   "field": "weakVision",
+   "ask": "Any weakness, numbness, odd vision or speech?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "A new change in strength, sight or speech.\nThis can mean brain injury."
+  },
+  "q_clearFluid": {
+   "field": "clearFluid",
+   "ask": "Any blood or clear fluid from nose or ear?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Watery or bloody drip from nose or ear.\nThis can mean a skull break."
+  },
+  "q_bleedingContinues": {
+   "field": "bleedingContinues",
+   "ask": "Does bleeding go on after 10 minutes of firm pressure?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "It still bleeds after pressing hard for 10 minutes.\nThis needs a doctor to stop it."
+  },
+  "q_cutDeep": {
+   "field": "cutDeep",
+   "ask": "Is it deep or gaping, or can you see fat or bone?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The edges will not close, or flesh shows.\nIt may need stitches."
+  },
+  "q_dirtInside": {
+   "field": "dirtInside",
+   "ask": "Is there dirt, glass or rust in it?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Something stuck in the wound.\nIt raises the chance of infection."
+  },
+  "q_tetanusOld": {
+   "field": "tetanusOld",
+   "ask": "Is your last tetanus jab over 10 years ago, or unsure?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "No booster in the last 10 years.\nDirty wounds may need a booster."
+  },
+  "q_bleedSite": {
+   "field": "bleedSite",
+   "ask": "Where is the blood coming from?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The place the blood comes from.\nSome places are more dangerous."
+  },
+  "q_heavyBleed": {
+   "field": "heavyBleed",
+   "ask": "Is blood soaking cloth within an hour?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "Clothes or towels soaked quickly.\nHeavy bleeding can drop blood pressure."
+  },
+  "q_burnCause": {
+   "field": "burnCause",
+   "ask": "What caused the burn?",
+   "type": "choice",
+   "priority": 50,
+   "help": "How the burn happened.\nChemical and electric burns go deeper."
+  },
+  "q_burnSite": {
+   "field": "burnSite",
+   "ask": "Where is the burn?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The part of the body burnt.\nFace, hands, feet and private parts need experts."
+  },
+  "q_smokeFace": {
+   "field": "smokeFace",
+   "ask": "Was there smoke, singed hair or a hoarse voice?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "Breathed smoke or burnt the face.\nThe airway can swell shut."
+  },
+  "q_coolWater": {
+   "field": "coolWater",
+   "ask": "Did you cool it under cool water for 20 minutes?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Running water soon after the burn.\nCooling limits how deep it goes."
+  },
+  "q_tightLump": {
+   "field": "tightLump",
+   "ask": "Is the swelling growing or feeling tight?",
+   "type": "yesno",
+   "priority": 89,
+   "help": "A hard, growing lump.\nBleeding can build up and press on nerves."
+  },
+  "q_swellSite": {
+   "field": "swellSite",
+   "ask": "Where is the swelling?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The body part that is swollen.\nThe place tells the cause."
+  },
+  "q_sprainSite": {
+   "field": "sprainSite",
+   "ask": "Which part did you hurt?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The joint that was hurt.\nDifferent joints have different checks."
+  },
+  "q_boneSite": {
+   "field": "boneSite",
+   "ask": "Which part might be broken?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The body part hurt.\nHip, back, neck and head need urgent care."
+  },
+  "q_biteBy": {
+   "field": "biteBy",
+   "ask": "What bit you?",
+   "type": "choice",
+   "priority": 50,
+   "help": "The kind of animal.\nSome bites carry rabies or venom."
+  },
+  "q_skinBroken": {
+   "field": "skinBroken",
+   "ask": "Did the bite break the skin?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Teeth went through the skin.\nBroken skin can get infected."
+  },
+  "q_biteSite": {
+   "field": "biteSite",
+   "ask": "Is it on the face, hand, joint or private part?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The bite is on a risky spot.\nThese sites are easily harmed."
+  },
+  "q_spreadSwell": {
+   "field": "spreadSwell",
+   "ask": "Is the swelling bigger than a palm or growing?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Red swelling that keeps spreading.\nIt can be infection or a big reaction."
+  },
+  "q_hivesBody": {
+   "field": "hivesBody",
+   "ask": "Any hives or itch away from the sting?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Raised itchy patches on other skin.\nThis can be the start of a serious allergy."
+  },
+  "q_coughStrong": {
+   "field": "coughStrong",
+   "ask": "Can they cough strongly?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A loud, forceful cough.\nA strong cough may clear it.",
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_cannotSpeak": {
+   "field": "cannotSpeak",
+   "ask": "Can they not speak, cough or breathe?",
+   "type": "yesno",
+   "priority": 99,
+   "help": "No sound, no air.\nThe airway is blocked.",
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_blueLips": {
+   "field": "blueLips",
+   "ask": "Are the lips or face turning blue?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "Blue or grey colour.\nNot enough air is getting in.",
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_lostResponse": {
+   "field": "lostResponse",
+   "ask": "Have they gone floppy or stopped responding?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "No answer when spoken to.\nThis is an emergency.",
+   "gate": {
+    "field": "choking",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_stuckFeeling": {
+   "field": "stuckFeeling",
+   "ask": "Does it still feel stuck after it passed?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Food or object feels stuck in throat.\nIt may still block or scratch the gullet."
+  },
+  "q_legTurned": {
+   "field": "legTurned",
+   "ask": "Is the leg shorter or turned outward?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "The foot points out or the leg looks short.\nThis is a sign of a broken hip.",
+   "gate": {
+    "field": "injuryFirst",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_openSore": {
+   "field": "openSore",
+   "ask": "Any open sore, blister or black skin?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Broken skin on the foot.\nFoot sores can turn serious, especially with diabetes."
+  }
+ },
+ "problems": {
+  "back_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "steroidBone",
+    "severity",
+    "bladderBowel",
+    "legWeak",
+    "numbGroin",
+    "feverish",
+    "weightLoss"
+   ],
+   "fu": []
+  },
+  "neck_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "severity",
+    "stiffNeckLight",
+    "feverish",
+    "armNumbWeak",
+    "chestTight"
+   ],
+   "fu": []
+  },
+  "knee_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "cannotWalk",
+    "cannotBend",
+    "severity",
+    "redHot",
+    "feverish",
+    "calfSwollen"
+   ],
+   "fu": []
+  },
+  "hip_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "legTurned",
+    "cannotWalk",
+    "severity",
+    "feverish",
+    "steroidBone"
+   ],
+   "fu": []
+  },
+  "shoulder_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "looksBent",
+    "severity",
+    "exertion",
+    "chestTight",
+    "armJaw",
+    "redHot",
+    "feverish"
+   ],
+   "fu": []
+  },
+  "joint_swelling": {
+   "fields": [
+    "onsetWhen",
+    "side",
+    "injuryFirst",
+    "redHot",
+    "feverish",
+    "jointStuck",
+    "severity",
+    "diabetes"
+   ],
+   "fu": []
+  },
+  "morning_stiffness": {
+   "fields": [
+    "onsetWhen",
+    "stiffLength",
+    "jointSwollen",
+    "shoulderHip",
+    "headScalpJaw",
+    "visionLoss"
+   ],
+   "fu": []
+  },
+  "cramps": {
+   "fields": [
+    "onsetWhen",
+    "side",
+    "atNight",
+    "calfSwollen",
+    "coldPale",
+    "newMedicine",
+    "lowFluids"
+   ],
+   "fu": []
+  },
+  "leg_pain": {
+   "fields": [
+    "onsetWhen",
+    "side",
+    "calfSwollen",
+    "redHot",
+    "coldPale",
+    "clotRisk",
+    "exertion",
+    "legWeak",
+    "breathless"
+   ],
+   "fu": []
+  },
+  "arm_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "looksBent",
+    "side",
+    "exertion",
+    "chestTight",
+    "armJaw",
+    "breathless",
+    "numbTingle"
+   ],
+   "fu": []
+  },
+  "foot_pain": {
+   "fields": [
+    "onsetWhen",
+    "injuryFirst",
+    "cannotWalk",
+    "side",
+    "diabetes",
+    "openSore",
+    "redHot",
+    "coldPale",
+    "feverish"
+   ],
+   "fu": []
+  },
+  "gout": {
+   "fields": [
+    "onsetWhen",
+    "side",
+    "firstTime",
+    "redHot",
+    "severity",
+    "feverish",
+    "jointStuck",
+    "newMedicine"
+   ],
+   "fu": []
+  },
+  "body_ache": {
+   "fields": [
+    "onsetWhen",
+    "temperature",
+    "severity",
+    "nonBlanching",
+    "stiffNeckLight",
+    "confusion",
+    "breathless",
+    "lowUrine",
+    "newMedicine"
+   ],
+   "fu": []
+  },
+  "rash": {
+   "fields": [
+    "onsetWhen",
+    "nonBlanching",
+    "feverish",
+    "spreading",
+    "blisters",
+    "rashNearEye",
+    "mouthEyeSores",
+    "newMedicine",
+    "lipSwelling"
+   ],
+   "fu": []
+  },
+  "itching": {
+   "fields": [
+    "onsetWhen",
+    "skinMarks",
+    "spreading",
+    "newMedicine",
+    "lipSwelling",
+    "breathless",
+    "yellowSkin",
+    "weightLoss"
+   ],
+   "fu": []
+  },
+  "hives": {
+   "fields": [
+    "onsetWhen",
+    "lipSwelling",
+    "breathless",
+    "throatTight",
+    "faintDizzy",
+    "bellyVomit",
+    "trigger",
+    "newMedicine"
+   ],
+   "fu": []
+  },
+  "allergic_reaction": {
+   "fields": [
+    "onsetWhen",
+    "lipSwelling",
+    "breathless",
+    "throatTight",
+    "faintDizzy",
+    "bellyVomit",
+    "trigger",
+    "newMedicine",
+    "hasPen"
+   ],
+   "fu": []
+  },
+  "blisters": {
+   "fields": [
+    "onsetWhen",
+    "rubbedBurnt",
+    "side",
+    "painful",
+    "spreading",
+    "oneSideBand",
+    "mouthEyeSores",
+    "feverish",
+    "newMedicine"
+   ],
+   "fu": []
+  },
+  "sunburn": {
+   "fields": [
+    "onsetWhen",
+    "sunArea",
+    "blisters",
+    "feverish",
+    "faintDizzy",
+    "confusion"
+   ],
+   "fu": []
+  },
+  "wound_not_healing": {
+   "fields": [
+    "weeks",
+    "diabetes",
+    "woundDischarge",
+    "woundColour",
+    "woundSmell",
+    "redHot",
+    "spreading",
+    "feverish",
+    "blackSkin"
+   ],
+   "fu": []
+  },
+  "bed_sore": {
+   "fields": [
+    "onsetWhen",
+    "sorePhase",
+    "woundDischarge",
+    "woundColour",
+    "woundSmell",
+    "spreading",
+    "feverish",
+    "confusion",
+    "diabetes"
+   ],
+   "fu": []
+  },
+  "mole": {
+   "fields": [
+    "weeks",
+    "moleChange",
+    "moleNew",
+    "skinCancerBefore"
+   ],
+   "fu": []
+  },
+  "hair_loss": {
+   "fields": [
+    "weeks",
+    "hairPattern",
+    "scalpSore",
+    "newMedicine",
+    "recentStress",
+    "tiredCold"
+   ],
+   "fu": []
+  },
+  "fungal": {
+   "fields": [
+    "onsetWhen",
+    "itchy",
+    "spreading",
+    "redHot",
+    "diabetes",
+    "feverish"
+   ],
+   "fu": []
+  },
+  "bruising_easily": {
+   "fields": [
+    "onsetWhen",
+    "bloodThinner",
+    "noKnock",
+    "newMedSteroid",
+    "otherBleeding",
+    "tinyDots",
+    "feverish",
+    "tiredPale"
+   ],
+   "fu": []
+  },
+  "fall": {
+   "fields": [
+    "happenedWhen",
+    "hitHead",
+    "bloodThinner",
+    "lostConsciousness",
+    "confusion",
+    "stuckOnFloor",
+    "longOnFloor",
+    "cannotWalk",
+    "dizzyBefore"
+   ],
+   "fu": []
+  },
+  "near_fall": {
+   "fields": [
+    "happenedWhen",
+    "dizzyBefore",
+    "standingDizzy",
+    "nearFaint",
+    "heartRacing",
+    "weakSide",
+    "fallsBefore",
+    "newMedicine"
+   ],
+   "fu": []
+  },
+  "head_injury": {
+   "fields": [
+    "happenedWhen",
+    "bloodThinner",
+    "lostConsciousness",
+    "confusion",
+    "vomitedMore",
+    "seizure",
+    "headacheBad",
+    "weakVision",
+    "clearFluid"
+   ],
+   "fu": []
+  },
+  "cut": {
+   "fields": [
+    "happenedWhen",
+    "bleedingContinues",
+    "bloodThinner",
+    "cutDeep",
+    "numbTingle",
+    "dirtInside",
+    "tetanusOld",
+    "redHot",
+    "feverish"
+   ],
+   "fu": []
+  },
+  "bleeding": {
+   "fields": [
+    "happenedWhen",
+    "bleedSite",
+    "bleedingContinues",
+    "heavyBleed",
+    "faintDizzy",
+    "bloodThinner"
+   ],
+   "fu": []
+  },
+  "burn": {
+   "fields": [
+    "happenedWhen",
+    "burnCause",
+    "burnSite",
+    "smokeFace",
+    "burnDepth",
+    "burnSize",
+    "coolWater",
+    "redHot"
+   ],
+   "fu": []
+  },
+  "bruise": {
+   "fields": [
+    "happenedWhen",
+    "injuryFirst",
+    "hitHead",
+    "bloodThinner",
+    "tightLump",
+    "numbTingle",
+    "redHot"
+   ],
+   "fu": []
+  },
+  "swelling": {
+   "fields": [
+    "onsetWhen",
+    "swellSite",
+    "injuryFirst",
+    "side",
+    "redHot",
+    "painful",
+    "breathless",
+    "lipSwelling",
+    "feverish"
+   ],
+   "fu": []
+  },
+  "sprain": {
+   "fields": [
+    "happenedWhen",
+    "sprainSite",
+    "side",
+    "cannotWalk",
+    "boneTender",
+    "looksBent",
+    "numbTingle",
+    "coldPale"
+   ],
+   "fu": []
+  },
+  "broken_bone": {
+   "fields": [
+    "happenedWhen",
+    "boneSite",
+    "side",
+    "looksBent",
+    "boneThrough",
+    "cannotUse",
+    "numbTingle",
+    "coldPale",
+    "bleedingContinues"
+   ],
+   "fu": []
+  },
+  "bite": {
+   "fields": [
+    "happenedWhen",
+    "biteBy",
+    "skinBroken",
+    "bleedingContinues",
+    "biteSite",
+    "tetanusOld",
+    "redHot",
+    "feverish",
+    "lipSwelling"
+   ],
+   "fu": []
+  },
+  "sting": {
+   "fields": [
+    "happenedWhen",
+    "lipSwelling",
+    "breathless",
+    "throatTight",
+    "faintDizzy",
+    "hivesBody",
+    "hasPen",
+    "spreadSwell",
+    "feverish"
+   ],
+   "fu": []
+  },
+  "choking": {
+   "fields": [
+    "choking",
+    "coughStrong",
+    "cannotSpeak",
+    "blueLips",
+    "lostResponse",
+    "breathless",
+    "stuckFeeling",
+    "happenedWhen"
+   ],
+   "fu": []
+  }
+ },
+ "redFlags": [
+  {
+   "id": "rf_back_pain_1",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "bladderBowel",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Back pain with new bladder or bowel trouble: possible cauda equina.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_back_pain_2",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "numbGroin",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Back pain with saddle numbness: possible cauda equina.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_back_pain_3",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "legWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Back pain with new leg weakness: possible spinal nerve compression.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_back_pain_4",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Back pain with fever: possible spinal infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_back_pain_5",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "steroidBone",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Back pain after injury with weak bones or steroids: possible vertebral fracture.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_back_pain_6",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "weightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Back pain with past cancer or unexplained weight loss.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_back_pain_7",
+   "problems": [
+    "back_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe back pain after injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_neck_pain_1",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "stiffNeckLight",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Neck stiffness with fever and headache or photophobia: possible meningitis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_neck_pain_2",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "stiffNeckLight",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Stiff neck with headache or light sensitivity.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_neck_pain_3",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "chestTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Neck pain with chest symptoms: possible cardiac cause.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_neck_pain_4",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "armNumbWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Neck injury with arm numbness or weakness: possible cervical cord or root injury.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_neck_pain_5",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "armNumbWeak",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Neck pain with arm numbness or weakness.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_neck_pain_6",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "severity",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe neck pain after injury (consider Canadian C-spine rule).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_neck_pain_7",
+   "problems": [
+    "neck_pain"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Neck pain with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_knee_pain_1",
+   "problems": [
+    "knee_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Injury, cannot bear weight 4 steps: Ottawa knee rule positive, X-ray.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_knee_pain_2",
+   "problems": [
+    "knee_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "cannotBend",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Injury, cannot flex to 90 degrees: Ottawa knee rule positive, X-ray.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_knee_pain_3",
+   "problems": [
+    "knee_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hot red swollen joint with fever: septic arthritis until proven otherwise.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_knee_pain_4",
+   "problems": [
+    "knee_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hot red knee: possible infection or crystal arthritis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_knee_pain_5",
+   "problems": [
+    "knee_pain"
+   ],
+   "all": [
+    {
+     "field": "calfSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Knee pain with calf swelling or tenderness: possible DVT (NICE NG158).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hip_pain_1",
+   "problems": [
+    "hip_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "legTurned",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hip pain after fall with shortened or rotated leg: suspected hip fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hip_pain_2",
+   "problems": [
+    "hip_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hip pain after fall and cannot bear weight: suspected hip fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hip_pain_3",
+   "problems": [
+    "hip_pain"
+   ],
+   "all": [
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hip pain and cannot bear weight without clear injury: occult fracture or infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hip_pain_4",
+   "problems": [
+    "hip_pain"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    },
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hip pain with fever and cannot walk: possible septic arthritis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hip_pain_5",
+   "problems": [
+    "hip_pain"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hip pain with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_shoulder_pain_1",
+   "problems": [
+    "shoulder_pain"
+   ],
+   "all": [
+    {
+     "field": "chestTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Shoulder pain with chest symptoms: possible heart attack.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_shoulder_pain_2",
+   "problems": [
+    "shoulder_pain"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    },
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Shoulder pain spreading to arm or jaw and brought on by effort: possible angina or heart attack.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_shoulder_pain_3",
+   "problems": [
+    "shoulder_pain"
+   ],
+   "all": [
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Shoulder pain brought on by exertion: possible angina.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_shoulder_pain_4",
+   "problems": [
+    "shoulder_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "looksBent",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Shoulder injury with deformity: possible dislocation or fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_shoulder_pain_5",
+   "problems": [
+    "shoulder_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hot swollen joint with fever: possible septic arthritis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_shoulder_pain_6",
+   "problems": [
+    "shoulder_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot shoulder.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_joint_swelling_1",
+   "problems": [
+    "joint_swelling"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hot swollen joint with fever: septic arthritis until proven otherwise.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_joint_swelling_2",
+   "problems": [
+    "joint_swelling"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "jointStuck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hot swollen joint that cannot move: possible septic arthritis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_joint_swelling_3",
+   "problems": [
+    "joint_swelling"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hot red swollen joint: possible infection or crystal arthritis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_joint_swelling_4",
+   "problems": [
+    "joint_swelling"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "jointStuck",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen joint after injury that will not move: fracture or internal injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_joint_swelling_5",
+   "problems": [
+    "joint_swelling"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen joint with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_morning_stiffness_1",
+   "problems": [
+    "morning_stiffness"
+   ],
+   "all": [
+    {
+     "field": "visionLoss",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Stiffness with visual disturbance: possible giant cell arteritis, same-day assessment.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_morning_stiffness_2",
+   "problems": [
+    "morning_stiffness"
+   ],
+   "all": [
+    {
+     "field": "headScalpJaw",
+     "is": true
+    },
+    {
+     "field": "shoulderHip",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Shoulder or hip stiffness with new headache or jaw claudication: suspected giant cell arteritis with polymyalgia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_morning_stiffness_3",
+   "problems": [
+    "morning_stiffness"
+   ],
+   "all": [
+    {
+     "field": "headScalpJaw",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New headache, scalp tenderness or jaw claudication: consider giant cell arteritis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_morning_stiffness_4",
+   "problems": [
+    "morning_stiffness"
+   ],
+   "all": [
+    {
+     "field": "jointSwollen",
+     "is": true
+    },
+    {
+     "field": "stiffLength",
+     "is": "over 1 hour"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen joints with over 1 hour morning stiffness: possible inflammatory arthritis (NICE NG100), early referral.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_cramps_1",
+   "problems": [
+    "cramps"
+   ],
+   "all": [
+    {
+     "field": "coldPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Painful cold pale limb: possible acute limb ischaemia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_cramps_2",
+   "problems": [
+    "cramps"
+   ],
+   "all": [
+    {
+     "field": "calfSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Calf pain with swelling: possible DVT (NICE NG158).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cramps_3",
+   "problems": [
+    "cramps"
+   ],
+   "all": [
+    {
+     "field": "lowFluids",
+     "is": true
+    },
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cramps with fluid loss and new medicine: electrolyte disturbance.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_leg_pain_1",
+   "problems": [
+    "leg_pain"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Leg pain with breathlessness: possible pulmonary embolism.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_leg_pain_2",
+   "problems": [
+    "leg_pain"
+   ],
+   "all": [
+    {
+     "field": "coldPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cold pale painful leg: possible acute limb ischaemia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_leg_pain_3",
+   "problems": [
+    "leg_pain"
+   ],
+   "all": [
+    {
+     "field": "legWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New leg weakness: possible stroke or spinal cause.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_leg_pain_4",
+   "problems": [
+    "leg_pain"
+   ],
+   "all": [
+    {
+     "field": "calfSwollen",
+     "is": true
+    },
+    {
+     "field": "clotRisk",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen tender calf with clot risk: high DVT probability, same-day scan (NICE NG158).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_leg_pain_5",
+   "problems": [
+    "leg_pain"
+   ],
+   "all": [
+    {
+     "field": "calfSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen tender calf: possible DVT (NICE NG158).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_leg_pain_6",
+   "problems": [
+    "leg_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot leg: possible cellulitis or DVT.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_arm_pain_1",
+   "problems": [
+    "arm_pain"
+   ],
+   "all": [
+    {
+     "field": "chestTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Arm pain with chest symptoms: possible heart attack.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_arm_pain_2",
+   "problems": [
+    "arm_pain"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Arm pain spreading to jaw or back: possible heart attack.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_arm_pain_3",
+   "problems": [
+    "arm_pain"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    },
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Arm pain with breathlessness on effort: possible heart cause.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_arm_pain_4",
+   "problems": [
+    "arm_pain"
+   ],
+   "all": [
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Arm pain on exertion: possible angina.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_arm_pain_5",
+   "problems": [
+    "arm_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "looksBent",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Arm injury with deformity: fracture or dislocation.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_arm_pain_6",
+   "problems": [
+    "arm_pain"
+   ],
+   "all": [
+    {
+     "field": "numbTingle",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Arm pain with numbness: nerve or vascular cause; sudden onset needs stroke check.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_foot_pain_1",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "openSore",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Diabetic foot ulcer with fever: moderate or severe infection (NICE NG19).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_foot_pain_2",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "coldPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Diabetic with cold pale foot: critical ischaemia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_foot_pain_3",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "coldPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cold pale painful foot: acute limb ischaemia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_foot_pain_4",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red hot foot with fever: cellulitis with systemic signs.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_foot_pain_5",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "openSore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Diabetic foot sore: refer to foot protection team within 1 working day (NICE NG19).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_foot_pain_6",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Diabetic with red hot foot: possible infection or Charcot.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_foot_pain_7",
+   "problems": [
+    "foot_pain"
+   ],
+   "all": [
+    {
+     "field": "injuryFirst",
+     "is": true
+    },
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Foot injury, cannot bear weight: Ottawa foot rule positive, X-ray.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_gout_1",
+   "problems": [
+    "gout"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hot joint with fever: exclude septic arthritis before assuming gout.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_gout_2",
+   "problems": [
+    "gout"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "jointStuck",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hot joint unable to move: exclude septic arthritis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_gout_3",
+   "problems": [
+    "gout"
+   ],
+   "all": [
+    {
+     "field": "firstTime",
+     "is": true
+    },
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "First hot joint episode: needs diagnosis (NICE CKS gout).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_body_ache_1",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "nonBlanching",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Aches with non-blanching rash: possible meningococcal sepsis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_body_ache_2",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "stiffNeckLight",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Fever, headache and neck stiffness: possible meningitis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_body_ache_3",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "stiffNeckLight",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Aches with stiff neck or light sensitivity.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_body_ache_4",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Aches with confusion: possible sepsis (NICE NG51).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_body_ache_5",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Fever with breathlessness: possible sepsis or pneumonia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_body_ache_6",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    },
+    {
+     "field": "lowUrine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fever with little urine: dehydration or sepsis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_body_ache_7",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "lowUrine",
+     "is": true
+    },
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Muscle aches with dark urine on new medicine: possible rhabdomyolysis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_body_ache_8",
+   "problems": [
+    "body_ache"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 103
+    }
+   ],
+   "level": "AMBER",
+   "reason": "High fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_rash_1",
+   "problems": [
+    "rash"
+   ],
+   "all": [
+    {
+     "field": "nonBlanching",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Non-blanching rash: possible meningococcal sepsis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_rash_2",
+   "problems": [
+    "rash"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Rash with lip, face or tongue swelling: angioedema or anaphylaxis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_rash_3",
+   "problems": [
+    "rash"
+   ],
+   "all": [
+    {
+     "field": "mouthEyeSores",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Rash with mucosal sores or peeling skin: possible SJS/TEN.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_rash_4",
+   "problems": [
+    "rash"
+   ],
+   "all": [
+    {
+     "field": "rashNearEye",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blisters near eye or nose tip: possible ophthalmic shingles, same-day.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_rash_5",
+   "problems": [
+    "rash"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading rash with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_rash_6",
+   "problems": [
+    "rash"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    },
+    {
+     "field": "blisters",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blistering rash after new medicine: drug reaction.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itching_1",
+   "problems": [
+    "itching"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Itching with face or tongue swelling: anaphylaxis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_itching_2",
+   "problems": [
+    "itching"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Itching with breathing difficulty: anaphylaxis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_itching_3",
+   "problems": [
+    "itching"
+   ],
+   "all": [
+    {
+     "field": "yellowSkin",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Itch with jaundice: liver or bile duct cause.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itching_4",
+   "problems": [
+    "itching"
+   ],
+   "all": [
+    {
+     "field": "weightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Generalised itch with weight loss: systemic cause.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_itching_5",
+   "problems": [
+    "itching"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading itch after new medicine: drug reaction.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hives_1",
+   "problems": [
+    "hives"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives with lip, face or tongue swelling: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hives_2",
+   "problems": [
+    "hives"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives with breathing difficulty: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hives_3",
+   "problems": [
+    "hives"
+   ],
+   "all": [
+    {
+     "field": "throatTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives with throat tightness or stridor: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hives_4",
+   "problems": [
+    "hives"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives with faintness or collapse: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_hives_5",
+   "problems": [
+    "hives"
+   ],
+   "all": [
+    {
+     "field": "bellyVomit",
+     "is": true
+    },
+    {
+     "field": "trigger",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives with vomiting after a trigger: skin plus gut involvement suggests anaphylaxis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_allergic_reaction_1",
+   "problems": [
+    "allergic_reaction"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face, lip or tongue swelling in allergic reaction: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_allergic_reaction_2",
+   "problems": [
+    "allergic_reaction"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Breathing difficulty in allergic reaction: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_allergic_reaction_3",
+   "problems": [
+    "allergic_reaction"
+   ],
+   "all": [
+    {
+     "field": "throatTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Throat tightness or stridor in allergic reaction: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_allergic_reaction_4",
+   "problems": [
+    "allergic_reaction"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Faintness or collapse in allergic reaction: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_allergic_reaction_5",
+   "problems": [
+    "allergic_reaction"
+   ],
+   "all": [
+    {
+     "field": "bellyVomit",
+     "is": true
+    },
+    {
+     "field": "trigger",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomiting or belly pain after a trigger with reaction: possible anaphylaxis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_allergic_reaction_6",
+   "problems": [
+    "allergic_reaction"
+   ],
+   "all": [
+    {
+     "field": "hasPen",
+     "is": true
+    },
+    {
+     "field": "trigger",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Has adrenaline pen and reaction after trigger: prior anaphylaxis, use pen.",
+   "say": "Use your pen. Call 999."
+  },
+  {
+   "id": "rf_blisters_1",
+   "problems": [
+    "blisters"
+   ],
+   "all": [
+    {
+     "field": "mouthEyeSores",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blisters with mouth or eye sores or peeling skin: possible SJS/TEN.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_blisters_2",
+   "problems": [
+    "blisters"
+   ],
+   "all": [
+    {
+     "field": "oneSideBand",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Painful blistering band on one side: shingles, antiviral within 72 hours.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blisters_3",
+   "problems": [
+    "blisters"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading blisters with fever: infection or severe blistering disease.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blisters_4",
+   "problems": [
+    "blisters"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading blisters after new medicine: drug reaction.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sunburn_1",
+   "problems": [
+    "sunburn"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sunburn with confusion: heat stroke.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sunburn_2",
+   "problems": [
+    "sunburn"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sunburn with fever and faintness: heat illness.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sunburn_3",
+   "problems": [
+    "sunburn"
+   ],
+   "all": [
+    {
+     "field": "blisters",
+     "is": true
+    },
+    {
+     "field": "sunArea",
+     "is": "most of the body"
+    }
+   ],
+   "level": "RED",
+   "reason": "Blistering sunburn over most of the body: large partial-thickness burn.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sunburn_4",
+   "problems": [
+    "sunburn"
+   ],
+   "all": [
+    {
+     "field": "blisters",
+     "is": true
+    },
+    {
+     "field": "sunArea",
+     "is": "one limb or back"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blistering sunburn over a large area.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sunburn_5",
+   "problems": [
+    "sunburn"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sunburn with dizziness or faintness: heat exhaustion or dehydration.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_1",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Wound with spreading redness and fever: systemic infection (sepsis screen).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_wound_not_healing_2",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "blackSkin",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Diabetic wound with dead tissue: possible gangrene or severe infection.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_wound_not_healing_3",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "blackSkin",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Wound with black dead tissue.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_4",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Diabetic wound with redness and heat: infection (NICE NG19).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_5",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "woundColour",
+     "is": "yellow"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Yellow discharge: possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_6",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "woundColour",
+     "is": "green"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Green discharge: possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_7",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "woundSmell",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Foul-smelling wound: possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_8",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading red hot skin around wound: cellulitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wound_not_healing_9",
+   "problems": [
+    "wound_not_healing"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Wound not healing over 4 weeks: look for venous, arterial, diabetic cause or cancer.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_bed_sore_1",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pressure sore with fever and spreading redness: sepsis risk in older adults.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bed_sore_2",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pressure sore with fever and confusion: possible sepsis (NICE NG51).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bed_sore_3",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "sorePhase",
+     "is": "deep hole, fat or bone seen"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Deep pressure ulcer (EPUAP category 3-4).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bed_sore_4",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "sorePhase",
+     "is": "black or dead skin"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pressure ulcer with dead tissue (category 4 or unstageable).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bed_sore_5",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "sorePhase",
+     "is": "open skin or blister"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Open pressure ulcer (category 2): needs dressing and pressure relief.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_bed_sore_6",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "woundSmell",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Foul-smelling pressure sore: infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bed_sore_7",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "woundColour",
+     "is": "yellow"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Yellow discharge: possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bed_sore_8",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "woundColour",
+     "is": "green"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Green discharge: possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bed_sore_9",
+   "problems": [
+    "bed_sore"
+   ],
+   "all": [
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pressure sore with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_mole_1",
+   "problems": [
+    "mole"
+   ],
+   "all": [
+    {
+     "field": "moleChange",
+     "is": "getting bigger"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Growing mole: suspected melanoma, NICE NG12 urgent referral.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_mole_2",
+   "problems": [
+    "mole"
+   ],
+   "all": [
+    {
+     "field": "moleChange",
+     "is": "darker or uneven colour"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Colour change mole: suspected melanoma, NICE NG12 urgent referral.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_mole_3",
+   "problems": [
+    "mole"
+   ],
+   "all": [
+    {
+     "field": "moleChange",
+     "is": "uneven edge"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Irregular border mole: suspected melanoma, NICE NG12 urgent referral.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_mole_4",
+   "problems": [
+    "mole"
+   ],
+   "all": [
+    {
+     "field": "moleChange",
+     "is": "bleeds or crusts"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding or crusting mole: suspected melanoma, NICE NG12 urgent referral.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_mole_5",
+   "problems": [
+    "mole"
+   ],
+   "all": [
+    {
+     "field": "moleChange",
+     "is": "itchy or sore"
+    },
+    {
+     "field": "moleNew",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New itchy mole in an adult: check for melanoma.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_hair_loss_1",
+   "problems": [
+    "hair_loss"
+   ],
+   "all": [
+    {
+     "field": "scalpSore",
+     "is": true
+    },
+    {
+     "field": "hairPattern",
+     "is": "bald patches"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Patchy hair loss with sore scalp: possible scarring alopecia, early treatment.",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_fungal_1",
+   "problems": [
+    "fungal"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot spreading skin with fever: bacterial cellulitis, not fungus.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fungal_2",
+   "problems": [
+    "fungal"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Diabetic with red hot skin: infection risk.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fungal_3",
+   "problems": [
+    "fungal"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "spreading",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red, hot, spreading skin: possible cellulitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bruising_easily_1",
+   "problems": [
+    "bruising_easily"
+   ],
+   "all": [
+    {
+     "field": "tinyDots",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Petechiae with fever: possible sepsis or leukaemia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bruising_easily_2",
+   "problems": [
+    "bruising_easily"
+   ],
+   "all": [
+    {
+     "field": "tinyDots",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Petechiae: low platelets, urgent blood count.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bruising_easily_3",
+   "problems": [
+    "bruising_easily"
+   ],
+   "all": [
+    {
+     "field": "otherBleeding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bruising with bleeding elsewhere: clotting or platelet problem.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bruising_easily_4",
+   "problems": [
+    "bruising_easily"
+   ],
+   "all": [
+    {
+     "field": "noKnock",
+     "is": true
+    },
+    {
+     "field": "tiredPale",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Unprovoked bruising with fatigue and pallor: check blood count.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fall_1",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head strike on anticoagulant or antiplatelet: CT head within 8 hours (NICE NG232).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_fall_2",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head strike with loss of consciousness (NICE NG232).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_fall_3",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head strike with confusion (NICE NG232).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_fall_4",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Confusion after a fall.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_fall_5",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blackout with fall: needs same-day assessment for cause.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fall_6",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot bear weight after fall: suspected hip or pelvic fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_fall_7",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "longOnFloor",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Long lie over 1 hour: rhabdomyolysis, hypothermia, pressure injury.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_fall_8",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "stuckOnFloor",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Could not get up alone after a fall.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fall_9",
+   "problems": [
+    "fall"
+   ],
+   "all": [
+    {
+     "field": "dizzyBefore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dizziness before fall: look for cause (NICE NG249).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_near_fall_1",
+   "problems": [
+    "near_fall"
+   ],
+   "all": [
+    {
+     "field": "weakSide",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Near fall with face, arm or speech change: possible stroke or TIA.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_near_fall_2",
+   "problems": [
+    "near_fall"
+   ],
+   "all": [
+    {
+     "field": "nearFaint",
+     "is": true
+    },
+    {
+     "field": "heartRacing",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Near-faint with palpitations or chest pain: possible arrhythmia.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_near_fall_3",
+   "problems": [
+    "near_fall"
+   ],
+   "all": [
+    {
+     "field": "heartRacing",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Palpitations or chest pain before near fall.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_near_fall_4",
+   "problems": [
+    "near_fall"
+   ],
+   "all": [
+    {
+     "field": "nearFaint",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Near-blackout: needs same-day cause check.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_near_fall_5",
+   "problems": [
+    "near_fall"
+   ],
+   "all": [
+    {
+     "field": "fallsBefore",
+     "is": true
+    },
+    {
+     "field": "standingDizzy",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Repeated falls with postural dizziness: falls assessment (NICE NG249).",
+   "say": "See a doctor this week."
+  },
+  {
+   "id": "rf_near_fall_6",
+   "problems": [
+    "near_fall"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    },
+    {
+     "field": "dizzyBefore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dizziness after new medicine.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_head_injury_1",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head injury on anticoagulant or antiplatelet: CT within 8 hours (NICE NG232).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_2",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head injury with loss of consciousness.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_3",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head injury with confusion.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_4",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "vomitedMore",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head injury with repeated vomiting: CT within 1 hour.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_5",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "seizure",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head injury with seizure: CT within 1 hour.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_6",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "weakVision",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head injury with new neurological deficit: CT within 1 hour.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_7",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "clearFluid",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood or clear fluid from nose or ear: possible skull base fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_head_injury_8",
+   "problems": [
+    "head_injury"
+   ],
+   "all": [
+    {
+     "field": "headacheBad",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Worsening headache after head injury: possible intracranial bleed.",
+   "say": "See a doctor today. Go now if worse."
+  },
+  {
+   "id": "rf_cut_1",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "bleedingContinues",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bleeding not controlled by 10 minutes of direct pressure.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_cut_2",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    },
+    {
+     "field": "cutDeep",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Deep wound on blood thinner: bleeding and suturing risk.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_cut_3",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Infected wound with fever.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_cut_4",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "cutDeep",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Deep or gaping wound: may need closure within hours.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cut_5",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "numbTingle",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cut with numbness or loss of movement: nerve or tendon injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cut_6",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "dirtInside",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Contaminated wound: irrigation, tetanus and antibiotic review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cut_7",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "tetanusOld",
+     "is": true
+    },
+    {
+     "field": "dirtInside",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dirty wound with tetanus status over 10 years or unknown.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cut_8",
+   "problems": [
+    "cut"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot wound: possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bleeding_1",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedingContinues",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bleeding not controlled by 10 minutes of pressure.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bleeding_2",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "heavyBleed",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding soaking cloth within an hour.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bleeding_3",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bleeding with faintness: possible shock.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bleeding_4",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedSite",
+     "is": "vomit"
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomiting blood: upper GI bleed.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bleeding_5",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedSite",
+     "is": "stool or bottom"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood from bowel: black or red stool needs same-day review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bleeding_6",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedSite",
+     "is": "urine"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in urine.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bleeding_7",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedSite",
+     "is": "vagina"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Vaginal bleeding: pregnancy or post-menopausal needs review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bleeding_8",
+   "problems": [
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding on blood thinner: medicine review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burn_1",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "smokeFace",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burn with smoke exposure or airway signs: inhalation injury.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_burn_2",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnCause",
+     "is": "chemical"
+    }
+   ],
+   "level": "RED",
+   "reason": "Chemical burn: specialist assessment (ABA).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_burn_3",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnCause",
+     "is": "electric"
+    }
+   ],
+   "level": "RED",
+   "reason": "Electrical burn: cardiac and deep tissue injury (ABA).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_burn_4",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnDepth",
+     "is": "white, brown or black"
+    }
+   ],
+   "level": "RED",
+   "reason": "Full-thickness burn: needs specialist care.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_burn_5",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnSite",
+     "is": "face, neck or mouth"
+    }
+   ],
+   "level": "RED",
+   "reason": "Burn to face, neck or mouth: airway risk.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_burn_6",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnSize",
+     "is": "bigger than a palm"
+    },
+    {
+     "field": "burnDepth",
+     "is": "blisters"
+    }
+   ],
+   "level": "RED",
+   "reason": "Partial-thickness burn larger than a palm: over 1 percent TBSA, ED (NICE CKS Burns).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_burn_7",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnSite",
+     "is": "hand, foot or joint"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burn on hand, foot or joint: burns service referral (ABA).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burn_8",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnSite",
+     "is": "private parts"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Genital burn: burns service referral (ABA).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burn_9",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnSize",
+     "is": "bigger than a palm"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burn larger than a palm.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burn_10",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "burnDepth",
+     "is": "blisters"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blistered burn: dressing review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burn_11",
+   "problems": [
+    "burn"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading red hot skin around burn: infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bruise_1",
+   "problems": [
+    "bruise"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head strike on blood thinner: CT within 8 hours (NICE NG232).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bruise_2",
+   "problems": [
+    "bruise"
+   ],
+   "all": [
+    {
+     "field": "tightLump",
+     "is": true
+    },
+    {
+     "field": "numbTingle",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tense swelling with numbness: possible compartment syndrome.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bruise_3",
+   "problems": [
+    "bruise"
+   ],
+   "all": [
+    {
+     "field": "tightLump",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Growing tense haematoma on blood thinner.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bruise_4",
+   "problems": [
+    "bruise"
+   ],
+   "all": [
+    {
+     "field": "tightLump",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Growing tense swelling: haematoma.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bruise_5",
+   "problems": [
+    "bruise"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bruise after head knock: head injury checks.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bruise_6",
+   "problems": [
+    "bruise"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot bruise: infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swelling_1",
+   "problems": [
+    "swelling"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face, lip or tongue swelling: angioedema.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_swelling_2",
+   "problems": [
+    "swelling"
+   ],
+   "all": [
+    {
+     "field": "swellSite",
+     "is": "face or tongue"
+    }
+   ],
+   "level": "RED",
+   "reason": "Face or tongue swelling: angioedema.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_swelling_3",
+   "problems": [
+    "swelling"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swelling with breathlessness: heart failure, PE or allergy.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_swelling_4",
+   "problems": [
+    "swelling"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red hot swelling with fever: cellulitis or abscess with systemic signs.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_swelling_5",
+   "problems": [
+    "swelling"
+   ],
+   "all": [
+    {
+     "field": "swellSite",
+     "is": "leg"
+    },
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Painful leg swelling: possible DVT (NICE NG158).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swelling_6",
+   "problems": [
+    "swelling"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot swelling: infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sprain_1",
+   "problems": [
+    "sprain"
+   ],
+   "all": [
+    {
+     "field": "looksBent",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Deformed limb after injury: fracture or dislocation.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sprain_2",
+   "problems": [
+    "sprain"
+   ],
+   "all": [
+    {
+     "field": "coldPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cold pale limb after injury: vascular injury.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sprain_3",
+   "problems": [
+    "sprain"
+   ],
+   "all": [
+    {
+     "field": "cannotWalk",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot take 4 steps: Ottawa rule positive, X-ray.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sprain_4",
+   "problems": [
+    "sprain"
+   ],
+   "all": [
+    {
+     "field": "boneTender",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bony tenderness: Ottawa rule positive, X-ray.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sprain_5",
+   "problems": [
+    "sprain"
+   ],
+   "all": [
+    {
+     "field": "numbTingle",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Numbness after injury: nerve injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_broken_bone_1",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "boneThrough",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Open fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_2",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "looksBent",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Deformed limb.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_3",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "coldPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cold pale limb after injury: vascular compromise.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_4",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "numbTingle",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Numbness after injury: nerve or vascular compromise.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_5",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "bleedingContinues",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Uncontrolled bleeding.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_6",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "boneSite",
+     "is": "hip"
+    }
+   ],
+   "level": "RED",
+   "reason": "Suspected hip fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_7",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "boneSite",
+     "is": "back or neck"
+    }
+   ],
+   "level": "RED",
+   "reason": "Suspected spinal injury.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_8",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "boneSite",
+     "is": "head or face"
+    }
+   ],
+   "level": "RED",
+   "reason": "Suspected head or facial fracture.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_broken_bone_9",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "boneSite",
+     "is": "ribs"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Rib injury: check for lung injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_broken_bone_10",
+   "problems": [
+    "broken_bone"
+   ],
+   "all": [
+    {
+     "field": "cannotUse",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot use limb after injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_1",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "biteBy",
+     "is": "snake or spider"
+    }
+   ],
+   "level": "RED",
+   "reason": "Snake or spider bite: envenomation.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bite_2",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "biteBy",
+     "is": "bat or wild animal"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bat or wild animal bite: rabies post-exposure advice same day (UKHSA).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_3",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "biteBy",
+     "is": "human"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Human bite: high infection risk.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_4",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "biteBy",
+     "is": "cat"
+    },
+    {
+     "field": "skinBroken",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cat bite with puncture: deep infection risk (NICE CKS Bites).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_5",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "biteBy",
+     "is": "dog"
+    },
+    {
+     "field": "skinBroken",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dog bite with broken skin: infection and tetanus review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_6",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "skinBroken",
+     "is": true
+    },
+    {
+     "field": "biteSite",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Broken skin bite on face, hand, joint or genitals.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_7",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "tetanusOld",
+     "is": true
+    },
+    {
+     "field": "skinBroken",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bite with tetanus status over 10 years or unknown.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_8",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "bleedingContinues",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bleeding not controlled by 10 minutes of pressure.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bite_9",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Infected bite with fever.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_bite_10",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot bite site: infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bite_11",
+   "problems": [
+    "bite"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bite with face or tongue swelling: anaphylaxis.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sting_1",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sting with lip, face or tongue swelling: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sting_2",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sting with breathing difficulty: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sting_3",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "throatTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sting with throat tightness: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sting_4",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sting with faintness: anaphylaxis (Resus Council UK).",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_sting_5",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "hivesBody",
+     "is": true
+    },
+    {
+     "field": "hasPen",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives after sting in someone with an adrenaline pen: prior anaphylaxis.",
+   "say": "Use your pen. Call 999."
+  },
+  {
+   "id": "rf_sting_6",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "hivesBody",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hives away from the sting: early systemic allergy, watch closely.",
+   "say": "See a doctor today. Go now if worse."
+  },
+  {
+   "id": "rf_sting_7",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "spreadSwell",
+     "is": true
+    },
+    {
+     "field": "feverish",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spreading swelling with fever: infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sting_8",
+   "problems": [
+    "sting"
+   ],
+   "all": [
+    {
+     "field": "spreadSwell",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swelling larger than a palm or spreading: large local reaction or infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_choking_1",
+   "problems": [
+    "choking"
+   ],
+   "all": [
+    {
+     "field": "choking",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Choking now: airway obstruction (Resus Council UK).",
+   "say": "Call 999 now. Give 5 back blows."
+  },
+  {
+   "id": "rf_choking_2",
+   "problems": [
+    "choking"
+   ],
+   "all": [
+    {
+     "field": "cannotSpeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot speak, cough or breathe: severe airway obstruction.",
+   "say": "Call 999 now."
+  },
+  {
+   "id": "rf_choking_3",
+   "problems": [
+    "choking"
+   ],
+   "all": [
+    {
+     "field": "blueLips",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blue lips or face: severe airway obstruction.",
+   "say": "Call 999 now."
+  },
+  {
+   "id": "rf_choking_4",
+   "problems": [
+    "choking"
+   ],
+   "all": [
+    {
+     "field": "lostResponse",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Floppy or unresponsive: severe airway obstruction.",
+   "say": "Call 999 now."
+  },
+  {
+   "id": "rf_choking_5",
+   "problems": [
+    "choking"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Breathing difficulty after choking.",
+   "say": "Call 999 or go to A&E now."
+  },
+  {
+   "id": "rf_choking_6",
+   "problems": [
+    "choking"
+   ],
+   "all": [
+    {
+     "field": "stuckFeeling",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Object or food still feels stuck after choking: possible retained foreign body.",
+   "say": "See a doctor today."
+  }
+ ]
+}
