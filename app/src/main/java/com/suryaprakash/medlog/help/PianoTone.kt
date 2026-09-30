@@ -89,7 +89,7 @@ object PianoTone {
         val freq = n * F0 * sqrt(1.0 + B * n * n)
 
         // Amplitude
-        val amp = (1.0 / pow(n.toDouble(), 0.9)) * amplitudes[n - 1]
+        val amp = (1.0 / n.toDouble().pow(0.9)) * amplitudes[n - 1]
 
         // Decay time constant
         val tau = 3.2 / (1.0 + 0.55 * (n - 1))

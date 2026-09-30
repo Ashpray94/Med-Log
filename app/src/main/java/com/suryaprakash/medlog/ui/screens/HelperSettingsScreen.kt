@@ -78,7 +78,7 @@ fun HelperSettingsScreen(nav: Nav) {
                 ValueRow("Text size", if (s.bigMode) "Large" else "Regular") { nav.go(Route.EasySettings) }
             }
 
-            com.suryaprakash.medlog.ui.Section(null)
+            com.suryaprakash.medlog.ui.Section("")
             androidx.compose.foundation.layout.Box(Modifier.padding(vertical = 12.dp)) {
                 Text("Switch to self mode", fontSize = sc.small, color = LocalPalette.current.inkSoft, modifier = Modifier.fillMaxWidth().padding(16.dp))
             }

@@ -25,6 +25,7 @@ data class FeedbackState(
 )
 
 /** Bottom sheet for sending feedback on shake. Categories: Bug, Idea, Confusing. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun FeedbackSheet(
     state: FeedbackState,

@@ -4,6 +4,7 @@ import android.graphics.BitmapFactory
 import com.suryaprakash.medlog.ui.steady
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -372,7 +373,7 @@ fun MedicineRowWithActions(m: Medicine, onEdit: () -> Unit, onDelete: () -> Unit
             MedicinePicture(m, 64.dp)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+                Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
                 if (m.purpose.isNotBlank()) Text("For ${m.purpose}", fontSize = sc.body, color = p.ink)
                 else Text("Add what it's for", fontSize = sc.body, color = p.brand)
                 Text(whenWords, fontSize = sc.small, color = p.inkSoft)

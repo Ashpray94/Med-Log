@@ -211,7 +211,7 @@ fun SettingsScreen(nav: Nav) {
             com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
             }
-            com.suryaprakash.medlog.ui.Section(null)
+            com.suryaprakash.medlog.ui.Section("")
             androidx.compose.foundation.layout.Box(Modifier.padding(vertical = 12.dp)) {
                 Text("Switch to helper mode", fontSize = LocalScale.current.small, color = LocalPalette.current.inkSoft, modifier = Modifier.fillMaxWidth().padding(16.dp))
             }
@@ -483,7 +483,7 @@ fun pinWidget(ctx: android.content.Context) {
 
 /** Which languages the person speaks and reads, and the voices for reading aloud. */
 @Composable
-private fun LanguagesSection(onBack: () -> Unit, onHome: () -> Unit) {
+fun LanguagesSection(onBack: () -> Unit, onHome: () -> Unit) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val s = LocalSettings.current

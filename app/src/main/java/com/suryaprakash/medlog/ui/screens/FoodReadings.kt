@@ -541,7 +541,7 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
             last?.let { n ->
                 com.suryaprakash.medlog.ui.Group {
                     com.suryaprakash.medlog.ui.GroupLine()
-                    com.suryaprakash.medlog.ui.ValueRow(n.text ?: "", sub = "Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}")
+                    com.suryaprakash.medlog.ui.ValueRow("Last", n.text ?: "", sub = "Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}")
                     com.suryaprakash.medlog.ui.GroupLine()
                 }
                 RowActions(what = label, onEdit = { if (onEdit != null) onEdit() }, onDelete = {

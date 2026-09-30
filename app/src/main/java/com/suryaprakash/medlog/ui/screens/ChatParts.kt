@@ -215,7 +215,7 @@ private fun ChatBubble(msg: ChatMsg, onRetry: (ChatMsg) -> Unit) {
         horizontalArrangement = if (msg.mine) Arrangement.End else Arrangement.Start
     ) {
         Column(
-            modifier = Modifier.widthIn(maxWidth = (0.8f * 16 * 5).dp), // ~80% of a reasonable screen width
+            modifier = Modifier.widthIn(max = (0.8f * 16 * 5).dp), // ~80% of a reasonable screen width
             horizontalAlignment = if (msg.mine) Alignment.End else Alignment.Start
         ) {
             if (!msg.mine) {
