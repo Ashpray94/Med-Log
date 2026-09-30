@@ -90,7 +90,10 @@ android {
     packaging {
         resources.excludes += setOf("META-INF/AL2.0", "META-INF/LGPL2.1", "META-INF/*.kotlin_module")
     }
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
+    }
     // One APK per phone type keeps the download small (the speech engine is native code).
     // arm64-v8a: almost all phones from 2017 on; armeabi-v7a: older/cheaper phones; x86_64: emulator.
     splits {
@@ -145,4 +148,5 @@ dependencies {
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
+    testImplementation("org.robolectric:robolectric:4.14.1")
 }

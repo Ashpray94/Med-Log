@@ -67,6 +67,15 @@ jobs:
       - name: Test and build
         run: gradle --no-daemon :app:testProdDebugUnitTest :app:assembleProdRelease :app:assembleDevRelease
 
+      - name: Validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-evidence
+          path: |
+            app/build/test-results/testProdDebugUnitTest/*.xml
+            app/schemas/com.suryaprakash.medlog.data.MedDb/5.json
+
       - name: Name the files
         id: files
         run: |
