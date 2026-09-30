@@ -1,6 +1,7 @@
 package com.suryaprakash.medlog.ui.screens
 
 import android.content.Context
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -98,7 +99,7 @@ private fun ToolButton(text: String, icon: ImageVector, onClick: () -> Unit) {
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
             .background(p.card)
             .padding(12.dp)
-            .androidx.compose.foundation.clickable(onClick = onClick),
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
