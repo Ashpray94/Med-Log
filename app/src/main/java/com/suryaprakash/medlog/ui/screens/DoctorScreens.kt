@@ -118,6 +118,7 @@ fun VisitScreen(nav: Nav) {
                 f.nextAt?.let { at ->
                     val a = Appointment(at = at, doctor = f.doctor, purpose = "Follow-up")
                     val id = app.db.appointments().insert(a)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "add", id)
                     CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
                     com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
                 }
@@ -197,6 +198,7 @@ fun AppointmentsScreen(nav: Nav) {
             }, onDelete = {
                 scope.launch {
                     app.db.appointments().delete(a.id)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "delete", a.id)
                     Announce.done(ctx, null, "removed appointment", "delete", a.id)
                 }
             })
@@ -220,10 +222,12 @@ fun AppointmentsScreen(nav: Nav) {
                 if (editingId != null) {
                     val a = Appointment(id = editingId!!, at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())
                     app.db.appointments().update(a)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "edit", editingId!!)
                     Announce.done(ctx, null, "updated appointment", "edit", editingId!!)
                 } else {
                     val a = Appointment(at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())
                     val id = app.db.appointments().insert(a)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "add", id)
                     CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
                     Announce.done(ctx, null, "added appointment", "add", id)
                 }

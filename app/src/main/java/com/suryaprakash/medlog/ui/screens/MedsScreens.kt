@@ -174,6 +174,7 @@ fun MedsScreen(nav: Nav) {
                 scope.launch {
                     val deactivated = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
                     app.db.medicines().update(deactivated)
+                    com.suryaprakash.medlog.data.Sync.local("medicine", "delete", m.id)
                     Announce.done(ctx, null, "removed ${m.name}", "delete", m.id)
                 }
             })

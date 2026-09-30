@@ -173,6 +173,7 @@ object Scheduler {
         val d = app.db.doses().get(doseId) ?: return Taken.OK
         if (d.status == DoseStatus.TAKEN && !force) return Taken.ALREADY
         app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
+        com.suryaprakash.medlog.data.Sync.local("dose", "edit", doseId)
         app.db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
         if (force && d.status == DoseStatus.TAKEN) {
             val m = app.db.medicines().get(d.medicineId)
@@ -202,6 +203,7 @@ object Scheduler {
         val app = ctx.medlog
         val d = app.db.doses().get(doseId) ?: return
         app.db.doses().update(d.copy(status = DoseStatus.SNOOZED, snoozeUntil = System.currentTimeMillis() + app.settings.value.snoozeMinutes * 60_000L, reminded = 0))
+        com.suryaprakash.medlog.data.Sync.local("dose", "edit", doseId)
         DoseAlert.cancel(ctx, doseId)
         answered(ctx, d, "snooze", "snoozed")
         reschedule(ctx)
@@ -227,6 +229,7 @@ object Scheduler {
         val app = ctx.medlog
         val d = app.db.doses().get(doseId) ?: return
         app.db.doses().update(d.copy(status = DoseStatus.SKIPPED, actedAt = System.currentTimeMillis(), reason = reason, snoozeUntil = null))
+        com.suryaprakash.medlog.data.Sync.local("dose", "edit", doseId)
         DoseAlert.cancel(ctx, doseId)
         app.refreshWidgets()
         answered(ctx, d, "skip", "skipped")

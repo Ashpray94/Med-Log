@@ -178,6 +178,7 @@ fun FoodScreen(nav: Nav) {
             feedMenu = null
             scope.launch {
                 app.db.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
+                com.suryaprakash.medlog.data.Sync.local("medicine", "delete", m.id)
                 app.db.doses().dropFuture(m.id, System.currentTimeMillis())
                 com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
             }
@@ -307,6 +308,7 @@ fun FeedNewScreen(nav: Nav) {
                 scope.launch {
                     val id = app.db.medicines().insert(com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed", amount = "$ml ml", times = times.joinToString(","),
                         purpose = if (tube == 1) "Feed by tube" else "Feed by mouth", critical = tube == 1))
+                    com.suryaprakash.medlog.data.Sync.local("medicine", "add", id)
                     app.settings.putString("feed_info", com.suryaprakash.medlog.nutrition.Feeds.infoWith(app.settings.getString("feed_info"), id,
                         com.suryaprakash.medlog.nutrition.Feeds.Info(parts.toList(), tube == 1)))
                     com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
@@ -470,6 +472,22 @@ fun ReadingsScreen(nav: Nav) {
             v1 = ""; v2 = ""; type = null
         }
     }
+    fun saveEditing(r: Reading, noteId: Long) {
+        scope.launch {
+            val lastNote = app.db.notes().get(noteId)
+            if (lastNote != null) {
+                app.db.notes().update(lastNote.copy(text = r.label(), details = r.toJson().toString()))
+                com.suryaprakash.medlog.data.Sync.local("note", "edit", noteId)
+            }
+            val problem = when (r.type) { "bp" -> if (r.v1 < 100) "low_bp" else "high_bp"; "sugar" -> if (r.v1 < 100) "low_sugar" else "high_sugar"; "spo2" -> "low_oxygen"; "temp" -> "fever"; else -> null }
+            val t = DangerRules.evaluate(problem?.takeIf { r.type != "temp" || r.v1 >= 100.4 }, emptyMap(), listOf(r), emptyList(), app.repo.person())
+            savedFeedback(ctx)
+            if (t.level == Level.RED) Alerts.dangerToHelpers(ctx, r.label(), t)
+            result = t
+            app.speaker.say("Updated. ${r.label()}. " + if (t.level == Level.GREEN) "" else t.say + " " + t.reasons.joinToString(". "))
+            v1 = ""; v2 = ""; type = null
+        }
+    }
 
     val kinds = listOf(
         Triple("bp", "Blood pressure", Icons.Rounded.MonitorHeart to p.tintPink), Triple("sugar", "Sugar", Icons.Rounded.Bloodtype to p.tintOrange),
@@ -498,23 +516,25 @@ fun ReadingsScreen(nav: Nav) {
             }
         }
     }
-    type?.let { k -> ReadingSheet(k, kinds.first { it.first == k }.second, latest[k], onSave = { save(it) }, onDelete = { n ->
+    type?.let { k -> ReadingSheet(k, kinds.first { it.first == k }.second, latest[k], onSave = { r ->
+        if (latest[k] != null) saveEditing(r, latest[k]!!.id) else save(r)
+    }, onDelete = { n ->
         scope.launch { app.repo.remove(listOf(n.id)) }; type = null
         UndoHost.show("Reading deleted.") { scope.launch { app.repo.restore(listOf(n.id)) } }
-    }, onDismiss = { type = null }) }
+    }, onDismiss = { type = null }, initial = latest[k], onEdit = { /* Re-open with edit mode - keep the sheet open */ }) }
 }
 
 /** Entering one reading, in a panel: two boxes for blood pressure, one for the rest, the scale for weight. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.medlog.data.Note?, onSave: (Reading) -> Unit, onDelete: (com.suryaprakash.medlog.data.Note) -> Unit, onDismiss: () -> Unit) {
+private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.medlog.data.Note?, onSave: (Reading) -> Unit, onDelete: (com.suryaprakash.medlog.data.Note) -> Unit, onDismiss: () -> Unit, initial: com.suryaprakash.medlog.data.Note? = null, onEdit: (() -> Unit)? = null) {
     val ctx = LocalContext.current
     val p = LocalPalette.current
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
     val app = ctx.medlog
-    var v1 by remember { mutableStateOf("") }
-    var v2 by remember { mutableStateOf("") }
+    var v1 by remember { mutableStateOf(initial?.text?.substringAfter(" ")?.substringBefore("/") ?: "") }
+    var v2 by remember { mutableStateOf(initial?.text?.substringAfter("/") ?: "") }
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -524,8 +544,11 @@ private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.med
                     com.suryaprakash.medlog.ui.ValueRow(n.text ?: "", sub = "Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}")
                     com.suryaprakash.medlog.ui.GroupLine()
                 }
-                RowActions(what = label, onEdit = { /* Editing not supported for readings in sheet */ }, onDelete = {
-                    scope.launch { onDelete(n) }
+                RowActions(what = label, onEdit = { if (onEdit != null) onEdit() }, onDelete = {
+                    scope.launch {
+                        onDelete(n)
+                        com.suryaprakash.medlog.data.Sync.local("note", "delete", n.id)
+                    }
                     Announce.done(ctx, null, "removed reading", "delete", n.id)
                 })
             }
