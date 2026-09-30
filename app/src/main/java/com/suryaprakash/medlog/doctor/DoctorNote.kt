@@ -43,15 +43,29 @@ data class DoctorNote(
     val concernLevels: List<String> = emptyList(),   // RED / AMBER / GREEN per concern
     val tiles: List<Reading> = emptyList(),
     val days: Int = 14,
+    /** Structured header/report fields (SOAP layout, SBAR, FHIR). */
+    val name: String = "", val sexText: String = "", val ageYears: Int? = null, val dob: String = "",
+    val bloodThinner: Boolean = false, val allergiesRecorded: Boolean = false,
+    val generatedAt: Long = 0L, val appVersion: String = "", val rulesVersion: String = "",
+    /** every reading in the period, oldest first */
+    val obs: List<Obs> = emptyList(),
 ) {
+    /** One measured value. unit is the stored unit, e.g. "mmHg", "mg/dL", "°F". */
+    data class Obs(val type: String, val v1: Double, val v2: Double?, val unit: String, val at: Long)
+    /** Overall urgency of the period: RED, AMBER or GREEN. */
+    val level: String get() = when { concernLevels.contains("RED") -> "RED"; concernLevels.contains("AMBER") -> "AMBER"; else -> "GREEN" }
     data class Row(
         val n: Int, val name: String, val urgent: String, val whenText: String, val where: String, val nature: String, val notes: String,
         val problemId: String = "", val total: Int = 1, val daysWith: Int = 1, val sevLow: Int? = null, val sevHigh: Int? = null, val sevLast: Int? = null,
         /** occurrences on each day of the period, oldest first */
         val daily: List<Int> = emptyList(), val trend: String? = null, val began: String? = null,
         val places: List<String> = emptyList(), val feels: List<String> = emptyList(), val flags: List<String> = emptyList(), val quote: String? = null,
+        /** what makes it worse / better, and what the patient took */
+        val provoke: String? = null, val tried: String? = null, val firstAt: Long? = null,
     )
-    data class Med(val name: String, val dose: String, val taken: String, val change: String, val done: Int = 0, val due: Int = 0, val asNeeded: Boolean = false)
+    data class Med(val name: String, val dose: String, val taken: String, val change: String, val done: Int = 0, val due: Int = 0, val asNeeded: Boolean = false,
+        val strength: String = "", val amount: String = "", val route: String = "", val freq: String = "", val food: String = "",
+        val missed: Int = 0, val skipped: Int = 0, val reasons: String = "", val active: Boolean = true)
     data class Reading(val name: String, val latest: String, val unit: String, val range: String?, val count: Int, val date: String, val off: Boolean)
 }
 
@@ -135,7 +149,13 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
                 began = started?.let { com.suryaprakash.medlog.ui.screens.startedWords(it, first, alwaysDate = true) },
                 places = (sites + depths).map { it.replaceFirstChar(Char::uppercase) },
                 feels = (chars + listOfNotNull(fs.firstNotNullOfOrNull { it["pattern"]?.value?.toString() })).map { it.replaceFirstChar(Char::uppercase) },
-                flags = flags.toList(), quote = fs.firstNotNullOfOrNull { it["note"]?.value?.toString() }?.let { translit(it).take(120) })
+                flags = flags.toList(), quote = fs.firstNotNullOfOrNull { it["note"]?.value?.toString() }?.let { translit(it).take(120) },
+                provoke = listOfNotNull(
+                    fs.firstNotNullOfOrNull { (it["worse"]?.value as? List<*>)?.joinToString("/") }?.let { "worse: $it" },
+                    fs.firstNotNullOfOrNull { (it["better"]?.value as? List<*>)?.joinToString("/") }?.let { "eased by: $it" },
+                ).joinToString("; ").ifBlank { null },
+                firstAt = first,
+                tried = fs.firstNotNullOfOrNull { it["medicineTaken"]?.value?.toString() }?.let { translit(it) })
             fs.mapNotNull { it["pin"]?.value?.toString() }.distinct().take(2).forEach { pins += n to it }
         }
 
@@ -170,12 +190,20 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
                     skipped.ifBlank { null }?.let { "skipped: $it" },
                 ).joinToString("; "),
                 done = taken, due = md.size, asNeeded = m.asNeeded,
+                strength = m.strength, amount = doseAmount(m), route = routeFor(m.form), freq = freq(m).ifBlank { "as labelled" },
+                food = when (m.food) { "before" -> "before food"; "after" -> "after food"; "with" -> "with food"; else -> "any" },
+                missed = md.count { it.status == DoseStatus.MISSED }, skipped = md.count { it.status == DoseStatus.SKIPPED },
+                reasons = skipped, active = m.active,
             )
         }
 
         // ── readings: latest and range ──
         val tiles = ArrayList<DoctorNote.Reading>()
-        val readings = notes.filter { it.kind == Kind.READING }.mapNotNull { n -> runCatching { JSONObject(n.details) }.getOrNull()?.let { n to it } }
+        val readingNotes = notes.filter { it.kind == Kind.READING }.mapNotNull { n -> runCatching { JSONObject(n.details) }.getOrNull()?.let { n to it } }
+        val obs = readingNotes.sortedBy { it.first.occurredAt }.mapNotNull { (n, o) ->
+            if (!o.has("v1")) null else DoctorNote.Obs(o.optString("type"), o.getDouble("v1"), if (o.has("v2")) o.optDouble("v2") else null, o.optString("unit"), n.occurredAt)
+        }
+        val readings = readingNotes
             .groupBy { it.second.getString("type") }.map { (type, l) ->
                 val s = l.sortedBy { it.first.occurredAt }
                 val name = mapOf("bp" to "BP", "sugar" to "Blood sugar", "spo2" to "SpO₂", "temp" to "Temperature", "pulse" to "Pulse", "weight" to "Weight")[type] ?: type
@@ -204,7 +232,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
         return DoctorNote(
             period = "${d(from)} – ${d(to - 1)} ${day(to - 1).year}",
             patient = patient.ifBlank { "Patient" },
-            allergies = profile.allergies.ifBlank { "None known" },
+            allergies = profile.allergies.ifBlank { "Not recorded" },
             conditions = profile.conditions.ifBlank { "None recorded" } + if (profile.onBloodThinner || active.any { it.bloodThinner }) "; on a blood thinner" else "",
             currentMeds = currentMeds,
             concerns = concerns.take(3).toList(),
@@ -217,9 +245,16 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
             concernLevels = levels.take(3),
             tiles = tiles,
             days = ((to - from) / DAY).toInt(),
-            footer = "Reported by the patient, recorded with MedLog on their phone. Printed ${SimpleDateFormat("d MMM yyyy", Locale.ENGLISH).format(Date(now))}.",
+            name = profile.name, sexText = when (profile.sex) { "F" -> "female"; "M" -> "male"; else -> "" }, ageYears = age, dob = profile.dob,
+            bloodThinner = profile.onBloodThinner || active.any { it.bloodThinner }, allergiesRecorded = profile.allergies.isNotBlank(),
+            generatedAt = now, appVersion = com.suryaprakash.medlog.BuildConfig.VERSION_NAME, rulesVersion = com.suryaprakash.medlog.clinical.DangerRules.VERSION,
+            obs = obs,
+            footer = "Patient-reported; not a diagnosis; ◇ = inferred by the app. Generated ${stamp(now)}. MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}, rules ${com.suryaprakash.medlog.clinical.DangerRules.VERSION}",
         )
     }
+
+    private fun doseAmount(m: Medicine): String =
+        if (m.amount.isNotBlank() && m.amount.all { it.isDigit() || it in "½¼¾./ " }) "${m.amount} ${m.form}".trim() else m.amount.ifBlank { "as labelled" }
 
     private fun rank(l: String) = when (l) { "RED" -> 2; "AMBER" -> 1; else -> 0 }
 
@@ -239,4 +274,19 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
     }
 
     @Suppress("unused") private val keep = DAY
+
+    companion object {
+        /** Local date-time with offset, e.g. 2026-09-30 14:05 +05:30 */
+        fun stamp(t: Long): String = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm xxx").format(Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()))
+
+        /** Route of administration from the medicine form; "as labelled" when the form does not say. */
+        fun routeFor(form: String): String = when (form.trim().lowercase()) {
+            "tablet", "capsule", "syrup", "oral" -> "oral"
+            "drops" -> "eye/ear/nose per label"
+            "inhaler" -> "inhaled"
+            "patch" -> "transdermal"
+            "injection" -> "injection"
+            else -> "as labelled"
+        }
+    }
 }
