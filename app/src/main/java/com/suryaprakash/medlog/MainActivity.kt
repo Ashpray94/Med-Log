@@ -4,12 +4,14 @@ import kotlinx.coroutines.launch
 
 import android.content.Intent
 import android.os.Bundle
+import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
@@ -24,14 +26,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.platform.LocalContext
 import com.suryaprakash.medlog.help.Sos
 import com.suryaprakash.medlog.ui.MedTheme
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.screens.*
+import com.suryaprakash.medlog.ui.ShakeDetector
+import com.suryaprakash.medlog.ui.FeedbackState
+import com.suryaprakash.medlog.ui.FeedbackSheet
+import com.suryaprakash.medlog.ui.sendFeedback
+import com.suryaprakash.medlog.ui.shakeFeedbackEnabled
 
 class MainActivity : ComponentActivity() {
     private lateinit var nav: Nav
+    private var shakeDetector: ShakeDetector? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,11 +49,19 @@ class MainActivity : ComponentActivity() {
         val s = medlog.settings.value
         val root = rootRoute()
         nav = Nav(root).also { n -> n.setupRunning = { !medlog.settings.value.onboarded && medlog.settings.value.role != "helper" } }
+        if (shakeFeedbackEnabled(this)) {
+            shakeDetector = ShakeDetector(this).also { it.start() }
+        }
         handle(intent)
         setContent {
             val settings by medlog.settings.flow.collectAsState()
-            MedTheme(settings) { App(nav) }
+            MedTheme(settings) { App(nav, shakeDetector) }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        shakeDetector?.stop()
     }
 
     private fun rootRoute(): Route {
@@ -112,9 +130,35 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun App(nav: Nav) {
-    BackHandler(enabled = nav.stack.size > 1) { nav.back() }
-    androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalNav provides nav) { Screens(nav) }
+fun App(nav: Nav, detector: ShakeDetector?) {
+    var feedbackState by remember { mutableStateOf(FeedbackState()) }
+    val ctx = LocalContext.current
+
+    if (detector != null) {
+        val shakeEvent by detector.shakeEvent.collectAsState()
+        if (shakeEvent != null && com.suryaprakash.medlog.help.Sos.phase.value is com.suryaprakash.medlog.help.Sos.Phase.Idle) {
+            feedbackState = feedbackState.copy(isOpen = true)
+        }
+    }
+
+    BackHandler(enabled = feedbackState.isOpen) {
+        feedbackState = feedbackState.copy(isOpen = false)
+    }
+    BackHandler(enabled = !feedbackState.isOpen && nav.stack.size > 1) { nav.back() }
+
+    androidx.compose.runtime.CompositionLocalProvider(com.suryaprakash.medlog.ui.LocalNav provides nav) {
+        Box {
+            Screens(nav)
+            FeedbackSheet(
+                feedbackState,
+                onDismiss = { feedbackState = feedbackState.copy(isOpen = false) },
+                onSend = { text, category, screenshot ->
+                    sendFeedback(ctx, text, category, screenshot)
+                    feedbackState = feedbackState.copy(isOpen = false)
+                }
+            )
+        }
+    }
 }
 
 @Composable
