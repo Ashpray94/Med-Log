@@ -5,11 +5,13 @@ import android.content.Context
 import android.content.Intent
 import android.util.Base64
 import androidx.core.app.NotificationCompat
+import androidx.core.app.RemoteInput
 import com.suryaprakash.medlog.MedLogApp
 import com.suryaprakash.medlog.R
 import com.suryaprakash.medlog.data.InboxItem
 import com.suryaprakash.medlog.data.Keys
 import com.suryaprakash.medlog.medlog
+import com.suryaprakash.medlog.notify.NotifySpec
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -99,11 +101,21 @@ object FamilyChat {
             val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from", "Helper"), text = o.optString("text"), kind = KIND,
                 at = o.optLong("at", System.currentTimeMillis()), acked = true))
             val pi = PendingIntent.getActivity(ctx, 6000 + (id % 500).toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
+            val replyInput = androidx.core.app.RemoteInput.Builder("reply_text").setLabel("Reply").build()
+            val replyAction = PendingIntent.getBroadcast(ctx, (id * 10 + 5).toInt(),
+                Intent(ctx, com.suryaprakash.medlog.help.AlertActionReceiver::class.java).putExtra("notifId", 6000 + (id % 500).toInt()).putExtra("inboxId", id),
+                PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val seenAction = PendingIntent.getBroadcast(ctx, (id * 10 + 6).toInt(),
+                Intent(ctx, com.suryaprakash.medlog.help.AlertActionReceiver::class.java).putExtra("reply", "seen").putExtra("notifId", 6000 + (id % 500).toInt()).putExtra("inboxId", id),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
             val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(com.suryaprakash.medlog.ui.tr("Family") + ": " + o.optString("from", "Helper"))
                 .setContentText(o.optString("text"))
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT).setCategory(NotificationCompat.CATEGORY_MESSAGE)
-                .setContentIntent(pi).setAutoCancel(true).build()
+                .setContentIntent(pi).setAutoCancel(true)
+                .addAction(androidx.core.app.NotificationCompat.Action.Builder(0, "Reply", replyAction).addRemoteInput(replyInput).build())
+                .addAction(0, "Seen", seenAction)
+                .build()
             runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(6000 + (id % 500).toInt(), n) }
         }
     }

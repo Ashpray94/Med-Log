@@ -78,6 +78,7 @@ class AlertActivity : ComponentActivity() {
                     CHECKIN -> CheckInPanel(onClose = { finish() })
                     ASKED -> AskedPanel(intent.getLongExtra("helperId", 0), intent.getStringExtra("from") ?: "", intent.getStringExtra("re") ?: "", onClose = { finish() })
                     HELPER -> HelperAlertPanel(intent.getStringExtra("from") ?: "", intent.getStringExtra("text") ?: "", intent.getStringExtra("kind") ?: "", intent.getLongExtra("id", 0), onClose = { finish() })
+                    else -> GenericAlertPanel(intent.getStringExtra("text") ?: "", onClose = { finish() })
                 }
             }
         }
@@ -293,7 +294,7 @@ class AlertActivity : ComponentActivity() {
                     AlertButton(com.suryaprakash.medlog.notify.NotifySpec.label(helperType(kind), "call"), Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
                     AlertButton(com.suryaprakash.medlog.notify.NotifySpec.label(helperType(kind), "cant"), Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
                 }
-                Text("Open MedLog", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                Text("Open MedLog", color = Color.White.copy(alpha = 0.6f), fontSize = sc.body, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { AlertSound.stop(); openApp("helper") }.padding(vertical = 12.dp))
             }
         }
@@ -326,6 +327,24 @@ class AlertActivity : ComponentActivity() {
             BigButton("😐  I'm OK", tone = Tone.QUIET, height = sc.target * 1.5f, onClick = { answer("ok") })
             BigButton("😟  Not so well", tone = Tone.AMBER, height = sc.target * 1.5f, onClick = { answer("notwell") })
             BigButton("Please call me", tone = Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { answer("call") })
+        }
+    }
+
+    /** Generic alert panel with text, OK button, and Open MedLog button. */
+    @Composable
+    private fun GenericAlertPanel(text: String, onClose: () -> Unit) {
+        val p = LocalPalette.current
+        val sc = LocalScale.current
+        Screen(if (text.length > 40) "Alert" else text, text, onHome = null, background = p.fill) {
+            androidx.compose.foundation.layout.Column(
+                Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(sc.radius + 6.dp)).background(Color(0xFF1F2023)).padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+            ) {
+                Text(text, fontSize = sc.question, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
+                BigButton("OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = onClose)
+                Text("Open MedLog", color = Color.White.copy(alpha = 0.6f), fontSize = sc.body, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { openApp("home") }.padding(vertical = 12.dp))
+            }
         }
     }
 

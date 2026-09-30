@@ -16,10 +16,15 @@ object EntryNotice {
         val id = row.notifId + (what.hashCode() and 0xff)
         val text = "$who added $what"
         val pi = PendingIntent.getActivity(ctx, id, Intent(ctx, MainActivity::class.java).setData(android.net.Uri.parse("medlog://open?name=timeline")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        val seenAction = PendingIntent.getBroadcast(ctx, (id * 10).toInt(),
+            Intent(ctx, com.suryaprakash.medlog.help.AlertActionReceiver::class.java).putExtra("reply", "seen").putExtra("notifId", id).putExtra("inboxId", 0L),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(ctx, MedLogApp.CH_CARE).setSmallIcon(R.drawable.ic_stat)
             .setContentTitle(tr("New entry")).setContentText(tr(text))
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
-            .setContentIntent(pi).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH).build()
+            .setContentIntent(pi).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH)
+            .addAction(0, NotifySpec.label(NotifySpec.Type.MESSAGE, "clear"), seenAction)
+            .build()
         runCatching { NotificationManagerCompat.from(ctx).notify(id, n) }
     }
 }
