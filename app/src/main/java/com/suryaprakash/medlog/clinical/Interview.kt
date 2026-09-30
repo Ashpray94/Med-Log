@@ -185,7 +185,7 @@ object Interview {
         add(WHEN)
         if (p.id in BURNS) {
             // burns: look and size decide urgency, so they stay in core; place and the second danger check move to "Tell more"
-            coreDanger(cat, p).take(1).forEach(::add)
+            coreDanger(cat, p).forEach(::add)
             add(BURN_LOOK); add(BURN_SIZE)
         } else {
             coreDanger(cat, p).forEach(::add)
@@ -257,7 +257,7 @@ object Interview {
     }
 
     /** The (at most two) ungated danger questions asked first. */
-    private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> = dangerQuestions(cat, p).filter { it.gate == null }.take(2)
+    private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> = dangerQuestions(cat, p).filter { it.gate == null }.take(if (p.id in BURNS) 1 else 2)
 
     private fun fromQuestion(cat: Catalogue, q: Question): Ask? {
         val help = q.help ?: Help.of(q.id, q.field)
