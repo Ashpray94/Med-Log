@@ -17,9 +17,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.AppointmentNew
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -41,7 +41,6 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +60,7 @@ import com.suryaprakash.medlog.ui.Hs
 import com.suryaprakash.medlog.ui.LocalPalette
 import com.suryaprakash.medlog.ui.LocalSettings
 import com.suryaprakash.medlog.ui.Nav
+import com.suryaprakash.medlog.ui.RowActions
 import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Senior
@@ -81,8 +81,8 @@ fun TimelineScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     val now = System.currentTimeMillis()
 
-    var dayOffset by rememberSaveable { mutableStateOf(0) }
-    var filters by rememberSaveable { mutableStateOf(setOf(TlFilter.ALL)) }
+    var dayOffset by remember { mutableStateOf(0) }
+    var filters by remember { mutableStateOf(setOf(TlFilter.ALL)) }
     val openSegments = remember { mutableStateMapOf<Segment, Boolean>() }
     val isHelper = s.role == "helper"
 
@@ -254,7 +254,7 @@ fun TimelineScreen(nav: Nav) {
                             }
                             Text("${segs.size}", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Hs.Ink.copy(alpha = 0.7f))
                             Spacer(Modifier.width(8.dp))
-                            Icon(if (isOpen) Icons.AutoMirrored.Rounded.KeyboardArrowUp else Icons.AutoMirrored.Rounded.KeyboardArrowDown, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
+                            Icon(if (isOpen) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown, null, tint = Hs.Ink, modifier = Modifier.size(24.dp))
                         }
 
                         if (isOpen) {
@@ -313,8 +313,8 @@ private fun TimelineRow(
         EntryType.FOOD -> Icons.Rounded.Restaurant
         EntryType.READING -> Icons.Rounded.MonitorHeart
         EntryType.SYMPTOM -> Icons.Rounded.Warning
-        EntryType.APPOINTMENT -> Icons.Rounded.AppointmentNew
-        else -> Icons.Rounded.AppointmentNew
+        EntryType.APPOINTMENT -> Icons.Rounded.Event
+        else -> Icons.Rounded.Event
     }
     val iconTint = when (entry.type) {
         EntryType.MEDICINE -> Hs.Blue
@@ -350,7 +350,7 @@ private fun TimelineRow(
                     }
                 }
             }
-            com.suryaprakash.medlog.ui.Forms.RowActions(entry.title, onEditNote, onDelete)
+            RowActions(entry.title, onEditNote, onDelete)
             Box(Modifier.fillMaxWidth().height(1.dp).background(Hs.Ink.copy(alpha = 0.05f)))
         }
     }

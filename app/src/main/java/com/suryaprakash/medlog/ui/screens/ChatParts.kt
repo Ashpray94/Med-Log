@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.maxWidth
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -215,7 +215,7 @@ private fun ChatBubble(msg: ChatMsg, onRetry: (ChatMsg) -> Unit) {
         horizontalArrangement = if (msg.mine) Arrangement.End else Arrangement.Start
     ) {
         Column(
-            modifier = Modifier.maxWidth(0.8f * 16 * 5), // ~80% of a reasonable screen width
+            modifier = Modifier.widthIn(maxWidth = (0.8f * 16 * 5).dp), // ~80% of a reasonable screen width
             horizontalAlignment = if (msg.mine) Alignment.End else Alignment.Start
         ) {
             if (!msg.mine) {

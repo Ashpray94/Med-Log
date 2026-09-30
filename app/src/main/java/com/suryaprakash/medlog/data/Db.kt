@@ -238,6 +238,7 @@ interface AppointmentDao {
     @Query("SELECT * FROM appointments WHERE at >= :from ORDER BY at") fun upcomingFlow(from: Long): Flow<List<Appointment>>
     @Query("SELECT * FROM appointments WHERE at >= :from ORDER BY at") suspend fun upcoming(from: Long): List<Appointment>
     @Query("SELECT * FROM appointments") suspend fun everything(): List<Appointment>
+    @Query("SELECT * FROM appointments WHERE id = :id") suspend fun get(id: Long): Appointment?
     @Insert suspend fun insert(a: Appointment): Long
     @Update suspend fun update(a: Appointment)
     @Query("DELETE FROM appointments WHERE id = :id") suspend fun delete(id: Long)

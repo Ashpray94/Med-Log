@@ -69,6 +69,13 @@ data class Reading(val type: String, val v1: Double, val v2: Double? = null, val
         "weight" -> "Weight ${fmt1(v1)} kg"
         else -> "$type $v1"
     }
+
+    fun toJson(): JSONObject = JSONObject().apply {
+        put("type", type)
+        put("v1", v1)
+        if (v2 != null) put("v2", v2)
+        if (unit.isNotBlank()) put("unit", unit)
+    }
 }
 
 fun fmt1(d: Double): String = if (d % 1.0 == 0.0) d.toInt().toString() else String.format(java.util.Locale.US, "%.1f", d)

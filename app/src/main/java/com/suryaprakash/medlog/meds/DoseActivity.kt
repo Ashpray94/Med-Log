@@ -42,7 +42,7 @@ import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.IconButton
-import androidx.compose.ui.Modifier
+import androidx.compose.material3.Icon
 import com.suryaprakash.medlog.ui.BigButton
 import com.suryaprakash.medlog.ui.Body
 import com.suryaprakash.medlog.ui.Card
