@@ -220,7 +220,8 @@ object Interview {
         if (locatable(p)) { add(WORSE); add(BETTER) }
         add(TOOK_MED)
         add(ANYTHING)
-        return out.take(9)
+        // Extended questions are optional ("tell more"), gated, and can be stopped at any time; substance chains need room.
+        return out.take(14)
     }
 
     private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> =
