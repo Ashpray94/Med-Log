@@ -64,9 +64,31 @@ clinical-content audit, which used Sonnet on purpose.)
 - Merge: `python3 tools/merge_audit.py` applies the patches to `catalogue.json` and validates references and gate ordering;
   `--check` validates only.
 
-## 5. Status of the last wave (update this table when you finish each item)
-Items launched last, in parallel: dev/prod flavors; alert notification buttons + generic alert panel; piano tone; Sync hook calls + reading edit/delete;
-clinical engine; four clinical-audit content patches. Check `git log` and the tables above; anything not committed is not done.
+## 5. Status of the last wave
+Done and committed (all uncompiled): dev/prod flavors (`docs/ENVIRONMENTS.md`); alert notification reply buttons + generic alert panel + reply receiver
+(`help/AlertActionReceiver.kt`); synthesised piano tone (`help/PianoTone.kt`); sync hook calls on medicine/dose/appointment/reading changes + reading edit;
+clinical engine (gates, age limits, data-driven red flags, `tools/merge_audit.py`); four clinical audits merged into `catalogue.json`
+(145 problems, 457 fields, 444 questions, 1031 red flags; version 0.1.1; still `reviewed:false`); doctor report in SOAP order + SBAR text + FHIR R4 JSON export
+(`doctor/Pdf.kt`, `Sbar.kt`, `Fhir.kt`); `CLAUDE.md` with strict rules (rule 0 = the 90-year-old user test); senior-friendly pass (contrast-fixed tokens, 4 hero tiles, bigger
+bottom bar, dose screen) may be in progress: check `git log` for "senior".
+
+## 5b. Known gaps and risks found by the agents (act on these)
+- **Over-triage risk:** 1031 red flags (524 RED, 507 AMBER), 847 single-condition. One "yes" to a danger question raises the level. Measure how often a normal elderly day
+  triggers RED; ask a clinician to trim. Alarm fatigue is a patient-safety risk too.
+- **Engine limits:** red flags support only `gte` (no "less than", no "is false"), no age/sex tests, no sex gate (pregnancy questions), so newborn jaundice and
+  pregnancy/ectopic risk are not expressible. Add `lt`, `isNot`, `minAge/maxAge/sex` to `RedFlag` in `clinical/Catalogue.kt` and `Triage.kt`.
+- **Disease names shown to patient:** some problem labels (e.g. "Gout attack") name a disease. Labels live in `catalogue.json` `problems[].label`; relabel to symptom
+  wording ("Painful swollen toe"). Not yet done.
+- Only 2 danger questions are asked in the core set; the rest wait for "tell more" (red flags still fire when answered).
+- Units: temperature thresholds assume °F; glucose in mg/dL. Confirm with the clinician; store units with readings.
+- Open clinical values for a clinician: sugar bands, fever cut-offs (100.4/102/103/104 °F), 5 kg weight-loss flag, helpline numbers (Tele-MANAS 14416, 112, ambulance 108),
+  self-harm "yes" = RED. Full per-problem lists in `docs/clinical-audit/*.md`.
+- Smell-loss "smoke/gas alarm" advice needs UI support (no question can carry it). `cough` was not audited by patch (engine agent rebuilt its gated flow): blood-in-cough,
+  TB-duration, talk-test, fever and weight-loss questions are missing there.
+- Report: allergies and blood thinner print "Not recorded" when blank (cannot tell "none" from "not asked"); Profile.sex holds only F/M, so FHIR gender is never "other";
+  readings have no source field (PDF prints "patient-entered").
+- `projectile` (age limit) and `pillows` (gate) shared fields were edited by the audit: re-check other problems that use them.
+- Patient screens must pass the rule-0 test: verify the Timeline, Tell flow, Dose screen and alerts on an emulator with the largest text size.
 
 ## 6. Do next (in order)
 1. Build and run unit tests; fix compile errors. Install the dev flavor on an emulator and click through all 4 tabs.
