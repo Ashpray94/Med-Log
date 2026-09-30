@@ -266,6 +266,12 @@ object Interview {
             FieldType.NUMBER -> Ask(q.id, q.field, q.ask, Kind.NUMBER, gate = q.gate, help = help)
             FieldType.TEMP -> Ask(q.id, q.field, q.ask, Kind.TEMP, gate = q.gate, help = help)
             FieldType.SCALE -> SEVERITY.copy(gate = q.gate, help = help)
+            FieldType.CHOICE, FieldType.MULTI -> {
+                val field = cat.field(q.field) ?: return null
+                val choices = field.choices.map { value -> Choice(value, value.replaceFirstChar(Char::uppercase), listOf(value)) }
+                Ask(q.id, q.field, q.ask, if (q.type == FieldType.CHOICE) Kind.CHOICE else Kind.MULTI, choices, gate = q.gate, help = help)
+            }
+            FieldType.TEXT -> Ask(q.id, q.field, q.ask, Kind.FREE, gate = q.gate, help = help)
             else -> null
         }
     }
