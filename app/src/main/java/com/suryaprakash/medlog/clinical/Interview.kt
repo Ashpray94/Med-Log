@@ -183,10 +183,15 @@ object Interview {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
-        coreDanger(cat, p).forEach(::add)
-        if (locatable(p)) add(WHERE)
-        if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
-        // Core is at most 5 and always keeps severity (last). Burn size moves to "Tell more" if room is short.
+        if (p.id in BURNS) {
+            // burns: look and size decide urgency, so they stay in core; place and the second danger check move to "Tell more"
+            coreDanger(cat, p).take(1).forEach(::add)
+            add(BURN_LOOK); add(BURN_SIZE)
+        } else {
+            coreDanger(cat, p).forEach(::add)
+            if (locatable(p)) add(WHERE)
+        }
+        // Core is at most 5 and always keeps severity (last).
         val sev = scaleFor(p).takeIf { p.id !in NO_SEVERITY && !facts.containsKey(it.field) }
         return out.take(if (sev != null) 4 else 5) + listOfNotNull(sev)
     }
@@ -202,6 +207,7 @@ object Interview {
             return false
         }
         if (p.id in COUNTABLE) add(COUNT)
+        if (p.id in BURNS && locatable(p)) add(WHERE)
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
         dangerQuestions(cat, p).filterNot { a -> coreDanger(cat, p).any { it.field == a.field } }.forEach(::add)
