@@ -26,6 +26,14 @@ could she do this with one finger, no reading, no memory and no fear of breaking
    patterns go on the clinician's page only, marked as inferred (◇). This is a deliberate safety and regulatory decision (PLAN.md section 0, D3). Do not reverse it.
 4. **Questions are conditional, never blind.** A dependent question (colour, shade, amount, type) is gated behind its prerequisite ("did anything come up?").
    A question that does not apply to the problem must not be asked (for example, coffee-ground vomit only under vomiting). Use catalogue `gate`, `minAge`, `maxAge`.
+4a. **Main information first, detail after.** The first screens capture only the core: when it started, how bad, where (if it has a place) and at most two danger checks, never more than 5 questions and never a wall of options. Every granular question (amount, colour, shade, consistency, smell, timing, modifiers, history) sits behind "Tell more", is optional, and can be stopped at any time with one tap. A test (`CoreSizeTest`) enforces the cap for every problem.
+4b. **Granular for EVERY ailment, enforced by a check.** Every problem is assigned one or more archetypes (pain, substance/discharge/bleeding, skin, swelling/lump, breathing,
+   neuro, systemic, mind/sleep, injury, sensation, medicine effect, etc.) in `app/src/main/assets/clinical/archetypes.json`. Each archetype lists required clinical dimensions in
+   `standard.json` (for example pain = site, onset, course, character, radiation, associated, timing, aggravating, relieving, severity, impact, tried). Every problem also needs the
+   universal dimensions: onset, course, severity, impact, tried, danger screen. Fields and questions are tagged with the dimensions they cover in `dims.json`.
+   `python3 tools/lint_completeness.py` must print zero gaps before any catalogue change is merged or shipped; a dimension may be waived only with a written reason in
+   `archetypes.json` that a clinician reviews. Anything that comes out of the body (phlegm, vomit, stool, urine, discharge, bleeding) follows the chain
+   any? → amount → colour + shade → consistency → smell → blood → timing.
 5. **Every question carries a 2-line explanation:** line 1 what it means, line 2 why it is asked. Plain words, about grade 5, ≤12 words per sentence.
 6. **Nothing is saved as fact without read-back.** Unknown stays "not said". Inferred facts are flagged. Never fabricate a value, code or reference range.
 7. **No clinical rule ships as "reviewed" without a licensed clinician.** `catalogue.json` keeps `"reviewed": false` and `DangerRules.VERSION` ends in `-unreviewed`
