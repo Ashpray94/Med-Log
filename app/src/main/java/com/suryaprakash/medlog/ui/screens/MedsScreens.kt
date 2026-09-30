@@ -64,12 +64,14 @@ import com.suryaprakash.medlog.ui.LocalPalette
 import com.suryaprakash.medlog.ui.LocalScale
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Route
+import com.suryaprakash.medlog.ui.RowActions
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Toggle
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.UndoHost
 import com.suryaprakash.medlog.ui.YesNo
+import com.suryaprakash.medlog.ui.Announce
 import com.suryaprakash.medlog.ui.savedFeedback
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -167,7 +169,15 @@ fun MedsScreen(nav: Nav) {
             if (meds.isEmpty()) "None added yet" else "${meds.size} medicine${if (meds.size == 1) "" else "s"} · tap one to change",
             if (meds.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
         if (meds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
-        meds.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
+        meds.forEach { m ->
+            MedicineRowWithActions(m, onEdit = { nav.go(Route.MedEdit(m.id)) }, onDelete = {
+                scope.launch {
+                    val deactivated = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
+                    app.db.medicines().update(deactivated)
+                    Announce.done(ctx, null, "removed ${m.name}", "delete", m.id)
+                }
+            })
+        }
     }
 }
 
@@ -332,5 +342,41 @@ fun DidITakeScreen(nav: Nav) {
         taken.forEach { d -> byId[d.medicineId]?.let { m -> Row(verticalAlignment = Alignment.CenterVertically) { MedPhoto(m.photoPath); Spacer(Modifier.width(12.dp)); Body("✓ ${m.name} · ${DoseActivity.time(d.actedAt ?: d.scheduledAt)}", bold = true) } } }
         if (pending.isNotEmpty()) BigButton("Take them now", tone = Tone.OK, onClick = { nav.replace(Route.Meds) })
         Spacer(Modifier.height(4.dp))
+    }
+}
+
+/** "08:00" → "8:00 AM". */
+private fun timeWordsDisplay(t: String): String = runCatching {
+    val lt = java.time.LocalTime.parse(t.padStart(5, '0'))
+    lt.format(java.time.format.DateTimeFormatter.ofPattern("h:mm a", java.util.Locale.ENGLISH))
+}.getOrDefault(t)
+
+/** How much one dose is, in words: "1 tablet", "2 puffs", "10 ml". */
+private fun amountWordsDisplay(amount: String, unit: String) =
+    if (amount.endsWith("ml")) amount else "$amount $unit" + if (amount != "1" && amount != "½" && unit != "ml") "s" else ""
+
+/** A medicine row with Edit, Details, and Delete actions. */
+@Composable
+fun MedicineRowWithActions(m: Medicine, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(22.dp)
+    val times = m.times.split(",").map { it.trim() }.filter { it.isNotBlank() }.sorted()
+    val unit = when (m.form) { "syrup", "drops" -> "ml"; "cream" -> "use"; "inhaler" -> "puff"; "injection" -> "dose"; else -> m.form }
+    val whenWords = if (m.asNeeded || times.isEmpty()) "When needed" else
+        (if (times.size == 1) timeWordsDisplay(times[0]) else times.dropLast(1).joinToString(", ") { timeWordsDisplay(it) } + " and " + timeWordsDisplay(times.last())) +
+            " · " + amountWordsDisplay(m.amount, unit)
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MedicinePicture(m, 64.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(listOf(m.name, m.strength).filter { it.isNotBlank() }.joinToString(" "), fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
+                if (m.purpose.isNotBlank()) Text("For ${m.purpose}", fontSize = sc.body, color = p.ink)
+                else Text("Add what it's for", fontSize = sc.body, color = p.brand)
+                Text(whenWords, fontSize = sc.small, color = p.inkSoft)
+            }
+        }
+        RowActions(what = m.name, onEdit = onEdit, onDelete = onDelete)
     }
 }
