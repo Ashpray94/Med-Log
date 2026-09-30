@@ -70,6 +70,8 @@ data class Settings(
     val voiceEngine: String = "auto",
     /** let the phone's speech service use the internet when it has no offline pack for a language */
     val voiceOnline: Boolean = true,
+    /** helper phone: notify when entries are added to the log */
+    val notifyEntryAdded: Boolean = true,
 ) {
     companion object {
         /** Ready-made messages the person can choose from (plan 13.2). */
@@ -148,6 +150,7 @@ class SettingsStore(ctx: Context) {
             voiceEngine = p.getString("voiceEngine", d.voiceEngine)!!,
             voiceOnline = p.getBoolean("voiceOnline", d.voiceOnline),
             messages = p.getString("messages", null)?.let { s -> JSONArray(s).let { a -> (0 until a.length()).map { a.getString(it) } } } ?: d.messages,
+            notifyEntryAdded = p.getBoolean("notifyEntryAdded", d.notifyEntryAdded),
         )
     }
 
@@ -174,6 +177,7 @@ class SettingsStore(ctx: Context) {
             putBoolean("internetLink", s.internetLink); putString("relayUrl", s.relayUrl)
             putString("messages", JSONArray(s.messages).toString())
             putString("languages", s.languages.joinToString(",")); putString("voiceEngine", s.voiceEngine); putBoolean("voiceOnline", s.voiceOnline)
+            putBoolean("notifyEntryAdded", s.notifyEntryAdded)
         }.apply()
         _flow.value = s
     }

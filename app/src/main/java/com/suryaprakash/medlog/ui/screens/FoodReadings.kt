@@ -80,10 +80,12 @@ import com.suryaprakash.medlog.ui.LocalScale
 import com.suryaprakash.medlog.ui.LocalSettings
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Perms
+import com.suryaprakash.medlog.ui.RowActions
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.UndoHost
+import com.suryaprakash.medlog.ui.Announce
 import com.suryaprakash.medlog.ui.savedFeedback
 import kotlinx.coroutines.launch
 import java.io.File
@@ -152,10 +154,7 @@ fun FoodScreen(nav: Nav) {
                 val proteinToday = todayFood.sumOf { n -> runCatching { org.json.JSONObject(n.details ?: "").optDouble("protein") }.getOrNull()?.takeIf { !it.isNaN() } ?: 0.0 }
                 com.suryaprakash.medlog.ui.SectionHeader("Today", if (todayFood.isEmpty()) "Nothing yet" else "${kcalToday.toInt()} kcal · ${proteinToday.toInt()} g protein", "My health") { nav.go(Route.Reports) }
                 BigButton("Add food", icon = Icons.Rounded.Add, onClick = { nav.go(Route.FoodPick()) })
-                todayFood.forEach { n -> MealCard(n, onChange = { nav.go(Route.FoodPick(n.id)) }, onDelete = {
-                    scope.launch { app.repo.remove(listOf(n.id)) }
-                    UndoHost.show("Meal deleted.") { scope.launch { app.repo.restore(listOf(n.id)) } }
-                }) }
+                todayFood.forEach { n -> MealCard(n, onChange = { nav.go(Route.FoodPick(n.id)) }, onDelete = {}) }
             }
             else -> {
                 val feedDoses = doses.filter { d -> feeds.any { it.id == d.medicineId } }
@@ -179,6 +178,7 @@ fun FoodScreen(nav: Nav) {
             feedMenu = null
             scope.launch {
                 app.db.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
+                com.suryaprakash.medlog.data.Sync.local("medicine", "delete", m.id)
                 app.db.doses().dropFuture(m.id, System.currentTimeMillis())
                 com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
             }
@@ -217,19 +217,21 @@ private fun CustomFoodSheet(name: String, onDone: (com.suryaprakash.medlog.nutri
 /** One meal logged: the main dish with its picture and amount, each side with its amount, and the energy in its own box. Tap to change or delete. */
 @Composable
 private fun MealCard(n: com.suryaprakash.medlog.data.Note, onChange: () -> Unit, onDelete: () -> Unit) {
+    val ctx = LocalContext.current
     val p = LocalPalette.current
     val sc = LocalScale.current
-    var menu by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val app = ctx.medlog
     val o = runCatching { org.json.JSONObject(n.details ?: "") }.getOrNull()
     val items = o?.optJSONArray("items")?.let { a -> (0 until a.length()).map { a.getJSONObject(it) } }.orEmpty()
     fun isSide(x: org.json.JSONObject) = com.suryaprakash.medlog.nutrition.Foods.all.firstOrNull { it.name == x.optString("name") }?.side == true
     val main = items.firstOrNull { !isSide(it) } ?: items.firstOrNull()
-    val title = main?.optString("name")?.replaceFirstChar(Char::uppercase) ?: (n.transcript?.ifBlank { null } ?: "Photo of a meal")
+    val title = main?.optString("name")?.replaceFirstChar(Char::uppercase) ?: (n.transcript?.ifBlank { null } ?: "Meal")
     val sides = items.filter { it !== main }
     val kcal = o?.optInt("kcal", -1) ?: -1
     val protein = o?.optDouble("protein")?.takeIf { !it.isNaN() }
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).steady("$title. Tap to change or delete") { menu = true }.padding(18.dp),
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FoodPicture(main?.optString("name")?.let { nm -> com.suryaprakash.medlog.nutrition.Foods.all.firstOrNull { it.name == nm } }, 72.dp)
@@ -256,25 +258,14 @@ private fun MealCard(n: com.suryaprakash.medlog.data.Note, onChange: () -> Unit,
                 }
             }
         }
+        RowActions(what = title, onEdit = onChange, onDelete = {
+            scope.launch { app.repo.remove(listOf(n.id)); onDelete() }
+            UndoHost.show("Meal deleted.") { scope.launch { app.repo.restore(listOf(n.id)) } }
+            Announce.done(ctx, null, "removed meal", "delete", n.id)
+        })
     }
-    if (menu) MealMenu(title, onChange = { menu = false; onChange() }, onDelete = { menu = false; onDelete() }, onDismiss = { menu = false })
 }
 
-/** Change or delete a logged meal. */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
-@Composable
-private fun MealMenu(title: String, onChange: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
-    val p = LocalPalette.current
-    val sc = LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            com.suryaprakash.medlog.ui.SectionHeader(title, "Change it, or delete it", null)
-            BigButton("Change meal", icon = Icons.Rounded.Edit, onClick = onChange)
-            BigButton("Delete meal", tone = Tone.OUTLINE, icon = Icons.Rounded.Delete, onClick = onDelete)
-        }
-    }
-}
 
 /** Stop a feed: its reminders end; what was given stays in the record. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
@@ -317,6 +308,7 @@ fun FeedNewScreen(nav: Nav) {
                 scope.launch {
                     val id = app.db.medicines().insert(com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed", amount = "$ml ml", times = times.joinToString(","),
                         purpose = if (tube == 1) "Feed by tube" else "Feed by mouth", critical = tube == 1))
+                    com.suryaprakash.medlog.data.Sync.local("medicine", "add", id)
                     app.settings.putString("feed_info", com.suryaprakash.medlog.nutrition.Feeds.infoWith(app.settings.getString("feed_info"), id,
                         com.suryaprakash.medlog.nutrition.Feeds.Info(parts.toList(), tube == 1)))
                     com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
@@ -480,6 +472,22 @@ fun ReadingsScreen(nav: Nav) {
             v1 = ""; v2 = ""; type = null
         }
     }
+    fun saveEditing(r: Reading, noteId: Long) {
+        scope.launch {
+            val lastNote = app.db.notes().get(noteId)
+            if (lastNote != null) {
+                app.db.notes().update(lastNote.copy(text = r.label(), details = r.toJson().toString()))
+                com.suryaprakash.medlog.data.Sync.local("note", "edit", noteId)
+            }
+            val problem = when (r.type) { "bp" -> if (r.v1 < 100) "low_bp" else "high_bp"; "sugar" -> if (r.v1 < 100) "low_sugar" else "high_sugar"; "spo2" -> "low_oxygen"; "temp" -> "fever"; else -> null }
+            val t = DangerRules.evaluate(problem?.takeIf { r.type != "temp" || r.v1 >= 100.4 }, emptyMap(), listOf(r), emptyList(), app.repo.person())
+            savedFeedback(ctx)
+            if (t.level == Level.RED) Alerts.dangerToHelpers(ctx, r.label(), t)
+            result = t
+            app.speaker.say("Updated. ${r.label()}. " + if (t.level == Level.GREEN) "" else t.say + " " + t.reasons.joinToString(". "))
+            v1 = ""; v2 = ""; type = null
+        }
+    }
 
     val kinds = listOf(
         Triple("bp", "Blood pressure", Icons.Rounded.MonitorHeart to p.tintPink), Triple("sugar", "Sugar", Icons.Rounded.Bloodtype to p.tintOrange),
@@ -508,27 +516,41 @@ fun ReadingsScreen(nav: Nav) {
             }
         }
     }
-    type?.let { k -> ReadingSheet(k, kinds.first { it.first == k }.second, latest[k], onSave = { save(it) }, onDelete = { n ->
+    type?.let { k -> ReadingSheet(k, kinds.first { it.first == k }.second, latest[k], onSave = { r ->
+        if (latest[k] != null) saveEditing(r, latest[k]!!.id) else save(r)
+    }, onDelete = { n ->
         scope.launch { app.repo.remove(listOf(n.id)) }; type = null
         UndoHost.show("Reading deleted.") { scope.launch { app.repo.restore(listOf(n.id)) } }
-    }, onDismiss = { type = null }) }
+    }, onDismiss = { type = null }, initial = latest[k], onEdit = { /* Re-open with edit mode - keep the sheet open */ }) }
 }
 
 /** Entering one reading, in a panel: two boxes for blood pressure, one for the rest, the scale for weight. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.medlog.data.Note?, onSave: (Reading) -> Unit, onDelete: (com.suryaprakash.medlog.data.Note) -> Unit, onDismiss: () -> Unit) {
+private fun ReadingSheet(type: String, label: String, last: com.suryaprakash.medlog.data.Note?, onSave: (Reading) -> Unit, onDelete: (com.suryaprakash.medlog.data.Note) -> Unit, onDismiss: () -> Unit, initial: com.suryaprakash.medlog.data.Note? = null, onEdit: (() -> Unit)? = null) {
+    val ctx = LocalContext.current
     val p = LocalPalette.current
     val sc = LocalScale.current
-    var v1 by remember { mutableStateOf("") }
-    var v2 by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+    val app = ctx.medlog
+    var v1 by remember { mutableStateOf(initial?.text?.substringAfter(" ")?.substringBefore("/") ?: "") }
+    var v2 by remember { mutableStateOf(initial?.text?.substringAfter("/") ?: "") }
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
         sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             last?.let { n ->
                 com.suryaprakash.medlog.ui.Group {
-                    com.suryaprakash.medlog.ui.ValueRow(n.text ?: "", "Delete", sub = "Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}", valueColor = p.red) { onDelete(n) }
+                    com.suryaprakash.medlog.ui.GroupLine()
+                    com.suryaprakash.medlog.ui.ValueRow("Last", n.text ?: "", sub = "Last · ${dayLabel(n.occurredAt)} ${timeLabel(n.occurredAt)}")
+                    com.suryaprakash.medlog.ui.GroupLine()
                 }
+                RowActions(what = label, onEdit = { if (onEdit != null) onEdit() }, onDelete = {
+                    scope.launch {
+                        onDelete(n)
+                        com.suryaprakash.medlog.data.Sync.local("note", "delete", n.id)
+                    }
+                    Announce.done(ctx, null, "removed reading", "delete", n.id)
+                })
             }
             when (type) {
                 "bp" -> {

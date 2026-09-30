@@ -78,6 +78,7 @@ class AlertActivity : ComponentActivity() {
                     CHECKIN -> CheckInPanel(onClose = { finish() })
                     ASKED -> AskedPanel(intent.getLongExtra("helperId", 0), intent.getStringExtra("from") ?: "", intent.getStringExtra("re") ?: "", onClose = { finish() })
                     HELPER -> HelperAlertPanel(intent.getStringExtra("from") ?: "", intent.getStringExtra("text") ?: "", intent.getStringExtra("kind") ?: "", intent.getLongExtra("id", 0), onClose = { finish() })
+                    else -> GenericAlertPanel(intent.getStringExtra("text") ?: "", onClose = { finish() })
                 }
             }
         }
@@ -135,7 +136,7 @@ class AlertActivity : ComponentActivity() {
             // the one thing to do now
             when (val ph = phase) {
                 is Sos.Phase.Countdown -> {
-                    BigButton("Cancel – I'm OK", tone = Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.5f, onClick = { Sos.cancel(this@AlertActivity) })
+                    BigButton("Cancel: I'm OK", tone = Tone.SECONDARY, icon = Icons.Rounded.Close, height = sc.target * 1.5f, onClick = { com.suryaprakash.medlog.notify.NotifySpec.responded(com.suryaprakash.medlog.notify.NotifySpec.Type.SOS, "ok", com.suryaprakash.medlog.notify.NotifySpec.Who.PATIENT); Sos.cancel(this@AlertActivity) })
                     BigButton("Don't wait – start now", tone = Tone.DANGER, onClick = { Sos.answer.value = "go" })
                 }
                 is Sos.Phase.Answered -> {
@@ -200,9 +201,9 @@ class AlertActivity : ComponentActivity() {
         Screen("Did you fall?", "Did you fall? Are you OK?", onHome = null, background = p.redSoft) {
             Text("$left", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = p.red)
             BigButton("I'm OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
-                done = true; medlog.scope.launch { medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
+                done = true; com.suryaprakash.medlog.notify.NotifySpec.responded(com.suryaprakash.medlog.notify.NotifySpec.Type.FALL, "ok", com.suryaprakash.medlog.notify.NotifySpec.Who.PATIENT); medlog.scope.launch { medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
             })
-            BigButton("I fell – I need help", tone = Tone.DANGER, height = sc.target * 1.5f, onClick = { done = true; Sos.start(this@AlertActivity, "I fell", countdown = false); onClose() })
+            BigButton("I fell – I need help", tone = Tone.DANGER, height = sc.target * 1.5f, onClick = { done = true; com.suryaprakash.medlog.notify.NotifySpec.responded(com.suryaprakash.medlog.notify.NotifySpec.Type.FALL, "help", com.suryaprakash.medlog.notify.NotifySpec.Who.PATIENT); Sos.start(this@AlertActivity, "I fell", countdown = false); onClose() })
             BigButton("I fell but I'm OK – note it", tone = Tone.SECONDARY, onClick = { done = true; openApp("tell?problem=fall") })
         }
     }
@@ -217,6 +218,7 @@ class AlertActivity : ComponentActivity() {
         Screen("How are you today?", hello, onHome = null) {
             Body(hello, bold = true)
             fun answer(word: String, route: String?) {
+                com.suryaprakash.medlog.notify.NotifySpec.responded(com.suryaprakash.medlog.notify.NotifySpec.Type.CHECKIN, if (word == "not well") "unwell" else "well", com.suryaprakash.medlog.notify.NotifySpec.Who.PATIENT)
                 medlog.scope.launch { medlog.repo.addEvent(Kind.CHECKIN, "Check-in: $word") }
                 com.suryaprakash.medlog.care.CheckIn.answered(this@AlertActivity)
                 savedFeedback(this@AlertActivity)
@@ -249,6 +251,7 @@ class AlertActivity : ComponentActivity() {
         val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
         fun reply(r: String) {
             AlertSound.stop()
+            if (r == "coming" || r == "call" || r == "cant") Alerts.answered(helperType(kind), r)
             medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
             onClose()
         }
@@ -285,13 +288,13 @@ class AlertActivity : ComponentActivity() {
                     }
                 }
                 // one big answer, smaller ones under it
-                AlertButton("I'm coming", Color.White, card, sc.target * 1.3f, Modifier.fillMaxWidth()) { reply("coming") }
+                AlertButton(com.suryaprakash.medlog.notify.NotifySpec.label(helperType(kind), "coming"), Color.White, card, sc.target * 1.3f, Modifier.fillMaxWidth()) { reply("coming") }
                 Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
                     AlertButton("In 5 min", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("5min") }
-                    AlertButton("I'll call", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
-                    AlertButton("Can't now", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
+                    AlertButton(com.suryaprakash.medlog.notify.NotifySpec.label(helperType(kind), "call"), Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
+                    AlertButton(com.suryaprakash.medlog.notify.NotifySpec.label(helperType(kind), "cant"), Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
                 }
-                Text("Open MedLog", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
+                Text("Open MedLog", color = Color.White.copy(alpha = 0.6f), fontSize = sc.body, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { AlertSound.stop(); openApp("helper") }.padding(vertical = 12.dp))
             }
         }
@@ -327,7 +330,31 @@ class AlertActivity : ComponentActivity() {
         }
     }
 
+    /** Generic alert panel with text, OK button, and Open MedLog button. */
+    @Composable
+    private fun GenericAlertPanel(text: String, onClose: () -> Unit) {
+        val p = LocalPalette.current
+        val sc = LocalScale.current
+        Screen(if (text.length > 40) "Alert" else text, text, onHome = null, background = p.fill) {
+            androidx.compose.foundation.layout.Column(
+                Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(sc.radius + 6.dp)).background(Color(0xFF1F2023)).padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
+            ) {
+                Text(text, fontSize = sc.question, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center)
+                BigButton("OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = onClose)
+                Text("Open MedLog", color = Color.White.copy(alpha = 0.6f), fontSize = sc.body, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { openApp("home") }.padding(vertical = 12.dp))
+            }
+        }
+    }
+
     companion object {
+        /** Which table row a helper-side alert belongs to. */
+        fun helperType(kind: String) = when (kind) {
+            "SOS", "DANGER", "FALL" -> com.suryaprakash.medlog.notify.NotifySpec.Type.HELPER_ALERT
+            "MISSED_DOSE" -> com.suryaprakash.medlog.notify.NotifySpec.Type.HELPER_MISSED_DOSE
+            else -> com.suryaprakash.medlog.notify.NotifySpec.Type.HELPER_NOTE
+        }
         const val MODE = "mode"
         const val ASKED = "asked"
         const val SOS = "sos"

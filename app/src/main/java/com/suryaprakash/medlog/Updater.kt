@@ -60,6 +60,7 @@ object Updater {
 
     /** Looks for a newer version. [quiet] leaves the screen alone when there is none (the daily check). */
     suspend fun check(ctx: Context, quiet: Boolean = false): Release? = withContext(Dispatchers.IO) {
+        if (BuildConfig.ENV == "dev") return@withContext null
         if (!allowed(ctx)) return@withContext null
         if (!quiet) state.value = State.Checking
         val r = SOURCES.mapNotNull { src ->

@@ -340,6 +340,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                             changeNote = change,
                         )
                         val mid = if (id == null) app.db.medicines().insert(saved) else { app.db.medicines().update(saved); id }
+                        com.suryaprakash.medlog.data.Sync.local("medicine", if (id == null) "add" else "edit", mid)
                         app.db.doses().dropFuture(mid, now)
                         Scheduler.reschedule(ctx)
                         app.db.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
@@ -401,6 +402,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                             scope.launch {
                                 val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
                                 app.db.medicines().update(stopped)
+                                com.suryaprakash.medlog.data.Sync.local("medicine", "edit", stopped.id)
                                 app.db.doses().dropFuture(stopped.id, System.currentTimeMillis())
                                 CalendarSync.removeMedicine(ctx, stopped)
                                 Scheduler.reschedule(ctx); nav.back()

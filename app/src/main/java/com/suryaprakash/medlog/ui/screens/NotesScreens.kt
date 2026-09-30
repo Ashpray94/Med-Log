@@ -75,11 +75,13 @@ import com.suryaprakash.medlog.ui.LocalPalette
 import com.suryaprakash.medlog.ui.LocalScale
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Route
+import com.suryaprakash.medlog.ui.RowActions
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Segmented
 import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.UndoHost
+import com.suryaprakash.medlog.ui.Announce
 import com.suryaprakash.medlog.ui.steady
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
@@ -463,13 +465,17 @@ fun NoteDetailScreen(nav: Nav, id: Long) {
             })
         }
         if (problem != null) BigButton("Add more about this", tone = Tone.QUIET, onClick = { nav.go(Route.Tell(noteId = n.id)) })
-        BigButton("Remove this note", tone = Tone.SECONDARY, icon = Icons.Rounded.Delete, onClick = {
-            scope.launch {
-                app.repo.remove(listOf(n.id)); app.refreshWidgets()
-                UndoHost.show("Note removed.") { scope.launch { app.repo.restore(listOf(n.id)); app.refreshWidgets() } }
-                nav.back()
+        RowActions(what = problem?.label ?: n.text.substringBefore(":"),
+            onEdit = { nav.go(Route.Tell(noteId = n.id)) },
+            onDelete = {
+                scope.launch {
+                    app.repo.remove(listOf(n.id)); app.refreshWidgets()
+                    UndoHost.show("Note removed.") { scope.launch { app.repo.restore(listOf(n.id)); app.refreshWidgets() } }
+                    Announce.done(ctx, null, "removed note", "delete", n.id)
+                    nav.back()
+                }
             }
-        })
+        )
     }
 }
 

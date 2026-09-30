@@ -4,6 +4,8 @@ import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -56,10 +59,12 @@ import com.suryaprakash.medlog.ui.LocalSettings
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Perms
 import com.suryaprakash.medlog.ui.Route
+import com.suryaprakash.medlog.ui.RowActions
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Toggle
 import com.suryaprakash.medlog.ui.Tone
+import com.suryaprakash.medlog.ui.Announce
 import com.suryaprakash.medlog.ui.savedFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -116,6 +121,7 @@ fun VisitScreen(nav: Nav) {
                 f.nextAt?.let { at ->
                     val a = Appointment(at = at, doctor = f.doctor, purpose = "Follow-up")
                     val id = app.db.appointments().insert(a)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "add", id)
                     CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
                     com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
                 }
@@ -184,9 +190,22 @@ fun AppointmentsScreen(nav: Nav) {
     var doctor by remember { mutableStateOf("") }
     var place by remember { mutableStateOf("") }
     var purpose by remember { mutableStateOf("") }
+    var editingId by remember { mutableStateOf<Long?>(null) }
     Screen("Doctor appointments", "Your next doctor visits. MedLog reminds you the evening before and prepares your doctor page.", onHome = { nav.home() }, onBack = { nav.back() }) {
         if (list.isEmpty()) Hint("No appointments yet.")
-        list.forEach { a -> Card { Body("${dayLabel(a.at)} · ${timeLabel(a.at)}", bold = true); Body(listOf(a.doctor, a.place, a.purpose).filter { it.isNotBlank() }.joinToString(" · ")); BigButton("Remove", tone = Tone.SECONDARY, onClick = { scope.launch { app.db.appointments().delete(a.id) } }) } }
+        list.forEach { a ->
+            AppointmentRow(a, onEdit = {
+                editingId = a.id
+                date = LocalDateTime.ofInstant(java.time.Instant.ofEpochMilli(a.at), ZoneId.systemDefault())
+                doctor = a.doctor; place = a.place; purpose = a.purpose
+            }, onDelete = {
+                scope.launch {
+                    app.db.appointments().delete(a.id)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "delete", a.id)
+                    Announce.done(ctx, null, "removed appointment", "delete", a.id)
+                }
+            })
+        }
         Title("Add an appointment")
         FlowRowOf {
             val now = LocalDateTime.now()
@@ -200,14 +219,23 @@ fun AppointmentsScreen(nav: Nav) {
         BigField("Doctor", doctor, { doctor = it })
         BigField("Place", place, { place = it })
         BigField("For what", purpose, { purpose = it })
-        BigButton("Save", tone = Tone.OK, icon = Icons.Rounded.Add, enabled = date != null, onClick = {
+        BigButton(if (editingId != null) "Update appointment" else "Save", tone = Tone.OK, icon = Icons.Rounded.Add, enabled = date != null, onClick = {
             scope.launch {
                 val at = date!!.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                val a = Appointment(at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())
-                val id = app.db.appointments().insert(a)
-                CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
+                if (editingId != null) {
+                    val a = Appointment(id = editingId!!, at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())
+                    app.db.appointments().update(a)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "edit", editingId!!)
+                    Announce.done(ctx, null, "updated appointment", "edit", editingId!!)
+                } else {
+                    val a = Appointment(at = at, doctor = doctor.trim(), place = place.trim(), purpose = purpose.trim())
+                    val id = app.db.appointments().insert(a)
+                    com.suryaprakash.medlog.data.Sync.local("appointment", "add", id)
+                    CalendarSync.addAppointment(ctx, a.copy(id = id))?.let { ev -> app.db.appointments().update(a.copy(id = id, calendarEventId = ev)) }
+                    Announce.done(ctx, null, "added appointment", "add", id)
+                }
                 com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
-                date = null; doctor = ""; place = ""; purpose = ""
+                date = null; doctor = ""; place = ""; purpose = ""; editingId = null
                 savedFeedback(ctx)
             }
         })
@@ -215,3 +243,18 @@ fun AppointmentsScreen(nav: Nav) {
 }
 
 @Suppress("unused") private val keepSettings = LocalSettings
+
+/** An appointment with Edit and Delete actions. */
+@Composable
+fun AppointmentRow(a: Appointment, onEdit: () -> Unit, onDelete: () -> Unit) {
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val sh = RoundedCornerShape(22.dp)
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column {
+            Text("${dayLabel(a.at)} · ${timeLabel(a.at)}", fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink)
+            Text(listOf(a.doctor, a.place, a.purpose).filter { it.isNotBlank() }.joinToString(" · "), fontSize = sc.small, color = p.inkSoft)
+        }
+        RowActions(what = a.doctor.ifBlank { "Appointment" }, onEdit = onEdit, onDelete = onDelete)
+    }
+}

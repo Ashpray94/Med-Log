@@ -24,7 +24,26 @@ object Interview {
         val choices: List<Choice> = emptyList(),
         val core: Boolean = true,
         val danger: Boolean = false,
-    )
+        /** Two short lines: what the question means, then why it is asked (see [Help]). Shown under the question. */
+        val help: String = Help.of(id, field),
+        /** The question is only asked when this holds (for example, colour of phlegm only if phlegm came up). */
+        val gate: Gate? = null,
+    ) {
+        val what: String get() = Help.what(help)
+        val why: String get() = Help.why(help)
+    }
+
+    /** "Ask only if [field] was answered with one of [any]" ([negate]: only if it was not; an unanswered field then counts as "not"). */
+    data class Gate(val field: String, val any: Set<Any?>, val negate: Boolean = false) {
+        fun open(facts: Map<String, Fact>): Boolean {
+            val v = facts[field]?.value ?: return negate
+            val hit = v in any
+            return if (negate) !hit else hit
+        }
+    }
+
+    /** False when an earlier answer makes [a] pointless. */
+    fun applies(a: Ask, facts: Map<String, Fact>) = a.gate?.open(facts) ?: true
 
     // ── fixed questions ──
 
@@ -100,6 +119,18 @@ object Interview {
         Choice("comes and goes", "Comes and goes", listOf("comes and goes", "sometimes", "on and off", "kabhi kabhi", "appappo", "appudappudu")),
     ), core = false)
 
+    val COURSE = Ask("course", "course", "Is it getting better, worse, or the same?", Kind.CHOICE, listOf(
+        Choice("better", "Better", listOf("better", "improving", "theek", "kuraivu")),
+        Choice("same", "Same", listOf("same", "no change", "waisa hi", "appadiye")),
+        Choice("worse", "Worse", listOf("worse", "getting worse", "zyada", "adhigam")),
+    ), core = false)
+
+    val IMPACT = Ask("impact", "impact", "Is it stopping you from doing things?", Kind.CHOICE, listOf(
+        Choice("no", "No", listOf("no", "nahi", "illai")),
+        Choice("some", "A little", listOf("a little", "some", "thoda", "konjam")),
+        Choice("a lot", "A lot", listOf("a lot", "very much", "bahut", "romba")),
+    ), core = false)
+
     val WORSE = Ask("worse", "worse", "What makes it worse?", Kind.MULTI, listOf(
         Choice("moving", "Moving", listOf("moving", "move", "hilna", "asaivu")), Choice("walking", "Walking", listOf("walking", "walk", "chalna", "nadakka")),
         Choice("eating", "Eating", listOf("eating", "food", "khana", "saapadu", "annam")), Choice("lying down", "Lying down", listOf("lying", "lie down", "letna", "padukka")),
@@ -148,52 +179,95 @@ object Interview {
     fun deepable(p: Problem) = locatable(p) && p.region !in SHALLOW_REGIONS
 
     /** Core questions for [p], skipping anything already known. */
-    fun core(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
+    fun core(cat: Catalogue, p: Problem, facts: Map<String, Fact>, age: Int? = null): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
-        dangerQuestions(cat, p).take(2).forEach(::add)
-        if (p.id in COUNTABLE) add(COUNT)
-        if (locatable(p)) add(WHERE)
-        if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
-        if (p.id !in NO_SEVERITY) add(scaleFor(p))
-        return out
+        if (p.id in BURNS) {
+            // burns: look and size decide urgency, so they stay in core; place and the second danger check move to "Tell more"
+            coreDanger(cat, p).forEach(::add)
+            add(BURN_LOOK); add(BURN_SIZE)
+        } else {
+            coreDanger(cat, p).forEach(::add)
+            if (locatable(p)) add(WHERE)
+        }
+        // Core is at most 5 and always keeps severity (last).
+        val sev = scaleFor(p).takeIf { p.id !in NO_SEVERITY && !facts.containsKey(it.field) }
+        return out.take(if (sev != null) 4 else 5) + listOfNotNull(sev)
     }
 
     /** Extended questions (only after the person agrees to tell more). */
-    fun extended(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
+    fun extended(cat: Catalogue, p: Problem, facts: Map<String, Fact>, age: Int? = null): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field) && out.none { it.field == a.field }) out += a.copy(core = false) }
+        fun isAgeExcluded(minAge: Int?, maxAge: Int?): Boolean {
+            if (age == null) return false
+            if (minAge != null && age < minAge) return true
+            if (maxAge != null && age > maxAge) return true
+            return false
+        }
+        if (p.id in COUNTABLE) add(COUNT)
+        if (p.id in BURNS && locatable(p)) add(WHERE)
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
-        dangerQuestions(cat, p).drop(2).forEach(::add)
-        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q -> fromQuestion(cat, q)?.let(::add) }
+        dangerQuestions(cat, p).filterNot { a -> coreDanger(cat, p).any { it.field == a.field } }.forEach(::add)
+        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q ->
+            if (!isAgeExcluded(q.minAge, q.maxAge)) fromQuestion(cat, q)?.let(::add)
+        }
         // other catalogue fields that have simple answers
         for (f in p.fields) {
             val field = cat.field(f) ?: continue
             if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "pillows", "timeOnFloor", "sleepHours")) continue
+
+            if (isAgeExcluded(field.minAge, field.maxAge)) continue
+
             when (field.type) {
-                FieldType.YESNO -> add(Ask("f_$f", f, yesNoText(field.label), Kind.YESNO, core = false, danger = field.danger))
-                FieldType.CHOICE -> add(Ask("f_$f", f, choiceText(f, field.label), Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false))
+                FieldType.YESNO -> {
+                    val text = field.help?.split("\n")?.firstOrNull() ?: yesNoText(field.label)
+                    val help = field.help ?: Help.of("f_$f", f)
+                    add(Ask("f_$f", f, text, Kind.YESNO, core = false, danger = field.danger, gate = field.gate, help = help))
+                }
+                FieldType.CHOICE -> {
+                    val text = field.help?.split("\n")?.firstOrNull() ?: choiceText(f, field.label)
+                    val help = field.help ?: Help.of("f_$f", f)
+                    add(Ask("f_$f", f, text, Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false, gate = field.gate, help = help))
+                }
                 else -> {}
             }
         }
         if (locatable(p) || "pattern" in p.fields || p.region == "whole") add(PATTERN)
         if (locatable(p)) { add(WORSE); add(BETTER) }
+        if (p.id in BURNS) add(BURN_SIZE)
+        add(COURSE)
+        add(IMPACT)
         add(TOOK_MED)
         add(ANYTHING)
-        return out.take(9)
+        // Extended questions are optional ("tell more"), gated, and can be stopped at any time.
+        return out
     }
 
-    private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> =
-        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority >= 85 }.sortedByDescending { it.priority }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
+    private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> {
+        val fromFollowUps = p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority >= 85 }.sortedByDescending { it.priority }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
+        // audited problems keep their danger yes/no questions as fields flagged `danger`
+        val fromFields = p.fields.mapNotNull { f ->
+            val fd = cat.field(f) ?: return@mapNotNull null
+            if (fd.danger && fd.type == FieldType.YESNO) Ask("f_$f", f, yesNoText(fd.label), Kind.YESNO, core = true, danger = true, help = fd.help ?: Help.of("f_$f", f), gate = fd.gate) else null
+        }
+        return (fromFollowUps + fromFields).distinctBy { it.field }
+    }
 
-    private fun fromQuestion(cat: Catalogue, q: Question): Ask? = when (q.type) {
-        FieldType.YESNO -> Ask(q.id, q.field, q.ask, Kind.YESNO)
-        FieldType.NUMBER -> Ask(q.id, q.field, q.ask, Kind.NUMBER)
-        FieldType.TEMP -> Ask(q.id, q.field, q.ask, Kind.TEMP)
-        FieldType.SCALE -> SEVERITY
-        else -> null
+    /** The (at most two) ungated danger questions asked first. */
+    private fun coreDanger(cat: Catalogue, p: Problem): List<Ask> = dangerQuestions(cat, p).filter { it.gate == null }.take(if (p.id in BURNS) 1 else 2)
+
+    private fun fromQuestion(cat: Catalogue, q: Question): Ask? {
+        val help = q.help ?: Help.of(q.id, q.field)
+        return when (q.type) {
+            FieldType.YESNO -> Ask(q.id, q.field, q.ask, Kind.YESNO, gate = q.gate, help = help)
+            FieldType.NUMBER -> Ask(q.id, q.field, q.ask, Kind.NUMBER, gate = q.gate, help = help)
+            FieldType.TEMP -> Ask(q.id, q.field, q.ask, Kind.TEMP, gate = q.gate, help = help)
+            FieldType.SCALE -> SEVERITY.copy(gate = q.gate, help = help)
+            else -> null
+        }
     }
 
     private fun yesNoText(label: String) = when {
@@ -203,9 +277,10 @@ object Interview {
 
     private fun choiceText(field: String, label: String) = when (field) {
         "colour" -> "What colour was it?"
+        "phlegmColour" -> "What colour was the phlegm?"
         "content" -> "What came out?"
         "stoolType" -> "What was it like?"
-        "dryWet" -> "Is the cough dry, or with phlegm?"
+        "dryWet" -> "Is the cough dry, or wet?"
         else -> "$label?"
     }
 

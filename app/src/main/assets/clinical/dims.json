@@ -1,0 +1,3298 @@
+{
+ "fields": {
+  "count": [
+   "frequency"
+  ],
+  "severity": [
+   "severity"
+  ],
+  "side": [
+   "side"
+  ],
+  "character": [
+   "character"
+  ],
+  "radiation": [
+   "radiation"
+  ],
+  "onset": [
+   "onset",
+   "speed_of_onset"
+  ],
+  "pattern": [
+   "timing",
+   "constant_or_comes_and_goes",
+   "pattern"
+  ],
+  "worse": [
+   "aggravating"
+  ],
+  "better": [
+   "relieving"
+  ],
+  "context": [
+   "timing"
+  ],
+  "colour": [
+   "colour"
+  ],
+  "blood": [
+   "blood",
+   "danger"
+  ],
+  "coffeeGround": [
+   "blood",
+   "danger"
+  ],
+  "keepWater": [
+   "fluids_intake"
+  ],
+  "urineToday": [
+   "fluids_intake"
+  ],
+  "projectile": [
+   "character"
+  ],
+  "content": [
+   "consistency"
+  ],
+  "stoolType": [
+   "consistency"
+  ],
+  "blackStool": [
+   "colour",
+   "blood",
+   "danger"
+  ],
+  "mucus": [
+   "consistency"
+  ],
+  "temperature": [
+   "fever",
+   "associated"
+  ],
+  "chills": [
+   "associated"
+  ],
+  "sweating": [
+   "associated"
+  ],
+  "confusion": [
+   "consciousness",
+   "danger"
+  ],
+  "breathless": [
+   "danger"
+  ],
+  "atRest": [
+   "at_rest"
+  ],
+  "lyingFlat": [
+   "lying_flat"
+  ],
+  "pillows": [
+   "lying_flat"
+  ],
+  "armJaw": [
+   "radiation",
+   "danger"
+  ],
+  "exertion": [
+   "exertion_tolerance"
+  ],
+  "phlegm": [
+   "any"
+  ],
+  "phlegmColour": [
+   "colour"
+  ],
+  "shade": [
+   "shade"
+  ],
+  "dryWet": [
+   "consistency",
+   "cough"
+  ],
+  "weeks": [
+   "duration"
+  ],
+  "hitHead": [
+   "mechanism",
+   "danger"
+  ],
+  "couldGetUp": [
+   "recovery"
+  ],
+  "timeOnFloor": [
+   "recovery"
+  ],
+  "dizzyBefore": [
+   "warning_before"
+  ],
+  "worstEver": [
+   "speed_of_onset",
+   "severity",
+   "danger"
+  ],
+  "visionChange": [
+   "vision_speech",
+   "danger"
+  ],
+  "stiffNeck": [
+   "associated",
+   "danger"
+  ],
+  "faceDroop": [
+   "one_sided",
+   "vision_speech",
+   "danger"
+  ],
+  "armWeak": [
+   "weakness",
+   "one_sided",
+   "danger"
+  ],
+  "speech": [
+   "vision_speech",
+   "danger"
+  ],
+  "spinning": [
+   "character"
+  ],
+  "onStanding": [
+   "position_trigger",
+   "trigger"
+  ],
+  "itchy": [
+   "itch_pain"
+  ],
+  "spreading": [
+   "spread",
+   "change",
+   "course"
+  ],
+  "blisters": [
+   "appearance"
+  ],
+  "newMedicine": [
+   "new_or_changed"
+  ],
+  "lipSwelling": [
+   "site",
+   "swelling_redness",
+   "danger"
+  ],
+  "oneSide": [
+   "one_sided",
+   "side"
+  ],
+  "redHot": [
+   "colour_warmth"
+  ],
+  "painful": [
+   "itch_pain",
+   "tenderness"
+  ],
+  "burning": [
+   "character"
+  ],
+  "frequent": [
+   "frequency"
+  ],
+  "cannotPass": [
+   "control",
+   "danger"
+  ],
+  "hours": [
+   "duration"
+  ],
+  "reading": [
+   "reading"
+  ],
+  "selfHarm": [
+   "safety",
+   "danger"
+  ],
+  "sleepHours": [
+   "hours_slept",
+   "sleep"
+  ],
+  "wound": [
+   "appearance"
+  ],
+  "bleedingStops": [
+   "stops_with_pressure",
+   "tried"
+  ],
+  "bloodThinner": [
+   "anticoagulant"
+  ],
+  "choking": [
+   "danger"
+  ],
+  "fits": [
+   "consciousness",
+   "danger"
+  ],
+  "lostConsciousness": [
+   "consciousness",
+   "danger"
+  ],
+  "swallowWater": [
+   "swallowing",
+   "fluids_intake"
+  ],
+  "duration": [
+   "duration_each",
+   "duration"
+  ],
+  "impact": [
+   "impact"
+  ],
+  "note": [
+   "associated"
+  ],
+  "burnDepth": [
+   "appearance",
+   "severity"
+  ],
+  "burnSize": [
+   "size",
+   "severity"
+  ],
+  "chestFaint": [
+   "associated",
+   "faint_dizzy",
+   "danger"
+  ],
+  "chestSick": [
+   "associated"
+  ],
+  "painMinutes": [
+   "duration",
+   "timing"
+  ],
+  "worseBreathing": [
+   "aggravating"
+  ],
+  "palpMinutes": [
+   "duration_each",
+   "duration"
+  ],
+  "palpRegular": [
+   "rate_regularity"
+  ],
+  "pulseRate": [
+   "rate_regularity",
+   "reading"
+  ],
+  "palpChest": [
+   "chest_pain",
+   "danger"
+  ],
+  "palpFaint": [
+   "faint_dizzy",
+   "danger"
+  ],
+  "breathTalk": [
+   "exertion_tolerance",
+   "danger"
+  ],
+  "blueLips": [
+   "colour",
+   "danger"
+  ],
+  "breathChest": [
+   "chest_pain",
+   "aggravating",
+   "danger"
+  ],
+  "oxygenBand": [
+   "reading",
+   "danger"
+  ],
+  "usesInhaler": [
+   "tried"
+  ],
+  "inhalerNoHelp": [
+   "tried",
+   "danger"
+  ],
+  "bloodAmount": [
+   "amount",
+   "blood",
+   "danger"
+  ],
+  "coughFever": [
+   "fever"
+  ],
+  "weightLossLately": [
+   "amount_of_change",
+   "associated"
+  ],
+  "weightUp": [
+   "amount_of_change"
+  ],
+  "swellDays": [
+   "duration",
+   "course"
+  ],
+  "legPainful": [
+   "tenderness"
+  ],
+  "snoreLoud": [
+   "breathing_in_sleep"
+  ],
+  "apneaWitnessed": [
+   "breathing_in_sleep"
+  ],
+  "wakeGasping": [
+   "breathing_in_sleep"
+  ],
+  "daySleepy": [
+   "daytime_effect",
+   "impact"
+  ],
+  "bpToldHigh": [
+   "known_condition"
+  ],
+  "snoreDrive": [
+   "daytime_effect",
+   "danger"
+  ],
+  "nightChest": [
+   "chest_pain",
+   "night",
+   "danger"
+  ],
+  "sysBp": [
+   "reading"
+  ],
+  "diaBp": [
+   "reading"
+  ],
+  "onBpTablets": [
+   "on_treatment",
+   "which_medicine"
+  ],
+  "missedBpTablets": [
+   "missed_treatment"
+  ],
+  "strokeSigns": [
+   "one_sided",
+   "vision_speech",
+   "weakness",
+   "danger"
+  ],
+  "bpChest": [
+   "chest_pain",
+   "danger"
+  ],
+  "lowBpBand": [
+   "reading"
+  ],
+  "lowFluidLoss": [
+   "fluids_intake"
+  ],
+  "faintWeak": [
+   "faint_dizzy",
+   "associated",
+   "danger"
+  ],
+  "bellyBlood": [
+   "blood",
+   "danger"
+  ],
+  "hoursPain": [
+   "duration",
+   "timing"
+  ],
+  "bellyWhere": [
+   "site"
+  ],
+  "bellyHard": [
+   "tenderness",
+   "danger"
+  ],
+  "noWind": [
+   "control",
+   "danger"
+  ],
+  "bellyBloat": [
+   "associated"
+  ],
+  "vomitWith": [
+   "associated"
+  ],
+  "daysSoFar": [
+   "duration"
+  ],
+  "cantKeepFluids": [
+   "fluids_intake",
+   "danger"
+  ],
+  "noUrine8h": [
+   "amount",
+   "fluids_intake",
+   "danger"
+  ],
+  "headNeck": [
+   "associated",
+   "danger"
+  ],
+  "nauseaChest": [
+   "chest_pain",
+   "danger"
+  ],
+  "vomitGreen": [
+   "colour",
+   "danger"
+  ],
+  "vomitBloodAmount": [
+   "amount",
+   "blood",
+   "danger"
+  ],
+  "takesPainkillers": [
+   "which_medicine"
+  ],
+  "daysNoStool": [
+   "frequency",
+   "duration"
+  ],
+  "bowelChange": [
+   "frequency"
+  ],
+  "stoolBloodColour": [
+   "colour",
+   "blood",
+   "danger"
+  ],
+  "stoolBloodAmount": [
+   "amount",
+   "blood",
+   "danger"
+  ],
+  "vomitBloodToo": [
+   "blood",
+   "danger"
+  ],
+  "flankPain": [
+   "site",
+   "danger"
+  ],
+  "rigors": [
+   "associated",
+   "fever",
+   "danger"
+  ],
+  "urinePerDay": [
+   "frequency"
+  ],
+  "nightTimes": [
+   "night"
+  ],
+  "veryThirsty": [
+   "associated"
+  ],
+  "noEmpty": [
+   "control"
+  ],
+  "bladderPain": [
+   "site",
+   "danger"
+  ],
+  "dropsOnly": [
+   "amount",
+   "control"
+  ],
+  "saddleNumb": [
+   "site",
+   "danger"
+  ],
+  "urineBloodColour": [
+   "colour",
+   "blood",
+   "danger"
+  ],
+  "leakWhen": [
+   "control",
+   "trigger"
+  ],
+  "bowelLeak": [
+   "control",
+   "danger"
+  ],
+  "painWaves": [
+   "timing",
+   "character"
+  ],
+  "urineBloodSeen": [
+   "blood"
+  ],
+  "swollenLegsToo": [
+   "associated",
+   "swelling"
+  ],
+  "foamyUrine": [
+   "consistency"
+  ],
+  "lessUrine": [
+   "amount"
+  ],
+  "periodPainNew": [
+   "course"
+  ],
+  "periodLate": [
+   "cycle_or_bleeding_pattern"
+  ],
+  "maybePregnant": [
+   "age_context",
+   "danger"
+  ],
+  "padsHour": [
+   "amount",
+   "danger"
+  ],
+  "bleedDays": [
+   "duration_of_bleeding",
+   "cycle_or_bleeding_pattern"
+  ],
+  "bigClots": [
+   "consistency",
+   "amount"
+  ],
+  "monthsSincePeriod": [
+   "cycle_or_bleeding_pattern",
+   "age_context"
+  ],
+  "bleedAmount": [
+   "amount",
+   "danger"
+  ],
+  "onHrt": [
+   "which_medicine"
+  ],
+  "pelvicPain": [
+   "site",
+   "pain",
+   "danger"
+  ],
+  "dischargeColour": [
+   "colour"
+  ],
+  "fishySmell": [
+   "smell"
+  ],
+  "riskSex": [
+   "associated"
+  ],
+  "lumpGrowing": [
+   "change"
+  ],
+  "lumpHard": [
+   "consistency"
+  ],
+  "skinChange": [
+   "appearance",
+   "danger"
+  ],
+  "nippleChange": [
+   "appearance",
+   "danger"
+  ],
+  "armpitLump": [
+   "site",
+   "associated"
+  ],
+  "painCyclic": [
+   "timing",
+   "cycle_or_bleeding_pattern"
+  ],
+  "breastLump": [
+   "site",
+   "danger"
+  ],
+  "breastfeeding": [
+   "age_context"
+  ],
+  "flushPerDay": [
+   "frequency"
+  ],
+  "periodsChanged": [
+   "cycle_or_bleeding_pattern"
+  ],
+  "nightSoaking": [
+   "night",
+   "associated"
+  ],
+  "racingHeart": [
+   "rate_regularity",
+   "associated"
+  ],
+  "bleedAfterStop": [
+   "cycle_or_bleeding_pattern",
+   "age_context",
+   "danger"
+  ],
+  "bloatDaily": [
+   "frequency",
+   "timing"
+  ],
+  "earlySatiety": [
+   "meal_relation",
+   "appetite_weight"
+  ],
+  "bellySwollenFast": [
+   "change"
+  ],
+  "foodSticks": [
+   "swallowing",
+   "danger"
+  ],
+  "chokeCough": [
+   "swallowing",
+   "cough"
+  ],
+  "regurgitate": [
+   "meal_relation",
+   "swallowing"
+  ],
+  "swallowWhat": [
+   "swallowing",
+   "danger"
+  ],
+  "droolSaliva": [
+   "swallowing",
+   "danger"
+  ],
+  "foodStuckNow": [
+   "swallowing",
+   "danger"
+  ],
+  "hiccupHours": [
+   "duration"
+  ],
+  "darkUrine": [
+   "colour",
+   "fluids_intake"
+  ],
+  "paleStool": [
+   "colour"
+  ],
+  "upperRightPain": [
+   "site"
+  ],
+  "tooManyTablets": [
+   "which_medicine",
+   "danger"
+  ],
+  "howLong": [
+   "duration",
+   "onset"
+  ],
+  "diabetes": [
+   "known_condition"
+  ],
+  "tooWeak": [
+   "activity_affected",
+   "danger"
+  ],
+  "feverRash": [
+   "appearance",
+   "fever",
+   "danger"
+  ],
+  "lowImmunity": [
+   "associated"
+  ],
+  "chestDiscomfort": [
+   "chest_pain",
+   "danger"
+  ],
+  "unplannedWeightLoss": [
+   "amount_of_change"
+  ],
+  "lowInterest": [
+   "mood_anxiety"
+  ],
+  "weakOneSide": [
+   "weakness",
+   "one_sided",
+   "danger"
+  ],
+  "spreadingUp": [
+   "weakness",
+   "spread",
+   "danger"
+  ],
+  "cantSwallowWater": [
+   "swallowing",
+   "danger"
+  ],
+  "yellowSkin": [
+   "colour"
+  ],
+  "bellyPain": [
+   "associated"
+  ],
+  "peeingMore": [
+   "frequency",
+   "amount"
+  ],
+  "nightSweatsAlso": [
+   "associated",
+   "night"
+  ],
+  "longCough": [
+   "cough",
+   "duration",
+   "danger"
+  ],
+  "swallowHard": [
+   "swallowing"
+  ],
+  "onPurpose": [
+   "amount_of_change"
+  ],
+  "weightLostKg": [
+   "amount_of_change"
+  ],
+  "nightsPerWeek": [
+   "frequency",
+   "night"
+  ],
+  "lumpNeckArmpit": [
+   "site",
+   "associated"
+  ],
+  "sugarBand": [
+   "reading",
+   "danger"
+  ],
+  "takesSugarMedicine": [
+   "which_medicine",
+   "on_treatment"
+  ],
+  "vomitOrLoose": [
+   "associated",
+   "fluids_intake"
+  ],
+  "dizzyOnStanding": [
+   "position_trigger"
+  ],
+  "onWaterPills": [
+   "which_medicine"
+  ],
+  "selfHarmPlan": [
+   "safety",
+   "danger"
+  ],
+  "selfHarmNow": [
+   "safety",
+   "danger"
+  ],
+  "selfHarmActed": [
+   "safety",
+   "danger"
+  ],
+  "notAlone": [
+   "safety"
+  ],
+  "fastHeart": [
+   "rate_regularity"
+  ],
+  "sleepTrouble": [
+   "sleep_pattern",
+   "sleep"
+  ],
+  "wakesBreathless": [
+   "breathing_in_sleep",
+   "lying_flat",
+   "danger"
+  ],
+  "snoring": [
+   "breathing_in_sleep"
+  ],
+  "hardToWake": [
+   "consciousness",
+   "danger"
+  ],
+  "recentLoss": [
+   "mood_anxiety"
+  ],
+  "noOneToTalk": [
+   "function"
+  ],
+  "unsafeAtHome": [
+   "safety",
+   "danger"
+  ],
+  "hallucType": [
+   "associated"
+  ],
+  "voicesHarm": [
+   "safety",
+   "danger"
+  ],
+  "stoppedAlcohol": [
+   "associated",
+   "danger"
+  ],
+  "shaky": [
+   "associated"
+  ],
+  "skippedMeal": [
+   "new_or_changed",
+   "timing_vs_dose"
+  ],
+  "footSore": [
+   "appearance",
+   "danger"
+  ],
+  "footColdPale": [
+   "colour",
+   "danger"
+  ],
+  "lumpWhere": [
+   "site"
+  ],
+  "lumpRedHot": [
+   "colour_warmth",
+   "discharge"
+  ],
+  "cannotPushBack": [
+   "danger"
+  ],
+  "heavyPeriods": [
+   "cycle_or_bleeding_pattern",
+   "amount"
+  ],
+  "whenAfterMedicine": [
+   "timing_vs_dose",
+   "onset"
+  ],
+  "throatTight": [
+   "danger"
+  ],
+  "rashHives": [
+   "appearance",
+   "itch_pain"
+  ],
+  "skinPeeling": [
+   "appearance",
+   "danger"
+  ],
+  "unusualBleeding": [
+   "associated"
+  ],
+  "legSwollen": [
+   "site",
+   "tenderness",
+   "colour_warmth"
+  ],
+  "fellRecently": [
+   "associated"
+  ],
+  "coughsChokes": [
+   "swallowing",
+   "cough"
+  ],
+  "mouthSore": [
+   "pain"
+  ],
+  "painSwallowing": [
+   "pain",
+   "swallowing"
+  ],
+  "whichAccident": [
+   "control"
+  ],
+  "burnsPeeing": [
+   "pain_passing"
+  ],
+  "painWhere": [
+   "site"
+  ],
+  "cancerHistory": [
+   "associated"
+  ],
+  "hasDiabetes": [
+   "known_condition"
+  ],
+  "headKnockWeeks": [
+   "mechanism",
+   "time_since"
+  ],
+  "notDrinking": [
+   "fluids_intake"
+  ],
+  "heartSigns": [
+   "chest_pain",
+   "rate_regularity",
+   "danger"
+  ],
+  "bleedSigns": [
+   "blood",
+   "danger"
+  ],
+  "notRecovered": [
+   "course",
+   "danger"
+  ],
+  "settledAlready": [
+   "course"
+  ],
+  "breathTrouble": [
+   "danger"
+  ],
+  "swellingLipsThroat": [
+   "swelling_redness",
+   "danger"
+  ],
+  "scalpJawPain": [
+   "pain",
+   "danger"
+  ],
+  "mouthOpen": [
+   "eating_drinking"
+  ],
+  "neckLump": [
+   "site"
+  ],
+  "swallowHurts": [
+   "pain",
+   "swallowing"
+  ],
+  "usesTobacco": [
+   "associated"
+  ],
+  "afterHeadKnock": [
+   "mechanism",
+   "danger"
+  ],
+  "hearingDrop": [
+   "vision_hearing_change"
+  ],
+  "earFluid": [
+   "discharge"
+  ],
+  "noseBloodStained": [
+   "discharge",
+   "blood"
+  ],
+  "clearFluidAfterKnock": [
+   "discharge",
+   "mechanism",
+   "danger"
+  ],
+  "eyelidSwollen": [
+   "swelling_redness",
+   "danger"
+  ],
+  "faceSinusPain": [
+   "pain",
+   "site"
+  ],
+  "otherBleeding": [
+   "other_bleeding"
+  ],
+  "feelFaint": [
+   "danger"
+  ],
+  "eyeInjury": [
+   "mechanism",
+   "danger"
+  ],
+  "redEye": [
+   "swelling_redness"
+  ],
+  "lightHurts": [
+   "pain",
+   "danger"
+  ],
+  "eyeHalos": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "sickWithEye": [
+   "associated",
+   "danger"
+  ],
+  "contactLens": [
+   "associated"
+  ],
+  "rashForehead": [
+   "appearance",
+   "danger"
+  ],
+  "eyeDischarge": [
+   "discharge"
+  ],
+  "curtainShadow": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "itchySneeze": [
+   "associated"
+  ],
+  "flashesLight": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "lastWell": [
+   "onset",
+   "time_since"
+  ],
+  "balanceLost": [
+   "speed_of_onset",
+   "danger"
+  ],
+  "bladderBowelChange": [
+   "control",
+   "danger"
+  ],
+  "legsWeakening": [
+   "weakness",
+   "spread",
+   "danger"
+  ],
+  "urineBurning": [
+   "pain_passing"
+  ],
+  "bleedMinutes": [
+   "duration_of_bleeding"
+  ],
+  "bleedsOften": [
+   "frequency",
+   "timing"
+  ],
+  "highBpKnown": [
+   "known_condition"
+  ],
+  "sickManyTimes": [
+   "frequency",
+   "fluids_intake"
+  ],
+  "painkillerDays": [
+   "which_medicine",
+   "frequency"
+  ],
+  "migraineUsual": [
+   "course",
+   "pattern"
+  ],
+  "dizzyLasts": [
+   "duration_each"
+  ],
+  "dizzyHeadache": [
+   "associated",
+   "danger"
+  ],
+  "faintCardiac": [
+   "trigger",
+   "heart_symptoms",
+   "danger"
+  ],
+  "firstEverFit": [
+   "first_time",
+   "danger"
+  ],
+  "fitLong": [
+   "duration_unresponsive",
+   "danger"
+  ],
+  "fitRepeat": [
+   "pattern",
+   "danger"
+  ],
+  "earPainRash": [
+   "pain",
+   "appearance"
+  ],
+  "speechType": [
+   "vision_speech",
+   "character"
+  ],
+  "weakWhere": [
+   "site",
+   "weakness"
+  ],
+  "numbWhere": [
+   "site"
+  ],
+  "tinglingWhere": [
+   "site"
+  ],
+  "lowB12Diet": [
+   "associated"
+  ],
+  "memoryCourse": [
+   "speed_of_onset",
+   "course"
+  ],
+  "repeatsQuestions": [
+   "function"
+  ],
+  "gotLost": [
+   "function"
+  ],
+  "dailyTasksHarder": [
+   "function",
+   "impact"
+  ],
+  "moodLow": [
+   "mood_anxiety"
+  ],
+  "tremorWhen": [
+   "trigger",
+   "pattern"
+  ],
+  "slowStiff": [
+   "associated"
+  ],
+  "heartRacingSweat": [
+   "associated"
+  ],
+  "alcoholCut": [
+   "associated"
+  ],
+  "feetNumb": [
+   "site",
+   "associated"
+  ],
+  "headacheWithBalance": [
+   "associated",
+   "danger"
+  ],
+  "earDischargeColour": [
+   "colour"
+  ],
+  "swollenBehindEar": [
+   "swelling_redness",
+   "danger"
+  ],
+  "hasRinging": [
+   "associated"
+  ],
+  "pulseTinnitus": [
+   "character"
+  ],
+  "tinnitusDistress": [
+   "impact"
+  ],
+  "earBlocked": [
+   "associated"
+  ],
+  "lowImmune": [
+   "associated"
+  ],
+  "bloodInSpit": [
+   "blood"
+  ],
+  "lostWeight": [
+   "amount_of_change"
+  ],
+  "afterColdOrShouting": [
+   "trigger",
+   "onset"
+  ],
+  "doubleWorse": [
+   "course"
+  ],
+  "sprayOverWeek": [
+   "which_medicine",
+   "tried"
+  ],
+  "afterNoseKnock": [
+   "mechanism"
+  ],
+  "afterNewTrigger": [
+   "triggers",
+   "danger"
+  ],
+  "sneezeTrigger": [
+   "trigger_or_allergy",
+   "triggers"
+  ],
+  "smellOrTaste": [
+   "smell_taste"
+  ],
+  "noseBlockedNow": [
+   "discharge_or_blockage"
+  ],
+  "appetiteLow": [
+   "appetite_weight",
+   "impact"
+  ],
+  "lumpInnerCorner": [
+   "site",
+   "swelling_redness"
+  ],
+  "cannotCloseEye": [
+   "associated"
+  ],
+  "thirstPee": [
+   "associated"
+  ],
+  "doubleGoesOneClosed": [
+   "character"
+  ],
+  "eyelidDroop": [
+   "associated",
+   "danger"
+  ],
+  "worseEvening": [
+   "timing",
+   "pattern"
+  ],
+  "dryMouthToo": [
+   "associated"
+  ],
+  "shortSighted": [
+   "associated"
+  ],
+  "manyFloaters": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "toothChest": [
+   "chest_pain",
+   "exertion_link",
+   "danger"
+  ],
+  "faceSwollen": [
+   "swelling_redness",
+   "danger"
+  ],
+  "painWakes": [
+   "timing",
+   "night"
+  ],
+  "bleedOnlyBrushing": [
+   "bleeding"
+  ],
+  "bleedSpont": [
+   "bleeding",
+   "danger"
+  ],
+  "tiredPale": [
+   "associated"
+  ],
+  "gumPus": [
+   "discharge",
+   "swelling_redness"
+  ],
+  "ulcerNumber": [
+   "ulcer_or_patch"
+  ],
+  "ulcerHard": [
+   "ulcer_or_patch",
+   "danger"
+  ],
+  "painStopsDrinking": [
+   "eating_drinking",
+   "impact"
+  ],
+  "dentureLoose": [
+   "associated"
+  ],
+  "sorePatch": [
+   "ulcer_or_patch"
+  ],
+  "whitePatch": [
+   "ulcer_or_patch"
+  ],
+  "wearAtNight": [
+   "associated"
+  ],
+  "drowsy": [
+   "consciousness",
+   "danger"
+  ],
+  "cheekSwollen": [
+   "swelling_redness",
+   "site"
+  ],
+  "onsetWhen": [
+   "onset",
+   "time_since"
+  ],
+  "happenedWhen": [
+   "time_since",
+   "onset"
+  ],
+  "injuryFirst": [
+   "mechanism"
+  ],
+  "cannotWalk": [
+   "weight_bearing"
+  ],
+  "cannotBend": [
+   "associated"
+  ],
+  "boneTender": [
+   "tenderness"
+  ],
+  "looksBent": [
+   "deformity",
+   "danger"
+  ],
+  "boneThrough": [
+   "deformity",
+   "bleeding",
+   "danger"
+  ],
+  "cannotUse": [
+   "impact"
+  ],
+  "numbTingle": [
+   "associated"
+  ],
+  "armNumbWeak": [
+   "weakness",
+   "site",
+   "danger"
+  ],
+  "coldPale": [
+   "colour",
+   "danger"
+  ],
+  "legWeak": [
+   "weakness",
+   "danger"
+  ],
+  "numbGroin": [
+   "site",
+   "danger"
+  ],
+  "bladderBowel": [
+   "control",
+   "danger"
+  ],
+  "feverish": [
+   "fever"
+  ],
+  "weightLoss": [
+   "amount_of_change",
+   "associated"
+  ],
+  "steroidBone": [
+   "which_medicine"
+  ],
+  "chestTight": [
+   "chest_pain",
+   "danger"
+  ],
+  "calfSwollen": [
+   "tenderness"
+  ],
+  "clotRisk": [
+   "associated"
+  ],
+  "jointStuck": [
+   "associated"
+  ],
+  "stiffLength": [
+   "duration",
+   "timing"
+  ],
+  "jointSwollen": [
+   "site",
+   "colour_warmth"
+  ],
+  "shoulderHip": [
+   "site"
+  ],
+  "headScalpJaw": [
+   "pain",
+   "danger"
+  ],
+  "visionLoss": [
+   "vision_speech",
+   "danger"
+  ],
+  "atNight": [
+   "night",
+   "timing"
+  ],
+  "lowFluids": [
+   "fluids_intake"
+  ],
+  "firstTime": [
+   "course"
+  ],
+  "nonBlanching": [
+   "appearance",
+   "danger"
+  ],
+  "stiffNeckLight": [
+   "associated",
+   "danger"
+  ],
+  "lowUrine": [
+   "fluids_intake",
+   "amount"
+  ],
+  "rashNearEye": [
+   "distribution",
+   "appearance",
+   "danger"
+  ],
+  "mouthEyeSores": [
+   "appearance",
+   "danger"
+  ],
+  "skinMarks": [
+   "appearance"
+  ],
+  "faintDizzy": [
+   "faint_dizzy",
+   "danger"
+  ],
+  "bellyVomit": [
+   "associated",
+   "danger"
+  ],
+  "trigger": [
+   "triggers",
+   "trigger"
+  ],
+  "hasPen": [
+   "tried",
+   "danger"
+  ],
+  "rubbedBurnt": [
+   "triggers"
+  ],
+  "oneSideBand": [
+   "distribution"
+  ],
+  "sunArea": [
+   "size",
+   "distribution"
+  ],
+  "woundDischarge": [
+   "discharge",
+   "any"
+  ],
+  "woundColour": [
+   "colour"
+  ],
+  "woundSmell": [
+   "smell"
+  ],
+  "blackSkin": [
+   "appearance",
+   "colour"
+  ],
+  "sorePhase": [
+   "appearance"
+  ],
+  "moleChange": [
+   "change",
+   "appearance"
+  ],
+  "moleNew": [
+   "onset"
+  ],
+  "skinCancerBefore": [
+   "associated"
+  ],
+  "hairPattern": [
+   "distribution",
+   "appearance"
+  ],
+  "scalpSore": [
+   "itch_pain",
+   "appearance"
+  ],
+  "recentStress": [
+   "triggers"
+  ],
+  "tiredCold": [
+   "associated"
+  ],
+  "noKnock": [
+   "triggers"
+  ],
+  "tinyDots": [
+   "appearance",
+   "colour"
+  ],
+  "newMedSteroid": [
+   "new_or_changed"
+  ],
+  "stuckOnFloor": [
+   "recovery",
+   "danger"
+  ],
+  "longOnFloor": [
+   "recovery",
+   "danger"
+  ],
+  "standingDizzy": [
+   "position_trigger"
+  ],
+  "nearFaint": [
+   "faint_dizzy",
+   "danger"
+  ],
+  "heartRacing": [
+   "rate_regularity",
+   "chest_pain",
+   "danger"
+  ],
+  "weakSide": [
+   "one_sided",
+   "weakness",
+   "vision_speech",
+   "danger"
+  ],
+  "fallsBefore": [
+   "associated",
+   "first_time"
+  ],
+  "vomitedMore": [
+   "frequency",
+   "danger"
+  ],
+  "seizure": [
+   "consciousness",
+   "danger"
+  ],
+  "headacheBad": [
+   "course",
+   "severity",
+   "danger"
+  ],
+  "weakVision": [
+   "weakness",
+   "vision_speech",
+   "danger"
+  ],
+  "clearFluid": [
+   "discharge",
+   "danger"
+  ],
+  "bleedingContinues": [
+   "duration_of_bleeding",
+   "stops_with_pressure",
+   "danger"
+  ],
+  "cutDeep": [
+   "appearance"
+  ],
+  "dirtInside": [
+   "mechanism"
+  ],
+  "tetanusOld": [
+   "associated"
+  ],
+  "bleedSite": [
+   "site"
+  ],
+  "heavyBleed": [
+   "amount",
+   "danger"
+  ],
+  "burnCause": [
+   "mechanism"
+  ],
+  "burnSite": [
+   "site"
+  ],
+  "smokeFace": [
+   "mechanism",
+   "danger"
+  ],
+  "coolWater": [
+   "tried"
+  ],
+  "tightLump": [
+   "size",
+   "change",
+   "danger"
+  ],
+  "swellSite": [
+   "site"
+  ],
+  "sprainSite": [
+   "site"
+  ],
+  "boneSite": [
+   "site"
+  ],
+  "biteBy": [
+   "mechanism"
+  ],
+  "skinBroken": [
+   "appearance"
+  ],
+  "biteSite": [
+   "site"
+  ],
+  "spreadSwell": [
+   "size",
+   "change"
+  ],
+  "hivesBody": [
+   "spread",
+   "distribution",
+   "danger"
+  ],
+  "coughStrong": [
+   "cough"
+  ],
+  "cannotSpeak": [
+   "danger"
+  ],
+  "lostResponse": [
+   "consciousness",
+   "danger"
+  ],
+  "stuckFeeling": [
+   "associated"
+  ],
+  "legTurned": [
+   "deformity",
+   "weight_bearing",
+   "danger"
+  ],
+  "openSore": [
+   "appearance"
+  ]
+ },
+ "questions": {
+  "q_blood_vomit": [
+   "blood",
+   "danger"
+  ],
+  "q_coffee": [
+   "blood",
+   "danger"
+  ],
+  "q_keepwater": [
+   "fluids_intake"
+  ],
+  "q_urine": [
+   "fluids_intake"
+  ],
+  "q_count": [
+   "frequency"
+  ],
+  "q_blood_stool": [
+   "blood",
+   "danger"
+  ],
+  "q_black_stool": [
+   "colour",
+   "blood",
+   "danger"
+  ],
+  "q_temp": [
+   "fever",
+   "associated"
+  ],
+  "q_confused": [
+   "consciousness",
+   "danger"
+  ],
+  "q_armjaw": [
+   "radiation",
+   "danger"
+  ],
+  "q_sweat": [
+   "associated"
+  ],
+  "q_breathless": [
+   "danger"
+  ],
+  "q_atrest": [
+   "at_rest"
+  ],
+  "q_blood_cough": [
+   "blood",
+   "danger"
+  ],
+  "q_weeks": [
+   "duration"
+  ],
+  "q_hithead": [
+   "mechanism",
+   "danger"
+  ],
+  "q_getup": [
+   "recovery"
+  ],
+  "q_worst": [
+   "speed_of_onset",
+   "severity",
+   "danger"
+  ],
+  "q_vision": [
+   "vision_speech",
+   "danger"
+  ],
+  "q_face": [
+   "one_sided",
+   "vision_speech",
+   "danger"
+  ],
+  "q_armweak": [
+   "weakness",
+   "one_sided",
+   "danger"
+  ],
+  "q_speech": [
+   "vision_speech",
+   "danger"
+  ],
+  "q_standing": [
+   "position_trigger",
+   "trigger"
+  ],
+  "q_spinning": [
+   "character"
+  ],
+  "q_lips": [
+   "site",
+   "swelling_redness",
+   "danger"
+  ],
+  "q_spreading": [
+   "spread",
+   "change",
+   "course"
+  ],
+  "q_newmed": [
+   "new_or_changed"
+  ],
+  "q_onesided": [
+   "one_sided",
+   "side"
+  ],
+  "q_cannotpass": [
+   "control",
+   "danger"
+  ],
+  "q_selfharm": [
+   "safety",
+   "danger"
+  ],
+  "q_severity": [
+   "severity"
+  ],
+  "q_bleedstop": [
+   "stops_with_pressure",
+   "tried"
+  ],
+  "q_thinner": [
+   "anticoagulant"
+  ],
+  "q_swallow": [
+   "swallowing",
+   "fluids_intake"
+  ],
+  "q_reading": [
+   "reading"
+  ],
+  "q_stiffneck": [
+   "associated",
+   "danger"
+  ],
+  "q_lostcon": [
+   "consciousness",
+   "danger"
+  ],
+  "q_chestFaint": [
+   "associated",
+   "faint_dizzy",
+   "danger"
+  ],
+  "q_chestSick": [
+   "associated"
+  ],
+  "q_painMinutes": [
+   "duration",
+   "timing"
+  ],
+  "q_worseBreathing": [
+   "aggravating"
+  ],
+  "q_palpMinutes": [
+   "duration_each",
+   "duration"
+  ],
+  "q_palpRegular": [
+   "rate_regularity"
+  ],
+  "q_pulseRate": [
+   "rate_regularity",
+   "reading"
+  ],
+  "q_palpChest": [
+   "chest_pain",
+   "danger"
+  ],
+  "q_palpFaint": [
+   "faint_dizzy",
+   "danger"
+  ],
+  "q_breathTalk": [
+   "exertion_tolerance",
+   "danger"
+  ],
+  "q_blueLips": [
+   "colour",
+   "danger"
+  ],
+  "q_breathChest": [
+   "chest_pain",
+   "aggravating",
+   "danger"
+  ],
+  "q_oxygenBand": [
+   "reading",
+   "danger"
+  ],
+  "q_usesInhaler": [
+   "tried"
+  ],
+  "q_inhalerNoHelp": [
+   "tried",
+   "danger"
+  ],
+  "q_bloodAmount": [
+   "amount",
+   "blood",
+   "danger"
+  ],
+  "q_coughFever": [
+   "fever"
+  ],
+  "q_weightLossLately": [
+   "amount_of_change",
+   "associated"
+  ],
+  "q_weightUp": [
+   "amount_of_change"
+  ],
+  "q_swellDays": [
+   "duration",
+   "course"
+  ],
+  "q_legPainful": [
+   "tenderness"
+  ],
+  "q_snoreLoud": [
+   "breathing_in_sleep"
+  ],
+  "q_apneaWitnessed": [
+   "breathing_in_sleep"
+  ],
+  "q_wakeGasping": [
+   "breathing_in_sleep"
+  ],
+  "q_daySleepy": [
+   "daytime_effect",
+   "impact"
+  ],
+  "q_bpToldHigh": [
+   "known_condition"
+  ],
+  "q_snoreDrive": [
+   "daytime_effect",
+   "danger"
+  ],
+  "q_nightChest": [
+   "chest_pain",
+   "night",
+   "danger"
+  ],
+  "q_sysBp": [
+   "reading"
+  ],
+  "q_diaBp": [
+   "reading"
+  ],
+  "q_onBpTablets": [
+   "on_treatment",
+   "which_medicine"
+  ],
+  "q_missedBpTablets": [
+   "missed_treatment"
+  ],
+  "q_strokeSigns": [
+   "one_sided",
+   "vision_speech",
+   "weakness",
+   "danger"
+  ],
+  "q_bpChest": [
+   "chest_pain",
+   "danger"
+  ],
+  "q_lowBpBand": [
+   "reading"
+  ],
+  "q_lowFluidLoss": [
+   "fluids_intake"
+  ],
+  "q_faintWeak": [
+   "faint_dizzy",
+   "associated",
+   "danger"
+  ],
+  "q_bellyBlood": [
+   "blood",
+   "danger"
+  ],
+  "q_hoursPain": [
+   "duration",
+   "timing"
+  ],
+  "q_bellyWhere": [
+   "site"
+  ],
+  "q_bellyHard": [
+   "tenderness",
+   "danger"
+  ],
+  "q_noWind": [
+   "control",
+   "danger"
+  ],
+  "q_bellyBloat": [
+   "associated"
+  ],
+  "q_vomitWith": [
+   "associated"
+  ],
+  "q_daysSoFar": [
+   "duration"
+  ],
+  "q_newMedicine": [
+   "new_or_changed"
+  ],
+  "q_cantKeepFluids": [
+   "fluids_intake",
+   "danger"
+  ],
+  "q_noUrine8h": [
+   "amount",
+   "fluids_intake",
+   "danger"
+  ],
+  "q_headNeck": [
+   "associated",
+   "danger"
+  ],
+  "q_nauseaChest": [
+   "chest_pain",
+   "danger"
+  ],
+  "q_vomitGreen": [
+   "colour",
+   "danger"
+  ],
+  "q_coffee_v": [
+   "blood",
+   "danger"
+  ],
+  "q_projectile": [
+   "character"
+  ],
+  "q_vomitBloodAmount": [
+   "amount",
+   "blood",
+   "danger"
+  ],
+  "q_takesPainkillers": [
+   "which_medicine"
+  ],
+  "q_daysNoStool": [
+   "frequency",
+   "duration"
+  ],
+  "q_bowelChange": [
+   "frequency"
+  ],
+  "q_stoolBloodColour": [
+   "colour",
+   "blood",
+   "danger"
+  ],
+  "q_stoolBloodAmount": [
+   "amount",
+   "blood",
+   "danger"
+  ],
+  "q_vomitBloodToo": [
+   "blood",
+   "danger"
+  ],
+  "q_flankPain": [
+   "site",
+   "danger"
+  ],
+  "q_rigors": [
+   "associated",
+   "fever",
+   "danger"
+  ],
+  "q_urinePerDay": [
+   "frequency"
+  ],
+  "q_nightTimes": [
+   "night"
+  ],
+  "q_veryThirsty": [
+   "associated"
+  ],
+  "q_noEmpty": [
+   "control"
+  ],
+  "q_bladderPain": [
+   "site",
+   "danger"
+  ],
+  "q_dropsOnly": [
+   "amount",
+   "control"
+  ],
+  "q_saddleNumb": [
+   "site",
+   "danger"
+  ],
+  "q_urineBloodColour": [
+   "colour",
+   "blood",
+   "danger"
+  ],
+  "q_leakWhen": [
+   "control",
+   "trigger"
+  ],
+  "q_bowelLeak": [
+   "control",
+   "danger"
+  ],
+  "q_painWaves": [
+   "timing",
+   "character"
+  ],
+  "q_urineBloodSeen": [
+   "blood"
+  ],
+  "q_swollenLegsToo": [
+   "associated",
+   "swelling"
+  ],
+  "q_foamyUrine": [
+   "consistency"
+  ],
+  "q_lessUrine": [
+   "amount"
+  ],
+  "q_periodPainNew": [
+   "course"
+  ],
+  "q_periodLate": [
+   "cycle_or_bleeding_pattern"
+  ],
+  "q_maybePregnant": [
+   "age_context",
+   "danger"
+  ],
+  "q_padsHour": [
+   "amount",
+   "danger"
+  ],
+  "q_bleedDays": [
+   "duration_of_bleeding",
+   "cycle_or_bleeding_pattern"
+  ],
+  "q_bigClots": [
+   "consistency",
+   "amount"
+  ],
+  "q_monthsSincePeriod": [
+   "cycle_or_bleeding_pattern",
+   "age_context"
+  ],
+  "q_bleedAmount": [
+   "amount",
+   "danger"
+  ],
+  "q_onHrt": [
+   "which_medicine"
+  ],
+  "q_pelvicPain": [
+   "site",
+   "pain",
+   "danger"
+  ],
+  "q_dischargeColour": [
+   "colour"
+  ],
+  "q_fishySmell": [
+   "smell"
+  ],
+  "q_riskSex": [
+   "associated"
+  ],
+  "q_lumpGrowing": [
+   "change"
+  ],
+  "q_lumpHard": [
+   "consistency"
+  ],
+  "q_skinChange": [
+   "appearance",
+   "danger"
+  ],
+  "q_nippleChange": [
+   "appearance",
+   "danger"
+  ],
+  "q_armpitLump": [
+   "site",
+   "associated"
+  ],
+  "q_painCyclic": [
+   "timing",
+   "cycle_or_bleeding_pattern"
+  ],
+  "q_breastLump": [
+   "site",
+   "danger"
+  ],
+  "q_breastfeeding": [
+   "age_context"
+  ],
+  "q_flushPerDay": [
+   "frequency"
+  ],
+  "q_periodsChanged": [
+   "cycle_or_bleeding_pattern"
+  ],
+  "q_nightSoaking": [
+   "night",
+   "associated"
+  ],
+  "q_racingHeart": [
+   "rate_regularity",
+   "associated"
+  ],
+  "q_bleedAfterStop": [
+   "cycle_or_bleeding_pattern",
+   "age_context",
+   "danger"
+  ],
+  "q_bloatDaily": [
+   "frequency",
+   "timing"
+  ],
+  "q_earlySatiety": [
+   "meal_relation",
+   "appetite_weight"
+  ],
+  "q_bellySwollenFast": [
+   "change"
+  ],
+  "q_foodSticks": [
+   "swallowing",
+   "danger"
+  ],
+  "q_chokeCough": [
+   "swallowing",
+   "cough"
+  ],
+  "q_regurgitate": [
+   "meal_relation",
+   "swallowing"
+  ],
+  "q_swallowWhat": [
+   "swallowing",
+   "danger"
+  ],
+  "q_droolSaliva": [
+   "swallowing",
+   "danger"
+  ],
+  "q_foodStuckNow": [
+   "swallowing",
+   "danger"
+  ],
+  "q_hiccupHours": [
+   "duration"
+  ],
+  "q_darkUrine": [
+   "colour",
+   "fluids_intake"
+  ],
+  "q_paleStool": [
+   "colour"
+  ],
+  "q_upperRightPain": [
+   "site"
+  ],
+  "q_tooManyTablets": [
+   "which_medicine",
+   "danger"
+  ],
+  "q_pillows": [
+   "lying_flat"
+  ],
+  "q_howLong": [
+   "duration",
+   "onset"
+  ],
+  "q_diabetes": [
+   "known_condition"
+  ],
+  "q_tooWeak": [
+   "activity_affected",
+   "danger"
+  ],
+  "q_feverRash": [
+   "appearance",
+   "fever",
+   "danger"
+  ],
+  "q_lowImmunity": [
+   "associated"
+  ],
+  "q_chestDiscomfort": [
+   "chest_pain",
+   "danger"
+  ],
+  "q_unplannedWeightLoss": [
+   "amount_of_change"
+  ],
+  "q_lowInterest": [
+   "mood_anxiety"
+  ],
+  "q_weakOneSide": [
+   "weakness",
+   "one_sided",
+   "danger"
+  ],
+  "q_spreadingUp": [
+   "weakness",
+   "spread",
+   "danger"
+  ],
+  "q_cantSwallowWater": [
+   "swallowing",
+   "danger"
+  ],
+  "q_yellowSkin": [
+   "colour"
+  ],
+  "q_bellyPain": [
+   "associated"
+  ],
+  "q_peeingMore": [
+   "frequency",
+   "amount"
+  ],
+  "q_nightSweatsAlso": [
+   "associated",
+   "night"
+  ],
+  "q_longCough": [
+   "cough",
+   "duration",
+   "danger"
+  ],
+  "q_swallowHard": [
+   "swallowing"
+  ],
+  "q_onPurpose": [
+   "amount_of_change"
+  ],
+  "q_weightLostKg": [
+   "amount_of_change"
+  ],
+  "q_nightsPerWeek": [
+   "frequency",
+   "night"
+  ],
+  "q_lumpNeckArmpit": [
+   "site",
+   "associated"
+  ],
+  "q_sugarBand": [
+   "reading",
+   "danger"
+  ],
+  "q_takesSugarMedicine": [
+   "which_medicine",
+   "on_treatment"
+  ],
+  "q_vomitOrLoose": [
+   "associated",
+   "fluids_intake"
+  ],
+  "q_dizzyOnStanding": [
+   "position_trigger"
+  ],
+  "q_onWaterPills": [
+   "which_medicine"
+  ],
+  "q_selfHarmPlan": [
+   "safety",
+   "danger"
+  ],
+  "q_selfHarmNow": [
+   "safety",
+   "danger"
+  ],
+  "q_selfHarmActed": [
+   "safety",
+   "danger"
+  ],
+  "q_notAlone": [
+   "safety"
+  ],
+  "q_fastHeart": [
+   "rate_regularity"
+  ],
+  "q_sleepTrouble": [
+   "sleep_pattern",
+   "sleep"
+  ],
+  "q_wakesBreathless": [
+   "breathing_in_sleep",
+   "lying_flat",
+   "danger"
+  ],
+  "q_snoring": [
+   "breathing_in_sleep"
+  ],
+  "q_hardToWake": [
+   "consciousness",
+   "danger"
+  ],
+  "q_recentLoss": [
+   "mood_anxiety"
+  ],
+  "q_noOneToTalk": [
+   "function"
+  ],
+  "q_unsafeAtHome": [
+   "safety",
+   "danger"
+  ],
+  "q_hallucType": [
+   "associated"
+  ],
+  "q_voicesHarm": [
+   "safety",
+   "danger"
+  ],
+  "q_stoppedAlcohol": [
+   "associated",
+   "danger"
+  ],
+  "q_shaky": [
+   "associated"
+  ],
+  "q_skippedMeal": [
+   "new_or_changed",
+   "timing_vs_dose"
+  ],
+  "q_footSore": [
+   "appearance",
+   "danger"
+  ],
+  "q_footColdPale": [
+   "colour",
+   "danger"
+  ],
+  "q_lumpWhere": [
+   "site"
+  ],
+  "q_lumpRedHot": [
+   "colour_warmth",
+   "discharge"
+  ],
+  "q_cannotPushBack": [
+   "danger"
+  ],
+  "q_heavyPeriods": [
+   "cycle_or_bleeding_pattern",
+   "amount"
+  ],
+  "q_whenAfterMedicine": [
+   "timing_vs_dose",
+   "onset"
+  ],
+  "q_throatTight": [
+   "danger"
+  ],
+  "q_rashHives": [
+   "appearance",
+   "itch_pain"
+  ],
+  "q_skinPeeling": [
+   "appearance",
+   "danger"
+  ],
+  "q_unusualBleeding": [
+   "associated"
+  ],
+  "q_legSwollen": [
+   "site",
+   "tenderness",
+   "colour_warmth"
+  ],
+  "q_fellRecently": [
+   "associated"
+  ],
+  "q_coughsChokes": [
+   "swallowing",
+   "cough"
+  ],
+  "q_mouthSore": [
+   "pain"
+  ],
+  "q_painSwallowing": [
+   "pain",
+   "swallowing"
+  ],
+  "q_whichAccident": [
+   "control"
+  ],
+  "q_burnsPeeing": [
+   "pain_passing"
+  ],
+  "q_painWhere": [
+   "site"
+  ],
+  "q_cancerHistory": [
+   "associated"
+  ],
+  "q_selfHarmCalm": [
+   "safety",
+   "danger"
+  ],
+  "q_walkHead": [
+   "mechanism",
+   "danger"
+  ],
+  "q_walkThinner": [
+   "anticoagulant"
+  ],
+  "q_eatFace": [
+   "one_sided",
+   "vision_speech",
+   "danger"
+  ],
+  "q_painArmJaw": [
+   "radiation",
+   "danger"
+  ],
+  "q_painBreathless": [
+   "danger"
+  ],
+  "q_accCount": [
+   "frequency"
+  ],
+  "q_hasDiabetes": [
+   "known_condition"
+  ],
+  "q_headKnockWeeks": [
+   "mechanism",
+   "time_since"
+  ],
+  "q_notDrinking": [
+   "fluids_intake"
+  ],
+  "q_heartSigns": [
+   "chest_pain",
+   "rate_regularity",
+   "danger"
+  ],
+  "q_bleedSigns": [
+   "blood",
+   "danger"
+  ],
+  "q_notRecovered": [
+   "course",
+   "danger"
+  ],
+  "q_settledAlready": [
+   "course"
+  ],
+  "q_breathTrouble": [
+   "danger"
+  ],
+  "q_swellingLipsThroat": [
+   "swelling_redness",
+   "danger"
+  ],
+  "q_scalpJawPain": [
+   "pain",
+   "danger"
+  ],
+  "q_mouthOpen": [
+   "eating_drinking"
+  ],
+  "q_neckLump": [
+   "site"
+  ],
+  "q_swallowHurts": [
+   "pain",
+   "swallowing"
+  ],
+  "q_usesTobacco": [
+   "associated"
+  ],
+  "q_afterHeadKnock": [
+   "mechanism",
+   "danger"
+  ],
+  "q_hearingDrop": [
+   "vision_hearing_change"
+  ],
+  "q_earFluid": [
+   "discharge"
+  ],
+  "q_noseBloodStained": [
+   "discharge",
+   "blood"
+  ],
+  "q_clearFluidAfterKnock": [
+   "discharge",
+   "mechanism",
+   "danger"
+  ],
+  "q_eyelidSwollen": [
+   "swelling_redness",
+   "danger"
+  ],
+  "q_faceSinusPain": [
+   "pain",
+   "site"
+  ],
+  "q_otherBleeding": [
+   "other_bleeding"
+  ],
+  "q_feelFaint": [
+   "danger"
+  ],
+  "q_eyeInjury": [
+   "mechanism",
+   "danger"
+  ],
+  "q_redEye": [
+   "swelling_redness"
+  ],
+  "q_lightHurts": [
+   "pain",
+   "danger"
+  ],
+  "q_eyeHalos": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "q_sickWithEye": [
+   "associated",
+   "danger"
+  ],
+  "q_contactLens": [
+   "associated"
+  ],
+  "q_rashForehead": [
+   "appearance",
+   "danger"
+  ],
+  "q_eyeDischarge": [
+   "discharge"
+  ],
+  "q_curtainShadow": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "q_itchySneeze": [
+   "associated"
+  ],
+  "q_flashesLight": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "q_lastWell": [
+   "onset",
+   "time_since"
+  ],
+  "q_balanceLost": [
+   "speed_of_onset",
+   "danger"
+  ],
+  "q_bladderBowelChange": [
+   "control",
+   "danger"
+  ],
+  "q_legsWeakening": [
+   "weakness",
+   "spread",
+   "danger"
+  ],
+  "q_urineBurning": [
+   "pain_passing"
+  ],
+  "q_bleedMinutes": [
+   "duration_of_bleeding"
+  ],
+  "q_bleedsOften": [
+   "frequency",
+   "timing"
+  ],
+  "q_highBpKnown": [
+   "known_condition"
+  ],
+  "q_hd_stiff": [
+   "associated",
+   "danger"
+  ],
+  "q_hd_thinner": [
+   "anticoagulant"
+  ],
+  "q_hd_painful": [
+   "itch_pain",
+   "tenderness"
+  ],
+  "q_hd_oneside": [
+   "one_sided",
+   "side"
+  ],
+  "q_hd_faintjerk": [
+   "consciousness",
+   "danger"
+  ],
+  "q_hd_warning": [
+   "warning_before"
+  ],
+  "q_hd_headsame": [
+   "speed_of_onset",
+   "severity",
+   "danger"
+  ],
+  "q_sickManyTimes": [
+   "frequency",
+   "fluids_intake"
+  ],
+  "q_painkillerDays": [
+   "which_medicine",
+   "frequency"
+  ],
+  "q_migraineUsual": [
+   "course",
+   "pattern"
+  ],
+  "q_dizzyLasts": [
+   "duration_each"
+  ],
+  "q_dizzyHeadache": [
+   "associated",
+   "danger"
+  ],
+  "q_faintCardiac": [
+   "trigger",
+   "heart_symptoms",
+   "danger"
+  ],
+  "q_firstEverFit": [
+   "first_time",
+   "danger"
+  ],
+  "q_fitLong": [
+   "duration_unresponsive",
+   "danger"
+  ],
+  "q_fitRepeat": [
+   "pattern",
+   "danger"
+  ],
+  "q_earPainRash": [
+   "pain",
+   "appearance"
+  ],
+  "q_speechType": [
+   "vision_speech",
+   "character"
+  ],
+  "q_weakWhere": [
+   "site",
+   "weakness"
+  ],
+  "q_numbWhere": [
+   "site"
+  ],
+  "q_hd_dur": [
+   "duration_each",
+   "duration"
+  ],
+  "q_hd_side": [
+   "side"
+  ],
+  "q_tinglingWhere": [
+   "site"
+  ],
+  "q_lowB12Diet": [
+   "associated"
+  ],
+  "q_hd_tside": [
+   "side"
+  ],
+  "q_memoryCourse": [
+   "speed_of_onset",
+   "course"
+  ],
+  "q_repeatsQuestions": [
+   "function"
+  ],
+  "q_gotLost": [
+   "function"
+  ],
+  "q_dailyTasksHarder": [
+   "function",
+   "impact"
+  ],
+  "q_moodLow": [
+   "mood_anxiety"
+  ],
+  "q_tremorWhen": [
+   "trigger",
+   "pattern"
+  ],
+  "q_slowStiff": [
+   "associated"
+  ],
+  "q_heartRacingSweat": [
+   "associated"
+  ],
+  "q_alcoholCut": [
+   "associated"
+  ],
+  "q_feetNumb": [
+   "site",
+   "associated"
+  ],
+  "q_headacheWithBalance": [
+   "associated",
+   "danger"
+  ],
+  "q_earDischargeColour": [
+   "colour"
+  ],
+  "q_swollenBehindEar": [
+   "swelling_redness",
+   "danger"
+  ],
+  "q_hasRinging": [
+   "associated"
+  ],
+  "q_pulseTinnitus": [
+   "character"
+  ],
+  "q_tinnitusDistress": [
+   "impact"
+  ],
+  "q_earBlocked": [
+   "associated"
+  ],
+  "q_lowImmune": [
+   "associated"
+  ],
+  "q_bloodInSpit": [
+   "blood"
+  ],
+  "q_lostWeight": [
+   "amount_of_change"
+  ],
+  "q_afterColdOrShouting": [
+   "trigger",
+   "onset"
+  ],
+  "q_doubleWorse": [
+   "course"
+  ],
+  "q_sprayOverWeek": [
+   "which_medicine",
+   "tried"
+  ],
+  "q_afterNoseKnock": [
+   "mechanism"
+  ],
+  "q_afterNewTrigger": [
+   "triggers",
+   "danger"
+  ],
+  "q_sneezeTrigger": [
+   "trigger_or_allergy",
+   "triggers"
+  ],
+  "q_smellOrTaste": [
+   "smell_taste"
+  ],
+  "q_noseBlockedNow": [
+   "discharge_or_blockage"
+  ],
+  "q_appetiteLow": [
+   "appetite_weight",
+   "impact"
+  ],
+  "q_re_halos": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "q_re_light": [
+   "pain",
+   "danger"
+  ],
+  "q_re_gunk": [
+   "discharge"
+  ],
+  "q_lumpInnerCorner": [
+   "site",
+   "swelling_redness"
+  ],
+  "q_cannotCloseEye": [
+   "associated"
+  ],
+  "q_thirstPee": [
+   "associated"
+  ],
+  "q_doubleGoesOneClosed": [
+   "character"
+  ],
+  "q_eyelidDroop": [
+   "associated",
+   "danger"
+  ],
+  "q_worseEvening": [
+   "timing",
+   "pattern"
+  ],
+  "q_dryMouthToo": [
+   "associated"
+  ],
+  "q_shortSighted": [
+   "associated"
+  ],
+  "q_manyFloaters": [
+   "vision_hearing_change",
+   "danger"
+  ],
+  "q_toothChest": [
+   "chest_pain",
+   "exertion_link",
+   "danger"
+  ],
+  "q_faceSwollen": [
+   "swelling_redness",
+   "danger"
+  ],
+  "q_painWakes": [
+   "timing",
+   "night"
+  ],
+  "q_bleedOnlyBrushing": [
+   "bleeding"
+  ],
+  "q_bleedSpont": [
+   "bleeding",
+   "danger"
+  ],
+  "q_tiredPale": [
+   "associated"
+  ],
+  "q_gumPus": [
+   "discharge",
+   "swelling_redness"
+  ],
+  "q_ulcerNumber": [
+   "ulcer_or_patch"
+  ],
+  "q_ulcerHard": [
+   "ulcer_or_patch",
+   "danger"
+  ],
+  "q_painStopsDrinking": [
+   "eating_drinking",
+   "impact"
+  ],
+  "q_dentureLoose": [
+   "associated"
+  ],
+  "q_sorePatch": [
+   "ulcer_or_patch"
+  ],
+  "q_whitePatch": [
+   "ulcer_or_patch"
+  ],
+  "q_wearAtNight": [
+   "associated"
+  ],
+  "q_drowsy": [
+   "consciousness",
+   "danger"
+  ],
+  "q_cheekSwollen": [
+   "swelling_redness",
+   "site"
+  ],
+  "q_onsetWhen": [
+   "onset",
+   "time_since"
+  ],
+  "q_happenedWhen": [
+   "time_since",
+   "onset"
+  ],
+  "q_injuryFirst": [
+   "mechanism"
+  ],
+  "q_cannotWalk": [
+   "weight_bearing"
+  ],
+  "q_cannotBend": [
+   "associated"
+  ],
+  "q_boneTender": [
+   "tenderness"
+  ],
+  "q_looksBent": [
+   "deformity",
+   "danger"
+  ],
+  "q_boneThrough": [
+   "deformity",
+   "bleeding",
+   "danger"
+  ],
+  "q_cannotUse": [
+   "impact"
+  ],
+  "q_numbTingle": [
+   "associated"
+  ],
+  "q_armNumbWeak": [
+   "weakness",
+   "site",
+   "danger"
+  ],
+  "q_coldPale": [
+   "colour",
+   "danger"
+  ],
+  "q_legWeak": [
+   "weakness",
+   "danger"
+  ],
+  "q_numbGroin": [
+   "site",
+   "danger"
+  ],
+  "q_bladderBowel": [
+   "control",
+   "danger"
+  ],
+  "q_feverish": [
+   "fever"
+  ],
+  "q_weightLoss": [
+   "amount_of_change",
+   "associated"
+  ],
+  "q_steroidBone": [
+   "which_medicine"
+  ],
+  "q_chestTight": [
+   "chest_pain",
+   "danger"
+  ],
+  "q_calfSwollen": [
+   "tenderness"
+  ],
+  "q_clotRisk": [
+   "associated"
+  ],
+  "q_jointStuck": [
+   "associated"
+  ],
+  "q_stiffLength": [
+   "duration",
+   "timing"
+  ],
+  "q_jointSwollen": [
+   "site",
+   "colour_warmth"
+  ],
+  "q_shoulderHip": [
+   "site"
+  ],
+  "q_headScalpJaw": [
+   "pain",
+   "danger"
+  ],
+  "q_visionLoss": [
+   "vision_speech",
+   "danger"
+  ],
+  "q_atNight": [
+   "night",
+   "timing"
+  ],
+  "q_lowFluids": [
+   "fluids_intake"
+  ],
+  "q_firstTime": [
+   "course"
+  ],
+  "q_nonBlanching": [
+   "appearance",
+   "danger"
+  ],
+  "q_stiffNeckLight": [
+   "associated",
+   "danger"
+  ],
+  "q_lowUrine": [
+   "fluids_intake",
+   "amount"
+  ],
+  "q_rashNearEye": [
+   "distribution",
+   "appearance",
+   "danger"
+  ],
+  "q_mouthEyeSores": [
+   "appearance",
+   "danger"
+  ],
+  "q_skinMarks": [
+   "appearance"
+  ],
+  "q_faintDizzy": [
+   "faint_dizzy",
+   "danger"
+  ],
+  "q_bellyVomit": [
+   "associated",
+   "danger"
+  ],
+  "q_trigger": [
+   "triggers",
+   "trigger"
+  ],
+  "q_hasPen": [
+   "tried",
+   "danger"
+  ],
+  "q_rubbedBurnt": [
+   "triggers"
+  ],
+  "q_oneSideBand": [
+   "distribution"
+  ],
+  "q_sunArea": [
+   "size",
+   "distribution"
+  ],
+  "q_woundDischarge": [
+   "discharge",
+   "any"
+  ],
+  "q_woundColour": [
+   "colour"
+  ],
+  "q_woundSmell": [
+   "smell"
+  ],
+  "q_blackSkin": [
+   "appearance",
+   "colour"
+  ],
+  "q_sorePhase": [
+   "appearance"
+  ],
+  "q_moleChange": [
+   "change",
+   "appearance"
+  ],
+  "q_moleNew": [
+   "onset"
+  ],
+  "q_skinCancerBefore": [
+   "associated"
+  ],
+  "q_hairPattern": [
+   "distribution",
+   "appearance"
+  ],
+  "q_scalpSore": [
+   "itch_pain",
+   "appearance"
+  ],
+  "q_recentStress": [
+   "triggers"
+  ],
+  "q_tiredCold": [
+   "associated"
+  ],
+  "q_noKnock": [
+   "triggers"
+  ],
+  "q_tinyDots": [
+   "appearance",
+   "colour"
+  ],
+  "q_newMedSteroid": [
+   "new_or_changed"
+  ],
+  "q_stuckOnFloor": [
+   "recovery",
+   "danger"
+  ],
+  "q_longOnFloor": [
+   "recovery",
+   "danger"
+  ],
+  "q_standingDizzy": [
+   "position_trigger"
+  ],
+  "q_nearFaint": [
+   "faint_dizzy",
+   "danger"
+  ],
+  "q_heartRacing": [
+   "rate_regularity",
+   "chest_pain",
+   "danger"
+  ],
+  "q_weakSide": [
+   "one_sided",
+   "weakness",
+   "vision_speech",
+   "danger"
+  ],
+  "q_fallsBefore": [
+   "associated",
+   "first_time"
+  ],
+  "q_vomitedMore": [
+   "frequency",
+   "danger"
+  ],
+  "q_seizure": [
+   "consciousness",
+   "danger"
+  ],
+  "q_headacheBad": [
+   "course",
+   "severity",
+   "danger"
+  ],
+  "q_weakVision": [
+   "weakness",
+   "vision_speech",
+   "danger"
+  ],
+  "q_clearFluid": [
+   "discharge",
+   "danger"
+  ],
+  "q_bleedingContinues": [
+   "duration_of_bleeding",
+   "stops_with_pressure",
+   "danger"
+  ],
+  "q_cutDeep": [
+   "appearance"
+  ],
+  "q_dirtInside": [
+   "mechanism"
+  ],
+  "q_tetanusOld": [
+   "associated"
+  ],
+  "q_bleedSite": [
+   "site"
+  ],
+  "q_heavyBleed": [
+   "amount",
+   "danger"
+  ],
+  "q_burnCause": [
+   "mechanism"
+  ],
+  "q_burnSite": [
+   "site"
+  ],
+  "q_smokeFace": [
+   "mechanism",
+   "danger"
+  ],
+  "q_coolWater": [
+   "tried"
+  ],
+  "q_tightLump": [
+   "size",
+   "change",
+   "danger"
+  ],
+  "q_swellSite": [
+   "site"
+  ],
+  "q_sprainSite": [
+   "site"
+  ],
+  "q_boneSite": [
+   "site"
+  ],
+  "q_biteBy": [
+   "mechanism"
+  ],
+  "q_skinBroken": [
+   "appearance"
+  ],
+  "q_biteSite": [
+   "site"
+  ],
+  "q_spreadSwell": [
+   "size",
+   "change"
+  ],
+  "q_hivesBody": [
+   "spread",
+   "distribution",
+   "danger"
+  ],
+  "q_coughStrong": [
+   "cough"
+  ],
+  "q_cannotSpeak": [
+   "danger"
+  ],
+  "q_lostResponse": [
+   "consciousness",
+   "danger"
+  ],
+  "q_stuckFeeling": [
+   "associated"
+  ],
+  "q_legTurned": [
+   "deformity",
+   "weight_bearing",
+   "danger"
+  ],
+  "q_openSore": [
+   "appearance"
+  ]
+ }
+}

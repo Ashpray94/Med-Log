@@ -1,0 +1,2046 @@
+{
+ "fields": {
+  "sputumAmount": {
+   "label": "How much phlegm",
+   "type": "choice",
+   "choices": [
+    "a little (under a teaspoon)",
+    "some (a few spoons)",
+    "a lot (a cupful or more)"
+   ],
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "How much phlegm came up.\nMore phlegm helps show how bad it is."
+  },
+  "sputumConsistency": {
+   "label": "Phlegm feel",
+   "type": "choice",
+   "choices": [
+    "thin and watery",
+    "thick and sticky",
+    "frothy"
+   ],
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Is the phlegm thin, thick or frothy.\nThe feel helps show the cause."
+  },
+  "sputumSmell": {
+   "label": "Phlegm smells bad",
+   "type": "yesno",
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "A bad smell from the phlegm.\nA bad smell can mean an infection."
+  },
+  "sputumWhen": {
+   "label": "When phlegm is worst",
+   "type": "choice",
+   "choices": [
+    "morning",
+    "night",
+    "all day"
+   ],
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "The time of day it is worst.\nThe pattern helps show the cause."
+  },
+  "coughBreathTalk": {
+   "label": "Breathless when talking",
+   "type": "yesno",
+   "danger": true,
+   "help": "You stop to breathe while speaking.\nThis can mean the lungs are struggling."
+  },
+  "coughBreathWalk": {
+   "label": "Breathless when walking",
+   "type": "yesno",
+   "help": "You get short of breath on a short walk.\nIt shows how much the cough limits you."
+  },
+  "coughWheeze": {
+   "label": "Whistling chest",
+   "type": "yesno",
+   "help": "A whistling sound when you breathe out.\nIt can mean narrowed airways."
+  },
+  "vomitAmount": {
+   "label": "How much vomit",
+   "type": "choice",
+   "choices": [
+    "a little",
+    "a cupful",
+    "a large amount",
+    "cannot keep anything down"
+   ],
+   "help": "How much came up each time.\nA large amount dries the body out fast."
+  },
+  "vomitColour": {
+   "label": "Vomit colour",
+   "type": "choice",
+   "choices": [
+    "clear",
+    "white",
+    "yellow",
+    "green",
+    "brown",
+    "red",
+    "black"
+   ],
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "vomitShade": {
+   "label": "Vomit shade",
+   "type": "choice",
+   "choices": [
+    "pale",
+    "dark"
+   ],
+   "help": "Light, like weak tea, or deep, like coffee.\nA deep colour can mean older blood."
+  },
+  "vomitFaecal": {
+   "label": "Vomit smells like stool",
+   "type": "yesno",
+   "danger": true,
+   "help": "The vomit smells like a toilet.\nThis can mean the gut is blocked."
+  },
+  "stoolShape": {
+   "label": "Stool shape",
+   "type": "choice",
+   "choices": [
+    "hard lumps",
+    "lumpy sausage",
+    "cracked sausage",
+    "smooth sausage",
+    "soft blobs",
+    "mushy",
+    "watery"
+   ],
+   "help": "Pick the picture that looks most like it.\nThe shape shows how fast food moves through."
+  },
+  "stoolColour": {
+   "label": "Stool colour",
+   "type": "choice",
+   "choices": [
+    "brown",
+    "yellow",
+    "green",
+    "pale or clay",
+    "red",
+    "black and tarry"
+   ],
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "stoolShade": {
+   "label": "Stool shade",
+   "type": "choice",
+   "choices": [
+    "pale",
+    "dark"
+   ],
+   "help": "Light, like milk tea, or deep, like coffee.\nShade helps tell the cause."
+  },
+  "stoolBloodWhere": {
+   "label": "Where the blood is",
+   "type": "choice",
+   "choices": [
+    "on paper only",
+    "streaks on stool",
+    "mixed in stool",
+    "dripping in bowl"
+   ],
+   "help": "Where you see the blood.\nThe place helps show where it comes from."
+  },
+  "stoolBloodPlace": {
+   "label": "Where the blood is",
+   "type": "choice",
+   "choices": [
+    "on paper only",
+    "streaks on stool",
+    "mixed in stool",
+    "dripping in bowl"
+   ],
+   "help": "Where you see the blood.\nThe place helps show where it comes from."
+  },
+  "stoolSmell": {
+   "label": "Stool smells very bad",
+   "type": "yesno",
+   "help": "Much worse smell than usual.\nA very bad smell can mean food is not absorbed."
+  },
+  "stoolFloats": {
+   "label": "Stool floats",
+   "type": "yesno",
+   "help": "The stool floats and is hard to flush.\nIt can mean fat is not absorbed."
+  },
+  "urineColour": {
+   "label": "Urine colour",
+   "type": "choice",
+   "choices": [
+    "pale straw",
+    "dark yellow",
+    "tea or brown",
+    "pink or red",
+    "cloudy"
+   ],
+   "help": "Pick the colour of the urine.\nDark or red urine needs attention."
+  },
+  "urineAmount": {
+   "label": "Amount of urine",
+   "type": "choice",
+   "choices": [
+    "little",
+    "normal",
+    "large"
+   ],
+   "help": "How much urine comes each time.\nVery little or a lot both need a check."
+  },
+  "urineSmell": {
+   "label": "Urine smells strong",
+   "type": "yesno",
+   "help": "A strong or bad smell from the urine.\nA bad smell can mean an infection."
+  },
+  "dischargeAmount": {
+   "label": "How much fluid",
+   "type": "choice",
+   "choices": [
+    "a few drops",
+    "wets a tissue",
+    "soaks dressing or pad"
+   ],
+   "help": "How much fluid comes out.\nMore fluid helps show how bad it is."
+  },
+  "fluidColour": {
+   "label": "Fluid colour",
+   "type": "choice",
+   "choices": [
+    "clear",
+    "white",
+    "yellow",
+    "green",
+    "brown",
+    "pink",
+    "red"
+   ],
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "fluidShade": {
+   "label": "Fluid shade",
+   "type": "choice",
+   "choices": [
+    "pale",
+    "dark"
+   ],
+   "help": "Light or deep in colour.\nShade helps tell the cause."
+  },
+  "fluidConsistency": {
+   "label": "Fluid feel",
+   "type": "choice",
+   "choices": [
+    "watery",
+    "thick",
+    "pus-like"
+   ],
+   "help": "Is it watery, thick or like pus.\nThe feel helps show the cause."
+  },
+  "fluidSmell": {
+   "label": "Fluid smells bad",
+   "type": "yesno",
+   "help": "An unpleasant smell from the fluid.\nA bad smell can mean an infection."
+  },
+  "fluidBlood": {
+   "label": "Blood in the fluid",
+   "type": "yesno",
+   "help": "Pink or red streaks in the fluid.\nBlood in it needs a check."
+  },
+  "bleedVolume": {
+   "label": "How much bleeding",
+   "type": "choice",
+   "choices": [
+    "a few spots",
+    "soaked a tissue",
+    "soaks a pad per hour",
+    "more than that"
+   ],
+   "danger": true,
+   "help": "A rough amount of blood lost.\nMore blood lost needs faster care."
+  },
+  "bleedColour": {
+   "label": "Blood colour",
+   "type": "choice",
+   "choices": [
+    "bright red",
+    "dark red"
+   ],
+   "help": "Bright red or dark red.\nBright red is fresh. Dark red is slower or older."
+  }
+ },
+ "questions": {
+  "q_coughTalk": {
+   "field": "coughBreathTalk",
+   "ask": "Do you stop to breathe when you talk?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "You must pause for breath in the middle of a sentence.\nThis can mean the lungs need help fast."
+  },
+  "q_coughWalk": {
+   "field": "coughBreathWalk",
+   "ask": "Are you short of breath when you walk?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Breathless on a short walk, like across a room.\nIt shows how much the cough limits you."
+  },
+  "q_coughWheeze": {
+   "field": "coughWheeze",
+   "ask": "Does your chest make a whistling sound?",
+   "type": "yesno",
+   "priority": 52,
+   "help": "A high whistle when you breathe out.\nIt can mean the airways are narrow."
+  },
+  "q_dryWet": {
+   "field": "dryWet",
+   "ask": "Is the cough dry or wet?",
+   "type": "choice",
+   "priority": 58,
+   "help": "Dry has nothing coming up. Wet brings up phlegm.\nIt helps tell the cause of the cough."
+  },
+  "q_phlegm": {
+   "field": "phlegm",
+   "ask": "Did any phlegm come up?",
+   "type": "yesno",
+   "priority": 57,
+   "gate": {
+    "field": "dryWet",
+    "any": [
+     "wet"
+    ]
+   },
+   "help": "Thick spit from deep in the chest.\nThe look of it helps find the cause."
+  },
+  "q_sputumAmount": {
+   "field": "sputumAmount",
+   "ask": "How much phlegm came up?",
+   "type": "choice",
+   "priority": 50,
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "A teaspoon is a small spoon. A cup is a tea cup.\nMore phlegm helps show how bad it is."
+  },
+  "q_phlegmColour": {
+   "field": "phlegmColour",
+   "ask": "What colour is the phlegm?",
+   "type": "choice",
+   "priority": 49,
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "q_sputumShade": {
+   "field": "shade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 48,
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Light, like milk, or deep, like tea.\nA deep colour can mean older blood or infection."
+  },
+  "q_sputumConsistency": {
+   "field": "sputumConsistency",
+   "ask": "Is the phlegm watery, sticky or frothy?",
+   "type": "choice",
+   "priority": 47,
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Watery runs like water. Sticky clings. Frothy has bubbles.\nThe feel of it helps show the cause."
+  },
+  "q_sputumSmell": {
+   "field": "sputumSmell",
+   "ask": "Does the phlegm smell bad?",
+   "type": "yesno",
+   "priority": 46,
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "An unpleasant smell when it comes up.\nA bad smell can mean an infection."
+  },
+  "q_sputumWhen": {
+   "field": "sputumWhen",
+   "ask": "When is the phlegm worst?",
+   "type": "choice",
+   "priority": 45,
+   "gate": {
+    "field": "phlegm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Morning, night or the whole day.\nThe time of day helps show the cause."
+  },
+  "q_vomitAmount": {
+   "field": "vomitAmount",
+   "ask": "How much did you vomit?",
+   "type": "choice",
+   "priority": 75,
+   "help": "A cup is a tea cup.\nA large amount dries the body out fast."
+  },
+  "q_vomitColour": {
+   "field": "vomitColour",
+   "ask": "What colour is the vomit?",
+   "type": "choice",
+   "priority": 74,
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "q_vomitShade": {
+   "field": "vomitShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 73,
+   "gate": {
+    "field": "vomitColour",
+    "any": [
+     "yellow",
+     "green",
+     "brown",
+     "red"
+    ]
+   },
+   "help": "Light, like weak tea, or deep, like coffee.\nA deep colour can mean older blood."
+  },
+  "q_vomitFaecal": {
+   "field": "vomitFaecal",
+   "ask": "Does the vomit smell like stool?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "It smells like a dirty toilet.\nThis can mean the gut is blocked."
+  },
+  "q_stoolShape": {
+   "field": "stoolShape",
+   "ask": "Which picture looks most like it?",
+   "type": "choice",
+   "priority": 72,
+   "help": "Seven pictures, from hard lumps to watery.\nThe shape shows how fast food moves through."
+  },
+  "q_stoolColour": {
+   "field": "stoolColour",
+   "ask": "What colour is it?",
+   "type": "choice",
+   "priority": 71,
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "q_stoolShade": {
+   "field": "stoolShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 70,
+   "gate": {
+    "field": "stoolColour",
+    "any": [
+     "brown",
+     "yellow",
+     "green",
+     "red"
+    ]
+   },
+   "help": "Light, like milk tea, or deep, like coffee.\nShade helps tell the cause."
+  },
+  "q_stoolBloodWhere": {
+   "field": "stoolBloodWhere",
+   "ask": "Where do you see the blood?",
+   "type": "choice",
+   "priority": 69,
+   "gate": {
+    "field": "blood",
+    "any": [
+     true
+    ]
+   },
+   "help": "On the paper, on the stool or in the bowl.\nThe place helps show where it comes from."
+  },
+  "q_stoolBloodPlace": {
+   "field": "stoolBloodPlace",
+   "ask": "Where do you see the blood?",
+   "type": "choice",
+   "priority": 69,
+   "help": "On the paper, on the stool or in the bowl.\nThe place helps show where it comes from."
+  },
+  "q_stoolMucus": {
+   "field": "mucus",
+   "ask": "Is there slime (mucus) in it?",
+   "type": "yesno",
+   "priority": 68,
+   "help": "Clear or white jelly, like egg white.\nSlime can mean the gut is sore."
+  },
+  "q_stoolSmell": {
+   "field": "stoolSmell",
+   "ask": "Is the smell very bad?",
+   "type": "yesno",
+   "priority": 67,
+   "help": "Much worse than your usual smell.\nA very bad smell can mean food is not absorbed."
+  },
+  "q_stoolFloats": {
+   "field": "stoolFloats",
+   "ask": "Does it float?",
+   "type": "yesno",
+   "priority": 66,
+   "help": "It floats and is hard to flush.\nIt can mean fat is not absorbed."
+  },
+  "q_stoolPain": {
+   "field": "painful",
+   "ask": "Is it painful to pass?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Pain or burning when the stool comes out.\nIt can point to a sore or tear nearby."
+  },
+  "q_urineColour": {
+   "field": "urineColour",
+   "ask": "What colour is the urine?",
+   "type": "choice",
+   "priority": 72,
+   "help": "Pick the colour you see most.\nDark or red urine needs attention."
+  },
+  "q_urineColourLast": {
+   "field": "urineColour",
+   "ask": "What colour was the last urine?",
+   "type": "choice",
+   "priority": 72,
+   "help": "Pick the colour you saw most.\nDark or red urine needs attention."
+  },
+  "q_urineAmount": {
+   "field": "urineAmount",
+   "ask": "How much urine comes each time?",
+   "type": "choice",
+   "priority": 71,
+   "help": "Little, normal or a large amount.\nVery little or a lot both need a check."
+  },
+  "q_urineSmell": {
+   "field": "urineSmell",
+   "ask": "Does the urine smell strong or bad?",
+   "type": "yesno",
+   "priority": 68,
+   "help": "A smell stronger than your usual.\nA bad smell can mean an infection."
+  },
+  "q_urineBlood": {
+   "field": "blood",
+   "ask": "Is there blood in the urine?",
+   "type": "yesno",
+   "priority": 67,
+   "help": "Pink, red or tea-coloured urine.\nBlood can come from the bladder or kidneys."
+  },
+  "q_urineBurn": {
+   "field": "burning",
+   "ask": "Does it burn when you pass urine?",
+   "type": "yesno",
+   "priority": 66,
+   "help": "Stinging or pain as the urine comes out.\nBurning can mean an infection."
+  },
+  "q_urineFlank": {
+   "field": "flankPain",
+   "ask": "Do you have pain in your side or back?",
+   "type": "yesno",
+   "priority": 65,
+   "gate": {
+    "field": "burning",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pain below the ribs, on one side.\nWith burning it can mean the kidney is infected."
+  },
+  "q_dAmount": {
+   "field": "dischargeAmount",
+   "ask": "How much fluid comes out?",
+   "type": "choice",
+   "priority": 64,
+   "help": "A few drops, a wet tissue, or a soaked pad.\nMore fluid helps show how bad it is."
+  },
+  "q_dConsist": {
+   "field": "fluidConsistency",
+   "ask": "Is it watery, thick or like pus?",
+   "type": "choice",
+   "priority": 61,
+   "help": "Watery runs like water. Pus is thick and cloudy.\nThe feel helps show the cause."
+  },
+  "q_dSmell": {
+   "field": "fluidSmell",
+   "ask": "Does the fluid smell bad?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "An unpleasant smell from the fluid.\nA bad smell can mean an infection."
+  },
+  "q_dBlood": {
+   "field": "fluidBlood",
+   "ask": "Is there any blood in the fluid?",
+   "type": "yesno",
+   "priority": 59,
+   "help": "Pink or red streaks in the fluid.\nBlood in it needs a check."
+  },
+  "q_dColour_n": {
+   "field": "fluidColour",
+   "ask": "What colour is the fluid?",
+   "type": "choice",
+   "priority": 63,
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "q_dShade_n": {
+   "field": "fluidShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 62,
+   "gate": {
+    "field": "fluidColour",
+    "any": [
+     "yellow",
+     "green",
+     "brown"
+    ]
+   },
+   "help": "Light or deep in colour.\nShade helps tell the cause."
+  },
+  "q_dShade_ear": {
+   "field": "fluidShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 62,
+   "gate": {
+    "field": "earDischargeColour",
+    "any": [
+     "yellow",
+     "green",
+     "brown"
+    ]
+   },
+   "help": "Light or deep in colour.\nShade helps tell the cause."
+  },
+  "q_dShade_v": {
+   "field": "fluidShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 62,
+   "gate": {
+    "field": "dischargeColour",
+    "any": [
+     "yellow or green",
+     "brown or bloody",
+     "pink"
+    ]
+   },
+   "help": "Light or deep in colour.\nShade helps tell the cause."
+  },
+  "q_dAmount_w": {
+   "field": "dischargeAmount",
+   "ask": "How much fluid comes out?",
+   "type": "choice",
+   "priority": 64,
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "A few drops, a wet tissue, or a soaked pad.\nMore fluid helps show how bad it is."
+  },
+  "q_dConsist_w": {
+   "field": "fluidConsistency",
+   "ask": "Is it watery, thick or like pus?",
+   "type": "choice",
+   "priority": 61,
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "Watery runs like water. Pus is thick and cloudy.\nThe feel helps show the cause."
+  },
+  "q_dBlood_w": {
+   "field": "fluidBlood",
+   "ask": "Is there any blood in the fluid?",
+   "type": "yesno",
+   "priority": 59,
+   "gate": {
+    "field": "woundDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pink or red streaks in the fluid.\nBlood in it needs a check."
+  },
+  "q_dShade_w": {
+   "field": "fluidShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 62,
+   "gate": {
+    "field": "woundColour",
+    "any": [
+     "yellow",
+     "green",
+     "brown",
+     "red or bloody"
+    ]
+   },
+   "help": "Light or deep in colour.\nShade helps tell the cause."
+  },
+  "q_dAmount_e": {
+   "field": "dischargeAmount",
+   "ask": "How much fluid comes out?",
+   "type": "choice",
+   "priority": 64,
+   "gate": {
+    "field": "eyeDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "A few drops, a wet tissue, or a soaked pad.\nMore fluid helps show how bad it is."
+  },
+  "q_dColour_e": {
+   "field": "fluidColour",
+   "ask": "What colour is the fluid?",
+   "type": "choice",
+   "priority": 63,
+   "gate": {
+    "field": "eyeDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pick the colour you see most.\nColour helps tell the cause."
+  },
+  "q_dShade_e": {
+   "field": "fluidShade",
+   "ask": "Is the colour pale or dark?",
+   "type": "choice",
+   "priority": 62,
+   "gate": {
+    "field": "fluidColour",
+    "any": [
+     "yellow",
+     "green",
+     "brown"
+    ]
+   },
+   "help": "Light or deep in colour.\nShade helps tell the cause."
+  },
+  "q_dConsist_e": {
+   "field": "fluidConsistency",
+   "ask": "Is it watery, thick or like pus?",
+   "type": "choice",
+   "priority": 61,
+   "gate": {
+    "field": "eyeDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "Watery runs like water. Pus is thick and cloudy.\nThe feel helps show the cause."
+  },
+  "q_dSmell_e": {
+   "field": "fluidSmell",
+   "ask": "Does the fluid smell bad?",
+   "type": "yesno",
+   "priority": 60,
+   "gate": {
+    "field": "eyeDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "An unpleasant smell from the fluid.\nA bad smell can mean an infection."
+  },
+  "q_dBlood_e": {
+   "field": "fluidBlood",
+   "ask": "Is there any blood in the fluid?",
+   "type": "yesno",
+   "priority": 59,
+   "gate": {
+    "field": "eyeDischarge",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pink or red streaks in the fluid.\nBlood in it needs a check."
+  },
+  "q_bleedVolume": {
+   "field": "bleedVolume",
+   "ask": "How much blood is there?",
+   "type": "choice",
+   "priority": 79,
+   "help": "A few spots, a soaked tissue, or a soaked pad.\nMore blood lost needs faster care."
+  },
+  "q_bleedColour": {
+   "field": "bleedColour",
+   "ask": "Is the blood bright red or dark red?",
+   "type": "choice",
+   "priority": 78,
+   "help": "Bright red is fresh. Dark red is slower or older.\nThe colour helps show where it comes from."
+  }
+ },
+ "problems": {
+  "cough": {
+   "fields": [
+    "dryWet",
+    "phlegm",
+    "sputumAmount",
+    "phlegmColour",
+    "shade",
+    "sputumConsistency",
+    "sputumSmell",
+    "blood",
+    "sputumWhen",
+    "weeks",
+    "coughBreathTalk",
+    "coughBreathWalk",
+    "coughFever",
+    "nightSweatsAlso",
+    "weightLossLately",
+    "coughWheeze",
+    "context"
+   ],
+   "fu": [
+    "q_blood_cough",
+    "q_coughTalk",
+    "q_weeks",
+    "q_coughFever",
+    "q_nightSweatsAlso",
+    "q_weightLossLately",
+    "q_coughWalk",
+    "q_coughWheeze",
+    "q_sputumAmount",
+    "q_phlegmColour",
+    "q_sputumShade",
+    "q_sputumConsistency",
+    "q_sputumSmell",
+    "q_sputumWhen"
+   ]
+  },
+  "cough_blood": {
+   "fields": [
+    "bloodAmount",
+    "count",
+    "weeks",
+    "coughFever",
+    "weightLossLately",
+    "dryWet",
+    "phlegm",
+    "sputumAmount",
+    "phlegmColour",
+    "shade",
+    "sputumConsistency",
+    "sputumSmell",
+    "sputumWhen",
+    "nightSweatsAlso",
+    "coughWheeze"
+   ],
+   "fu": [
+    "q_breathless",
+    "q_breathChest",
+    "q_thinner",
+    "q_weeks",
+    "q_coughFever",
+    "q_weightLossLately",
+    "q_nightSweatsAlso",
+    "q_coughWheeze",
+    "q_dryWet",
+    "q_phlegm",
+    "q_sputumAmount",
+    "q_phlegmColour",
+    "q_sputumShade",
+    "q_sputumConsistency",
+    "q_sputumSmell",
+    "q_sputumWhen"
+   ]
+  },
+  "vomiting": {
+   "fields": [
+    "vomitAmount",
+    "vomitColour",
+    "vomitShade",
+    "count",
+    "daysSoFar",
+    "blood",
+    "projectile",
+    "vomitFaecal",
+    "cantKeepFluids",
+    "noUrine8h"
+   ],
+   "fu": [
+    "q_blood_vomit",
+    "q_vomitAmount",
+    "q_vomitColour",
+    "q_vomitShade",
+    "q_vomitFaecal",
+    "q_coffee_v",
+    "q_vomitGreen",
+    "q_bellyHard",
+    "q_headNeck"
+   ]
+  },
+  "vomit_blood": {
+   "fields": [
+    "count",
+    "vomitBloodAmount",
+    "coffeeGround",
+    "blackStool",
+    "faintWeak",
+    "takesPainkillers",
+    "vomitAmount",
+    "vomitColour",
+    "vomitShade",
+    "vomitFaecal",
+    "cantKeepFluids"
+   ],
+   "fu": [
+    "q_thinner",
+    "q_vomitAmount",
+    "q_vomitColour",
+    "q_vomitShade",
+    "q_vomitFaecal",
+    "q_cantKeepFluids"
+   ]
+  },
+  "loose_motions": {
+   "fields": [
+    "stoolShape",
+    "stoolColour",
+    "stoolShade",
+    "blood",
+    "stoolBloodWhere",
+    "mucus",
+    "stoolSmell",
+    "stoolFloats",
+    "count",
+    "painful",
+    "daysSoFar",
+    "cantKeepFluids",
+    "noUrine8h"
+   ],
+   "fu": [
+    "q_black_stool",
+    "q_temp",
+    "q_bellyHard",
+    "q_confused",
+    "q_stoolShape",
+    "q_stoolColour",
+    "q_stoolShade",
+    "q_stoolBloodWhere",
+    "q_stoolMucus",
+    "q_stoolSmell",
+    "q_stoolFloats",
+    "q_count",
+    "q_stoolPain"
+   ]
+  },
+  "constipation": {
+   "fields": [
+    "daysNoStool",
+    "stoolShape",
+    "stoolColour",
+    "stoolShade",
+    "blood",
+    "stoolBloodWhere",
+    "mucus",
+    "stoolSmell",
+    "stoolFloats",
+    "painful",
+    "bowelChange",
+    "newMedicine"
+   ],
+   "fu": [
+    "q_noWind",
+    "q_bellyBloat",
+    "q_vomitWith",
+    "q_bellyHard",
+    "q_stoolShape",
+    "q_stoolColour",
+    "q_stoolShade",
+    "q_stoolBloodWhere",
+    "q_stoolMucus",
+    "q_stoolSmell",
+    "q_stoolFloats",
+    "q_stoolPain"
+   ]
+  },
+  "blood_stool": {
+   "fields": [
+    "stoolBloodColour",
+    "stoolBloodAmount",
+    "stoolBloodPlace",
+    "stoolShape",
+    "stoolColour",
+    "stoolShade",
+    "mucus",
+    "stoolSmell",
+    "stoolFloats",
+    "count",
+    "painful",
+    "bowelChange",
+    "weightLossLately"
+   ],
+   "fu": [
+    "q_thinner",
+    "q_faintWeak",
+    "q_bellyHard",
+    "q_stoolBloodPlace",
+    "q_stoolShape",
+    "q_stoolColour",
+    "q_stoolShade",
+    "q_stoolMucus",
+    "q_stoolSmell",
+    "q_stoolFloats",
+    "q_stoolPain"
+   ]
+  },
+  "black_stool": {
+   "fields": [
+    "count",
+    "daysSoFar",
+    "stoolShape",
+    "stoolColour",
+    "stoolShade",
+    "stoolSmell",
+    "painful"
+   ],
+   "fu": [
+    "q_vomitBloodToo",
+    "q_faintWeak",
+    "q_thinner",
+    "q_breathless",
+    "q_stoolShape",
+    "q_stoolColour",
+    "q_stoolShade",
+    "q_stoolSmell",
+    "q_stoolPain"
+   ]
+  },
+  "burning_urine": {
+   "fields": [
+    "urineColour",
+    "urineAmount",
+    "urinePerDay",
+    "nightTimes",
+    "urineSmell",
+    "blood",
+    "daysSoFar",
+    "frequent",
+    "flankPain",
+    "noUrine8h"
+   ],
+   "fu": [
+    "q_temp",
+    "q_rigors",
+    "q_confused",
+    "q_cantKeepFluids",
+    "q_urineColour",
+    "q_urineAmount",
+    "q_urinePerDay",
+    "q_nightTimes",
+    "q_urineSmell",
+    "q_urineBlood"
+   ]
+  },
+  "frequent_urine": {
+   "fields": [
+    "weeks",
+    "urineColour",
+    "urineAmount",
+    "urinePerDay",
+    "nightTimes",
+    "urineSmell",
+    "veryThirsty",
+    "weightLossLately",
+    "blood",
+    "burning"
+   ],
+   "fu": [
+    "q_noEmpty",
+    "q_temp",
+    "q_urineColour",
+    "q_urineAmount",
+    "q_urinePerDay",
+    "q_nightTimes",
+    "q_urineSmell",
+    "q_urineBlood",
+    "q_urineBurn",
+    "q_urineFlank"
+   ]
+  },
+  "no_urine": {
+   "fields": [
+    "hours",
+    "bladderPain",
+    "dropsOnly",
+    "urineColour",
+    "blood",
+    "burning",
+    "cantKeepFluids"
+   ],
+   "fu": [
+    "q_saddleNumb",
+    "q_temp",
+    "q_confused",
+    "q_urineColourLast",
+    "q_urineBlood",
+    "q_urineBurn",
+    "q_urineFlank"
+   ]
+  },
+  "blood_urine": {
+   "fields": [
+    "urineBloodColour",
+    "urineAmount",
+    "urinePerDay",
+    "urineSmell",
+    "burning",
+    "daysSoFar",
+    "flankPain",
+    "weightLossLately"
+   ],
+   "fu": [
+    "q_thinner",
+    "q_temp",
+    "q_noUrine8h",
+    "q_urineAmount",
+    "q_urinePerDay",
+    "q_urineSmell",
+    "q_urineBurn"
+   ]
+  },
+  "leaking_urine": {
+   "fields": [
+    "onset",
+    "weeks",
+    "leakWhen",
+    "urineColour",
+    "urineAmount",
+    "urinePerDay",
+    "nightTimes",
+    "urineSmell",
+    "blood",
+    "noEmpty",
+    "burning"
+   ],
+   "fu": [
+    "q_saddleNumb",
+    "q_bowelLeak",
+    "q_confused",
+    "q_temp",
+    "q_urineColour",
+    "q_urineAmount",
+    "q_urinePerDay",
+    "q_nightTimes",
+    "q_urineSmell",
+    "q_urineBlood",
+    "q_urineBurn",
+    "q_urineFlank"
+   ]
+  },
+  "ear_discharge": {
+   "fields": [
+    "dischargeAmount",
+    "earDischargeColour",
+    "fluidShade",
+    "fluidConsistency",
+    "fluidSmell",
+    "fluidBlood",
+    "side"
+   ],
+   "fu": [
+    "q_dAmount",
+    "q_earDischargeColour",
+    "q_dShade_ear",
+    "q_dConsist",
+    "q_dSmell",
+    "q_dBlood",
+    "q_afterHeadKnock",
+    "q_hd_painful",
+    "q_swollenBehindEar",
+    "q_face",
+    "q_hasDiabetes",
+    "q_hearingDrop",
+    "q_temp"
+   ]
+  },
+  "runny_nose": {
+   "fields": [
+    "dischargeAmount",
+    "fluidColour",
+    "fluidShade",
+    "fluidConsistency",
+    "fluidSmell",
+    "noseBloodStained",
+    "oneSide"
+   ],
+   "fu": [
+    "q_clearFluidAfterKnock",
+    "q_dAmount",
+    "q_dColour_n",
+    "q_dShade_n",
+    "q_dConsist",
+    "q_dSmell",
+    "q_noseBloodStained",
+    "q_hd_oneside",
+    "q_eyelidSwollen",
+    "q_temp",
+    "q_faceSinusPain",
+    "q_doubleWorse",
+    "q_itchySneeze"
+   ]
+  },
+  "itchy_eyes": {
+   "fields": [
+    "dischargeAmount",
+    "fluidColour",
+    "fluidShade",
+    "fluidConsistency",
+    "fluidSmell",
+    "fluidBlood",
+    "side"
+   ],
+   "fu": [
+    "q_hd_painful",
+    "q_vision",
+    "q_lightHurts",
+    "q_contactLens",
+    "q_itchySneeze",
+    "q_eyeDischarge",
+    "q_dAmount_e",
+    "q_dColour_e",
+    "q_dShade_e",
+    "q_dConsist_e",
+    "q_dSmell_e",
+    "q_dBlood_e",
+    "q_eyelidSwollen",
+    "q_rashForehead"
+   ]
+  },
+  "discharge": {
+   "fields": [
+    "daysSoFar",
+    "dischargeAmount",
+    "dischargeColour",
+    "fluidShade",
+    "fluidConsistency",
+    "fishySmell",
+    "fluidBlood",
+    "itchy",
+    "burning",
+    "riskSex",
+    "maybePregnant"
+   ],
+   "fu": [
+    "q_pelvicPain",
+    "q_temp",
+    "q_dAmount",
+    "q_dischargeColour",
+    "q_dShade_v",
+    "q_dConsist",
+    "q_fishySmell",
+    "q_dBlood"
+   ]
+  },
+  "wound_not_healing": {
+   "fields": [
+    "weeks",
+    "diabetes",
+    "woundDischarge",
+    "dischargeAmount",
+    "woundColour",
+    "fluidShade",
+    "fluidConsistency",
+    "woundSmell",
+    "fluidBlood",
+    "redHot",
+    "spreading",
+    "feverish",
+    "blackSkin"
+   ],
+   "fu": [
+    "q_woundDischarge",
+    "q_dAmount_w",
+    "q_woundColour",
+    "q_dShade_w",
+    "q_dConsist_w",
+    "q_woundSmell",
+    "q_dBlood_w"
+   ]
+  },
+  "bed_sore": {
+   "fields": [
+    "onsetWhen",
+    "sorePhase",
+    "woundDischarge",
+    "dischargeAmount",
+    "woundColour",
+    "fluidShade",
+    "fluidConsistency",
+    "woundSmell",
+    "fluidBlood",
+    "spreading",
+    "feverish",
+    "confusion",
+    "diabetes"
+   ],
+   "fu": [
+    "q_woundDischarge",
+    "q_dAmount_w",
+    "q_woundColour",
+    "q_dShade_w",
+    "q_dConsist_w",
+    "q_woundSmell",
+    "q_dBlood_w"
+   ]
+  },
+  "nosebleed": {
+   "fields": [
+    "side",
+    "bleedVolume",
+    "bleedColour"
+   ],
+   "fu": [
+    "q_bleedstop",
+    "q_thinner",
+    "q_bleedVolume",
+    "q_bleedColour",
+    "q_bleedMinutes",
+    "q_feelFaint",
+    "q_afterHeadKnock",
+    "q_otherBleeding",
+    "q_bleedsOften",
+    "q_highBpKnown"
+   ]
+  },
+  "cut": {
+   "fields": [
+    "happenedWhen",
+    "bleedVolume",
+    "bleedColour",
+    "bleedMinutes",
+    "bleedingContinues",
+    "bloodThinner",
+    "faintDizzy",
+    "cutDeep",
+    "numbTingle",
+    "dirtInside",
+    "tetanusOld",
+    "redHot",
+    "feverish"
+   ],
+   "fu": [
+    "q_bleedVolume",
+    "q_bleedColour",
+    "q_bleedMinutes",
+    "q_bleedingContinues",
+    "q_thinner",
+    "q_faintDizzy"
+   ]
+  },
+  "bleeding": {
+   "fields": [
+    "happenedWhen",
+    "bleedSite",
+    "bleedVolume",
+    "bleedColour",
+    "bleedMinutes",
+    "bleedingContinues",
+    "heavyBleed",
+    "bloodThinner",
+    "faintDizzy"
+   ],
+   "fu": [
+    "q_bleedVolume",
+    "q_bleedColour",
+    "q_bleedMinutes",
+    "q_bleedingContinues",
+    "q_thinner",
+    "q_faintDizzy"
+   ]
+  },
+  "heavy_bleeding": {
+   "fields": [
+    "bleedDays",
+    "padsHour",
+    "bleedColour",
+    "bigClots",
+    "maybePregnant",
+    "periodLate"
+   ],
+   "fu": [
+    "q_bleedColour",
+    "q_faintWeak",
+    "q_breathless",
+    "q_thinner"
+   ]
+  },
+  "postmeno_bleeding": {
+   "fields": [
+    "monthsSincePeriod",
+    "bleedAmount",
+    "bleedColour",
+    "bleedDays",
+    "onHrt"
+   ],
+   "fu": [
+    "q_bleedColour",
+    "q_faintWeak",
+    "q_thinner",
+    "q_pelvicPain"
+   ]
+  },
+  "bleeding_gums": {
+   "fields": [
+    "bleedVolume",
+    "bleedColour"
+   ],
+   "fu": [
+    "q_bleedOnlyBrushing",
+    "q_bleedSpont",
+    "q_bleedstop",
+    "q_bleedVolume",
+    "q_bleedColour",
+    "q_bleedMinutes",
+    "q_thinner",
+    "q_faintDizzy",
+    "q_otherBleeding",
+    "q_tiredPale",
+    "q_temp",
+    "q_gumPus"
+   ]
+  },
+  "bruising_easily": {
+   "fields": [
+    "onsetWhen",
+    "bloodThinner",
+    "noKnock",
+    "newMedSteroid",
+    "otherBleeding",
+    "tinyDots",
+    "feverish",
+    "tiredPale",
+    "faintDizzy"
+   ],
+   "fu": [
+    "q_faintDizzy"
+   ]
+  }
+ },
+ "redFlags": [
+  {
+   "id": "rf_sub_cough_1",
+   "problems": [
+    "cough"
+   ],
+   "all": [
+    {
+     "field": "blood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in the cough.",
+   "say": "Get help now. See a doctor today."
+  },
+  {
+   "id": "rf_sub_cough_2",
+   "problems": [
+    "cough"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cough for 3 weeks or more needs a check of the lungs.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_cough_3",
+   "problems": [
+    "cough",
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "coughBreathTalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Too breathless to finish a sentence.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_cough_4",
+   "problems": [
+    "cough",
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "coughBreathWalk",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breathless on a short walk with cough.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_cough_5",
+   "problems": [
+    "cough"
+   ],
+   "all": [
+    {
+     "field": "coughFever",
+     "is": true
+    },
+    {
+     "field": "nightSweatsAlso",
+     "is": true
+    },
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Long cough with fever, night sweats and weight loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_cough_6",
+   "problems": [
+    "cough",
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "sputumSmell",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bad-smelling phlegm can mean a lung infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_cough_7",
+   "problems": [
+    "cough",
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "phlegmColour",
+     "is": "red"
+    }
+   ],
+   "level": "RED",
+   "reason": "Red phlegm means blood.",
+   "say": "Get help now. See a doctor today."
+  },
+  {
+   "id": "rf_sub_cough_8",
+   "problems": [
+    "cough",
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "phlegmColour",
+     "is": "pink"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pink phlegm can mean blood or fluid in the lungs.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_vomit_1",
+   "problems": [
+    "vomiting",
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitFaecal",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomit smells like stool. The gut may be blocked.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_vomit_2",
+   "problems": [
+    "vomiting",
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitColour",
+     "is": "red"
+    }
+   ],
+   "level": "RED",
+   "reason": "Red vomit means blood.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_vomit_3",
+   "problems": [
+    "vomiting",
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitColour",
+     "is": "black"
+    }
+   ],
+   "level": "RED",
+   "reason": "Black vomit means old blood.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_vomit_4",
+   "problems": [
+    "vomiting",
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitColour",
+     "is": "green"
+    }
+   ],
+   "level": "RED",
+   "reason": "Green vomit can mean the gut is blocked.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_vomit_5",
+   "problems": [
+    "vomiting",
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitColour",
+     "is": "brown"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Brown vomit can be old blood.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sub_vomit_6",
+   "problems": [
+    "vomiting",
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitAmount",
+     "is": "cannot keep anything down"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep anything down. The body can dry out.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sub_stool_1",
+   "problems": [
+    "loose_motions",
+    "constipation",
+    "blood_stool",
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolColour",
+     "is": "black and tarry"
+    }
+   ],
+   "level": "RED",
+   "reason": "Black tarry stool means bleeding high in the gut.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_stool_2",
+   "problems": [
+    "loose_motions",
+    "constipation",
+    "blood_stool",
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolColour",
+     "is": "pale or clay"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pale clay stool can mean blocked bile.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_stool_3",
+   "problems": [
+    "loose_motions",
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "stoolColour",
+     "is": "red"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red stool means blood.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_stool_4",
+   "problems": [
+    "loose_motions",
+    "constipation",
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodWhere",
+     "is": "mixed in stool"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood mixed in the stool comes from higher up.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_stool_5",
+   "problems": [
+    "loose_motions",
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodWhere",
+     "is": "dripping in bowl"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood dripping into the bowl.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_stool_6",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodPlace",
+     "is": "mixed in stool"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood mixed in the stool comes from higher up.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_stool_7",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodPlace",
+     "is": "dripping in bowl"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood dripping into the bowl.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_urine_1",
+   "problems": [
+    "frequent_urine",
+    "no_urine",
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "flankPain",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Side or back pain with fever can mean a kidney infection.",
+   "say": "Get help today. See a doctor now."
+  },
+  {
+   "id": "rf_sub_urine_2",
+   "problems": [
+    "burning_urine",
+    "frequent_urine",
+    "no_urine",
+    "leaking_urine",
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "urineColour",
+     "is": "tea or brown"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tea or brown urine needs a check.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_urine_3",
+   "problems": [
+    "burning_urine",
+    "frequent_urine",
+    "no_urine",
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "urineColour",
+     "is": "pink or red"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pink or red urine means blood.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_disch_1",
+   "problems": [
+    "ear_discharge",
+    "itchy_eyes",
+    "wound_not_healing",
+    "bed_sore",
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "fluidBlood",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in the discharge.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_disch_2",
+   "problems": [
+    "ear_discharge",
+    "itchy_eyes",
+    "wound_not_healing",
+    "bed_sore",
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "dischargeAmount",
+     "is": "soaks dressing or pad"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "A heavy amount of discharge.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_disch_3",
+   "problems": [
+    "ear_discharge",
+    "itchy_eyes",
+    "wound_not_healing",
+    "bed_sore",
+    "discharge",
+    "runny_nose"
+   ],
+   "all": [
+    {
+     "field": "fluidConsistency",
+     "is": "pus-like"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pus-like discharge can mean an infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_disch_4",
+   "problems": [
+    "ear_discharge",
+    "runny_nose",
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "fluidSmell",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bad-smelling discharge can mean an infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sub_bleed_1",
+   "problems": [
+    "nosebleed",
+    "cut",
+    "bleeding",
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "bleedVolume",
+     "is": "more than that"
+    }
+   ],
+   "level": "RED",
+   "reason": "A very large amount of blood lost.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_bleed_2",
+   "problems": [
+    "cut",
+    "bleeding",
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "bleedVolume",
+     "is": "soaks a pad per hour"
+    },
+    {
+     "field": "faintDizzy",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding with dizziness. Blood pressure may fall.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_bleed_3",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "bleedVolume",
+     "is": "soaks a pad per hour"
+    },
+    {
+     "field": "feelFaint",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding with dizziness. Blood pressure may fall.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_bleed_4",
+   "problems": [
+    "nosebleed",
+    "cut",
+    "bleeding",
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "bleedVolume",
+     "is": "soaks a pad per hour"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Soaking a pad in an hour is heavy bleeding.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sub_bleed_5",
+   "problems": [
+    "bruising_easily"
+   ],
+   "all": [
+    {
+     "field": "faintDizzy",
+     "is": true
+    },
+    {
+     "field": "otherBleeding",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bruising with bleeding elsewhere and dizziness.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sub_bleed_6",
+   "problems": [
+    "cut",
+    "bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedMinutes",
+     "gte": 20
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding for over 20 minutes.",
+   "say": "See a doctor today."
+  }
+ ]
+}

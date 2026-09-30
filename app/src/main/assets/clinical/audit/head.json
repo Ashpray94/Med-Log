@@ -1,0 +1,6933 @@
+{
+ "fields": {
+  "hasDiabetes": {
+   "label": "Has diabetes",
+   "type": "yesno",
+   "danger": false,
+   "help": "Whether the person has diabetes.\nSugar problems can cause this symptom."
+  },
+  "strokeSigns": {
+   "label": "Face droop, weak limb or slurred speech",
+   "type": "yesno",
+   "danger": true,
+   "help": "Any sudden weakness of face, limb or speech.\nThese can be signs of a stroke."
+  },
+  "headKnockWeeks": {
+   "label": "Head knock in the past weeks",
+   "type": "yesno",
+   "danger": false,
+   "help": "A bump to the head, even a small one.\nSlow bleeding can follow a small knock."
+  },
+  "notDrinking": {
+   "label": "Drinking much less",
+   "type": "yesno",
+   "danger": false,
+   "help": "Drinking far fewer fluids than normal.\nBeing dry can cause this, more so when older."
+  },
+  "heartSigns": {
+   "label": "Chest pain or racing heart",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain in the chest or a heart that races.\nThe heart can be the cause."
+  },
+  "bleedSigns": {
+   "label": "Black stool or blood in vomit",
+   "type": "yesno",
+   "danger": true,
+   "help": "Stool like tar, or blood when being sick.\nHidden bleeding can cause this."
+  },
+  "notRecovered": {
+   "label": "Not back to normal",
+   "type": "yesno",
+   "danger": true,
+   "help": "Still muddled or drowsy after the event.\nIt should clear in minutes; if not, it needs urgent care."
+  },
+  "settledAlready": {
+   "label": "Symptom already gone",
+   "type": "yesno",
+   "danger": false,
+   "help": "The problem came and went.\nSymptoms that clear can still be a warning."
+  },
+  "breathTrouble": {
+   "label": "Hard or noisy breathing",
+   "type": "yesno",
+   "danger": true,
+   "help": "Struggling for air or a noisy, high sound.\nThe airway may be narrowing."
+  },
+  "swellingLipsThroat": {
+   "label": "Lip, tongue or throat swelling",
+   "type": "yesno",
+   "danger": true,
+   "help": "Swelling of the mouth or throat.\nThis can close the airway fast."
+  },
+  "scalpJawPain": {
+   "label": "Scalp tender or jaw pain when chewing",
+   "type": "yesno",
+   "danger": true,
+   "help": "Sore scalp when touched, or jaw ache while eating.\nIn people over 50, this can harm sight if missed.",
+   "minAge": 50
+  },
+  "mouthOpen": {
+   "label": "Can open mouth fully",
+   "type": "yesno",
+   "danger": false,
+   "help": "Opening wide without pain or a stuck feeling.\nA stuck jaw can mean a deep infection."
+  },
+  "neckLump": {
+   "label": "New neck lump",
+   "type": "yesno",
+   "danger": false,
+   "help": "A swelling you can feel in the neck.\nA lump that stays needs a check."
+  },
+  "swallowHurts": {
+   "label": "Pain or trouble swallowing",
+   "type": "yesno",
+   "danger": false,
+   "help": "Food or drink hurts or sticks going down.\nIt can point to a throat problem."
+  },
+  "usesTobacco": {
+   "label": "Smoke or chew tobacco",
+   "type": "yesno",
+   "danger": false,
+   "help": "Any tobacco use, smoked or chewed.\nTobacco raises the chance of mouth and throat problems."
+  },
+  "afterHeadKnock": {
+   "label": "After a head knock",
+   "type": "yesno",
+   "danger": true,
+   "help": "It began after a head injury.\nA head injury can damage the skull or ear."
+  },
+  "hearingDrop": {
+   "label": "Hearing worse",
+   "type": "yesno",
+   "danger": false,
+   "help": "Sounds are quieter than before.\nSudden hearing loss needs quick care."
+  },
+  "earFluid": {
+   "label": "Fluid from ear",
+   "type": "yesno",
+   "danger": false,
+   "help": "Wet or sticky fluid from the ear.\nIt shows the ear skin or drum may be damaged."
+  },
+  "noseBloodStained": {
+   "label": "Blood-stained nose fluid",
+   "type": "yesno",
+   "danger": false,
+   "help": "Pink or red streaks in nose fluid.\nBloody fluid on one side needs a check."
+  },
+  "clearFluidAfterKnock": {
+   "label": "Clear watery fluid after knock",
+   "type": "yesno",
+   "danger": true,
+   "help": "Thin fluid like water from nose or ear.\nIt can be brain fluid leaking."
+  },
+  "eyelidSwollen": {
+   "label": "Swollen red eyelid",
+   "type": "yesno",
+   "danger": true,
+   "help": "Puffy, red skin around the eye.\nAn infection behind the eye can harm sight."
+  },
+  "faceSinusPain": {
+   "label": "Pain in cheeks or forehead",
+   "type": "yesno",
+   "danger": false,
+   "help": "Ache over the sinuses.\nIt helps tell a sinus problem from a cold."
+  },
+  "otherBleeding": {
+   "label": "Other bleeding or bruising",
+   "type": "yesno",
+   "danger": true,
+   "help": "Gums, urine, stool or skin bleeding.\nBleeding in many places can mean a blood problem."
+  },
+  "feelFaint": {
+   "label": "Faint or dizzy from blood loss",
+   "type": "yesno",
+   "danger": true,
+   "help": "Light-headed, like you may pass out.\nIt can mean a lot of blood has been lost."
+  },
+  "eyeInjury": {
+   "label": "Eye injury or chemical",
+   "type": "yesno",
+   "danger": true,
+   "help": "A blow, a chip, or a liquid in the eye.\nEye injuries need quick care to save sight."
+  },
+  "redEye": {
+   "label": "Red eye",
+   "type": "yesno",
+   "danger": false,
+   "help": "The white of the eye looks red.\nRed and painful eyes can be serious."
+  },
+  "lightHurts": {
+   "label": "Light hurts",
+   "type": "yesno",
+   "danger": true,
+   "help": "Light makes the eye sore.\nIt can mean the front of the eye is inflamed."
+  },
+  "eyeHalos": {
+   "label": "Rainbow rings round lights",
+   "type": "yesno",
+   "danger": true,
+   "help": "Coloured rings around bright lights.\nIt can mean high pressure inside the eye."
+  },
+  "sickWithEye": {
+   "label": "Sick or headache with eye pain",
+   "type": "yesno",
+   "danger": true,
+   "help": "Nausea, vomiting or head pain with the eye.\nIt can mean high pressure inside the eye."
+  },
+  "contactLens": {
+   "label": "Wears contact lenses",
+   "type": "yesno",
+   "danger": false,
+   "help": "Lenses worn on the eyes.\nLens wearers can get serious eye infections."
+  },
+  "rashForehead": {
+   "label": "Rash on forehead or eyelid",
+   "type": "yesno",
+   "danger": true,
+   "help": "Small blisters on one side of the face.\nShingles near the eye can damage sight."
+  },
+  "eyeDischarge": {
+   "label": "Sticky discharge",
+   "type": "yesno",
+   "danger": false,
+   "help": "Thick gunk that glues the lids.\nIt helps tell an infection from allergy."
+  },
+  "curtainShadow": {
+   "label": "Dark curtain or shadow",
+   "type": "yesno",
+   "danger": true,
+   "help": "A dark patch that blocks part of the view.\nIt can mean the retina has come loose."
+  },
+  "itchySneeze": {
+   "label": "Itchy eyes or sneezing",
+   "type": "yesno",
+   "danger": false,
+   "help": "Itch in the eyes, nose or throat.\nIt points to allergy, which is not dangerous."
+  },
+  "flashesLight": {
+   "label": "Flashes of light",
+   "type": "yesno",
+   "danger": true,
+   "help": "Sparks or lightning streaks in the sight.\nIt can mean the retina is pulling."
+  },
+  "lastWell": {
+   "label": "Time last well",
+   "type": "text",
+   "danger": false,
+   "help": "The last time everything felt normal.\nStroke treatment depends on this time."
+  },
+  "balanceLost": {
+   "label": "Sudden loss of balance",
+   "type": "yesno",
+   "danger": true,
+   "help": "Stumbling or swaying with no warning.\nIt can be a sign of a stroke."
+  },
+  "bladderBowelChange": {
+   "label": "Bladder or bowel change",
+   "type": "yesno",
+   "danger": true,
+   "help": "New leaking or not being able to go.\nThe spinal cord may be squeezed."
+  },
+  "saddleNumb": {
+   "label": "Numb between legs",
+   "type": "yesno",
+   "danger": true,
+   "help": "Loss of feeling in the groin and bottom.\nThe spinal nerves may be squeezed."
+  },
+  "legsWeakening": {
+   "label": "Weakness spreading up legs",
+   "type": "yesno",
+   "danger": true,
+   "help": "Weakness that gets worse over hours or days.\nNerves can be attacked, and breathing may be hit."
+  },
+  "hardToWake": {
+   "label": "Hard to wake",
+   "type": "yesno",
+   "danger": true,
+   "help": "Sleepy, or slow to open eyes.\nIt can mean a serious illness."
+  },
+  "urineBurning": {
+   "label": "Burning when passing urine",
+   "type": "yesno",
+   "danger": false,
+   "help": "Stinging or pain passing water.\nUrine infection often confuses older people."
+  },
+  "bleedMinutes": {
+   "label": "Minutes bleeding",
+   "type": "number",
+   "danger": false,
+   "help": "The time the bleeding has gone on.\nOver 20 minutes needs care.",
+   "unit": "minutes"
+  },
+  "bleedsOften": {
+   "label": "Bleeds often",
+   "type": "yesno",
+   "danger": false,
+   "help": "Repeated bleeds over weeks.\nRepeat bleeds need a cause found."
+  },
+  "highBpKnown": {
+   "label": "High blood pressure",
+   "type": "yesno",
+   "danger": false,
+   "help": "A known diagnosis of high pressure.\nHigh pressure can make nosebleeds worse."
+  },
+  "sickManyTimes": {
+   "label": "Sick many times",
+   "type": "yesno",
+   "danger": false,
+   "help": "Vomiting again and again.\nBeing dry needs care."
+  },
+  "painkillerDays": {
+   "label": "Painkillers many days",
+   "type": "yesno",
+   "danger": false,
+   "help": "Tablets for pain most days.\nToo many tablets can keep headaches going."
+  },
+  "migraineUsual": {
+   "label": "Like usual migraine",
+   "type": "yesno",
+   "danger": false,
+   "help": "The same as attacks you know.\nA new kind of headache needs a check."
+  },
+  "dizzyLasts": {
+   "label": "How long each spell",
+   "type": "choice",
+   "danger": false,
+   "help": "The length of one spell of dizziness.\nSeconds, hours or days point to different causes.",
+   "choices": [
+    "seconds",
+    "minutes",
+    "hours",
+    "all day"
+   ]
+  },
+  "dizzyHeadache": {
+   "label": "Sudden headache or neck pain with it",
+   "type": "yesno",
+   "danger": true,
+   "help": "A thunderclap headache or sharp neck pain.\nBleeding or a torn neck vessel can cause both."
+  },
+  "faintCardiac": {
+   "label": "During effort, or chest pain or racing heart",
+   "type": "yesno",
+   "danger": true,
+   "help": "Fainting while active, or with heart symptoms.\nA heart rhythm problem can cause this."
+  },
+  "firstEverFit": {
+   "label": "First ever fit",
+   "type": "yesno",
+   "danger": true,
+   "help": "No fits before today.\nA first fit needs a full check."
+  },
+  "fitLong": {
+   "label": "Fit over 5 minutes",
+   "type": "yesno",
+   "danger": true,
+   "help": "Shaking for longer than 5 minutes.\nA long fit is an emergency."
+  },
+  "fitRepeat": {
+   "label": "Fits came again",
+   "type": "yesno",
+   "danger": true,
+   "help": "More than one fit close together.\nRepeated fits are an emergency."
+  },
+  "earPainRash": {
+   "label": "Ear pain or rash",
+   "type": "yesno",
+   "danger": false,
+   "help": "Pain or blisters around the ear.\nA nerve infection can also droop the face."
+  },
+  "speechType": {
+   "label": "What is wrong with speech",
+   "type": "choice",
+   "danger": false,
+   "help": "How the speech sounds.\nSlurred, wrong words or no words point to different causes.",
+   "choices": [
+    "slurred",
+    "wrong words",
+    "cannot find words",
+    "cannot speak"
+   ]
+  },
+  "weakWhere": {
+   "label": "Where weak",
+   "type": "choice",
+   "danger": false,
+   "help": "The part of the body that is weak.\nThe place helps the doctor find the cause.",
+   "choices": [
+    "arm",
+    "leg",
+    "arm and leg",
+    "face",
+    "whole side"
+   ]
+  },
+  "numbWhere": {
+   "label": "Where numb",
+   "type": "choice",
+   "danger": false,
+   "help": "The part of the body that is numb.\nThe place helps the doctor find the cause.",
+   "choices": [
+    "face",
+    "arm",
+    "hand",
+    "leg",
+    "foot",
+    "chest or belly",
+    "other"
+   ]
+  },
+  "tinglingWhere": {
+   "label": "Where tingling",
+   "type": "choice",
+   "danger": false,
+   "help": "The part of the body that tingles.\nThe place helps the doctor find the cause.",
+   "choices": [
+    "fingers or hands",
+    "feet",
+    "face or lips",
+    "one limb",
+    "all over"
+   ]
+  },
+  "lowB12Diet": {
+   "label": "Vegetarian or long-term metformin",
+   "type": "yesno",
+   "danger": false,
+   "help": "A diet or medicine that can lower vitamin B12.\nLow B12 can cause tingling."
+  },
+  "memoryCourse": {
+   "label": "How memory changed",
+   "type": "choice",
+   "danger": false,
+   "help": "Sudden, slow, or on and off.\nSudden loss is an emergency; slow loss needs a check.",
+   "choices": [
+    "came on suddenly",
+    "slowly worse over months",
+    "comes and goes"
+   ]
+  },
+  "repeatsQuestions": {
+   "label": "Repeats questions",
+   "type": "yesno",
+   "danger": false,
+   "help": "Asking again and again within minutes.\nIt is a common early sign."
+  },
+  "gotLost": {
+   "label": "Got lost",
+   "type": "yesno",
+   "danger": false,
+   "help": "Losing the way in a familiar place.\nIt is a common early sign."
+  },
+  "dailyTasksHarder": {
+   "label": "Daily tasks harder",
+   "type": "yesno",
+   "danger": false,
+   "help": "Everyday jobs that were easy are now hard.\nIt shows how much memory affects life."
+  },
+  "moodLow": {
+   "label": "Low mood",
+   "type": "yesno",
+   "danger": false,
+   "help": "Sad most days.\nLow mood can look like forgetting."
+  },
+  "tremorWhen": {
+   "label": "When it shakes",
+   "type": "choice",
+   "danger": false,
+   "help": "At rest, or when using the hands.\nRest shaking and action shaking have different causes.",
+   "choices": [
+    "at rest",
+    "when using hands",
+    "both"
+   ]
+  },
+  "slowStiff": {
+   "label": "Slow or stiff",
+   "type": "yesno",
+   "danger": false,
+   "help": "Slow movement or stiff limbs.\nIt can go with Parkinson disease."
+  },
+  "heartRacingSweat": {
+   "label": "Heart racing, sweating, weight loss",
+   "type": "yesno",
+   "danger": false,
+   "help": "Fast heart, sweats, thinner.\nAn overactive thyroid can cause shaking."
+  },
+  "alcoholCut": {
+   "label": "Cut down alcohol",
+   "type": "yesno",
+   "danger": false,
+   "help": "Heavy drinking, then stopping.\nStopping can cause shaking and fits."
+  },
+  "feetNumb": {
+   "label": "Numb feet",
+   "type": "yesno",
+   "danger": false,
+   "help": "Loss of feeling in the feet.\nNumb feet make walking unsteady."
+  },
+  "headacheWithBalance": {
+   "label": "New headache with it",
+   "type": "yesno",
+   "danger": true,
+   "help": "A fresh headache or being sick.\nProblems at the back of the brain can cause both."
+  },
+  "fellRecently": {
+   "label": "Fell in the past month",
+   "type": "yesno",
+   "danger": false,
+   "help": "Any fall, even without injury.\nFalls show a higher risk of a bad fall."
+  },
+  "earDischargeColour": {
+   "label": "Discharge colour",
+   "type": "choice",
+   "danger": false,
+   "help": "The look of the fluid from the ear.\nBlood or clear fluid needs care.",
+   "choices": [
+    "clear and watery",
+    "yellow",
+    "green",
+    "bloody",
+    "brown"
+   ]
+  },
+  "swollenBehindEar": {
+   "label": "Swollen behind ear",
+   "type": "yesno",
+   "danger": true,
+   "help": "Puffy, red or tender skin behind the ear.\nThe infection may have spread to the bone."
+  },
+  "hasRinging": {
+   "label": "Ringing in that ear",
+   "type": "yesno",
+   "danger": false,
+   "help": "Noise in the ear with no outside sound.\nRinging with hearing loss needs a check."
+  },
+  "pulseTinnitus": {
+   "label": "Ringing beats with heart",
+   "type": "yesno",
+   "danger": false,
+   "help": "A whooshing that matches your pulse.\nIt can come from a blood vessel."
+  },
+  "tinnitusDistress": {
+   "label": "Upsets sleep or mood",
+   "type": "yesno",
+   "danger": false,
+   "help": "The noise is hard to bear.\nDistress can be treated."
+  },
+  "earBlocked": {
+   "label": "Ear feels blocked",
+   "type": "yesno",
+   "danger": false,
+   "help": "A plugged feeling.\nWax or fluid can cause this."
+  },
+  "lowImmune": {
+   "label": "Low immunity",
+   "type": "yesno",
+   "danger": false,
+   "help": "Treatment that weakens the body's defence.\nInfections can turn serious fast."
+  },
+  "bloodInSpit": {
+   "label": "Blood in spit",
+   "type": "yesno",
+   "danger": false,
+   "help": "Streaks or spots of blood.\nBlood needs a cause found."
+  },
+  "lostWeight": {
+   "label": "Lost weight",
+   "type": "yesno",
+   "danger": false,
+   "help": "Clothes are looser, no diet.\nIt can go with serious illness."
+  },
+  "afterColdOrShouting": {
+   "label": "After cold or heavy voice use",
+   "type": "yesno",
+   "danger": false,
+   "help": "A clear trigger like a cold.\nA clear cause and quick recovery is reassuring."
+  },
+  "doubleWorse": {
+   "label": "Better then worse",
+   "type": "yesno",
+   "danger": false,
+   "help": "A second dip after first easing.\nA second dip can mean a bacterial infection."
+  },
+  "sprayOverWeek": {
+   "label": "Nose spray over a week",
+   "type": "yesno",
+   "danger": false,
+   "help": "Decongestant spray most days.\nLong use makes the nose block worse."
+  },
+  "afterNoseKnock": {
+   "label": "After knock to nose",
+   "type": "yesno",
+   "danger": false,
+   "help": "A blow to the nose.\nA blood bump in the nose needs same-day care."
+  },
+  "afterNewTrigger": {
+   "label": "After new food, sting or medicine",
+   "type": "yesno",
+   "danger": true,
+   "help": "A new thing eaten, stung or taken.\nAn allergy can turn serious fast."
+  },
+  "sneezeTrigger": {
+   "label": "What sets it off",
+   "type": "choice",
+   "danger": false,
+   "help": "The thing that brings on sneezing.\nA clear trigger points to allergy.",
+   "choices": [
+    "dust",
+    "pollen",
+    "pets",
+    "cold air",
+    "strong smell",
+    "nothing clear"
+   ]
+  },
+  "smellOrTaste": {
+   "label": "Smell or taste",
+   "type": "choice",
+   "danger": false,
+   "help": "Which sense is affected.\nIt helps the doctor narrow the cause.",
+   "choices": [
+    "smell",
+    "taste",
+    "both"
+   ]
+  },
+  "noseBlockedNow": {
+   "label": "Nose blocked",
+   "type": "yesno",
+   "danger": false,
+   "help": "A cold or block in the nose.\nA blocked nose explains lost smell."
+  },
+  "appetiteLow": {
+   "label": "Not eating",
+   "type": "yesno",
+   "danger": false,
+   "help": "Food has lost its appeal.\nPoor eating can cause weight loss."
+  },
+  "lumpInnerCorner": {
+   "label": "Red lump near nose corner",
+   "type": "yesno",
+   "danger": false,
+   "help": "A tender swelling beside the nose.\nThe tear sac may be infected."
+  },
+  "cannotCloseEye": {
+   "label": "Cannot close eye",
+   "type": "yesno",
+   "danger": false,
+   "help": "The lid will not shut.\nThe eye dries and can be damaged."
+  },
+  "thirstPee": {
+   "label": "Very thirsty, passing lots of urine",
+   "type": "yesno",
+   "danger": false,
+   "help": "Drinking and peeing far more than usual.\nHigh sugar can blur sight."
+  },
+  "doubleGoesOneClosed": {
+   "label": "Goes away closing one eye",
+   "type": "yesno",
+   "danger": false,
+   "help": "Seeing two goes to one with an eye shut.\nDouble sight from both eyes can be a nerve or brain cause."
+  },
+  "eyelidDroop": {
+   "label": "Drooping eyelid",
+   "type": "yesno",
+   "danger": true,
+   "help": "A lid that sags, or unequal pupils.\nA nerve may be pressed, or a blood vessel bulging."
+  },
+  "worseEvening": {
+   "label": "Worse late in the day",
+   "type": "yesno",
+   "danger": false,
+   "help": "It gets worse through the day.\nIt can go with a muscle-nerve illness."
+  },
+  "dryMouthToo": {
+   "label": "Dry mouth too",
+   "type": "yesno",
+   "danger": false,
+   "help": "Dry eyes and a dry mouth together.\nIt can go with a dryness illness."
+  },
+  "shortSighted": {
+   "label": "Very short-sighted or eye surgery",
+   "type": "yesno",
+   "danger": false,
+   "help": "Strong glasses or past eye operation.\nThese raise the risk of a loose retina."
+  },
+  "manyFloaters": {
+   "label": "Shower of new spots",
+   "type": "yesno",
+   "danger": true,
+   "help": "Many new specks at once.\nIt can mean the retina is tearing."
+  },
+  "toothChest": {
+   "label": "Pain with effort or chest tightness",
+   "type": "yesno",
+   "danger": true,
+   "help": "Tooth or jaw pain with exertion or chest symptoms.\nHeart pain can spread to the jaw and teeth."
+  },
+  "faceSwollen": {
+   "label": "Face or jaw swollen",
+   "type": "yesno",
+   "danger": true,
+   "help": "Swelling of the cheek or jaw.\nA tooth infection can spread."
+  },
+  "painWakes": {
+   "label": "Wakes at night or lingers",
+   "type": "yesno",
+   "danger": false,
+   "help": "Pain at night or lasting after a drink.\nIt shows deep tooth damage."
+  },
+  "bleedOnlyBrushing": {
+   "label": "Bleeds only when brushing",
+   "type": "yesno",
+   "danger": false,
+   "help": "Bleeding only when cleaning.\nThis is usually gum inflammation."
+  },
+  "bleedSpont": {
+   "label": "Bleeds without brushing",
+   "type": "yesno",
+   "danger": true,
+   "help": "Bleeding with no touch.\nBleeding on its own can mean a blood problem."
+  },
+  "tiredPale": {
+   "label": "Tired and pale",
+   "type": "yesno",
+   "danger": false,
+   "help": "More tired or pale than usual.\nIt can go with a blood problem."
+  },
+  "gumPus": {
+   "label": "Gum swollen with pus",
+   "type": "yesno",
+   "danger": false,
+   "help": "A sore lump on the gum.\nIt can be a tooth abscess."
+  },
+  "ulcerNumber": {
+   "label": "Number of ulcers",
+   "type": "number",
+   "danger": false,
+   "help": "A count of sores in the mouth.\nMany ulcers point to a different cause.",
+   "unit": "ulcers"
+  },
+  "ulcerHard": {
+   "label": "Hard, red or white patch or lump",
+   "type": "yesno",
+   "danger": true,
+   "help": "A firm lump or a patch that stays.\nThese can be early mouth cancer."
+  },
+  "painStopsDrinking": {
+   "label": "Too sore to drink",
+   "type": "yesno",
+   "danger": false,
+   "help": "Pain stops you taking fluids.\nBeing dry is risky, more so when older."
+  },
+  "dentureLoose": {
+   "label": "Dentures loose or rub",
+   "type": "yesno",
+   "danger": false,
+   "help": "Dentures that move or rub the gum.\nRubbing makes sores."
+  },
+  "sorePatch": {
+   "label": "Raw patch on gum",
+   "type": "yesno",
+   "danger": false,
+   "help": "A sore spot under the denture.\nIt helps find where they rub."
+  },
+  "whitePatch": {
+   "label": "White patches that wipe off",
+   "type": "yesno",
+   "danger": false,
+   "help": "Creamy patches on gum or tongue.\nIt can be thrush."
+  },
+  "wearAtNight": {
+   "label": "Dentures in at night",
+   "type": "yesno",
+   "danger": false,
+   "help": "Wearing dentures overnight.\nIt raises the chance of sores and thrush."
+  },
+  "veryThirsty": {
+   "label": "Very thirsty",
+   "type": "yesno",
+   "danger": false,
+   "help": "Thirst or passing lots of urine.\nHigh sugar dries the mouth."
+  },
+  "drowsy": {
+   "label": "Drowsy or muddled",
+   "type": "yesno",
+   "danger": true,
+   "help": "More sleepy or confused than normal.\nBeing very dry can do this."
+  },
+  "cheekSwollen": {
+   "label": "Cheek swollen",
+   "type": "yesno",
+   "danger": false,
+   "help": "Swelling near the ear or jaw.\nA spit gland may be blocked or infected."
+  }
+ },
+ "questions": {
+  "q_hasDiabetes": {
+   "field": "hasDiabetes",
+   "ask": "Do you have diabetes?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Whether the person has diabetes.\nSugar problems can cause this symptom."
+  },
+  "q_strokeSigns": {
+   "field": "strokeSigns",
+   "ask": "Any face drooping, weak arm or leg, or slurred speech?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Any sudden weakness of face, limb or speech.\nThese can be signs of a stroke."
+  },
+  "q_headKnockWeeks": {
+   "field": "headKnockWeeks",
+   "ask": "Any knock to the head in the past 2 weeks?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A bump to the head, even a small one.\nSlow bleeding can follow a small knock."
+  },
+  "q_newMedicine": {
+   "field": "newMedicine",
+   "ask": "Any new medicine in the past few weeks?",
+   "type": "yesno",
+   "priority": 35,
+   "help": "A medicine started or changed recently.\nSome medicines can cause this."
+  },
+  "q_notDrinking": {
+   "field": "notDrinking",
+   "ask": "Are you drinking much less than usual?",
+   "type": "yesno",
+   "priority": 35,
+   "help": "Drinking far fewer fluids than normal.\nBeing dry can cause this, more so when older."
+  },
+  "q_heartSigns": {
+   "field": "heartSigns",
+   "ask": "Chest pain, or a racing or pounding heart with it?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Pain in the chest or a heart that races.\nThe heart can be the cause."
+  },
+  "q_bleedSigns": {
+   "field": "bleedSigns",
+   "ask": "Any black stool, or blood in vomit?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Stool like tar, or blood when being sick.\nHidden bleeding can cause this."
+  },
+  "q_notRecovered": {
+   "field": "notRecovered",
+   "ask": "Are you still confused, or not back to normal?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "Still muddled or drowsy after the event.\nIt should clear in minutes; if not, it needs urgent care."
+  },
+  "q_settledAlready": {
+   "field": "settledAlready",
+   "ask": "Has it gone away fully?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "The problem came and went.\nSymptoms that clear can still be a warning."
+  },
+  "q_breathTrouble": {
+   "field": "breathTrouble",
+   "ask": "Is it hard to breathe, or is your breathing noisy?",
+   "type": "yesno",
+   "priority": 99,
+   "help": "Struggling for air or a noisy, high sound.\nThe airway may be narrowing."
+  },
+  "q_swellingLipsThroat": {
+   "field": "swellingLipsThroat",
+   "ask": "Are your lips, tongue or throat swelling?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "Swelling of the mouth or throat.\nThis can close the airway fast."
+  },
+  "q_scalpJawPain": {
+   "field": "scalpJawPain",
+   "ask": "Is your scalp tender, or does your jaw hurt when chewing?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Sore scalp when touched, or jaw ache while eating.\nIn people over 50, this can harm sight if missed."
+  },
+  "q_mouthOpen": {
+   "field": "mouthOpen",
+   "ask": "Can you open your mouth fully?",
+   "type": "yesno",
+   "priority": 86,
+   "help": "Opening wide without pain or a stuck feeling.\nA stuck jaw can mean a deep infection."
+  },
+  "q_neckLump": {
+   "field": "neckLump",
+   "ask": "Have you found a new lump in your neck?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "A swelling you can feel in the neck.\nA lump that stays needs a check."
+  },
+  "q_swallowHurts": {
+   "field": "swallowHurts",
+   "ask": "Is swallowing painful or hard?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Food or drink hurts or sticks going down.\nIt can point to a throat problem."
+  },
+  "q_usesTobacco": {
+   "field": "usesTobacco",
+   "ask": "Do you smoke or chew tobacco, paan or betel?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Any tobacco use, smoked or chewed.\nTobacco raises the chance of mouth and throat problems."
+  },
+  "q_afterHeadKnock": {
+   "field": "afterHeadKnock",
+   "ask": "Did it start after a knock to the head?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "It began after a head injury.\nA head injury can damage the skull or ear."
+  },
+  "q_hearingDrop": {
+   "field": "hearingDrop",
+   "ask": "Is your hearing worse on that side?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Sounds are quieter than before.\nSudden hearing loss needs quick care."
+  },
+  "q_earFluid": {
+   "field": "earFluid",
+   "ask": "Is any fluid or pus coming from the ear?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Wet or sticky fluid from the ear.\nIt shows the ear skin or drum may be damaged."
+  },
+  "q_noseBloodStained": {
+   "field": "noseBloodStained",
+   "ask": "Is the fluid from your nose blood-stained?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Pink or red streaks in nose fluid.\nBloody fluid on one side needs a check."
+  },
+  "q_clearFluidAfterKnock": {
+   "field": "clearFluidAfterKnock",
+   "ask": "Is clear, watery fluid dripping after a head knock?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Thin fluid like water from nose or ear.\nIt can be brain fluid leaking."
+  },
+  "q_eyelidSwollen": {
+   "field": "eyelidSwollen",
+   "ask": "Is an eyelid or the skin round your eye red and swollen?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Puffy, red skin around the eye.\nAn infection behind the eye can harm sight."
+  },
+  "q_faceSinusPain": {
+   "field": "faceSinusPain",
+   "ask": "Is there pain or pressure in your cheeks or forehead?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Ache over the sinuses.\nIt helps tell a sinus problem from a cold."
+  },
+  "q_otherBleeding": {
+   "field": "otherBleeding",
+   "ask": "Any other bleeding or new bruises?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "Gums, urine, stool or skin bleeding.\nBleeding in many places can mean a blood problem."
+  },
+  "q_feelFaint": {
+   "field": "feelFaint",
+   "ask": "Do you feel faint, dizzy or very weak?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "Light-headed, like you may pass out.\nIt can mean a lot of blood has been lost."
+  },
+  "q_eyeInjury": {
+   "field": "eyeInjury",
+   "ask": "Did something hit or splash into the eye?",
+   "type": "yesno",
+   "priority": 100,
+   "help": "A blow, a chip, or a liquid in the eye.\nEye injuries need quick care to save sight."
+  },
+  "q_redEye": {
+   "field": "redEye",
+   "ask": "Is the eye red?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "The white of the eye looks red.\nRed and painful eyes can be serious."
+  },
+  "q_lightHurts": {
+   "field": "lightHurts",
+   "ask": "Does bright light hurt the eye?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Light makes the eye sore.\nIt can mean the front of the eye is inflamed."
+  },
+  "q_eyeHalos": {
+   "field": "eyeHalos",
+   "ask": "Do you see rainbow rings round lights?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Coloured rings around bright lights.\nIt can mean high pressure inside the eye."
+  },
+  "q_sickWithEye": {
+   "field": "sickWithEye",
+   "ask": "Do you feel sick, or have a headache with the eye pain?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Nausea, vomiting or head pain with the eye.\nIt can mean high pressure inside the eye."
+  },
+  "q_contactLens": {
+   "field": "contactLens",
+   "ask": "Do you wear contact lenses?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Lenses worn on the eyes.\nLens wearers can get serious eye infections."
+  },
+  "q_rashForehead": {
+   "field": "rashForehead",
+   "ask": "Is there a blistering rash on your forehead or eyelid?",
+   "type": "yesno",
+   "priority": 91,
+   "help": "Small blisters on one side of the face.\nShingles near the eye can damage sight."
+  },
+  "q_eyeDischarge": {
+   "field": "eyeDischarge",
+   "ask": "Is there sticky yellow or green gunk?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Thick gunk that glues the lids.\nIt helps tell an infection from allergy."
+  },
+  "q_curtainShadow": {
+   "field": "curtainShadow",
+   "ask": "Is there a dark curtain or shadow in your sight?",
+   "type": "yesno",
+   "priority": 99,
+   "help": "A dark patch that blocks part of the view.\nIt can mean the retina has come loose."
+  },
+  "q_itchySneeze": {
+   "field": "itchySneeze",
+   "ask": "Are your eyes itchy, or are you sneezing?",
+   "type": "yesno",
+   "priority": 30,
+   "help": "Itch in the eyes, nose or throat.\nIt points to allergy, which is not dangerous."
+  },
+  "q_flashesLight": {
+   "field": "flashesLight",
+   "ask": "Do you see flashes of light?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Sparks or lightning streaks in the sight.\nIt can mean the retina is pulling."
+  },
+  "q_lastWell": {
+   "field": "lastWell",
+   "ask": "What time were you last completely well?",
+   "type": "text",
+   "priority": 30,
+   "help": "The last time everything felt normal.\nStroke treatment depends on this time."
+  },
+  "q_balanceLost": {
+   "field": "balanceLost",
+   "ask": "Did you suddenly lose balance or feel unsteady?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Stumbling or swaying with no warning.\nIt can be a sign of a stroke."
+  },
+  "q_bladderBowelChange": {
+   "field": "bladderBowelChange",
+   "ask": "Any new trouble passing urine or stool, or leaking?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "New leaking or not being able to go.\nThe spinal cord may be squeezed."
+  },
+  "q_saddleNumb": {
+   "field": "saddleNumb",
+   "ask": "Is the skin between your legs numb?",
+   "type": "yesno",
+   "priority": 91,
+   "help": "Loss of feeling in the groin and bottom.\nThe spinal nerves may be squeezed."
+  },
+  "q_legsWeakening": {
+   "field": "legsWeakening",
+   "ask": "Are your legs getting weaker, or is weakness spreading up?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Weakness that gets worse over hours or days.\nNerves can be attacked, and breathing may be hit."
+  },
+  "q_hardToWake": {
+   "field": "hardToWake",
+   "ask": "Is the person drowsy or hard to wake?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "Sleepy, or slow to open eyes.\nIt can mean a serious illness."
+  },
+  "q_urineBurning": {
+   "field": "urineBurning",
+   "ask": "Is there burning when you pass urine?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Stinging or pain passing water.\nUrine infection often confuses older people."
+  },
+  "q_bleedMinutes": {
+   "field": "bleedMinutes",
+   "ask": "How many minutes has it been bleeding?",
+   "type": "number",
+   "priority": 80,
+   "help": "The time the bleeding has gone on.\nOver 20 minutes needs care."
+  },
+  "q_bleedsOften": {
+   "field": "bleedsOften",
+   "ask": "Does this happen often?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Repeated bleeds over weeks.\nRepeat bleeds need a cause found."
+  },
+  "q_highBpKnown": {
+   "field": "highBpKnown",
+   "ask": "Do you have high blood pressure?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "A known diagnosis of high pressure.\nHigh pressure can make nosebleeds worse."
+  },
+  "q_hd_stiff": {
+   "field": "stiffNeck",
+   "ask": "Is your neck stiff, or does bending forward hurt?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "Hard to touch chin to chest.\nStiff neck with fever or headache can mean brain infection."
+  },
+  "q_hd_thinner": {
+   "field": "bloodThinner",
+   "ask": "Do you take a blood thinner or aspirin?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Medicine that stops blood clotting.\nBleeding lasts longer on these."
+  },
+  "q_hd_painful": {
+   "field": "painful",
+   "ask": "Is it painful?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "Pain, not just discomfort.\nPain makes a serious cause more likely."
+  },
+  "q_hd_oneside": {
+   "field": "oneSide",
+   "ask": "Is it on one side only?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Only one nostril or side is affected.\nOne side only can mean something blocks it."
+  },
+  "q_hd_faintjerk": {
+   "field": "fits",
+   "ask": "Did the body shake or jerk?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Arms or legs jerking.\nJerking can point to a fit, not a faint."
+  },
+  "q_hd_warning": {
+   "field": "dizzyBefore",
+   "ask": "Any warning first: sweat, sick, or sight dimming?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Feeling odd just before.\nA warning fits a simple faint."
+  },
+  "q_hd_headsame": {
+   "field": "worstEver",
+   "ask": "Did a sudden, very bad headache come with it?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "A headache like a thunderclap.\nIt can mean bleeding around the brain."
+  },
+  "q_sickManyTimes": {
+   "field": "sickManyTimes",
+   "ask": "Have you been sick many times, unable to keep fluids?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Vomiting again and again.\nBeing dry needs care."
+  },
+  "q_painkillerDays": {
+   "field": "painkillerDays",
+   "ask": "Do you take painkillers on more than 10 days a month?",
+   "type": "yesno",
+   "priority": 30,
+   "help": "Tablets for pain most days.\nToo many tablets can keep headaches going."
+  },
+  "q_migraineUsual": {
+   "field": "migraineUsual",
+   "ask": "Is this like your usual migraines?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "The same as attacks you know.\nA new kind of headache needs a check."
+  },
+  "q_dizzyLasts": {
+   "field": "dizzyLasts",
+   "ask": "How long does each spell last?",
+   "type": "choice",
+   "priority": 45,
+   "help": "The length of one spell of dizziness.\nSeconds, hours or days point to different causes.",
+   "gate": {
+    "field": "spinning",
+    "any": [
+     true
+    ],
+    "not": false
+   }
+  },
+  "q_dizzyHeadache": {
+   "field": "dizzyHeadache",
+   "ask": "Did a sudden bad headache or neck pain come with it?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "A thunderclap headache or sharp neck pain.\nBleeding or a torn neck vessel can cause both."
+  },
+  "q_faintCardiac": {
+   "field": "faintCardiac",
+   "ask": "Was it during effort, or with chest pain or a racing heart?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "Fainting while active, or with heart symptoms.\nA heart rhythm problem can cause this."
+  },
+  "q_firstEverFit": {
+   "field": "firstEverFit",
+   "ask": "Is this the first fit you have ever had?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "No fits before today.\nA first fit needs a full check."
+  },
+  "q_fitLong": {
+   "field": "fitLong",
+   "ask": "Did the fit last more than 5 minutes?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "Shaking for longer than 5 minutes.\nA long fit is an emergency."
+  },
+  "q_fitRepeat": {
+   "field": "fitRepeat",
+   "ask": "Did another fit come, or before waking up?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "More than one fit close together.\nRepeated fits are an emergency."
+  },
+  "q_earPainRash": {
+   "field": "earPainRash",
+   "ask": "Is there ear pain or a blistering rash near the ear?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Pain or blisters around the ear.\nA nerve infection can also droop the face."
+  },
+  "q_speechType": {
+   "field": "speechType",
+   "ask": "What is wrong with the speech?",
+   "type": "choice",
+   "priority": 85,
+   "help": "How the speech sounds.\nSlurred, wrong words or no words point to different causes."
+  },
+  "q_weakWhere": {
+   "field": "weakWhere",
+   "ask": "Where is the weakness?",
+   "type": "choice",
+   "priority": 80,
+   "help": "The part of the body that is weak.\nThe place helps the doctor find the cause."
+  },
+  "q_numbWhere": {
+   "field": "numbWhere",
+   "ask": "Where is it numb?",
+   "type": "choice",
+   "priority": 80,
+   "help": "The part of the body that is numb.\nThe place helps the doctor find the cause."
+  },
+  "q_hd_dur": {
+   "field": "duration",
+   "ask": "How long did the numbness last?",
+   "type": "text",
+   "priority": 55,
+   "help": "How many minutes or hours it lasted.\nShort spells that clear can be a warning."
+  },
+  "q_hd_side": {
+   "field": "side",
+   "ask": "Which side?",
+   "type": "choice",
+   "priority": 50,
+   "help": "Left or right side of the body.\nOne side points to the brain.",
+   "gate": {
+    "field": "oneSide",
+    "any": [
+     true
+    ],
+    "not": false
+   },
+   "choices": [
+    "left",
+    "right",
+    "both",
+    "middle"
+   ]
+  },
+  "q_tinglingWhere": {
+   "field": "tinglingWhere",
+   "ask": "Where is the tingling?",
+   "type": "choice",
+   "priority": 80,
+   "help": "The part of the body that tingles.\nThe place helps the doctor find the cause."
+  },
+  "q_lowB12Diet": {
+   "field": "lowB12Diet",
+   "ask": "Are you vegetarian, or on metformin for years?",
+   "type": "yesno",
+   "priority": 30,
+   "help": "A diet or medicine that can lower vitamin B12.\nLow B12 can cause tingling."
+  },
+  "q_hd_tside": {
+   "field": "side",
+   "ask": "Which side?",
+   "type": "choice",
+   "priority": 50,
+   "help": "Left or right side of the body.\nOne side points to the brain.",
+   "gate": {
+    "field": "tinglingWhere",
+    "any": [
+     "one limb"
+    ],
+    "not": false
+   },
+   "choices": [
+    "left",
+    "right",
+    "both",
+    "middle"
+   ]
+  },
+  "q_memoryCourse": {
+   "field": "memoryCourse",
+   "ask": "How did the forgetting start?",
+   "type": "choice",
+   "priority": 90,
+   "help": "Sudden, slow, or on and off.\nSudden loss is an emergency; slow loss needs a check."
+  },
+  "q_repeatsQuestions": {
+   "field": "repeatsQuestions",
+   "ask": "Do you repeat the same question or story?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Asking again and again within minutes.\nIt is a common early sign."
+  },
+  "q_gotLost": {
+   "field": "gotLost",
+   "ask": "Have you got lost somewhere you know well?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Losing the way in a familiar place.\nIt is a common early sign."
+  },
+  "q_dailyTasksHarder": {
+   "field": "dailyTasksHarder",
+   "ask": "Is it harder to manage money, meals or medicines?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Everyday jobs that were easy are now hard.\nIt shows how much memory affects life."
+  },
+  "q_moodLow": {
+   "field": "moodLow",
+   "ask": "Do you feel low or lose interest in things?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Sad most days.\nLow mood can look like forgetting."
+  },
+  "q_tremorWhen": {
+   "field": "tremorWhen",
+   "ask": "When do the hands shake most?",
+   "type": "choice",
+   "priority": 75,
+   "help": "At rest, or when using the hands.\nRest shaking and action shaking have different causes."
+  },
+  "q_slowStiff": {
+   "field": "slowStiff",
+   "ask": "Are you slower, stiffer, or taking smaller steps?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Slow movement or stiff limbs.\nIt can go with Parkinson disease."
+  },
+  "q_heartRacingSweat": {
+   "field": "heartRacingSweat",
+   "ask": "Is your heart racing, or are you sweating or losing weight?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Fast heart, sweats, thinner.\nAn overactive thyroid can cause shaking."
+  },
+  "q_alcoholCut": {
+   "field": "alcoholCut",
+   "ask": "Do you drink daily and recently cut down?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Heavy drinking, then stopping.\nStopping can cause shaking and fits."
+  },
+  "q_feetNumb": {
+   "field": "feetNumb",
+   "ask": "Are your feet numb or tingling?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Loss of feeling in the feet.\nNumb feet make walking unsteady."
+  },
+  "q_headacheWithBalance": {
+   "field": "headacheWithBalance",
+   "ask": "Is there a new bad headache, or vomiting, with it?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "A fresh headache or being sick.\nProblems at the back of the brain can cause both."
+  },
+  "q_fellRecently": {
+   "field": "fellRecently",
+   "ask": "Have you fallen in the past month?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Any fall, even without injury.\nFalls show a higher risk of a bad fall."
+  },
+  "q_earDischargeColour": {
+   "field": "earDischargeColour",
+   "ask": "What does the fluid look like?",
+   "type": "choice",
+   "priority": 70,
+   "help": "The look of the fluid from the ear.\nBlood or clear fluid needs care."
+  },
+  "q_swollenBehindEar": {
+   "field": "swollenBehindEar",
+   "ask": "Is the skin behind the ear red, swollen or sore?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Puffy, red or tender skin behind the ear.\nThe infection may have spread to the bone."
+  },
+  "q_hasRinging": {
+   "field": "hasRinging",
+   "ask": "Is there ringing or buzzing in that ear?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Noise in the ear with no outside sound.\nRinging with hearing loss needs a check."
+  },
+  "q_pulseTinnitus": {
+   "field": "pulseTinnitus",
+   "ask": "Does the noise beat with your heartbeat?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A whooshing that matches your pulse.\nIt can come from a blood vessel."
+  },
+  "q_tinnitusDistress": {
+   "field": "tinnitusDistress",
+   "ask": "Is the noise upsetting your sleep or mood?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The noise is hard to bear.\nDistress can be treated."
+  },
+  "q_earBlocked": {
+   "field": "earBlocked",
+   "ask": "Does the ear feel blocked or full?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "A plugged feeling.\nWax or fluid can cause this."
+  },
+  "q_lowImmune": {
+   "field": "lowImmune",
+   "ask": "Are you on chemo, steroids, or medicine that lowers immunity?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Treatment that weakens the body's defence.\nInfections can turn serious fast."
+  },
+  "q_bloodInSpit": {
+   "field": "bloodInSpit",
+   "ask": "Is there blood in your spit?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Streaks or spots of blood.\nBlood needs a cause found."
+  },
+  "q_lostWeight": {
+   "field": "lostWeight",
+   "ask": "Have you lost weight without trying?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Clothes are looser, no diet.\nIt can go with serious illness."
+  },
+  "q_afterColdOrShouting": {
+   "field": "afterColdOrShouting",
+   "ask": "Did it start after a cold or shouting?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "A clear trigger like a cold.\nA clear cause and quick recovery is reassuring."
+  },
+  "q_doubleWorse": {
+   "field": "doubleWorse",
+   "ask": "Did you get a bit better, then worse again?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "A second dip after first easing.\nA second dip can mean a bacterial infection."
+  },
+  "q_sprayOverWeek": {
+   "field": "sprayOverWeek",
+   "ask": "Have you used nose spray for more than a week?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Decongestant spray most days.\nLong use makes the nose block worse."
+  },
+  "q_afterNoseKnock": {
+   "field": "afterNoseKnock",
+   "ask": "Did it start after a knock to the nose?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "A blow to the nose.\nA blood bump in the nose needs same-day care."
+  },
+  "q_afterNewTrigger": {
+   "field": "afterNewTrigger",
+   "ask": "Did it start after a food, sting or medicine?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "A new thing eaten, stung or taken.\nAn allergy can turn serious fast."
+  },
+  "q_sneezeTrigger": {
+   "field": "sneezeTrigger",
+   "ask": "What seems to set it off?",
+   "type": "choice",
+   "priority": 40,
+   "help": "The thing that brings on sneezing.\nA clear trigger points to allergy."
+  },
+  "q_smellOrTaste": {
+   "field": "smellOrTaste",
+   "ask": "Have you lost smell, taste or both?",
+   "type": "choice",
+   "priority": 50,
+   "help": "Which sense is affected.\nIt helps the doctor narrow the cause."
+  },
+  "q_noseBlockedNow": {
+   "field": "noseBlockedNow",
+   "ask": "Is your nose blocked or runny?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "A cold or block in the nose.\nA blocked nose explains lost smell."
+  },
+  "q_appetiteLow": {
+   "field": "appetiteLow",
+   "ask": "Are you eating much less because of it?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Food has lost its appeal.\nPoor eating can cause weight loss."
+  },
+  "q_re_halos": {
+   "field": "eyeHalos",
+   "ask": "Do you see rainbow rings round lights?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Coloured rings around bright lights.\nIt can mean high pressure inside the eye.",
+   "gate": {
+    "field": "painful",
+    "any": [
+     true
+    ],
+    "not": false
+   }
+  },
+  "q_re_light": {
+   "field": "lightHurts",
+   "ask": "Does bright light hurt the eye?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Light makes the eye sore.\nIt can mean the front of the eye is inflamed.",
+   "gate": {
+    "field": "painful",
+    "any": [
+     true
+    ],
+    "not": false
+   }
+  },
+  "q_re_gunk": {
+   "field": "eyeDischarge",
+   "ask": "Is there sticky yellow or green gunk?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Thick gunk that glues the lids.\nIt helps tell an infection from allergy.",
+   "gate": {
+    "field": "painful",
+    "any": [
+     false
+    ],
+    "not": false
+   }
+  },
+  "q_lumpInnerCorner": {
+   "field": "lumpInnerCorner",
+   "ask": "Is there a red, sore lump by the corner of the eye?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A tender swelling beside the nose.\nThe tear sac may be infected."
+  },
+  "q_cannotCloseEye": {
+   "field": "cannotCloseEye",
+   "ask": "Can you not close the eye fully?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "The lid will not shut.\nThe eye dries and can be damaged."
+  },
+  "q_thirstPee": {
+   "field": "thirstPee",
+   "ask": "Are you very thirsty, passing lots of urine?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Drinking and peeing far more than usual.\nHigh sugar can blur sight."
+  },
+  "q_doubleGoesOneClosed": {
+   "field": "doubleGoesOneClosed",
+   "ask": "Does it go away if you close one eye?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Seeing two goes to one with an eye shut.\nDouble sight from both eyes can be a nerve or brain cause."
+  },
+  "q_eyelidDroop": {
+   "field": "eyelidDroop",
+   "ask": "Is an eyelid drooping, or is one pupil bigger?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "A lid that sags, or unequal pupils.\nA nerve may be pressed, or a blood vessel bulging."
+  },
+  "q_worseEvening": {
+   "field": "worseEvening",
+   "ask": "Is it worse when tired or late in the day?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "It gets worse through the day.\nIt can go with a muscle-nerve illness."
+  },
+  "q_dryMouthToo": {
+   "field": "dryMouthToo",
+   "ask": "Is your mouth dry too?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Dry eyes and a dry mouth together.\nIt can go with a dryness illness."
+  },
+  "q_shortSighted": {
+   "field": "shortSighted",
+   "ask": "Are you very short-sighted, or had eye surgery?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Strong glasses or past eye operation.\nThese raise the risk of a loose retina."
+  },
+  "q_manyFloaters": {
+   "field": "manyFloaters",
+   "ask": "Did a shower of new dark spots appear?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Many new specks at once.\nIt can mean the retina is tearing."
+  },
+  "q_toothChest": {
+   "field": "toothChest",
+   "ask": "Does it come with effort, chest tightness or sweating?",
+   "type": "yesno",
+   "priority": 99,
+   "help": "Tooth or jaw pain with exertion or chest symptoms.\nHeart pain can spread to the jaw and teeth."
+  },
+  "q_faceSwollen": {
+   "field": "faceSwollen",
+   "ask": "Is your face or jaw swollen?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "Swelling of the cheek or jaw.\nA tooth infection can spread."
+  },
+  "q_painWakes": {
+   "field": "painWakes",
+   "ask": "Does it wake you, or linger after hot or cold?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Pain at night or lasting after a drink.\nIt shows deep tooth damage."
+  },
+  "q_bleedOnlyBrushing": {
+   "field": "bleedOnlyBrushing",
+   "ask": "Do gums bleed only when you brush?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Bleeding only when cleaning.\nThis is usually gum inflammation."
+  },
+  "q_bleedSpont": {
+   "field": "bleedSpont",
+   "ask": "Do gums bleed on their own, without brushing?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "Bleeding with no touch.\nBleeding on its own can mean a blood problem."
+  },
+  "q_tiredPale": {
+   "field": "tiredPale",
+   "ask": "Are you very tired or pale lately?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "More tired or pale than usual.\nIt can go with a blood problem."
+  },
+  "q_gumPus": {
+   "field": "gumPus",
+   "ask": "Is a gum swollen, painful or oozing pus?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A sore lump on the gum.\nIt can be a tooth abscess."
+  },
+  "q_ulcerNumber": {
+   "field": "ulcerNumber",
+   "ask": "How many ulcers do you have?",
+   "type": "number",
+   "priority": 50,
+   "help": "A count of sores in the mouth.\nMany ulcers point to a different cause."
+  },
+  "q_ulcerHard": {
+   "field": "ulcerHard",
+   "ask": "Is it hard, or a red or white patch that stays?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "A firm lump or a patch that stays.\nThese can be early mouth cancer."
+  },
+  "q_painStopsDrinking": {
+   "field": "painStopsDrinking",
+   "ask": "Is it too sore to eat or drink?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Pain stops you taking fluids.\nBeing dry is risky, more so when older."
+  },
+  "q_dentureLoose": {
+   "field": "dentureLoose",
+   "ask": "Do your dentures rock or rub?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Dentures that move or rub the gum.\nRubbing makes sores."
+  },
+  "q_sorePatch": {
+   "field": "sorePatch",
+   "ask": "Is there a red or raw patch on the gum?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A sore spot under the denture.\nIt helps find where they rub."
+  },
+  "q_whitePatch": {
+   "field": "whitePatch",
+   "ask": "Are there white patches that wipe off?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Creamy patches on gum or tongue.\nIt can be thrush."
+  },
+  "q_wearAtNight": {
+   "field": "wearAtNight",
+   "ask": "Do you sleep with dentures in?",
+   "type": "yesno",
+   "priority": 35,
+   "help": "Wearing dentures overnight.\nIt raises the chance of sores and thrush."
+  },
+  "q_veryThirsty": {
+   "field": "veryThirsty",
+   "ask": "Are you very thirsty, or peeing much more?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Thirst or passing lots of urine.\nHigh sugar dries the mouth."
+  },
+  "q_drowsy": {
+   "field": "drowsy",
+   "ask": "Are you unusually sleepy or muddled?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "More sleepy or confused than normal.\nBeing very dry can do this."
+  },
+  "q_cheekSwollen": {
+   "field": "cheekSwollen",
+   "ask": "Is a cheek or under the jaw swollen and sore?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Swelling near the ear or jaw.\nA spit gland may be blocked or infected."
+  }
+ },
+ "problems": {
+  "headache": {
+   "fields": [],
+   "fu": [
+    "q_worst",
+    "q_hd_stiff",
+    "q_strokeSigns",
+    "q_temp",
+    "q_scalpJawPain",
+    "q_vision",
+    "q_headKnockWeeks",
+    "q_hd_thinner",
+    "q_severity"
+   ]
+  },
+  "migraine": {
+   "fields": [],
+   "fu": [
+    "q_migraineUsual",
+    "q_worst",
+    "q_hd_stiff",
+    "q_strokeSigns",
+    "q_scalpJawPain",
+    "q_temp",
+    "q_sickManyTimes",
+    "q_painkillerDays",
+    "q_severity"
+   ]
+  },
+  "dizzy": {
+   "fields": [],
+   "fu": [
+    "q_spinning",
+    "q_standing",
+    "q_dizzyLasts",
+    "q_strokeSigns",
+    "q_heartSigns",
+    "q_dizzyHeadache",
+    "q_bleedSigns",
+    "q_hasDiabetes",
+    "q_hd_thinner"
+   ]
+  },
+  "fainted": {
+   "fields": [],
+   "fu": [
+    "q_hithead",
+    "q_faintCardiac",
+    "q_notRecovered",
+    "q_standing",
+    "q_hd_warning",
+    "q_hd_faintjerk",
+    "q_hd_thinner",
+    "q_bleedSigns",
+    "q_hasDiabetes"
+   ]
+  },
+  "fits": {
+   "fields": [],
+   "fu": [
+    "q_fitLong",
+    "q_fitRepeat",
+    "q_firstEverFit",
+    "q_hithead",
+    "q_notRecovered",
+    "q_hasDiabetes",
+    "q_hd_thinner",
+    "q_temp",
+    "q_hd_stiff"
+   ]
+  },
+  "face_droop": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_armweak",
+    "q_speech",
+    "q_balanceLost",
+    "q_vision",
+    "q_hd_headsame",
+    "q_settledAlready",
+    "q_earPainRash",
+    "q_lastWell"
+   ]
+  },
+  "speech_trouble": {
+   "fields": [],
+   "fu": [
+    "q_speechType",
+    "q_face",
+    "q_armweak",
+    "q_settledAlready",
+    "q_hd_headsame",
+    "q_balanceLost",
+    "q_vision",
+    "q_lastWell",
+    "q_hasDiabetes"
+   ]
+  },
+  "one_side_weak": {
+   "fields": [
+    "onset",
+    "side"
+   ],
+   "fu": [
+    "q_weakWhere",
+    "q_face",
+    "q_speech",
+    "q_settledAlready",
+    "q_hd_headsame",
+    "q_bladderBowelChange",
+    "q_legsWeakening"
+   ]
+  },
+  "numbness": {
+   "fields": [
+    "onset"
+   ],
+   "fu": [
+    "q_numbWhere",
+    "q_hd_oneside",
+    "q_hd_side",
+    "q_hd_dur",
+    "q_strokeSigns",
+    "q_bladderBowelChange",
+    "q_saddleNumb",
+    "q_hasDiabetes"
+   ]
+  },
+  "tingling": {
+   "fields": [
+    "onset"
+   ],
+   "fu": [
+    "q_tinglingWhere",
+    "q_hd_tside",
+    "q_strokeSigns",
+    "q_swellingLipsThroat",
+    "q_legsWeakening",
+    "q_bladderBowelChange",
+    "q_hasDiabetes",
+    "q_lowB12Diet"
+   ]
+  },
+  "confusion": {
+   "fields": [
+    "onset"
+   ],
+   "fu": [
+    "q_strokeSigns",
+    "q_hardToWake",
+    "q_temp",
+    "q_hasDiabetes",
+    "q_headKnockWeeks",
+    "q_notDrinking",
+    "q_urineBurning",
+    "q_newMedicine"
+   ]
+  },
+  "memory": {
+   "fields": [],
+   "fu": [
+    "q_memoryCourse",
+    "q_strokeSigns",
+    "q_headKnockWeeks",
+    "q_repeatsQuestions",
+    "q_gotLost",
+    "q_dailyTasksHarder",
+    "q_moodLow",
+    "q_newMedicine",
+    "q_hasDiabetes"
+   ]
+  },
+  "tremor": {
+   "fields": [
+    "onset",
+    "side"
+   ],
+   "fu": [
+    "q_tremorWhen",
+    "q_slowStiff",
+    "q_newMedicine",
+    "q_heartRacingSweat",
+    "q_alcoholCut",
+    "q_strokeSigns"
+   ]
+  },
+  "balance": {
+   "fields": [
+    "onset"
+   ],
+   "fu": [
+    "q_spinning",
+    "q_standing",
+    "q_feetNumb",
+    "q_strokeSigns",
+    "q_headacheWithBalance",
+    "q_newMedicine",
+    "q_fellRecently",
+    "q_hasDiabetes"
+   ]
+  },
+  "earache": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_severity",
+    "q_temp",
+    "q_swollenBehindEar",
+    "q_face",
+    "q_hasDiabetes",
+    "q_hearingDrop",
+    "q_earFluid"
+   ]
+  },
+  "ear_discharge": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_earDischargeColour",
+    "q_afterHeadKnock",
+    "q_hd_painful",
+    "q_swollenBehindEar",
+    "q_face",
+    "q_hasDiabetes",
+    "q_hearingDrop",
+    "q_temp"
+   ]
+  },
+  "ringing_ears": {
+   "fields": [
+    "onset",
+    "side"
+   ],
+   "fu": [
+    "q_hearingDrop",
+    "q_pulseTinnitus",
+    "q_spinning",
+    "q_strokeSigns",
+    "q_newMedicine",
+    "q_tinnitusDistress"
+   ]
+  },
+  "hearing_loss": {
+   "fields": [
+    "onset",
+    "side"
+   ],
+   "fu": [
+    "q_earBlocked",
+    "q_hd_painful",
+    "q_earFluid",
+    "q_hasRinging",
+    "q_spinning",
+    "q_strokeSigns",
+    "q_newMedicine"
+   ]
+  },
+  "sore_throat": {
+   "fields": [],
+   "fu": [
+    "q_breathTrouble",
+    "q_swallow",
+    "q_mouthOpen",
+    "q_temp",
+    "q_severity",
+    "q_lowImmune",
+    "q_neckLump",
+    "q_weeks"
+   ]
+  },
+  "hoarse": {
+   "fields": [],
+   "fu": [
+    "q_breathTrouble",
+    "q_weeks",
+    "q_usesTobacco",
+    "q_swallowHurts",
+    "q_neckLump",
+    "q_bloodInSpit",
+    "q_lostWeight",
+    "q_afterColdOrShouting"
+   ]
+  },
+  "runny_nose": {
+   "fields": [],
+   "fu": [
+    "q_clearFluidAfterKnock",
+    "q_hd_oneside",
+    "q_noseBloodStained",
+    "q_eyelidSwollen",
+    "q_temp",
+    "q_faceSinusPain",
+    "q_doubleWorse",
+    "q_itchySneeze"
+   ]
+  },
+  "blocked_nose": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_weeks",
+    "q_afterNoseKnock",
+    "q_noseBloodStained",
+    "q_sprayOverWeek",
+    "q_faceSinusPain",
+    "q_eyelidSwollen",
+    "q_itchySneeze"
+   ]
+  },
+  "sneeze": {
+   "fields": [],
+   "fu": [
+    "q_swellingLipsThroat",
+    "q_breathTrouble",
+    "q_afterNewTrigger",
+    "q_itchySneeze",
+    "q_sneezeTrigger",
+    "q_temp"
+   ]
+  },
+  "nosebleed": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_bleedstop",
+    "q_thinner",
+    "q_bleedMinutes",
+    "q_feelFaint",
+    "q_afterHeadKnock",
+    "q_otherBleeding",
+    "q_bleedsOften",
+    "q_highBpKnown"
+   ]
+  },
+  "sinus": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_severity",
+    "q_temp",
+    "q_eyelidSwollen",
+    "q_vision",
+    "q_hd_stiff",
+    "q_doubleWorse",
+    "q_weeks"
+   ]
+  },
+  "no_smell": {
+   "fields": [
+    "onset"
+   ],
+   "fu": [
+    "q_smellOrTaste",
+    "q_noseBlockedNow",
+    "q_temp",
+    "q_afterHeadKnock",
+    "q_strokeSigns",
+    "q_noseBloodStained",
+    "q_newMedicine",
+    "q_appetiteLow"
+   ]
+  },
+  "eye_pain": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_eyeInjury",
+    "q_vision",
+    "q_redEye",
+    "q_lightHurts",
+    "q_eyeHalos",
+    "q_sickWithEye",
+    "q_contactLens",
+    "q_severity"
+   ]
+  },
+  "red_eye": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_eyeInjury",
+    "q_hd_painful",
+    "q_vision",
+    "q_re_halos",
+    "q_re_light",
+    "q_contactLens",
+    "q_rashForehead",
+    "q_re_gunk"
+   ]
+  },
+  "watery_eye": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_hd_painful",
+    "q_vision",
+    "q_eyeInjury",
+    "q_lumpInnerCorner",
+    "q_cannotCloseEye",
+    "q_itchySneeze",
+    "q_weeks"
+   ]
+  },
+  "blurred_vision": {
+   "fields": [
+    "onset",
+    "side"
+   ],
+   "fu": [
+    "q_hd_painful",
+    "q_scalpJawPain",
+    "q_strokeSigns",
+    "q_curtainShadow",
+    "q_eyeHalos",
+    "q_hasDiabetes",
+    "q_thirstPee"
+   ]
+  },
+  "vision_loss": {
+   "fields": [
+    "onset",
+    "side"
+   ],
+   "fu": [
+    "q_settledAlready",
+    "q_strokeSigns",
+    "q_curtainShadow",
+    "q_flashesLight",
+    "q_hd_painful",
+    "q_scalpJawPain",
+    "q_eyeInjury"
+   ]
+  },
+  "double_vision": {
+   "fields": [
+    "onset"
+   ],
+   "fu": [
+    "q_doubleGoesOneClosed",
+    "q_strokeSigns",
+    "q_eyelidDroop",
+    "q_hd_headsame",
+    "q_hd_painful",
+    "q_scalpJawPain",
+    "q_worseEvening",
+    "q_hasDiabetes"
+   ]
+  },
+  "dry_eyes": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_hd_painful",
+    "q_vision",
+    "q_lightHurts",
+    "q_contactLens",
+    "q_dryMouthToo",
+    "q_cannotCloseEye",
+    "q_newMedicine"
+   ]
+  },
+  "floaters": {
+   "fields": [
+    "side",
+    "onset"
+   ],
+   "fu": [
+    "q_flashesLight",
+    "q_manyFloaters",
+    "q_curtainShadow",
+    "q_vision",
+    "q_eyeInjury",
+    "q_shortSighted",
+    "q_hasDiabetes"
+   ]
+  },
+  "itchy_eyes": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_hd_painful",
+    "q_vision",
+    "q_lightHurts",
+    "q_contactLens",
+    "q_itchySneeze",
+    "q_eyeDischarge",
+    "q_eyelidSwollen",
+    "q_rashForehead"
+   ]
+  },
+  "toothache": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_toothChest",
+    "q_faceSwollen",
+    "q_breathTrouble",
+    "q_swallow",
+    "q_mouthOpen",
+    "q_temp",
+    "q_severity",
+    "q_painWakes"
+   ]
+  },
+  "bleeding_gums": {
+   "fields": [],
+   "fu": [
+    "q_bleedOnlyBrushing",
+    "q_bleedSpont",
+    "q_bleedstop",
+    "q_thinner",
+    "q_otherBleeding",
+    "q_tiredPale",
+    "q_temp",
+    "q_gumPus"
+   ]
+  },
+  "mouth_ulcer": {
+   "fields": [],
+   "fu": [
+    "q_weeks",
+    "q_ulcerNumber",
+    "q_usesTobacco",
+    "q_ulcerHard",
+    "q_neckLump",
+    "q_hd_painful",
+    "q_painStopsDrinking",
+    "q_newMedicine",
+    "q_temp"
+   ]
+  },
+  "denture_pain": {
+   "fields": [
+    "side"
+   ],
+   "fu": [
+    "q_dentureLoose",
+    "q_sorePatch",
+    "q_weeks",
+    "q_usesTobacco",
+    "q_ulcerHard",
+    "q_whitePatch",
+    "q_wearAtNight",
+    "q_faceSwollen"
+   ]
+  },
+  "dry_mouth": {
+   "fields": [],
+   "fu": [
+    "q_newMedicine",
+    "q_veryThirsty",
+    "q_hasDiabetes",
+    "q_notDrinking",
+    "q_drowsy",
+    "q_dryMouthToo",
+    "q_cheekSwollen",
+    "q_whitePatch"
+   ]
+  }
+ },
+ "redFlags": [
+  {
+   "id": "rf_headache_1",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden worst-ever headache: worth checking for bleeding around the brain (subarachnoid).",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_headache_2",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "stiffNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Headache with stiff neck: worth checking for meningitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_headache_3",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Headache with face, limb or speech signs: worth checking for stroke or bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_headache_4",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "scalpJawPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New headache with scalp tenderness or jaw pain: worth checking for giant cell arteritis.",
+   "say": "See a doctor today. Sight may be at risk."
+  },
+  {
+   "id": "rf_headache_5",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    },
+    {
+     "field": "severity",
+     "gte": 7
+    }
+   ],
+   "level": "RED",
+   "reason": "Severe headache with sight change: worth checking for angle-closure glaucoma, giant cell arteritis or stroke.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_headache_6",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Headache with sight change: migraine aura is possible; glaucoma and arteritis need excluding.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_headache_7",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "headKnockWeeks",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Headache after head knock on blood thinner: worth checking for intracranial bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_headache_8",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "headKnockWeeks",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Headache after a head knock in past 2 weeks: worth checking for subdural bleed.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_headache_9",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Headache with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_headache_10",
+   "problems": [
+    "headache"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 9
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severity 9-10 of 10.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_migraine_1",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden worst-ever headache on a migraine background: worth checking for bleeding around the brain.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_migraine_2",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "stiffNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Headache with stiff neck: worth checking for meningitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_migraine_3",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness, face droop or speech change is not typical aura: worth checking for stroke.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_migraine_4",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "scalpJawPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New-pattern headache with scalp or jaw pain over 50: worth checking for giant cell arteritis.",
+   "say": "See a doctor today. Sight may be at risk."
+  },
+  {
+   "id": "rf_migraine_5",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "migraineUsual",
+     "is": false
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Headache different from the usual migraine: needs assessment.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_migraine_6",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Headache with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_migraine_7",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "sickManyTimes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Repeated vomiting: dehydration risk, especially in older adults.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_migraine_8",
+   "problems": [
+    "migraine"
+   ],
+   "all": [
+    {
+     "field": "painkillerDays",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Possible medication-overuse headache.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_dizzy_1",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dizziness with face, limb or speech signs: worth checking for posterior stroke.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_dizzy_2",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "heartSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dizziness with chest pain or palpitations: worth checking for heart rhythm problem or ACS.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_dizzy_3",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "dizzyHeadache",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dizziness with sudden headache or neck pain: worth checking for bleed or dissection.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_dizzy_4",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "bleedSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dizziness with black stool or blood vomit: worth checking for GI bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_dizzy_5",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "spinning",
+     "is": true
+    },
+    {
+     "field": "dizzyLasts",
+     "is": "all day"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Constant spinning for a day: worth checking for vestibular neuritis or central cause.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dizzy_6",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dizzy with diabetes: check blood sugar; low sugar is possible.",
+   "say": "Check sugar if you can. See a doctor soon."
+  },
+  {
+   "id": "rf_dizzy_7",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    },
+    {
+     "field": "onStanding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dizzy on standing on blood thinner: possible hidden bleed or low pressure.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dizzy_8",
+   "problems": [
+    "dizzy"
+   ],
+   "all": [
+    {
+     "field": "onStanding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dizzy on standing: postural hypotension, medicines, dehydration.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_fainted_1",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "faintCardiac",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Faint with exertion, chest pain or palpitations: worth checking for arrhythmia or cardiac cause.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fainted_2",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Faint with head strike on blood thinner: worth checking for intracranial bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fainted_3",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Faint with head strike: needs head-injury assessment.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fainted_4",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "notRecovered",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Not back to normal after faint.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fainted_5",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "bleedSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Faint with black stool or blood vomit: worth checking for GI bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fainted_6",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "fits",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Jerking with faint: worth checking for seizure.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fainted_7",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Faint on blood thinner: possible hidden bleed.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fainted_8",
+   "problems": [
+    "fainted"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Faint with diabetes: check blood sugar.",
+   "say": "Check sugar if you can. See a doctor today."
+  },
+  {
+   "id": "rf_fits_1",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "fitLong",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Fit over 5 minutes: status epilepticus until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_fits_2",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "fitRepeat",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Repeated fits without recovery.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_fits_3",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "firstEverFit",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "First seizure: needs urgent assessment and cause search.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fits_4",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "notRecovered",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Not back to normal after fit.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fits_5",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Head strike during fit.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fits_6",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head strike during fit on blood thinner.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fits_7",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "stiffNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Fit with stiff neck: worth checking for meningitis or encephalitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_fits_8",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fit with fever: worth checking for infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_fits_9",
+   "problems": [
+    "fits"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fit with diabetes: check blood sugar.",
+   "say": "Check sugar if you can. See a doctor today."
+  },
+  {
+   "id": "rf_face_droop_1",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "armWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop with limb weakness (BE-FAST Face+Arm): stroke until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_face_droop_2",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "speech",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop with speech change: stroke until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_face_droop_3",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "balanceLost",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop with sudden imbalance (BE-FAST Balance).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_face_droop_4",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop with sight change (BE-FAST Eyes).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_face_droop_5",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop with sudden severe headache: worth checking for bleed.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_face_droop_6",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "settledAlready",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop that cleared: possible TIA, needs same-day assessment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_face_droop_7",
+   "problems": [
+    "face_droop"
+   ],
+   "all": [
+    {
+     "field": "earPainRash",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face droop with ear pain or rash: possible Ramsay Hunt; stroke still excluded first.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_speech_trouble_1",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble with face droop: stroke until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_speech_trouble_2",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "armWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble with limb weakness: stroke until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_speech_trouble_3",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "settledAlready",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble that cleared: possible TIA, same-day assessment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_speech_trouble_4",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble with sudden severe headache: worth checking for bleed.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_speech_trouble_5",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "balanceLost",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble with imbalance (BE-FAST).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_speech_trouble_6",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble with sight change (BE-FAST).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_speech_trouble_7",
+   "problems": [
+    "speech_trouble"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Speech trouble with diabetes: low sugar is a mimic, but stroke must not be assumed away.",
+   "say": "Check sugar if you can. Call for help."
+  },
+  {
+   "id": "rf_one_side_weak_1",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden one-sided weakness: stroke until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_one_side_weak_2",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness with face droop: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_one_side_weak_3",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "speech",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness with speech change: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_one_side_weak_4",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "settledAlready",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness that cleared: possible TIA, same-day assessment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_one_side_weak_5",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness with sudden severe headache: worth checking for bleed.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_one_side_weak_6",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "bladderBowelChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness with bladder or bowel change: worth checking for cord compression.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_one_side_weak_7",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "legsWeakening",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Ascending weakness: worth checking for Guillain-Barre.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_one_side_weak_8",
+   "problems": [
+    "one_side_weak"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "slow"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Slowly worsening one-sided weakness: needs neurology review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_numbness_1",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Numbness with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_numbness_2",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "oneSide",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden one-sided numbness: stroke or TIA until proven otherwise.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_numbness_3",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "numbWhere",
+     "is": "face"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden facial numbness: stroke or TIA.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_numbness_4",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "bladderBowelChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Numbness with bladder or bowel change: worth checking for cord compression.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_numbness_5",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Saddle numbness: worth checking for cauda equina.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_numbness_6",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "oneSide",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One-sided numbness: needs assessment.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_numbness_7",
+   "problems": [
+    "numbness"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Numbness with diabetes: neuropathy, check feet and sugar.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_tingling_1",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tingling with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tingling_2",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "swellingLipsThroat",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tingling with lip or throat swelling: worth checking for anaphylaxis.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tingling_3",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "legsWeakening",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tingling with spreading weakness: worth checking for Guillain-Barre.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tingling_4",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "bladderBowelChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tingling with bladder or bowel change: worth checking for cord compression.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tingling_5",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "tinglingWhere",
+     "is": "one limb"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden one-limb tingling: stroke or TIA.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tingling_6",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "tinglingWhere",
+     "is": "face or lips"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden face or lip tingling: stroke, TIA or allergy.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tingling_7",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tingling with diabetes: neuropathy.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_tingling_8",
+   "problems": [
+    "tingling"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden tingling.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_confusion_1",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New confusion with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_confusion_2",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "hardToWake",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Confusion with drowsiness: serious illness.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_confusion_3",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden confusion: delirium until proven otherwise; needs same-day assessment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_confusion_4",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Confusion with fever: worth checking for sepsis, meningitis or urine infection.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_confusion_5",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "headKnockWeeks",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Confusion after head knock: worth checking for subdural bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_confusion_6",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Confusion with diabetes: check blood sugar first.",
+   "say": "Check sugar now. Call for help."
+  },
+  {
+   "id": "rf_confusion_7",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "urineBurning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Confusion with urinary symptoms: worth checking for UTI.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_confusion_8",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "notDrinking",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Confusion with poor fluid intake: dehydration.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_confusion_9",
+   "problems": [
+    "confusion"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Confusion after new medicine: drug effect.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_memory_1",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "memoryCourse",
+     "is": "came on suddenly"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden memory loss: worth checking for stroke, TIA or bleed.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_memory_2",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Memory trouble with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_memory_3",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "headKnockWeeks",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Memory change after head knock: worth checking for subdural bleed.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_memory_4",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "gotLost",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Getting lost: possible dementia.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_memory_5",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "dailyTasksHarder",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Everyday function affected: dementia assessment.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_memory_6",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "repeatsQuestions",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Repeating questions: possible dementia.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_memory_7",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "moodLow",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Low mood with memory change: depression screen.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_memory_8",
+   "problems": [
+    "memory"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Memory change after new medicine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_tremor_1",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Shaking with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_tremor_2",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "alcoholCut",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tremor after alcohol reduction: withdrawal; fit risk.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_tremor_3",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden-onset tremor.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_tremor_4",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "slowStiff",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tremor with slowness or stiffness: worth checking for Parkinson disease.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_tremor_5",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "tremorWhen",
+     "is": "at rest"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Rest tremor: worth checking for Parkinson disease.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_tremor_6",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "heartRacingSweat",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tremor with racing heart or sweats: worth checking for thyroid or medicine effect.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_tremor_7",
+   "problems": [
+    "tremor"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tremor after new medicine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_balance_1",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Imbalance with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_balance_2",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden imbalance (BE-FAST Balance): worth checking for cerebellar or brainstem stroke.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_balance_3",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "headacheWithBalance",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Imbalance with new headache or vomiting: worth checking for posterior fossa bleed or stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_balance_4",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "fellRecently",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Imbalance with recent fall: falls-risk review.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_balance_5",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Imbalance after new medicine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_balance_6",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "feetNumb",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Numb feet with imbalance: neuropathy or cord cause.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_balance_7",
+   "problems": [
+    "balance"
+   ],
+   "all": [
+    {
+     "field": "onStanding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Unsteady on standing: postural hypotension.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_earache_1",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "swollenBehindEar",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Earache with swelling behind ear: worth checking for mastoiditis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_earache_2",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Earache with face droop: worth checking for stroke, Ramsay Hunt or ear infection spread.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_earache_3",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Earache with high fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_earache_4",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    },
+    {
+     "field": "severity",
+     "gte": 6
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe ear pain with diabetes: worth checking for malignant otitis externa.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_earache_5",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    },
+    {
+     "field": "earFluid",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Ear discharge with diabetes: worth checking for malignant otitis externa.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_earache_6",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "hearingDrop",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Earache with hearing loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_earache_7",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "earFluid",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Earache with discharge: possible drum perforation.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_earache_8",
+   "problems": [
+    "earache"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe earache.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ear_discharge_1",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "afterHeadKnock",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Ear fluid after head injury: worth checking for skull base fracture or CSF leak.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_ear_discharge_2",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "swollenBehindEar",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Ear discharge with swelling behind ear: worth checking for mastoiditis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_ear_discharge_3",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Ear discharge with face droop.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_ear_discharge_4",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "earDischargeColour",
+     "is": "bloody"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood from the ear.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_ear_discharge_5",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "earDischargeColour",
+     "is": "clear and watery"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Clear watery ear fluid: CSF leak if after injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_ear_discharge_6",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    },
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Painful ear discharge with diabetes: worth checking for malignant otitis externa.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_ear_discharge_7",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Ear discharge with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_ear_discharge_8",
+   "problems": [
+    "ear_discharge"
+   ],
+   "all": [
+    {
+     "field": "hearingDrop",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Ear discharge with hearing loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ringing_ears_1",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Ear noise with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_ringing_ears_2",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "hearingDrop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden hearing loss with ringing: worth checking for sudden sensorineural hearing loss (needs ENT within 24 hours).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_ringing_ears_3",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "hearingDrop",
+     "is": true
+    },
+    {
+     "field": "side",
+     "is": "left"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One-sided ringing with hearing loss: worth checking for acoustic neuroma.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ringing_ears_4",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "hearingDrop",
+     "is": true
+    },
+    {
+     "field": "side",
+     "is": "right"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One-sided ringing with hearing loss: worth checking for acoustic neuroma.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ringing_ears_5",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "pulseTinnitus",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pulsatile tinnitus: worth checking for vascular cause.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ringing_ears_6",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "spinning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Ringing with spinning: worth checking for Meniere or inner ear cause.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ringing_ears_7",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Ringing after new medicine (for example aspirin or aminoglycoside).",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_ringing_ears_8",
+   "problems": [
+    "ringing_ears"
+   ],
+   "all": [
+    {
+     "field": "tinnitusDistress",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Distressing tinnitus.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hearing_loss_1",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hearing loss with face, limb or speech signs: stroke.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_hearing_loss_2",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden hearing loss: worth checking for sudden sensorineural hearing loss (ENT within 24 hours).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hearing_loss_3",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "spinning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hearing loss with spinning.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hearing_loss_4",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "left"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hearing loss on one side: needs assessment.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hearing_loss_5",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "right"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hearing loss on one side: needs assessment.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hearing_loss_6",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "earFluid",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hearing loss with discharge.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hearing_loss_7",
+   "problems": [
+    "hearing_loss"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hearing loss after new medicine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sore_throat_1",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "breathTrouble",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sore throat with breathing trouble: worth checking for epiglottitis or airway swelling.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_sore_throat_2",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "swallowWater",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot swallow water: worth checking for deep throat infection or epiglottitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sore_throat_3",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "mouthOpen",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot open mouth: worth checking for quinsy or deep neck infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sore_throat_4",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "lowImmune",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Sore throat with fever on immune-lowering treatment: neutropenia risk.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sore_throat_5",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sore throat with high fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sore_throat_6",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "neckLump",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sore throat with a neck lump.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sore_throat_7",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sore throat over 3 weeks: needs assessment.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sore_throat_8",
+   "problems": [
+    "sore_throat"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe sore throat.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hoarse_1",
+   "problems": [
+    "hoarse"
+   ],
+   "all": [
+    {
+     "field": "breathTrouble",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hoarse voice with noisy or hard breathing: worth checking for airway narrowing.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_hoarse_2",
+   "problems": [
+    "hoarse"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hoarse over 3 weeks: NICE NG12 suspected cancer pathway if over 45 or a smoker.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hoarse_3",
+   "problems": [
+    "hoarse"
+   ],
+   "all": [
+    {
+     "field": "neckLump",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hoarse voice with neck lump.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hoarse_4",
+   "problems": [
+    "hoarse"
+   ],
+   "all": [
+    {
+     "field": "bloodInSpit",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hoarse voice with blood in spit.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hoarse_5",
+   "problems": [
+    "hoarse"
+   ],
+   "all": [
+    {
+     "field": "swallowHurts",
+     "is": true
+    },
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hoarse with trouble swallowing over 3 weeks.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hoarse_6",
+   "problems": [
+    "hoarse"
+   ],
+   "all": [
+    {
+     "field": "lostWeight",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hoarse voice with weight loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_runny_nose_1",
+   "problems": [
+    "runny_nose"
+   ],
+   "all": [
+    {
+     "field": "clearFluidAfterKnock",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Clear nose fluid after head injury: worth checking for CSF leak.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_runny_nose_2",
+   "problems": [
+    "runny_nose"
+   ],
+   "all": [
+    {
+     "field": "eyelidSwollen",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nose symptoms with swollen red eyelid: worth checking for orbital cellulitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_runny_nose_3",
+   "problems": [
+    "runny_nose"
+   ],
+   "all": [
+    {
+     "field": "noseBloodStained",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood-stained nasal discharge: worth checking for tumour or foreign body.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_runny_nose_4",
+   "problems": [
+    "runny_nose"
+   ],
+   "all": [
+    {
+     "field": "oneSide",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One-sided nasal discharge: worth checking for foreign body or tumour.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_runny_nose_5",
+   "problems": [
+    "runny_nose"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Runny nose with high fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blocked_nose_1",
+   "problems": [
+    "blocked_nose"
+   ],
+   "all": [
+    {
+     "field": "eyelidSwollen",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blocked nose with swollen red eyelid: worth checking for orbital cellulitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_blocked_nose_2",
+   "problems": [
+    "blocked_nose"
+   ],
+   "all": [
+    {
+     "field": "afterNoseKnock",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blocked nose after trauma: worth checking for septal haematoma.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blocked_nose_3",
+   "problems": [
+    "blocked_nose"
+   ],
+   "all": [
+    {
+     "field": "noseBloodStained",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blocked nose with blood-stained fluid.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blocked_nose_4",
+   "problems": [
+    "blocked_nose"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "left"
+    },
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One-sided blockage over 3 weeks: worth checking for polyp or tumour.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blocked_nose_5",
+   "problems": [
+    "blocked_nose"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "right"
+    },
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One-sided blockage over 3 weeks: worth checking for polyp or tumour.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sneeze_1",
+   "problems": [
+    "sneeze"
+   ],
+   "all": [
+    {
+     "field": "swellingLipsThroat",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sneezing with lip or throat swelling: worth checking for anaphylaxis.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_sneeze_2",
+   "problems": [
+    "sneeze"
+   ],
+   "all": [
+    {
+     "field": "breathTrouble",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sneezing with breathing trouble: worth checking for anaphylaxis or asthma.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_sneeze_3",
+   "problems": [
+    "sneeze"
+   ],
+   "all": [
+    {
+     "field": "afterNewTrigger",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sneezing after new allergen exposure.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sneeze_4",
+   "problems": [
+    "sneeze"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sneezing with high fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_nosebleed_1",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "bleedingStops",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Nosebleed not stopping with pressure (NICE CKS epistaxis).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_nosebleed_2",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "bleedMinutes",
+     "gte": 20
+    }
+   ],
+   "level": "RED",
+   "reason": "Bleeding over 20 minutes.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_nosebleed_3",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    },
+    {
+     "field": "bleedingStops",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Nosebleed on blood thinner not stopping.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_nosebleed_4",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "feelFaint",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nosebleed with faintness: significant blood loss.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_nosebleed_5",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "afterHeadKnock",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nosebleed after head injury: worth checking for skull or face fracture.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_nosebleed_6",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Nosebleed on blood thinner.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_nosebleed_7",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "otherBleeding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Nosebleed with bleeding elsewhere: worth checking for a blood or clotting disorder.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_nosebleed_8",
+   "problems": [
+    "nosebleed"
+   ],
+   "all": [
+    {
+     "field": "bleedsOften",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Repeated nosebleeds.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sinus_1",
+   "problems": [
+    "sinus"
+   ],
+   "all": [
+    {
+     "field": "eyelidSwollen",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sinus pain with swollen red eyelid: worth checking for orbital cellulitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sinus_2",
+   "problems": [
+    "sinus"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sinus pain with sight change: worth checking for orbital or cavernous sinus complication.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sinus_3",
+   "problems": [
+    "sinus"
+   ],
+   "all": [
+    {
+     "field": "stiffNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sinus pain with stiff neck: worth checking for meningitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_sinus_4",
+   "problems": [
+    "sinus"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sinus pain with high fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_sinus_5",
+   "problems": [
+    "sinus"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sinus symptoms over 3 weeks.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_sinus_6",
+   "problems": [
+    "sinus"
+   ],
+   "all": [
+    {
+     "field": "doubleWorse",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Double-worsening pattern: bacterial sinusitis possible (NICE NG79).",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_no_smell_1",
+   "problems": [
+    "no_smell"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Loss of smell with stroke signs.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_no_smell_2",
+   "problems": [
+    "no_smell"
+   ],
+   "all": [
+    {
+     "field": "afterHeadKnock",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Loss of smell after head injury: worth checking for skull base injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_no_smell_3",
+   "problems": [
+    "no_smell"
+   ],
+   "all": [
+    {
+     "field": "noseBloodStained",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lost smell with blood-stained fluid: worth checking for nasal tumour.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_no_smell_4",
+   "problems": [
+    "no_smell"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lost smell after new medicine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_no_smell_5",
+   "problems": [
+    "no_smell"
+   ],
+   "all": [
+    {
+     "field": "appetiteLow",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lost smell with poor eating.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_eye_pain_1",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "eyeInjury",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Eye pain after injury or chemical: urgent eye assessment; rinse with clean water if a splash.",
+   "say": "Rinse with clean water. Get help now."
+  },
+  {
+   "id": "rf_eye_pain_2",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Eye pain with sight change: worth checking for acute glaucoma, keratitis, uveitis or optic neuritis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_eye_pain_3",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "eyeHalos",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Eye pain with haloes: worth checking for acute angle-closure glaucoma.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_eye_pain_4",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "sickWithEye",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Eye pain with nausea or headache: worth checking for acute angle-closure glaucoma.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_eye_pain_5",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "lightHurts",
+     "is": true
+    },
+    {
+     "field": "redEye",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red painful eye with photophobia: keratitis or uveitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_eye_pain_6",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "contactLens",
+     "is": true
+    },
+    {
+     "field": "redEye",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Contact lens wearer with red painful eye: worth checking for microbial keratitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_eye_pain_7",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "lightHurts",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Eye pain with photophobia.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_eye_pain_8",
+   "problems": [
+    "eye_pain"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe eye pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_red_eye_1",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "eyeInjury",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red eye after injury or chemical: urgent eye assessment; rinse with clean water if a splash.",
+   "say": "Rinse with clean water. Get help now."
+  },
+  {
+   "id": "rf_red_eye_2",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red painful eye with sight change: worth checking for glaucoma, keratitis or uveitis.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_red_eye_3",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "eyeHalos",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red painful eye with haloes: worth checking for acute angle-closure glaucoma.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_red_eye_4",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "lightHurts",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red painful eye with photophobia: keratitis or uveitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_red_eye_5",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "contactLens",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Contact lens wearer with painful red eye: worth checking for microbial keratitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_red_eye_6",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "rashForehead",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Red eye with forehead rash: worth checking for herpes zoster ophthalmicus.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_red_eye_7",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Painful red eye.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_red_eye_8",
+   "problems": [
+    "red_eye"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red eye with sight change.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_watery_eye_1",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "eyeInjury",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Watery eye after injury or chemical: urgent eye assessment.",
+   "say": "Rinse with clean water. Get help now."
+  },
+  {
+   "id": "rf_watery_eye_2",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Watery painful eye with sight change: worth checking for keratitis or glaucoma.",
+   "say": "Get help now."
+  },
+  {
+   "id": "rf_watery_eye_3",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "cannotCloseEye",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot close eye: facial nerve palsy or stroke; corneal risk.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_watery_eye_4",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Watery painful eye.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_watery_eye_5",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Watery eye with sight change.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_watery_eye_6",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "lumpInnerCorner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lump by the eye corner: worth checking for dacryocystitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_watery_eye_7",
+   "problems": [
+    "watery_eye"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Watery eye over 4 weeks: worth checking for blocked tear duct.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blurred_vision_1",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden blurred vision: worth checking for retinal vascular event, stroke, glaucoma or detachment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_blurred_vision_2",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blurred vision with stroke signs.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_blurred_vision_3",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "curtainShadow",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blurred vision with curtain: worth checking for retinal detachment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_blurred_vision_4",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "eyeHalos",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blurred vision with haloes: worth checking for acute angle-closure glaucoma.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_blurred_vision_5",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "scalpJawPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blurred vision with scalp or jaw pain over 50: worth checking for giant cell arteritis.",
+   "say": "Get help now. Sight may be at risk."
+  },
+  {
+   "id": "rf_blurred_vision_6",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blurred vision with eye pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blurred_vision_7",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    },
+    {
+     "field": "thirstPee",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blurred vision with diabetes and high-sugar symptoms.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blurred_vision_8",
+   "problems": [
+    "blurred_vision"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blurred vision with diabetes: retinopathy or sugar swings.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_vision_loss_1",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden vision loss: same-day emergency (retinal artery or vein occlusion, detachment, stroke, arteritis, glaucoma).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_2",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "settledAlready",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss that returned: amaurosis fugax or TIA.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_vision_loss_3",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss with stroke signs.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_4",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "curtainShadow",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss with curtain: worth checking for retinal detachment.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_5",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "flashesLight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss with flashes: worth checking for retinal detachment.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_6",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "scalpJawPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss with scalp or jaw pain over 50: giant cell arteritis.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_7",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "eyeInjury",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss after injury.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_8",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sight loss with eye pain: worth checking for glaucoma or optic neuritis.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_vision_loss_9",
+   "problems": [
+    "vision_loss"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "slow"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Gradual sight loss.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_double_vision_1",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden binocular double vision: worth checking for stroke, cranial nerve palsy or aneurysm.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_double_vision_2",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Double vision with stroke signs.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_double_vision_3",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "eyelidDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Double vision with droopy lid or uneven pupil: worth checking for third nerve palsy or aneurysm.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_double_vision_4",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Double vision with thunderclap headache: worth checking for aneurysm bleed.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_double_vision_5",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "scalpJawPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Double vision with scalp or jaw pain over 50: giant cell arteritis.",
+   "say": "Get help now. Sight may be at risk."
+  },
+  {
+   "id": "rf_double_vision_6",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "doubleGoesOneClosed",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Binocular double vision: needs same-day neuro or eye review.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_double_vision_7",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Double vision with eye pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_double_vision_8",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Double vision with diabetes: cranial nerve palsy.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_double_vision_9",
+   "problems": [
+    "double_vision"
+   ],
+   "all": [
+    {
+     "field": "worseEvening",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Double vision worse when tired: worth checking for myasthenia.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_dry_eyes_1",
+   "problems": [
+    "dry_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dry painful eye with sight change: worth checking for keratitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dry_eyes_2",
+   "problems": [
+    "dry_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "lightHurts",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dry painful eye with photophobia: keratitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dry_eyes_3",
+   "problems": [
+    "dry_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "contactLens",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Lens wearer with painful eye: worth checking for keratitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dry_eyes_4",
+   "problems": [
+    "dry_eyes"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dry eye with sight change.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_dry_eyes_5",
+   "problems": [
+    "dry_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dry painful eye.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_dry_eyes_6",
+   "problems": [
+    "dry_eyes"
+   ],
+   "all": [
+    {
+     "field": "cannotCloseEye",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Incomplete lid closure: corneal risk.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_floaters_1",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "curtainShadow",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Floaters with curtain: worth checking for retinal detachment.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_floaters_2",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "flashesLight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New flashes: same-day retinal assessment (NICE CKS).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_floaters_3",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "manyFloaters",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Shower of floaters: worth checking for retinal tear.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_floaters_4",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Floaters with sight change.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_floaters_5",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "eyeInjury",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Floaters after eye injury.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_floaters_6",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden new floaters.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_floaters_7",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "shortSighted",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Floaters in high myopia or post-surgery.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_floaters_8",
+   "problems": [
+    "floaters"
+   ],
+   "all": [
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Floaters with diabetes: retinopathy bleed.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_itchy_eyes_1",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Itchy painful eye with sight change.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_2",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "lightHurts",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Painful eye with photophobia: keratitis or uveitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_3",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    },
+    {
+     "field": "contactLens",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Lens wearer with painful eye.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_4",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "rashForehead",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Eye symptoms with forehead rash: worth checking for zoster ophthalmicus.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_5",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Itchy eye with sight change.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_6",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "painful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Itchy painful eye.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_7",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "eyelidSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen red eyelid: worth checking for cellulitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_itchy_eyes_8",
+   "problems": [
+    "itchy_eyes"
+   ],
+   "all": [
+    {
+     "field": "lightHurts",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Light sensitivity.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_toothache_1",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "toothChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Jaw or tooth pain with exertion or chest symptoms: worth checking for ACS (AHA/ACC).",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_toothache_2",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "breathTrouble",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Toothache with breathing trouble: worth checking for Ludwig angina.",
+   "say": "Call emergency now."
+  },
+  {
+   "id": "rf_toothache_3",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "swallowWater",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Toothache, cannot swallow: worth checking for deep neck infection.",
+   "say": "Get help now. Call emergency."
+  },
+  {
+   "id": "rf_toothache_4",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "mouthOpen",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Toothache with locked jaw: worth checking for deep space infection.",
+   "say": "Get help now."
+  },
+  {
+   "id": "rf_toothache_5",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "faceSwollen",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Facial swelling with fever: spreading dental infection.",
+   "say": "Get help now."
+  },
+  {
+   "id": "rf_toothache_6",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "faceSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Facial swelling from a tooth: urgent dental care.",
+   "say": "See a dentist today."
+  },
+  {
+   "id": "rf_toothache_7",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 101
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Toothache with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_toothache_8",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe toothache.",
+   "say": "See a dentist today."
+  },
+  {
+   "id": "rf_toothache_9",
+   "problems": [
+    "toothache"
+   ],
+   "all": [
+    {
+     "field": "painWakes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night pain: irreversible pulpitis.",
+   "say": "See a dentist soon."
+  },
+  {
+   "id": "rf_bleeding_gums_1",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "bleedingStops",
+     "is": false
+    }
+   ],
+   "level": "RED",
+   "reason": "Gum bleeding not stopping with pressure.",
+   "say": "Get help now."
+  },
+  {
+   "id": "rf_bleeding_gums_2",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "otherBleeding",
+     "is": true
+    },
+    {
+     "field": "tiredPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Gum bleeding with bruising and pallor: worth checking for blood disorder such as leukaemia.",
+   "say": "Get help now."
+  },
+  {
+   "id": "rf_bleeding_gums_3",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "tiredPale",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Gum bleeding with fatigue and fever: worth checking for blood disorder.",
+   "say": "Get help now."
+  },
+  {
+   "id": "rf_bleeding_gums_4",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    },
+    {
+     "field": "bleedSpont",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spontaneous gum bleeding on blood thinner: check clotting (INR).",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bleeding_gums_5",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "bleedSpont",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spontaneous gum bleeding.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_bleeding_gums_6",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "otherBleeding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding at other sites.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bleeding_gums_7",
+   "problems": [
+    "bleeding_gums"
+   ],
+   "all": [
+    {
+     "field": "gumPus",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Abscess with fever.",
+   "say": "See a dentist today."
+  },
+  {
+   "id": "rf_mouth_ulcer_1",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "ulcerHard",
+     "is": true
+    },
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard or white-red patch over 3 weeks: NICE NG12 suspected oral cancer.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_mouth_ulcer_2",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Mouth ulcer over 3 weeks: NICE NG12 urgent referral criteria.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_mouth_ulcer_3",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "ulcerHard",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hard lump or non-wiping patch.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_mouth_ulcer_4",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "neckLump",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Mouth ulcer with neck lump.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_mouth_ulcer_5",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "usesTobacco",
+     "is": true
+    },
+    {
+     "field": "weeks",
+     "gte": 2
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tobacco user with ulcer over 2 weeks.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_mouth_ulcer_6",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "painStopsDrinking",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot drink with fever: dehydration.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_mouth_ulcer_7",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "painStopsDrinking",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Too sore to drink.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_mouth_ulcer_8",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "ulcerNumber",
+     "gte": 5
+    },
+    {
+     "field": "temperature",
+     "gte": 101
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Many ulcers with fever: worth checking for viral mouth infection or low white cells.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_mouth_ulcer_9",
+   "problems": [
+    "mouth_ulcer"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Ulcers after new medicine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_denture_pain_1",
+   "problems": [
+    "denture_pain"
+   ],
+   "all": [
+    {
+     "field": "ulcerHard",
+     "is": true
+    },
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard or non-wiping patch over 3 weeks: NICE NG12 suspected oral cancer.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_denture_pain_2",
+   "problems": [
+    "denture_pain"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Denture sore not healing in 3 weeks: NG12 referral criteria.",
+   "say": "See a dentist or doctor soon."
+  },
+  {
+   "id": "rf_denture_pain_3",
+   "problems": [
+    "denture_pain"
+   ],
+   "all": [
+    {
+     "field": "ulcerHard",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hard lump or non-wiping patch.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_denture_pain_4",
+   "problems": [
+    "denture_pain"
+   ],
+   "all": [
+    {
+     "field": "usesTobacco",
+     "is": true
+    },
+    {
+     "field": "weeks",
+     "gte": 2
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tobacco user with sore over 2 weeks.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_denture_pain_5",
+   "problems": [
+    "denture_pain"
+   ],
+   "all": [
+    {
+     "field": "faceSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Face or jaw swollen: possible infection.",
+   "say": "See a dentist today."
+  },
+  {
+   "id": "rf_dry_mouth_1",
+   "problems": [
+    "dry_mouth"
+   ],
+   "all": [
+    {
+     "field": "drowsy",
+     "is": true
+    },
+    {
+     "field": "notDrinking",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dry mouth, drowsy, drinking little: significant dehydration.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dry_mouth_2",
+   "problems": [
+    "dry_mouth"
+   ],
+   "all": [
+    {
+     "field": "veryThirsty",
+     "is": true
+    },
+    {
+     "field": "hasDiabetes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Thirst and dry mouth with diabetes: high sugar.",
+   "say": "Check sugar. See a doctor today."
+  },
+  {
+   "id": "rf_dry_mouth_3",
+   "problems": [
+    "dry_mouth"
+   ],
+   "all": [
+    {
+     "field": "veryThirsty",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Thirst with dry mouth: worth checking blood sugar.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_dry_mouth_4",
+   "problems": [
+    "dry_mouth"
+   ],
+   "all": [
+    {
+     "field": "drowsy",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Drowsy with dry mouth.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_dry_mouth_5",
+   "problems": [
+    "dry_mouth"
+   ],
+   "all": [
+    {
+     "field": "cheekSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swollen salivary gland: stone or infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_dry_mouth_6",
+   "problems": [
+    "dry_mouth"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dry mouth after new medicine.",
+   "say": "See a doctor soon."
+  }
+ ]
+}

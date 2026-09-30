@@ -11,18 +11,16 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlin.math.PI
-import kotlin.math.min
-import kotlin.math.sin
+import kotlin.math.max
 
 /**
- * The helper's alarm, in the style of Meeting Timer: a short 2.4 kHz beep on the alarm stream (it sounds even on
- * silent), with urgency only in how close together the beeps come.
+ * The helper's alarm: a sustained middle-C piano note (synthesised) on the alarm stream (it sounds even on
+ * silent), with urgency only in how close together the notes come.
  *
- * A message gives the helper [WINDOW] seconds to answer: one beep when it arrives, one at 0:10, two at 0:05,
+ * A message gives the helper [WINDOW] seconds to answer: one note when it arrives, one at 0:10, two at 0:05,
  * three at 0:03, then a continuous alarm until someone answers. The countdown runs here, not on the screen, so it
  * still escalates when the screen can't show (a locked phone that blocks full-screen alerts). Urgent alerts
- * (SOS, danger, fall) also beep every five seconds while counting down.
+ * (SOS, danger, fall) also play every five seconds while counting down.
  */
 object AlertSound {
     const val WINDOW = 30
@@ -78,15 +76,12 @@ object AlertSound {
     }
 
     private fun beepInto(buf: ShortArray, offset: Int) {
-        val n = RATE * BEEP_MS / 1000
-        val attack = RATE * 5 / 1000
-        val release = RATE * 20 / 1000
-        val amp = 0.95 * Short.MAX_VALUE / (1 + 0.33 + 0.14)
-        for (i in 0 until n) {
+        val note = PianoTone.note
+        for (i in note.indices) {
             if (offset + i >= buf.size) break
-            val w = 2 * PI * 2400 * (i.toDouble() / RATE)
-            val env = min(1.0, min(i.toDouble() / attack, (n - i).toDouble() / release))
-            buf[offset + i] = ((sin(w) + 0.33 * sin(3 * w) + 0.14 * sin(5 * w)) * amp * env).toInt().toShort()
+            // Mix (add with clipping to Short range)
+            val mixed = (buf[offset + i].toInt() + note[i].toInt()).coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+            buf[offset + i] = mixed
         }
     }
 
@@ -104,19 +99,20 @@ object AlertSound {
         }
     }
 
-    /** n beeps, [gap] seconds apart. */
+    /** n notes, [gap] seconds apart. */
     private fun beeps(n: Int, gap: Double) {
         val step = (gap * RATE).toInt()
-        val buf = ShortArray(step * (n - 1) + RATE * BEEP_MS / 1000 + RATE / 20)
+        val buf = ShortArray(step * (n - 1) + PianoTone.note.size)
         for (i in 0 until n) beepInto(buf, i * step)
         play(buf, loop = false)
         val pattern = LongArray(n * 2) { if (it % 2 == 0) (if (it == 0) 0L else (gap * 1000).toLong() - BEEP_MS) else BEEP_MS.toLong() * 2 }
         vibrate(pattern, -1)
     }
 
-    /** The continuous alarm: a beep every [gap] seconds until [stop]. */
+    /** The continuous alarm: a note every [gap] seconds until [stop]. */
     private fun loop(gap: Double) {
-        val buf = ShortArray((gap * RATE).toInt())
+        val bufLen = maxOf((gap * RATE).toInt(), 2 * RATE)  // Minimum 2s so notes ring
+        val buf = ShortArray(bufLen)
         beepInto(buf, 0)
         play(buf, loop = true)
         vibrate(longArrayOf(0, 400, 300), 0)

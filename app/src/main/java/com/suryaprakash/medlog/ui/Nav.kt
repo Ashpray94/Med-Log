@@ -43,7 +43,15 @@ sealed interface Route {
     data object Backup : Route
     data object Privacy : Route
     data object HelperLock : Route
+    /** Bottom-bar tabs. Timeline = today and what happened; HelpTab = Helper tools + Messages; HelperSettings = Settings in helper mode. */
+    data object Timeline : Route
+    data object HelpTab : Route
+    data object HelperSettings : Route
 }
+
+/** The four screens that show the bottom bar. Old Help and Messages deep links land on the Helpers tab. */
+fun Route.isRootTab(): Boolean = this == Route.Home || this == Route.HelperHome || this == Route.Timeline ||
+    this == Route.HelpTab || this == Route.Help || this == Route.Settings || this == Route.HelperSettings
 
 /** A plain back stack. Back always goes one step back; Home always goes home (plan 4.3 #13). */
 class Nav(start: Route) {

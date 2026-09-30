@@ -38,6 +38,7 @@ class MedLogApp : Application() {
         scope.launch { settings.flow.collect { com.suryaprakash.medlog.speech.I18n.use(this@MedLogApp, it.languages.firstOrNull() ?: "en-IN"); refreshWidgets() } }
         channels()
         speaker.init()
+        com.suryaprakash.medlog.data.Sync.init(this)
         scope.launch {
             runCatching { com.suryaprakash.medlog.help.Nearby.startListening(this@MedLogApp) }
             runCatching { Updater.dailyCheck(this@MedLogApp) }

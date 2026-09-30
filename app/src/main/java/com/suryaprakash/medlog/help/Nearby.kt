@@ -11,6 +11,7 @@ import android.os.IBinder
 import android.util.Base64
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.RemoteInput
 import androidx.core.app.ServiceCompat
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
@@ -32,6 +33,7 @@ import com.suryaprakash.medlog.data.People
 import com.suryaprakash.medlog.data.InboxItem
 import com.suryaprakash.medlog.data.Keys
 import com.suryaprakash.medlog.medlog
+import com.suryaprakash.medlog.notify.NotifySpec
 import com.suryaprakash.medlog.ui.Perms
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -340,11 +342,16 @@ object Nearby {
                 val id = app.db.inbox().insert(InboxItem(fromName = o.optString("from"), text = o.optString("text"), kind = kind, at = sentAt, acked = true))
                 val worried = o.optString("answer") in setOf("notwell", "call")
                 val pi = PendingIntent.getActivity(ctx, id.toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java).setData(android.net.Uri.parse("medlog://helper")), PendingIntent.FLAG_IMMUTABLE)
+                val seenAction = PendingIntent.getBroadcast(ctx, (id * 10).toInt(),
+                    Intent(ctx, AlertActionReceiver::class.java).putExtra("reply", "seen").putExtra("notifId", 5000 + id.toInt()).putExtra("inboxId", id),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                     .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.answer(o.optString("from"), o.optString("text"))))
                     .setContentText(com.suryaprakash.medlog.ui.tr(if (worried) "You may want to call them." else "Answer to your \"How are you?\""))
                     .setPriority(if (worried) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
-                    .setContentIntent(pi).setAutoCancel(true).build()
+                    .setContentIntent(pi).setAutoCancel(true)
+                    .addAction(0, NotifySpec.label(NotifySpec.Type.MESSAGE, "clear"), seenAction)
+                    .build()
                 runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
             }
             return
@@ -363,9 +370,14 @@ object Nearby {
                 // old news: a normal notification, not an alarm in the middle of the night
                 val sentWords = java.text.SimpleDateFormat("h:mm a, d MMM", java.util.Locale.getDefault()).format(java.util.Date(sentAt))
                 val pi = PendingIntent.getActivity(ctx, id.toInt(), Intent(ctx, com.suryaprakash.medlog.MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+                val seenAction = PendingIntent.getBroadcast(ctx, (id * 10 + 1).toInt(),
+                    Intent(ctx, AlertActionReceiver::class.java).putExtra("reply", "seen").putExtra("notifId", 5000 + id.toInt()).putExtra("inboxId", id),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                     .setContentTitle(com.suryaprakash.medlog.ui.tr("${o.optString("from")}: ${o.optString("text")}")).setContentText(com.suryaprakash.medlog.ui.tr("Sent earlier (at $sentWords). A call can check they're OK."))
-                    .setContentIntent(pi).setAutoCancel(true).build()
+                    .setContentIntent(pi).setAutoCancel(true)
+                    .addAction(0, NotifySpec.label(NotifySpec.Type.MESSAGE, "clear"), seenAction)
+                    .build()
                 runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
                 return@launch
             }
@@ -376,10 +388,20 @@ object Nearby {
                 .putExtra("from", o.optString("from")).putExtra("text", o.optString("text")).putExtra("kind", kind).putExtra("id", id)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             val pi = PendingIntent.getActivity(ctx, id.toInt(), open, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            fun action(kind: String, index: Int) = PendingIntent.getBroadcast(ctx, (id * 10 + index).toInt(),
+                Intent(ctx, AlertActionReceiver::class.java).putExtra("reply", kind).putExtra("notifId", 5000 + id.toInt()).putExtra("inboxId", id),
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val spec = NotifySpec[NotifySpec.Type.HELPER_ALERT]
             val n = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
                 .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.alertTitle(o.optString("from"), urgent))).setContentText(com.suryaprakash.medlog.ui.tr(o.optString("text")))
                 .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
-                .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(true).build()
+                .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(true)
+                .apply {
+                    addAction(0, NotifySpec.label(spec.type, "coming"), action("coming", 2))
+                    addAction(0, NotifySpec.label(spec.type, "call"), action("call", 3))
+                    addAction(0, NotifySpec.label(spec.type, "cant"), action("cant", 4))
+                }
+                .build()
             runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(5000 + id.toInt(), n) }
             runCatching { ctx.startActivity(open) }
         }

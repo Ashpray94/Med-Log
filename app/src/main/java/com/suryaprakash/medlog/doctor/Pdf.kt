@@ -42,18 +42,27 @@ object Pdf {
         val w = Writer(doc)
         w.page()
 
-        // ── heading ──
-        w.pair("Patient-reported symptoms", n.period, 15f)
-        w.text(n.patient, 11f, bold = true)
-        w.kv("Allergies", n.allergies, if (n.allergies != "None known") RED else INK)
-        w.kv("Conditions", n.conditions)
-        w.kv("Medicines", n.currentMeds)
+        // ── header ──
+        w.pair("Patient-reported clinical summary", n.period, 15f)
+        w.text(n.name.ifBlank { n.patient }, 12f, bold = true)
+        w.kv("Sex", n.sexText.ifBlank { "Not recorded" })
+        w.kv("Age", n.ageYears?.let { "$it years" } ?: "Not recorded")
+        w.kv("Date of birth", n.dob.ifBlank { "Not recorded" })
+        w.kv("Report period", n.period)
+        w.kv("Generated", if (n.generatedAt > 0) DoctorNoteBuilder.stamp(n.generatedAt) else "–")
+        w.kv("Version", "MedLog ${n.appVersion}, rules ${n.rulesVersion}")
         w.rule()
 
-        // ── main concerns, with the body diagram beside them ──
+        // ── allergies & alerts ──
+        w.section("Allergies & alerts")
+        w.kv("Allergies", if (n.allergiesRecorded) n.allergies else "Not recorded", if (n.allergiesRecorded) RED else INK)
+        w.kv("Blood thinner", if (n.bloodThinner) "Yes" else "Not recorded", if (n.bloodThinner) RED else INK)
+
+        // ── S: subjective ──
         val diagramW = 150f
         val top = w.y
-        w.section("Main concerns", right = diagramW + 12f)
+        w.section("S: Subjective", right = diagramW + 12f)
+        w.text("Chief concern", 9.5f, bold = true, color = SOFT, right = diagramW + 12f)
         if (n.concerns.isEmpty()) w.text("No concerning findings reported.", 10f, right = diagramW + 12f)
         n.concerns.forEachIndexed { i, c -> w.text("${i + 1}.  $c", 10.5f, bold = i == 0, right = diagramW + 12f) }
         if (n.pins.isNotEmpty()) {
@@ -61,23 +70,77 @@ object Pdf {
             w.y = maxOf(w.y, top + diagramW * 1.05f)
         }
         w.gap(4f)
-
-        // ── symptoms table ──
         if (n.symptoms.isNotEmpty()) {
-            w.section("Symptoms")
-            w.table(
-                listOf("#", "Symptom", "When", "Where", "Character", "Notes"),
-                floatArrayOf(0.04f, 0.15f, 0.22f, 0.17f, 0.17f, 0.25f),
-                n.symptoms.map { r -> listOf("${r.n}", r.name, r.whenText, r.where, r.nature, r.notes) to (if (r.urgent == "RED") RED else if (r.urgent == "AMBER") AMBER else INK) },
-            )
+            w.text("History of presenting complaint", 9.5f, bold = true, color = SOFT)
+            val ns = "not said"
+            for (r in n.symptoms) {
+                w.text("${r.n}.  ${r.name}", 10.5f, bold = true, color = if (r.urgent == "RED") RED else if (r.urgent == "AMBER") AMBER else INK)
+                val sev = when { r.sevHigh == null -> ns; r.sevLow == r.sevHigh -> "${r.sevHigh}/10"; else -> "${r.sevLow}–${r.sevHigh}/10 (latest ${r.sevLast}/10)" }
+                w.kv("Onset", r.began ?: ns)
+                w.kv("Provokes / eases", r.provoke ?: ns)
+                w.kv("Quality", r.feels.joinToString(", ").ifBlank { ns })
+                w.kv("Region / radiates", r.places.joinToString(", ").ifBlank { ns })
+                w.kv("Severity", sev)
+                w.kv("Timing", r.whenText)
+                r.tried?.let { w.kv("Tried", it) }
+                if (r.notes != "–") w.kv("Other", r.notes)
+            }
+            if (n.symptoms.size > 1) w.kv("Associated", n.symptoms.joinToString("; ") { it.name })
         }
+        if (n.questions.isNotEmpty()) { w.text("Patient's questions", 9.5f, bold = true, color = SOFT); n.questions.forEach { w.text("•  $it", 10.5f) } }
+
+        // ── medications ──
         if (n.medicines.isNotEmpty()) {
-            w.section("Medicines in this period")
-            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.26f, 0.2f, 0.14f, 0.4f), n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change.ifBlank { "–" }) to INK })
+            w.section("Medications")
+            w.table(listOf("Drug", "Strength", "Dose", "Route", "Frequency", "With food", "Taken / missed / skipped"), floatArrayOf(0.17f, 0.1f, 0.12f, 0.12f, 0.11f, 0.1f, 0.28f),
+                n.medicines.map { m ->
+                    val adherence = if (m.asNeeded) m.taken else "Taken ${m.done}/${m.due}; missed ${m.missed}; skipped ${m.skipped}" + (if (m.reasons.isNotBlank()) " (${m.reasons})" else "")
+                    listOf(m.name, m.strength.ifBlank { "–" }, m.amount.ifBlank { "–" }, m.route.ifBlank { "as labelled" }, m.freq.ifBlank { "–" }, m.food.ifBlank { "any" },
+                        adherence + if (m.change.isNotBlank() && !m.change.startsWith("skipped")) "; ${m.change}" else "") to INK
+                })
+        } else { w.section("Medications"); w.text("None recorded", 10f) }
+
+        // ── past history ──
+        w.section("Past history / conditions")
+        w.text(n.conditions, 10f)
+
+        // ── O: objective ──
+        w.section("O: Objective")
+        if (n.obs.isEmpty()) w.text("No measured values in this period.", 10f)
+        else {
+            val fmt = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")
+            val zone = java.time.ZoneId.systemDefault()
+            w.table(listOf("Measurement", "Value", "Date / time", "Source", "Usual range"), floatArrayOf(0.17f, 0.17f, 0.2f, 0.14f, 0.32f),
+                n.obs.takeLast(40).map { o ->
+                    val (label, unit, range) = when (o.type) {
+                        "bp" -> Triple("Blood pressure", "mmHg", "below 120/80; 180/120 or more = crisis")
+                        "sugar" -> Triple("Glucose", o.unit.ifBlank { "mg/dL" }, "fasting 70–99 mg/dL (3.9–5.5 mmol/L)")
+                        "pulse" -> Triple("Pulse", "bpm", "60–100 bpm at rest")
+                        "spo2" -> Triple("SpO₂", "%", "95–100 %; below 92 % low")
+                        "temp" -> Triple("Temperature", o.unit.ifBlank { "°F" }, "36.1–37.2 °C (97–99 °F); 38 °C (100.4 °F) or more = fever")
+                        "weight" -> Triple("Weight", "kg", "–")
+                        else -> Triple(o.type, o.unit, "–")
+                    }
+                    val value = if (o.type == "bp") "${o.v1.toInt()}/${(o.v2 ?: 0.0).toInt()} $unit" else "${com.suryaprakash.medlog.nlu.fmt1(o.v1)} $unit"
+                    val off = when (o.type) {
+                        "bp" -> o.v1 >= 180 || (o.v2 ?: 0.0) >= 120 || o.v1 < 90
+                        "sugar" -> if (unit.contains("mmol")) o.v1 < 3.9 || o.v1 >= 11.1 else o.v1 < 70 || o.v1 >= 200
+                        "pulse" -> o.v1 > 100 || o.v1 < 50
+                        "spo2" -> o.v1 < 92
+                        "temp" -> if (unit.contains("C")) o.v1 >= 38.0 else o.v1 >= 100.4
+                        else -> false
+                    }
+                    listOf(label, value, fmt.format(java.time.Instant.ofEpochMilli(o.at).atZone(zone)), "patient-entered", range) to (if (off) RED else INK)
+                })
         }
-        if (n.readings.isNotEmpty()) { w.section("Readings"); n.readings.forEach { w.text(it, 10f) } }
-        if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text(it, 10f, color = SOFT) } }
-        if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
+
+        // ── A/P: for the clinician ──
+        w.section("A/P: for clinician")
+        w.box("Assessment", 60f)
+        w.box("Plan", 60f)
+
+        // ── patterns worth checking ──
+        if (n.links.isNotEmpty()) { w.section("Patterns worth checking"); n.links.forEach { w.text("◇  $it", 10f, color = SOFT) } }
         w.footer(n.footer)
         // ── nutrition: its own page, verdict first, detail after ──
         nut?.let { r ->
@@ -156,6 +219,15 @@ object Pdf {
             y += maxOf(kl.height, vl.height) + 3f
         }
 
+        fun box(label: String, h: Float) {
+            ensure(h + 14f)
+            tp.textSize = 8.5f; tp.typeface = medium; tp.color = SOFT
+            c.drawText(label, M, y + 9f, tp)
+            y += 12f
+            c.drawRect(M, y, W - M, y + h, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = LINE; style = Paint.Style.STROKE; strokeWidth = 0.8f })
+            y += h + 6f
+        }
+
         fun rule() { y += 4f; c.drawLine(M, y, W - M, y, lp); y += 10f }
         fun gap(h: Float) { y += h }
 
@@ -229,10 +301,12 @@ object Pdf {
         }
     }
 
-    fun share(ctx: Context, f: File) {
+    fun share(ctx: Context, f: File) = shareFile(ctx, f, "application/pdf", "Share symptom summary")
+
+    fun shareFile(ctx: Context, f: File, mime: String, title: String) {
         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
-        val i = Intent(Intent.ACTION_SEND).setType("application/pdf").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        ctx.startActivity(Intent.createChooser(i, "Share symptom summary").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        val i = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ctx.startActivity(Intent.createChooser(i, title).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
 
     fun print(ctx: Context, f: File) {

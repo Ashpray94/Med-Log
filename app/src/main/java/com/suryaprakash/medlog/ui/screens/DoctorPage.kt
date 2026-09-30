@@ -114,9 +114,30 @@ fun DoctorScreen(nav: Nav) {
     LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.repo.profile().plan).doctors }
     // the page's job is to be shown or sent: those two actions stay pinned at the bottom, side by side
     Screen("For the doctor", speak, onHome = { nav.home() }, onBack = { nav.back() }, actions = {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BigButton("Handover (SBAR)", Modifier.weight(1f), Tone.QUIET, enabled = n != null && !busy, onClick = {
+                val i = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(android.content.Intent.EXTRA_TEXT, com.suryaprakash.medlog.doctor.Sbar.build(n!!))
+                ctx.startActivity(android.content.Intent.createChooser(i, "Share handover (SBAR)").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            })
+            BigButton("FHIR (JSON)", Modifier.weight(1f), Tone.QUIET, enabled = n != null && !busy, onClick = {
+                scope.launch {
+                    busy = true
+                    val f = withContext(Dispatchers.IO) {
+                        val app = ctx.medlog
+                        val json = com.suryaprakash.medlog.doctor.Fhir.bundle(n!!, app.repo.profile(), app.db.medicines().all(), n.obs)
+                        java.io.File(java.io.File(ctx.cacheDir, "share").apply { mkdirs() }, "medlog-fhir.json").also { it.writeText(json) }
+                    }
+                    busy = false
+                    Pdf.shareFile(ctx, f, "application/fhir+json", "Export FHIR (JSON)")
+                }
+            })
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             BigButton("Print", Modifier.weight(1f), Tone.SECONDARY, icon = Icons.Rounded.Print, enabled = n != null && !busy, onClick = { pdf { Pdf.print(ctx, it) } })
             BigButton("Share", Modifier.weight(1f), Tone.PRIMARY, icon = Icons.Rounded.Share, enabled = n != null && !busy, onClick = { pdf { Pdf.share(ctx, it) } })
+        }
         }
     }) {
         // how far back: four choices, one tap, no window

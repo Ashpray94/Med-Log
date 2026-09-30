@@ -39,7 +39,7 @@ data class PersonContext(
  * NOT YET CLINICIAN-REVIEWED — see catalogue "reviewNote".
  */
 object DangerRules {
-    const val VERSION = "rules-0.1.0-unreviewed"
+    const val VERSION = "rules-0.3.0-unreviewed"
 
     private fun yes(f: Map<String, Fact>, k: String) = f[k]?.value == true
     private fun no(f: Map<String, Fact>, k: String) = f[k]?.value == false
@@ -54,6 +54,7 @@ object DangerRules {
         recent: List<RecentNote>,
         person: PersonContext,
         now: Long = System.currentTimeMillis(),
+        redFlags: List<RedFlag> = emptyList(),
     ): Triage {
         val red = ArrayList<String>()
         val amber = ArrayList<String>()
@@ -219,6 +220,48 @@ object DangerRules {
             if (n >= 3) amber += "Dizzy $n times in 2 days"
         }
         if (problemId == "chest_pain" && person.conditions.contains("heart", true) && red.isEmpty()) red += "Chest pain in a person with heart disease"
+
+        // Evaluate catalogue-defined red flags
+        for (rf in redFlags) {
+            if (problemId != null && (rf.problems.contains("*") || rf.problems.contains(problemId))) {
+                val allMatch = rf.all.all { cond ->
+                    val v = facts[cond.field]?.value
+                    when {
+                        cond.isValue != null -> {
+                            when (cond.isValue) {
+                                is Boolean -> v == cond.isValue
+                                is String -> (v as? String)?.equals(cond.isValue, ignoreCase = true) == true
+                                is Number -> {
+                                    val factNum = when (v) {
+                                        is Number -> v.toDouble()
+                                        is String -> v.toDoubleOrNull()
+                                        else -> null
+                                    }
+                                    factNum == cond.isValue.toDouble()
+                                }
+                                else -> v == cond.isValue
+                            }
+                        }
+                        cond.gte != null -> {
+                            val factNum = when (v) {
+                                is Number -> v.toDouble()
+                                is String -> v.toDoubleOrNull()
+                                else -> null
+                            }
+                            (factNum ?: -1.0) >= cond.gte
+                        }
+                        else -> true
+                    }
+                }
+                if (allMatch) {
+                    when (rf.level) {
+                        "RED" -> red += rf.reason
+                        "AMBER" -> amber += rf.reason
+                        else -> {}
+                    }
+                }
+            }
+        }
 
         val tips = careTips(problemId, facts)
         return when {

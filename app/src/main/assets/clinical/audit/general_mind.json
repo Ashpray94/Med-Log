@@ -1,0 +1,4597 @@
+{
+ "fields": {
+  "howLong": {
+   "label": "How long",
+   "type": "choice",
+   "choices": [
+    "today",
+    "2 to 3 days",
+    "4 to 7 days",
+    "1 to 4 weeks",
+    "over a month"
+   ],
+   "danger": false,
+   "help": "How many days or weeks you have had this.\nShort and long problems need different care."
+  },
+  "diabetes": {
+   "label": "Has diabetes",
+   "type": "yesno",
+   "danger": false,
+   "help": "A doctor has told you that you have diabetes.\nSugar problems can make this more risky."
+  },
+  "tooWeak": {
+   "label": "Too weak to stand",
+   "type": "yesno",
+   "danger": true,
+   "help": "You cannot get up or stand on your own.\nBeing this weak can mean a serious illness."
+  },
+  "noUrine8h": {
+   "label": "No urine for 8 hours",
+   "type": "yesno",
+   "danger": true,
+   "help": "No urine at all in the last 8 hours.\nThe kidneys may be in trouble."
+  },
+  "feverRash": {
+   "label": "Rash that does not fade",
+   "type": "yesno",
+   "danger": true,
+   "help": "Press a clear glass on the rash. It stays red or purple.\nThis can be a sign of a serious infection."
+  },
+  "lowImmunity": {
+   "label": "Weak body defence",
+   "type": "yesno",
+   "danger": false,
+   "help": "Medicines that lower the body's defence against germs.\nInfections can turn serious faster then."
+  },
+  "chestDiscomfort": {
+   "label": "Chest pain or pressure",
+   "type": "yesno",
+   "danger": true,
+   "help": "A tight, heavy or aching feeling in the chest.\nIt can be a sign of a heart problem."
+  },
+  "unplannedWeightLoss": {
+   "label": "Losing weight without trying",
+   "type": "yesno",
+   "danger": false,
+   "help": "Your weight is dropping and you are not dieting.\nThis needs a check even if you feel well."
+  },
+  "lowInterest": {
+   "label": "Little interest or joy",
+   "type": "yesno",
+   "danger": false,
+   "help": "Not enjoying things you used to like.\nLow mood can hide behind tiredness."
+  },
+  "weakOneSide": {
+   "label": "Weak or numb on one side",
+   "type": "yesno",
+   "danger": true,
+   "help": "An arm, leg or the face feels weak or numb on one side.\nThis can be a sign of a stroke."
+  },
+  "spreadingUp": {
+   "label": "Weakness creeping up from feet",
+   "type": "yesno",
+   "danger": true,
+   "help": "Weakness starts in the toes and climbs to the legs.\nThis pattern needs a doctor quickly."
+  },
+  "cantSwallowWater": {
+   "label": "Hard to swallow water",
+   "type": "yesno",
+   "danger": true,
+   "help": "Water will not go down, or makes you choke.\nYou may get dry or not get enough medicine."
+  },
+  "cantKeepFluids": {
+   "label": "Cannot keep drinks down",
+   "type": "yesno",
+   "danger": true,
+   "help": "You bring up nearly everything you drink.\nThe body can dry out fast."
+  },
+  "yellowSkin": {
+   "label": "Yellow eyes or skin",
+   "type": "yesno",
+   "danger": false,
+   "help": "The white of the eyes looks yellow.\nIt can point to a liver or gall problem."
+  },
+  "bellyPain": {
+   "label": "Belly pain",
+   "type": "yesno",
+   "danger": false,
+   "help": "Pain anywhere between the ribs and the hips.\nBelly pain changes what we check."
+  },
+  "peeingMore": {
+   "label": "Passing more urine than usual",
+   "type": "yesno",
+   "danger": false,
+   "help": "You go to the toilet far more often to pass urine.\nIt can go with high sugar or dryness."
+  },
+  "nightSweatsAlso": {
+   "label": "Drenching night sweats",
+   "type": "yesno",
+   "danger": false,
+   "help": "Sweat that soaks your clothes or sheets.\nIt can go with infection or other illness."
+  },
+  "longCough": {
+   "label": "Cough over 3 weeks",
+   "type": "yesno",
+   "danger": true,
+   "help": "A cough that has not gone away in 3 weeks.\nA long cough needs a chest check."
+  },
+  "swallowHard": {
+   "label": "Food sticks when swallowing",
+   "type": "yesno",
+   "danger": false,
+   "help": "Food feels stuck in the throat or chest.\nIt can mean a blockage."
+  },
+  "bowelChange": {
+   "label": "Change in toilet habits",
+   "type": "yesno",
+   "danger": false,
+   "help": "Loose or hard stools that are new for you.\nNew bowel change needs a check."
+  },
+  "onPurpose": {
+   "label": "Trying to lose weight",
+   "type": "yesno",
+   "danger": false,
+   "help": "You are dieting or exercising to lose weight.\nIf yes, we ask fewer questions."
+  },
+  "weightLostKg": {
+   "label": "Weight lost (kg)",
+   "type": "number",
+   "unit": "kg",
+   "danger": false,
+   "gate": {
+    "field": "onPurpose",
+    "any": [
+     false
+    ]
+   },
+   "help": "Kilograms lost, as best you know.\nA big drop is more worrying."
+  },
+  "nightsPerWeek": {
+   "label": "Nights per week",
+   "type": "number",
+   "unit": "nights",
+   "danger": false,
+   "help": "Count the nights in a usual week.\nOften is more worrying than rare."
+  },
+  "lumpNeckArmpit": {
+   "label": "Lumps in neck or armpit",
+   "type": "yesno",
+   "danger": false,
+   "help": "Small hard swellings under the skin there.\nGlands swell with infection and other illness."
+  },
+  "sugarBand": {
+   "label": "Sugar reading",
+   "type": "choice",
+   "choices": [
+    "under 54",
+    "54 to 69",
+    "70 to 180",
+    "181 to 300",
+    "over 300",
+    "no reading"
+   ],
+   "danger": true,
+   "help": "Pick the band for your meter reading in mg/dL.\nLow and high sugar both need quick action."
+  },
+  "takesSugarMedicine": {
+   "label": "Takes insulin or sugar tablets",
+   "type": "yesno",
+   "danger": false,
+   "gate": {
+    "field": "diabetes",
+    "any": [
+     true
+    ]
+   },
+   "help": "Medicine that lowers blood sugar.\nThese can cause low sugar."
+  },
+  "veryThirsty": {
+   "label": "Very thirsty",
+   "type": "yesno",
+   "danger": false,
+   "help": "A strong thirst that water does not fix.\nIt can go with high sugar."
+  },
+  "vomitOrLoose": {
+   "label": "Vomiting or loose stools",
+   "type": "yesno",
+   "danger": false,
+   "help": "Being sick or passing watery stools.\nThese can dry out the body."
+  },
+  "darkUrine": {
+   "label": "Dark urine",
+   "type": "yesno",
+   "danger": false,
+   "gate": {
+    "field": "noUrine8h",
+    "any": [
+     false
+    ]
+   },
+   "help": "Urine looks dark yellow or brown.\nDark urine shows the body is short of water."
+  },
+  "dizzyOnStanding": {
+   "label": "Dizzy when standing up",
+   "type": "yesno",
+   "danger": false,
+   "help": "The head spins or goes light on standing.\nIt can show low water or low blood pressure."
+  },
+  "onWaterPills": {
+   "label": "Takes water tablets",
+   "type": "yesno",
+   "danger": false,
+   "help": "Tablets that make you pass more urine.\nThey can dry the body out."
+  },
+  "selfHarmPlan": {
+   "label": "Has thought how",
+   "type": "yesno",
+   "danger": true,
+   "gate": {
+    "field": "selfHarm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Thinking of a way or a time.\nIt helps us see how urgent help is."
+  },
+  "selfHarmNow": {
+   "label": "Feels unsafe now",
+   "type": "yesno",
+   "danger": true,
+   "gate": {
+    "field": "selfHarm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Worried you may act on these thoughts soon.\nIf yes, we will point you to help now."
+  },
+  "selfHarmActed": {
+   "label": "Hurt self today",
+   "type": "yesno",
+   "danger": true,
+   "gate": {
+    "field": "selfHarm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Any harm to yourself or extra medicine, today.\nQuick medical care may be needed."
+  },
+  "notAlone": {
+   "label": "Someone is with them",
+   "type": "yesno",
+   "danger": false,
+   "help": "A person is near you at this moment.\nBeing with someone makes you safer."
+  },
+  "fastHeart": {
+   "label": "Racing heart",
+   "type": "yesno",
+   "danger": false,
+   "help": "You feel fast or pounding beats.\nIt can come from worry or a heart problem."
+  },
+  "sleepTrouble": {
+   "label": "Sleep problem",
+   "type": "choice",
+   "choices": [
+    "falling asleep",
+    "waking in the night",
+    "waking too early"
+   ],
+   "danger": false,
+   "help": "Falling asleep, waking at night, or waking early.\nEach type has a different cause."
+  },
+  "wakesBreathless": {
+   "label": "Wakes up breathless",
+   "type": "yesno",
+   "danger": true,
+   "help": "You wake suddenly and gasp for air.\nIt can be a heart or lung problem."
+  },
+  "snoring": {
+   "label": "Loud snoring or stops breathing",
+   "type": "yesno",
+   "danger": false,
+   "help": "Others hear loud snoring or pauses in breath.\nIt can ruin sleep and tire you."
+  },
+  "hardToWake": {
+   "label": "Hard to wake",
+   "type": "yesno",
+   "danger": true,
+   "help": "You or the person stays sleepy even when shaken.\nBeing this sleepy can be dangerous."
+  },
+  "recentLoss": {
+   "label": "Recent loss",
+   "type": "yesno",
+   "danger": false,
+   "help": "A death or a big loss in recent months.\nLoss can bring low mood and loneliness."
+  },
+  "noOneToTalk": {
+   "label": "No one to talk to",
+   "type": "yesno",
+   "danger": false,
+   "help": "No friend or family you can call.\nHaving someone to talk to protects health."
+  },
+  "unsafeAtHome": {
+   "label": "Feels unsafe at home",
+   "type": "yesno",
+   "danger": true,
+   "help": "Someone shouts at you, hurts you or takes your money.\nWe ask so you can get safe help."
+  },
+  "hallucType": {
+   "label": "What they sense",
+   "type": "choice",
+   "choices": [
+    "seeing things",
+    "hearing voices",
+    "both",
+    "smell or feel things"
+   ],
+   "danger": false,
+   "help": "Seeing things, hearing voices, or both.\nThe type helps us judge the cause."
+  },
+  "voicesHarm": {
+   "label": "Voices say to hurt",
+   "type": "yesno",
+   "danger": true,
+   "gate": {
+    "field": "hallucType",
+    "any": [
+     "hearing voices",
+     "both"
+    ]
+   },
+   "help": "Voices that give orders to harm you or others.\nThis needs help right away."
+  },
+  "stoppedAlcohol": {
+   "label": "Stopped alcohol lately",
+   "type": "yesno",
+   "danger": true,
+   "help": "Heavy drinkers who stop can become unwell.\nStopping suddenly can be dangerous."
+  },
+  "shaky": {
+   "label": "Shaky or very hungry",
+   "type": "yesno",
+   "danger": false,
+   "help": "Trembling hands or a sudden strong hunger.\nThese are early signs of low sugar."
+  },
+  "skippedMeal": {
+   "label": "Missed meal or extra medicine",
+   "type": "yesno",
+   "danger": false,
+   "help": "Not eating, or more tablets or insulin than usual.\nIt is a common cause of low sugar."
+  },
+  "footSore": {
+   "label": "Sore or wound on foot",
+   "type": "yesno",
+   "danger": true,
+   "help": "Broken skin, a blister or a cut on the foot.\nFoot wounds heal badly with numbness."
+  },
+  "footColdPale": {
+   "label": "Foot cold, pale or blue",
+   "type": "yesno",
+   "danger": true,
+   "help": "One foot looks whiter or bluer than the other.\nThe blood flow may be blocked."
+  },
+  "saddleNumb": {
+   "label": "Numb between legs or bladder or bowel trouble",
+   "type": "yesno",
+   "danger": true,
+   "help": "Numb skin where you sit, or you cannot control water or stool.\nThe nerves in the back may be squeezed."
+  },
+  "lumpWhere": {
+   "label": "Where is the lump",
+   "type": "choice",
+   "choices": [
+    "neck",
+    "armpit",
+    "breast",
+    "groin",
+    "belly",
+    "skin elsewhere"
+   ],
+   "danger": false,
+   "help": "Pick the place that fits best.\nThe place changes who should see it."
+  },
+  "lumpGrowing": {
+   "label": "Lump getting bigger",
+   "type": "yesno",
+   "danger": false,
+   "help": "It is larger than when you first saw it.\nGrowing lumps need a check."
+  },
+  "lumpHard": {
+   "label": "Lump is hard",
+   "type": "yesno",
+   "danger": false,
+   "help": "It feels like a stone stuck under the skin.\nHard, fixed lumps need a check."
+  },
+  "lumpRedHot": {
+   "label": "Lump red, hot or leaking",
+   "type": "yesno",
+   "danger": false,
+   "help": "The skin over it is red and warm.\nIt may be infected."
+  },
+  "cannotPushBack": {
+   "label": "Painful and will not go back",
+   "type": "yesno",
+   "danger": true,
+   "gate": {
+    "field": "lumpWhere",
+    "any": [
+     "groin",
+     "belly"
+    ]
+   },
+   "help": "A groin or belly lump that hurts and will not push in.\nThe gut may be trapped."
+  },
+  "heavyPeriods": {
+   "label": "Heavy periods or bleeding",
+   "type": "yesno",
+   "danger": false,
+   "help": "Soaking pads fast, or passing clots.\nBlood loss can make you pale."
+  },
+  "whenAfterMedicine": {
+   "label": "When it began",
+   "type": "choice",
+   "choices": [
+    "within an hour",
+    "same day",
+    "1 to 7 days",
+    "over a week"
+   ],
+   "danger": false,
+   "gate": {
+    "field": "newMedicine",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pick the time between the tablet and the problem.\nQuick onset can mean a strong reaction."
+  },
+  "throatTight": {
+   "label": "Throat tight or voice changed",
+   "type": "yesno",
+   "danger": true,
+   "help": "It feels hard to get air in, or you sound hoarse.\nThis can be a sudden allergy."
+  },
+  "rashHives": {
+   "label": "Itchy rash or hives",
+   "type": "yesno",
+   "danger": false,
+   "help": "Red, raised, itchy patches on the skin.\nA rash can be a reaction to medicine."
+  },
+  "skinPeeling": {
+   "label": "Blisters or peeling skin",
+   "type": "yesno",
+   "danger": true,
+   "help": "Skin lifting off, or painful sores in mouth or eyes.\nThis can be a severe medicine reaction."
+  },
+  "unusualBleeding": {
+   "label": "Unusual bleeding or bruising",
+   "type": "yesno",
+   "danger": false,
+   "help": "Gums, nose or skin bleed or bruise easily.\nSome medicines make bleeding more likely."
+  },
+  "legSwollen": {
+   "label": "One leg swollen or sore",
+   "type": "yesno",
+   "danger": false,
+   "help": "One calf is bigger or hurts more than the other.\nIt can be a blood clot."
+  },
+  "fellRecently": {
+   "label": "Fallen recently",
+   "type": "yesno",
+   "danger": false,
+   "help": "A fall in the last few weeks.\nFalls can cause hidden injury."
+  },
+  "coughsChokes": {
+   "label": "Coughs or chokes when eating",
+   "type": "yesno",
+   "danger": false,
+   "help": "Coughing during or just after a swallow.\nFood may go down the wrong way."
+  },
+  "mouthSore": {
+   "label": "Sore mouth or teeth",
+   "type": "yesno",
+   "danger": false,
+   "help": "Pain or trouble when chewing.\nMouth problems are easy to fix."
+  },
+  "painSwallowing": {
+   "label": "Pain when swallowing",
+   "type": "yesno",
+   "danger": false,
+   "help": "A sharp or burning pain as food goes down.\nPain can point to a throat or food pipe problem."
+  },
+  "whichAccident": {
+   "label": "What leaked",
+   "type": "choice",
+   "choices": [
+    "urine",
+    "stool",
+    "both"
+   ],
+   "danger": false,
+   "help": "Urine, stool, or both.\nThe type helps us find the cause."
+  },
+  "burnsPeeing": {
+   "label": "Burning when passing urine",
+   "type": "yesno",
+   "danger": false,
+   "help": "A stinging or burning pain when urine passes.\nIt can mean a urine infection."
+  },
+  "painWhere": {
+   "label": "Where is the pain",
+   "type": "choice",
+   "choices": [
+    "head or neck",
+    "chest",
+    "belly",
+    "back",
+    "arm",
+    "leg or hip",
+    "joint",
+    "other"
+   ],
+   "danger": false,
+   "help": "Pick the main place.\nThe place tells us what to check."
+  },
+  "cancerHistory": {
+   "label": "Had cancer before",
+   "type": "yesno",
+   "danger": false,
+   "help": "A past cancer, even if treated.\nOld cancers can come back as night pain."
+  }
+ },
+ "questions": {
+  "q_howLong": {
+   "field": "howLong",
+   "ask": "How long has this been going on?",
+   "type": "choice",
+   "priority": 25,
+   "help": "How many days or weeks you have had this.\nShort and long problems need different care."
+  },
+  "q_diabetes": {
+   "field": "diabetes",
+   "ask": "Do you have diabetes?",
+   "type": "yesno",
+   "priority": 30,
+   "help": "A doctor has told you that you have diabetes.\nSugar problems can make this more risky."
+  },
+  "q_tooWeak": {
+   "field": "tooWeak",
+   "ask": "Are you too weak to stand?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "You cannot get up or stand on your own.\nBeing this weak can mean a serious illness."
+  },
+  "q_noUrine8h": {
+   "field": "noUrine8h",
+   "ask": "Have you passed no urine for 8 hours?",
+   "type": "yesno",
+   "priority": 86,
+   "help": "No urine at all in the last 8 hours.\nThe kidneys may be in trouble."
+  },
+  "q_feverRash": {
+   "field": "feverRash",
+   "ask": "Any rash that stays when pressed?",
+   "type": "yesno",
+   "priority": 87,
+   "help": "Press a clear glass on the rash. It stays red or purple.\nThis can be a sign of a serious infection."
+  },
+  "q_lowImmunity": {
+   "field": "lowImmunity",
+   "ask": "Do you take steroids or cancer medicine?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Medicines that lower the body's defence against germs.\nInfections can turn serious faster then."
+  },
+  "q_chestDiscomfort": {
+   "field": "chestDiscomfort",
+   "ask": "Any pain or pressure in your chest?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "A tight, heavy or aching feeling in the chest.\nIt can be a sign of a heart problem."
+  },
+  "q_unplannedWeightLoss": {
+   "field": "unplannedWeightLoss",
+   "ask": "Are you losing weight without trying?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Your weight is dropping and you are not dieting.\nThis needs a check even if you feel well."
+  },
+  "q_lowInterest": {
+   "field": "lowInterest",
+   "ask": "Have you lost interest in things you enjoy?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Not enjoying things you used to like.\nLow mood can hide behind tiredness."
+  },
+  "q_weakOneSide": {
+   "field": "weakOneSide",
+   "ask": "Is one side of your body weak or numb?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "An arm, leg or the face feels weak or numb on one side.\nThis can be a sign of a stroke."
+  },
+  "q_spreadingUp": {
+   "field": "spreadingUp",
+   "ask": "Is weakness creeping up from your feet?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Weakness starts in the toes and climbs to the legs.\nThis pattern needs a doctor quickly."
+  },
+  "q_cantSwallowWater": {
+   "field": "cantSwallowWater",
+   "ask": "Is swallowing water hard or not possible?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Water will not go down, or makes you choke.\nYou may get dry or not get enough medicine."
+  },
+  "q_cantKeepFluids": {
+   "field": "cantKeepFluids",
+   "ask": "Are you unable to keep drinks down?",
+   "type": "yesno",
+   "priority": 82,
+   "help": "You bring up nearly everything you drink.\nThe body can dry out fast."
+  },
+  "q_yellowSkin": {
+   "field": "yellowSkin",
+   "ask": "Are your eyes or skin yellow?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "The white of the eyes looks yellow.\nIt can point to a liver or gall problem."
+  },
+  "q_bellyPain": {
+   "field": "bellyPain",
+   "ask": "Do you have belly pain?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Pain anywhere between the ribs and the hips.\nBelly pain changes what we check."
+  },
+  "q_peeingMore": {
+   "field": "peeingMore",
+   "ask": "Are you passing much more urine than usual?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "You go to the toilet far more often to pass urine.\nIt can go with high sugar or dryness."
+  },
+  "q_nightSweatsAlso": {
+   "field": "nightSweatsAlso",
+   "ask": "Do you get drenching sweats at night?",
+   "type": "yesno",
+   "priority": 35,
+   "help": "Sweat that soaks your clothes or sheets.\nIt can go with infection or other illness."
+  },
+  "q_longCough": {
+   "field": "longCough",
+   "ask": "Have you had a cough for over 3 weeks?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A cough that has not gone away in 3 weeks.\nA long cough needs a chest check."
+  },
+  "q_swallowHard": {
+   "field": "swallowHard",
+   "ask": "Does food stick when you swallow?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Food feels stuck in the throat or chest.\nIt can mean a blockage."
+  },
+  "q_bowelChange": {
+   "field": "bowelChange",
+   "ask": "Any new change in your toilet habits?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Loose or hard stools that are new for you.\nNew bowel change needs a check."
+  },
+  "q_onPurpose": {
+   "field": "onPurpose",
+   "ask": "Are you trying to lose weight?",
+   "type": "yesno",
+   "priority": 35,
+   "help": "You are dieting or exercising to lose weight.\nIf yes, we ask fewer questions."
+  },
+  "q_weightLostKg": {
+   "field": "weightLostKg",
+   "ask": "How much weight have you lost, in kg?",
+   "type": "number",
+   "priority": 35,
+   "gate": {
+    "field": "onPurpose",
+    "any": [
+     false
+    ]
+   },
+   "help": "Kilograms lost, as best you know.\nA big drop is more worrying."
+  },
+  "q_nightsPerWeek": {
+   "field": "nightsPerWeek",
+   "ask": "How many nights a week do you sweat?",
+   "type": "number",
+   "priority": 35,
+   "help": "Count the nights in a usual week.\nOften is more worrying than rare."
+  },
+  "q_lumpNeckArmpit": {
+   "field": "lumpNeckArmpit",
+   "ask": "Any lumps in your neck or armpit?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Small hard swellings under the skin there.\nGlands swell with infection and other illness."
+  },
+  "q_sugarBand": {
+   "field": "sugarBand",
+   "ask": "What was your sugar reading?",
+   "type": "choice",
+   "priority": 90,
+   "help": "Pick the band for your meter reading in mg/dL.\nLow and high sugar both need quick action."
+  },
+  "q_takesSugarMedicine": {
+   "field": "takesSugarMedicine",
+   "ask": "Do you take insulin or sugar tablets?",
+   "type": "yesno",
+   "priority": 45,
+   "gate": {
+    "field": "diabetes",
+    "any": [
+     true
+    ]
+   },
+   "help": "Medicine that lowers blood sugar.\nThese can cause low sugar."
+  },
+  "q_veryThirsty": {
+   "field": "veryThirsty",
+   "ask": "Are you very thirsty?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "A strong thirst that water does not fix.\nIt can go with high sugar."
+  },
+  "q_vomitOrLoose": {
+   "field": "vomitOrLoose",
+   "ask": "Have you been vomiting or had loose stools?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Being sick or passing watery stools.\nThese can dry out the body."
+  },
+  "q_darkUrine": {
+   "field": "darkUrine",
+   "ask": "Is your urine dark?",
+   "type": "yesno",
+   "priority": 40,
+   "gate": {
+    "field": "noUrine8h",
+    "any": [
+     false
+    ]
+   },
+   "help": "Urine looks dark yellow or brown.\nDark urine shows the body is short of water."
+  },
+  "q_dizzyOnStanding": {
+   "field": "dizzyOnStanding",
+   "ask": "Do you feel dizzy when you stand up?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The head spins or goes light on standing.\nIt can show low water or low blood pressure."
+  },
+  "q_onWaterPills": {
+   "field": "onWaterPills",
+   "ask": "Do you take water tablets?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Tablets that make you pass more urine.\nThey can dry the body out."
+  },
+  "q_selfHarmPlan": {
+   "field": "selfHarmPlan",
+   "ask": "Have you thought about how you might do it?",
+   "type": "yesno",
+   "priority": 90,
+   "gate": {
+    "field": "selfHarm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Thinking of a way or a time.\nIt helps us see how urgent help is."
+  },
+  "q_selfHarmNow": {
+   "field": "selfHarmNow",
+   "ask": "Do you feel unsafe right now?",
+   "type": "yesno",
+   "priority": 92,
+   "gate": {
+    "field": "selfHarm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Worried you may act on these thoughts soon.\nIf yes, we will point you to help now."
+  },
+  "q_selfHarmActed": {
+   "field": "selfHarmActed",
+   "ask": "Have you hurt yourself or taken extra tablets today?",
+   "type": "yesno",
+   "priority": 95,
+   "gate": {
+    "field": "selfHarm",
+    "any": [
+     true
+    ]
+   },
+   "help": "Any harm to yourself or extra medicine, today.\nQuick medical care may be needed."
+  },
+  "q_notAlone": {
+   "field": "notAlone",
+   "ask": "Is someone with you right now?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A person is near you at this moment.\nBeing with someone makes you safer."
+  },
+  "q_fastHeart": {
+   "field": "fastHeart",
+   "ask": "Is your heart racing?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "You feel fast or pounding beats.\nIt can come from worry or a heart problem."
+  },
+  "q_sleepTrouble": {
+   "field": "sleepTrouble",
+   "ask": "What is the sleep problem?",
+   "type": "choice",
+   "priority": 40,
+   "help": "Falling asleep, waking at night, or waking early.\nEach type has a different cause."
+  },
+  "q_wakesBreathless": {
+   "field": "wakesBreathless",
+   "ask": "Do you wake up short of breath?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "You wake suddenly and gasp for air.\nIt can be a heart or lung problem."
+  },
+  "q_snoring": {
+   "field": "snoring",
+   "ask": "Do you snore loudly or stop breathing in sleep?",
+   "type": "yesno",
+   "priority": 35,
+   "help": "Others hear loud snoring or pauses in breath.\nIt can ruin sleep and tire you."
+  },
+  "q_hardToWake": {
+   "field": "hardToWake",
+   "ask": "Is it hard to wake up?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "You or the person stays sleepy even when shaken.\nBeing this sleepy can be dangerous."
+  },
+  "q_recentLoss": {
+   "field": "recentLoss",
+   "ask": "Have you lost someone close lately?",
+   "type": "yesno",
+   "priority": 30,
+   "help": "A death or a big loss in recent months.\nLoss can bring low mood and loneliness."
+  },
+  "q_noOneToTalk": {
+   "field": "noOneToTalk",
+   "ask": "Is there no one you can talk to?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "No friend or family you can call.\nHaving someone to talk to protects health."
+  },
+  "q_unsafeAtHome": {
+   "field": "unsafeAtHome",
+   "ask": "Does anyone at home make you feel unsafe?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "Someone shouts at you, hurts you or takes your money.\nWe ask so you can get safe help."
+  },
+  "q_hallucType": {
+   "field": "hallucType",
+   "ask": "What do you see or hear?",
+   "type": "choice",
+   "priority": 45,
+   "help": "Seeing things, hearing voices, or both.\nThe type helps us judge the cause."
+  },
+  "q_voicesHarm": {
+   "field": "voicesHarm",
+   "ask": "Do the voices tell you to hurt anyone?",
+   "type": "yesno",
+   "priority": 91,
+   "gate": {
+    "field": "hallucType",
+    "any": [
+     "hearing voices",
+     "both"
+    ]
+   },
+   "help": "Voices that give orders to harm you or others.\nThis needs help right away."
+  },
+  "q_stoppedAlcohol": {
+   "field": "stoppedAlcohol",
+   "ask": "Did you stop drinking alcohol in the last few days?",
+   "type": "yesno",
+   "priority": 72,
+   "help": "Heavy drinkers who stop can become unwell.\nStopping suddenly can be dangerous."
+  },
+  "q_shaky": {
+   "field": "shaky",
+   "ask": "Do you feel shaky or very hungry?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Trembling hands or a sudden strong hunger.\nThese are early signs of low sugar."
+  },
+  "q_skippedMeal": {
+   "field": "skippedMeal",
+   "ask": "Did you miss a meal or take extra medicine?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "Not eating, or more tablets or insulin than usual.\nIt is a common cause of low sugar."
+  },
+  "q_footSore": {
+   "field": "footSore",
+   "ask": "Any sore, blister or wound on your foot?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "Broken skin, a blister or a cut on the foot.\nFoot wounds heal badly with numbness."
+  },
+  "q_footColdPale": {
+   "field": "footColdPale",
+   "ask": "Is a foot cold, pale or blue?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "One foot looks whiter or bluer than the other.\nThe blood flow may be blocked."
+  },
+  "q_saddleNumb": {
+   "field": "saddleNumb",
+   "ask": "Numb between the legs? New urine or stool trouble?",
+   "type": "yesno",
+   "priority": 89,
+   "help": "Numb skin where you sit, or you cannot control water or stool.\nThe nerves in the back may be squeezed."
+  },
+  "q_lumpWhere": {
+   "field": "lumpWhere",
+   "ask": "Where is the lump?",
+   "type": "choice",
+   "priority": 40,
+   "help": "Pick the place that fits best.\nThe place changes who should see it."
+  },
+  "q_lumpGrowing": {
+   "field": "lumpGrowing",
+   "ask": "Is the lump getting bigger?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "It is larger than when you first saw it.\nGrowing lumps need a check."
+  },
+  "q_lumpHard": {
+   "field": "lumpHard",
+   "ask": "Is the lump hard and does it not move?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "It feels like a stone stuck under the skin.\nHard, fixed lumps need a check."
+  },
+  "q_lumpRedHot": {
+   "field": "lumpRedHot",
+   "ask": "Is the lump red, hot or leaking pus?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "The skin over it is red and warm.\nIt may be infected."
+  },
+  "q_cannotPushBack": {
+   "field": "cannotPushBack",
+   "ask": "Is it painful and will it not go back in?",
+   "type": "yesno",
+   "priority": 86,
+   "gate": {
+    "field": "lumpWhere",
+    "any": [
+     "groin",
+     "belly"
+    ]
+   },
+   "help": "A groin or belly lump that hurts and will not push in.\nThe gut may be trapped."
+  },
+  "q_heavyPeriods": {
+   "field": "heavyPeriods",
+   "ask": "Are your periods or other bleeding heavy?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Soaking pads fast, or passing clots.\nBlood loss can make you pale."
+  },
+  "q_whenAfterMedicine": {
+   "field": "whenAfterMedicine",
+   "ask": "How soon after the medicine did it start?",
+   "type": "choice",
+   "priority": 60,
+   "gate": {
+    "field": "newMedicine",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pick the time between the tablet and the problem.\nQuick onset can mean a strong reaction."
+  },
+  "q_throatTight": {
+   "field": "throatTight",
+   "ask": "Is your throat tight, or has your voice changed?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "It feels hard to get air in, or you sound hoarse.\nThis can be a sudden allergy."
+  },
+  "q_rashHives": {
+   "field": "rashHives",
+   "ask": "Do you have an itchy rash or raised lumps?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Red, raised, itchy patches on the skin.\nA rash can be a reaction to medicine."
+  },
+  "q_skinPeeling": {
+   "field": "skinPeeling",
+   "ask": "Any blisters, peeling skin or sore mouth or eyes?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Skin lifting off, or painful sores in mouth or eyes.\nThis can be a severe medicine reaction."
+  },
+  "q_unusualBleeding": {
+   "field": "unusualBleeding",
+   "ask": "Any bleeding or bruising you cannot explain?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Gums, nose or skin bleed or bruise easily.\nSome medicines make bleeding more likely."
+  },
+  "q_legSwollen": {
+   "field": "legSwollen",
+   "ask": "Is one leg swollen, red or sore?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "One calf is bigger or hurts more than the other.\nIt can be a blood clot."
+  },
+  "q_fellRecently": {
+   "field": "fellRecently",
+   "ask": "Have you fallen recently?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A fall in the last few weeks.\nFalls can cause hidden injury."
+  },
+  "q_coughsChokes": {
+   "field": "coughsChokes",
+   "ask": "Do you cough or choke when eating or drinking?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Coughing during or just after a swallow.\nFood may go down the wrong way."
+  },
+  "q_mouthSore": {
+   "field": "mouthSore",
+   "ask": "Do you have a sore mouth, bad teeth or loose dentures?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Pain or trouble when chewing.\nMouth problems are easy to fix."
+  },
+  "q_painSwallowing": {
+   "field": "painSwallowing",
+   "ask": "Does it hurt when you swallow?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "A sharp or burning pain as food goes down.\nPain can point to a throat or food pipe problem."
+  },
+  "q_whichAccident": {
+   "field": "whichAccident",
+   "ask": "What was the accident?",
+   "type": "choice",
+   "priority": 40,
+   "help": "Urine, stool, or both.\nThe type helps us find the cause."
+  },
+  "q_burnsPeeing": {
+   "field": "burnsPeeing",
+   "ask": "Does it burn when you pass urine?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "A stinging or burning pain when urine passes.\nIt can mean a urine infection."
+  },
+  "q_painWhere": {
+   "field": "painWhere",
+   "ask": "Where is the pain?",
+   "type": "choice",
+   "priority": 45,
+   "help": "Pick the main place.\nThe place tells us what to check."
+  },
+  "q_cancerHistory": {
+   "field": "cancerHistory",
+   "ask": "Have you ever had cancer?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A past cancer, even if treated.\nOld cancers can come back as night pain."
+  },
+  "q_selfHarmCalm": {
+   "field": "selfHarm",
+   "ask": "Have you had thoughts of hurting yourself?",
+   "type": "yesno",
+   "priority": 100,
+   "help": "Thoughts of ending your life or harming yourself.\nMany people have these. Help is available, and we ask to keep you safe."
+  },
+  "q_walkHead": {
+   "field": "hitHead",
+   "ask": "Did you hit your head in the fall?",
+   "type": "yesno",
+   "priority": 95,
+   "gate": {
+    "field": "fellRecently",
+    "any": [
+     true
+    ]
+   },
+   "help": "Any knock to the head when you fell.\nHead injuries can bleed slowly, more so on blood thinners."
+  },
+  "q_walkThinner": {
+   "field": "bloodThinner",
+   "ask": "Do you take a blood thinner?",
+   "type": "yesno",
+   "priority": 92,
+   "gate": {
+    "field": "fellRecently",
+    "any": [
+     true
+    ]
+   },
+   "help": "Tablets like warfarin, apixaban, or aspirin to thin the blood.\nBleeding after a fall is more risky on these."
+  },
+  "q_eatFace": {
+   "field": "faceDroop",
+   "ask": "Is one side of the face drooping?",
+   "type": "yesno",
+   "priority": 100,
+   "gate": {
+    "field": "onset",
+    "any": [
+     "sudden"
+    ]
+   },
+   "help": "One side of the face looks lower or uneven.\nWith sudden swallow trouble, this can be a stroke."
+  },
+  "q_painArmJaw": {
+   "field": "armJaw",
+   "ask": "Does the pain spread to your arm, jaw or back?",
+   "type": "yesno",
+   "priority": 100,
+   "gate": {
+    "field": "painWhere",
+    "any": [
+     "chest"
+    ]
+   },
+   "help": "Pain moving from the chest to arm, jaw or back.\nThis can be a sign of a heart problem."
+  },
+  "q_painBreathless": {
+   "field": "breathless",
+   "ask": "Is it hard to breathe?",
+   "type": "yesno",
+   "priority": 98,
+   "gate": {
+    "field": "painWhere",
+    "any": [
+     "chest"
+    ]
+   },
+   "help": "You feel short of air.\nWith chest pain, this can be serious."
+  },
+  "q_accCount": {
+   "field": "count",
+   "ask": "How many accidents in the last week?",
+   "type": "number",
+   "priority": 40,
+   "help": "Count the accidents in the past 7 days.\nMore accidents mean a bigger problem."
+  }
+ },
+ "problems": {
+  "fever": {
+   "fields": [
+    "howLong",
+    "temperature",
+    "confusion",
+    "breathless",
+    "stiffNeck",
+    "feverRash",
+    "noUrine8h",
+    "tooWeak",
+    "lowImmunity"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_temp",
+    "q_confused",
+    "q_breathless",
+    "q_stiffneck",
+    "q_feverRash",
+    "q_noUrine8h",
+    "q_tooWeak",
+    "q_lowImmunity"
+   ]
+  },
+  "chills": {
+   "fields": [
+    "howLong",
+    "temperature",
+    "pattern",
+    "confusion",
+    "breathless",
+    "tooWeak",
+    "noUrine8h",
+    "lowImmunity"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_temp",
+    "q_confused",
+    "q_breathless",
+    "q_tooWeak",
+    "q_noUrine8h",
+    "q_lowImmunity"
+   ]
+  },
+  "tired": {
+   "fields": [
+    "howLong",
+    "severity",
+    "impact",
+    "breathless",
+    "blackStool",
+    "lostConsciousness",
+    "unplannedWeightLoss",
+    "lowInterest",
+    "newMedicine"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_severity",
+    "q_breathless",
+    "q_black_stool",
+    "q_lostcon",
+    "q_unplannedWeightLoss",
+    "q_lowInterest",
+    "q_newmed"
+   ]
+  },
+  "weakness": {
+   "fields": [
+    "onset",
+    "howLong",
+    "weakOneSide",
+    "faceDroop",
+    "speech",
+    "breathless",
+    "spreadingUp",
+    "diabetes",
+    "impact"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_weakOneSide",
+    "q_face",
+    "q_speech",
+    "q_breathless",
+    "q_spreadingUp",
+    "q_diabetes"
+   ]
+  },
+  "unwell": {
+   "fields": [
+    "howLong",
+    "severity",
+    "temperature",
+    "confusion",
+    "breathless",
+    "chestDiscomfort",
+    "tooWeak",
+    "noUrine8h",
+    "diabetes"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_severity",
+    "q_temp",
+    "q_confused",
+    "q_breathless",
+    "q_chestDiscomfort",
+    "q_tooWeak",
+    "q_noUrine8h",
+    "q_diabetes"
+   ]
+  },
+  "no_appetite": {
+   "fields": [
+    "howLong",
+    "unplannedWeightLoss",
+    "cantSwallowWater",
+    "cantKeepFluids",
+    "blackStool",
+    "yellowSkin",
+    "bellyPain",
+    "lowInterest",
+    "newMedicine"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_unplannedWeightLoss",
+    "q_cantSwallowWater",
+    "q_cantKeepFluids",
+    "q_black_stool",
+    "q_yellowSkin",
+    "q_bellyPain",
+    "q_lowInterest",
+    "q_newmed"
+   ]
+  },
+  "weight_loss": {
+   "fields": [
+    "onPurpose",
+    "weightLostKg",
+    "weeks",
+    "peeingMore",
+    "nightSweatsAlso",
+    "longCough",
+    "swallowHard",
+    "blackStool",
+    "bowelChange"
+   ],
+   "fu": [
+    "q_onPurpose",
+    "q_weightLostKg",
+    "q_weeks",
+    "q_peeingMore",
+    "q_nightSweatsAlso",
+    "q_longCough",
+    "q_swallowHard",
+    "q_black_stool",
+    "q_bowelChange"
+   ]
+  },
+  "night_sweats": {
+   "fields": [
+    "howLong",
+    "nightsPerWeek",
+    "temperature",
+    "unplannedWeightLoss",
+    "longCough",
+    "lumpNeckArmpit",
+    "diabetes",
+    "newMedicine"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_nightsPerWeek",
+    "q_temp",
+    "q_unplannedWeightLoss",
+    "q_longCough",
+    "q_lumpNeckArmpit",
+    "q_diabetes",
+    "q_newmed"
+   ]
+  },
+  "thirsty": {
+   "fields": [
+    "howLong",
+    "peeingMore",
+    "diabetes",
+    "sugarBand",
+    "unplannedWeightLoss",
+    "visionChange",
+    "cantKeepFluids",
+    "confusion",
+    "breathless"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_peeingMore",
+    "q_diabetes",
+    "q_sugarBand",
+    "q_unplannedWeightLoss",
+    "q_vision",
+    "q_cantKeepFluids",
+    "q_confused",
+    "q_breathless"
+   ]
+  },
+  "dehydrated": {
+   "fields": [
+    "howLong",
+    "vomitOrLoose",
+    "cantKeepFluids",
+    "noUrine8h",
+    "darkUrine",
+    "dizzyOnStanding",
+    "confusion",
+    "tooWeak",
+    "onWaterPills"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_vomitOrLoose",
+    "q_cantKeepFluids",
+    "q_noUrine8h",
+    "q_darkUrine",
+    "q_dizzyOnStanding",
+    "q_confused",
+    "q_tooWeak",
+    "q_onWaterPills"
+   ]
+  },
+  "low_mood": {
+   "fields": [
+    "howLong",
+    "lowInterest",
+    "sleepHours",
+    "impact",
+    "selfHarm",
+    "selfHarmPlan",
+    "selfHarmNow"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_lowInterest",
+    "q_selfHarmCalm",
+    "q_selfHarmPlan",
+    "q_selfHarmNow"
+   ]
+  },
+  "anxious": {
+   "fields": [
+    "howLong",
+    "context",
+    "chestDiscomfort",
+    "breathless",
+    "fastHeart",
+    "lostConsciousness",
+    "newMedicine",
+    "impact",
+    "selfHarm"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_chestDiscomfort",
+    "q_breathless",
+    "q_fastHeart",
+    "q_lostcon",
+    "q_newmed",
+    "q_selfHarmCalm"
+   ]
+  },
+  "cant_sleep": {
+   "fields": [
+    "howLong",
+    "sleepTrouble",
+    "sleepHours",
+    "wakesBreathless",
+    "snoring",
+    "lowInterest",
+    "newMedicine",
+    "confusion",
+    "selfHarm"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_sleepTrouble",
+    "q_wakesBreathless",
+    "q_snoring",
+    "q_lowInterest",
+    "q_newmed",
+    "q_confused",
+    "q_selfHarmCalm"
+   ]
+  },
+  "sleep_too_much": {
+   "fields": [
+    "howLong",
+    "sleepHours",
+    "hardToWake",
+    "confusion",
+    "hitHead",
+    "newMedicine",
+    "diabetes",
+    "lowInterest",
+    "snoring"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_hardToWake",
+    "q_confused",
+    "q_hithead",
+    "q_newmed",
+    "q_diabetes",
+    "q_lowInterest",
+    "q_snoring"
+   ]
+  },
+  "lonely": {
+   "fields": [
+    "howLong",
+    "recentLoss",
+    "noOneToTalk",
+    "lowInterest",
+    "sleepHours",
+    "unsafeAtHome",
+    "selfHarm"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_recentLoss",
+    "q_noOneToTalk",
+    "q_lowInterest",
+    "q_unsafeAtHome",
+    "q_selfHarmCalm"
+   ]
+  },
+  "hallucination": {
+   "fields": [
+    "onset",
+    "howLong",
+    "hallucType",
+    "voicesHarm",
+    "confusion",
+    "temperature",
+    "newMedicine",
+    "stoppedAlcohol",
+    "selfHarm"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_hallucType",
+    "q_voicesHarm",
+    "q_confused",
+    "q_temp",
+    "q_newmed",
+    "q_stoppedAlcohol",
+    "q_selfHarmCalm"
+   ]
+  },
+  "self_harm": {
+   "fields": [
+    "selfHarm",
+    "selfHarmNow",
+    "selfHarmActed",
+    "selfHarmPlan",
+    "notAlone",
+    "howLong",
+    "lowInterest",
+    "sleepHours"
+   ],
+   "fu": [
+    "q_selfHarmCalm",
+    "q_selfHarmNow",
+    "q_selfHarmActed",
+    "q_selfHarmPlan",
+    "q_notAlone",
+    "q_howLong",
+    "q_lowInterest"
+   ]
+  },
+  "low_sugar": {
+   "fields": [
+    "diabetes",
+    "takesSugarMedicine",
+    "sugarBand",
+    "sweating",
+    "shaky",
+    "confusion",
+    "hardToWake",
+    "cantSwallowWater",
+    "skippedMeal"
+   ],
+   "fu": [
+    "q_diabetes",
+    "q_takesSugarMedicine",
+    "q_sugarBand",
+    "q_sweat",
+    "q_shaky",
+    "q_confused",
+    "q_hardToWake",
+    "q_cantSwallowWater",
+    "q_skippedMeal"
+   ]
+  },
+  "high_sugar": {
+   "fields": [
+    "diabetes",
+    "sugarBand",
+    "howLong",
+    "veryThirsty",
+    "peeingMore",
+    "cantKeepFluids",
+    "bellyPain",
+    "breathless",
+    "confusion"
+   ],
+   "fu": [
+    "q_diabetes",
+    "q_sugarBand",
+    "q_howLong",
+    "q_veryThirsty",
+    "q_peeingMore",
+    "q_cantKeepFluids",
+    "q_bellyPain",
+    "q_breathless",
+    "q_confused"
+   ]
+  },
+  "foot_numb": {
+   "fields": [
+    "onset",
+    "howLong",
+    "side",
+    "diabetes",
+    "footSore",
+    "footColdPale",
+    "weakOneSide",
+    "spreadingUp",
+    "saddleNumb"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_diabetes",
+    "q_footSore",
+    "q_footColdPale",
+    "q_weakOneSide",
+    "q_spreadingUp",
+    "q_saddleNumb"
+   ]
+  },
+  "lump": {
+   "fields": [
+    "lumpWhere",
+    "weeks",
+    "painful",
+    "lumpGrowing",
+    "lumpHard",
+    "lumpRedHot",
+    "temperature",
+    "unplannedWeightLoss",
+    "cannotPushBack"
+   ],
+   "fu": [
+    "q_lumpWhere",
+    "q_weeks",
+    "q_lumpGrowing",
+    "q_lumpHard",
+    "q_lumpRedHot",
+    "q_temp",
+    "q_unplannedWeightLoss",
+    "q_cannotPushBack"
+   ]
+  },
+  "pale": {
+   "fields": [
+    "howLong",
+    "breathless",
+    "chestDiscomfort",
+    "lostConsciousness",
+    "blackStool",
+    "bloodThinner",
+    "heavyPeriods",
+    "fastHeart",
+    "dizzyOnStanding"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_breathless",
+    "q_chestDiscomfort",
+    "q_lostcon",
+    "q_black_stool",
+    "q_thinner",
+    "q_heavyPeriods",
+    "q_fastHeart",
+    "q_dizzyOnStanding"
+   ]
+  },
+  "side_effect": {
+   "fields": [
+    "newMedicine",
+    "whenAfterMedicine",
+    "lipSwelling",
+    "throatTight",
+    "breathless",
+    "rashHives",
+    "skinPeeling",
+    "lostConsciousness",
+    "unusualBleeding"
+   ],
+   "fu": [
+    "q_newmed",
+    "q_whenAfterMedicine",
+    "q_lips",
+    "q_throatTight",
+    "q_breathless",
+    "q_rashHives",
+    "q_skinPeeling",
+    "q_lostcon",
+    "q_unusualBleeding"
+   ]
+  },
+  "trouble_walking": {
+   "fields": [
+    "onset",
+    "weakOneSide",
+    "faceDroop",
+    "speech",
+    "legSwollen",
+    "saddleNumb",
+    "fellRecently",
+    "hitHead",
+    "bloodThinner"
+   ],
+   "fu": [
+    "q_weakOneSide",
+    "q_face",
+    "q_speech",
+    "q_legSwollen",
+    "q_saddleNumb",
+    "q_fellRecently",
+    "q_walkHead",
+    "q_walkThinner"
+   ]
+  },
+  "trouble_eating": {
+   "fields": [
+    "onset",
+    "howLong",
+    "cantSwallowWater",
+    "coughsChokes",
+    "mouthSore",
+    "painSwallowing",
+    "unplannedWeightLoss",
+    "faceDroop",
+    "breathless"
+   ],
+   "fu": [
+    "q_howLong",
+    "q_cantSwallowWater",
+    "q_coughsChokes",
+    "q_mouthSore",
+    "q_painSwallowing",
+    "q_unplannedWeightLoss",
+    "q_eatFace",
+    "q_breathless"
+   ]
+  },
+  "toilet_accident": {
+   "fields": [
+    "onset",
+    "whichAccident",
+    "count",
+    "burnsPeeing",
+    "cannotPass",
+    "saddleNumb",
+    "weakOneSide",
+    "confusion",
+    "temperature"
+   ],
+   "fu": [
+    "q_whichAccident",
+    "q_accCount",
+    "q_burnsPeeing",
+    "q_cannotpass",
+    "q_saddleNumb",
+    "q_weakOneSide",
+    "q_confused",
+    "q_temp"
+   ]
+  },
+  "night_pain": {
+   "fields": [
+    "painWhere",
+    "howLong",
+    "severity",
+    "side",
+    "armJaw",
+    "breathless",
+    "cancerHistory",
+    "unplannedWeightLoss",
+    "saddleNumb"
+   ],
+   "fu": [
+    "q_painWhere",
+    "q_howLong",
+    "q_severity",
+    "q_painArmJaw",
+    "q_painBreathless",
+    "q_cancerHistory",
+    "q_unplannedWeightLoss",
+    "q_saddleNumb"
+   ]
+  }
+ },
+ "redFlags": [
+  {
+   "id": "rf_fever_1",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New confusion with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_2",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard to breathe with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_3",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "tooWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Too weak to stand with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_4",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "No urine for 8 hours with illness (sepsis or kidney risk).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_5",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "stiffNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Fever with stiff neck (meningitis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_6",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "feverRash",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Fever with rash that does not fade (meningococcal sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_7",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 104
+    }
+   ],
+   "level": "RED",
+   "reason": "Temperature 104F or more.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_8",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 103
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Temperature 103F or more.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_fever_9",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "lowImmunity",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Fever with weak immunity (steroids or chemo).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_fever_10",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "1 to 4 weeks"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fever for over 4 days, up to 4 weeks.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_fever_11",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fever for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_fever_12",
+   "problems": [
+    "fever"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "4 to 7 days"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fever for 4 to 7 days (see doctor if over 5 days).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_chills_1",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New confusion with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_chills_2",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard to breathe with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_chills_3",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "tooWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Too weak to stand with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_chills_4",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "No urine for 8 hours with illness (sepsis or kidney risk).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_chills_5",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 103
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chills with temperature 103F or more.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_chills_6",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "lowImmunity",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chills with weak immunity.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_chills_7",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "1 to 4 weeks"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chills for over a week.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_chills_8",
+   "problems": [
+    "chills"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chills for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_tired_1",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "blackStool",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tired with black sticky stool (gut bleeding).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_tired_2",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tired with hard breathing (anaemia, heart or lung cause).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_tired_3",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tired with a faint or blackout.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_tired_4",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tired with weight loss without trying.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_tired_5",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "lowInterest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tired with low interest (possible depression).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_tired_6",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tired for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_tired_7",
+   "problems": [
+    "tired"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tiredness severity 8 or more out of 10.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weakness_1",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "weakOneSide",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "One-sided weakness or numbness (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weakness_2",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face drooping (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weakness_3",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "speech",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Slurred speech (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weakness_4",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness with hard breathing.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weakness_5",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "spreadingUp",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weakness climbing from the feet (possible nerve illness).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weakness_6",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weakness that came on suddenly.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weakness_7",
+   "problems": [
+    "weakness"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weakness for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_unwell_1",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New confusion with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_unwell_2",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard to breathe with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_unwell_3",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "tooWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Too weak to stand with illness (sepsis sign).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_unwell_4",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "No urine for 8 hours with illness (sepsis or kidney risk).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_unwell_5",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "chestDiscomfort",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Feeling unwell with chest pain or pressure.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_unwell_6",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 103
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Temperature 103F or more.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_unwell_7",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Feeling very bad (8 or more out of 10).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_unwell_8",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "1 to 4 weeks"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Unwell for over a week.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_unwell_9",
+   "problems": [
+    "unwell"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Unwell for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_no_appetite_1",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "blackStool",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "No appetite with black sticky stool (gut bleeding).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_no_appetite_2",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No appetite and cannot keep drinks down.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_no_appetite_3",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "cantSwallowWater",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot swallow water.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_no_appetite_4",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "yellowSkin",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Yellow eyes or skin.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_no_appetite_5",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss without trying.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_no_appetite_6",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No appetite for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_no_appetite_7",
+   "problems": [
+    "no_appetite"
+   ],
+   "all": [
+    {
+     "field": "bellyPain",
+     "is": true
+    },
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Belly pain with vomiting.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weight_loss_1",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "blackStool",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Weight loss with black sticky stool.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_weight_loss_2",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "weightLostKg",
+     "gte": 5
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lost 5 kg or more without trying.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weight_loss_3",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "swallowHard",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with food sticking.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weight_loss_4",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "longCough",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with cough over 3 weeks.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weight_loss_5",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "nightSweatsAlso",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with night sweats.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weight_loss_6",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "peeingMore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with passing much more urine.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_weight_loss_7",
+   "problems": [
+    "weight_loss"
+   ],
+   "all": [
+    {
+     "field": "bowelChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with bowel change.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_sweats_1",
+   "problems": [
+    "night_sweats"
+   ],
+   "all": [
+    {
+     "field": "longCough",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night sweats with cough over 3 weeks (check for TB).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_sweats_2",
+   "problems": [
+    "night_sweats"
+   ],
+   "all": [
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night sweats with weight loss.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_sweats_3",
+   "problems": [
+    "night_sweats"
+   ],
+   "all": [
+    {
+     "field": "lumpNeckArmpit",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night sweats with lumps in neck or armpit.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_sweats_4",
+   "problems": [
+    "night_sweats"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 101
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night sweats with fever.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_sweats_5",
+   "problems": [
+    "night_sweats"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night sweats for over a month.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_thirsty_1",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thirsty with confusion (high sugar or dehydration).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_thirsty_2",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thirsty with fast or hard breathing (possible acid build-up).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_thirsty_3",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Diabetes with vomiting and thirst.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_thirsty_4",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "over 300"
+    },
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sugar over 300 with vomiting.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_thirsty_5",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "over 300"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sugar over 300 mg/dL.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_thirsty_6",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep drinks down.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_thirsty_7",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Thirsty with blurred vision.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_thirsty_8",
+   "problems": [
+    "thirsty"
+   ],
+   "all": [
+    {
+     "field": "peeingMore",
+     "is": true
+    },
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Thirst, passing more urine, weight loss (possible new diabetes).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_dehydrated_1",
+   "problems": [
+    "dehydrated"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    },
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "No urine for 8 hours and cannot keep drinks down.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_dehydrated_2",
+   "problems": [
+    "dehydrated"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dry body with confusion.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_dehydrated_3",
+   "problems": [
+    "dehydrated"
+   ],
+   "all": [
+    {
+     "field": "tooWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Dry body and too weak to stand.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_dehydrated_4",
+   "problems": [
+    "dehydrated"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No urine for 8 hours.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_dehydrated_5",
+   "problems": [
+    "dehydrated"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep drinks down.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_dehydrated_6",
+   "problems": [
+    "dehydrated"
+   ],
+   "all": [
+    {
+     "field": "dizzyOnStanding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Dizzy on standing (low fluid or low blood pressure).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_low_mood_1",
+   "problems": [
+    "low_mood"
+   ],
+   "all": [
+    {
+     "field": "selfHarmNow",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Feels unsafe now.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_low_mood_2",
+   "problems": [
+    "low_mood"
+   ],
+   "all": [
+    {
+     "field": "selfHarmPlan",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Has thought about a way to self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_low_mood_3",
+   "problems": [
+    "low_mood"
+   ],
+   "all": [
+    {
+     "field": "selfHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thoughts of self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_low_mood_4",
+   "problems": [
+    "low_mood"
+   ],
+   "all": [
+    {
+     "field": "lowInterest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Low interest plus low mood (PHQ-2 positive).",
+   "say": "Talking to a doctor can help. Please see one soon."
+  },
+  {
+   "id": "rf_low_mood_5",
+   "problems": [
+    "low_mood"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Low mood for over a month.",
+   "say": "Talking to a doctor can help. Please see one soon."
+  },
+  {
+   "id": "rf_anxious_1",
+   "problems": [
+    "anxious"
+   ],
+   "all": [
+    {
+     "field": "chestDiscomfort",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Anxiety with chest pain or pressure (heart cause must be ruled out).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_anxious_2",
+   "problems": [
+    "anxious"
+   ],
+   "all": [
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Anxiety with a faint or blackout.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_anxious_3",
+   "problems": [
+    "anxious"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Anxiety with hard breathing (lung or heart cause possible).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_anxious_4",
+   "problems": [
+    "anxious"
+   ],
+   "all": [
+    {
+     "field": "selfHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thoughts of self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_anxious_5",
+   "problems": [
+    "anxious"
+   ],
+   "all": [
+    {
+     "field": "howLong",
+     "is": "over a month"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Worry for over a month.",
+   "say": "Talking to a doctor can help. Please see one soon."
+  },
+  {
+   "id": "rf_cant_sleep_1",
+   "problems": [
+    "cant_sleep"
+   ],
+   "all": [
+    {
+     "field": "selfHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thoughts of self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_cant_sleep_2",
+   "problems": [
+    "cant_sleep"
+   ],
+   "all": [
+    {
+     "field": "wakesBreathless",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Wakes at night short of breath (heart or lung cause).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_cant_sleep_3",
+   "problems": [
+    "cant_sleep"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New confusion at night (delirium sign).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_cant_sleep_4",
+   "problems": [
+    "cant_sleep"
+   ],
+   "all": [
+    {
+     "field": "lowInterest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Poor sleep with low interest (possible depression).",
+   "say": "Talking to a doctor can help. Please see one soon."
+  },
+  {
+   "id": "rf_sleep_too_much_1",
+   "problems": [
+    "sleep_too_much"
+   ],
+   "all": [
+    {
+     "field": "hardToWake",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard to wake (drowsiness).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_sleep_too_much_2",
+   "problems": [
+    "sleep_too_much"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Drowsy with confusion (delirium).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_sleep_too_much_3",
+   "problems": [
+    "sleep_too_much"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Drowsy after a head knock (slow bleed possible).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_sleep_too_much_4",
+   "problems": [
+    "sleep_too_much"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Drowsy after a new medicine.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_sleep_too_much_5",
+   "problems": [
+    "sleep_too_much"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "hardToWake",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Diabetes and hard to wake (sugar problem).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_lonely_1",
+   "problems": [
+    "lonely"
+   ],
+   "all": [
+    {
+     "field": "selfHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thoughts of self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_lonely_2",
+   "problems": [
+    "lonely"
+   ],
+   "all": [
+    {
+     "field": "unsafeAtHome",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Feels unsafe at home (possible abuse).",
+   "say": "You can get safe help. Please talk to a doctor soon."
+  },
+  {
+   "id": "rf_lonely_3",
+   "problems": [
+    "lonely"
+   ],
+   "all": [
+    {
+     "field": "lowInterest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Loneliness with low interest (possible depression).",
+   "say": "Talking to a doctor can help. Please see one soon."
+  },
+  {
+   "id": "rf_hallucination_1",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Seeing or hearing things with confusion (delirium).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_hallucination_2",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "stoppedAlcohol",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hallucinations after stopping alcohol (withdrawal).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_hallucination_3",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "voicesHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Voices telling them to hurt others or self.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_hallucination_4",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "selfHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thoughts of self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_hallucination_5",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden onset (delirium likely).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_hallucination_6",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fever with hallucinations (infection).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_hallucination_7",
+   "problems": [
+    "hallucination"
+   ],
+   "all": [
+    {
+     "field": "newMedicine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New medicine before hallucinations.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_self_harm_1",
+   "problems": [
+    "self_harm"
+   ],
+   "all": [
+    {
+     "field": "selfHarmActed",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hurt self or took extra tablets today.",
+   "say": "Please call 108 now. Then call Tele-MANAS 14416."
+  },
+  {
+   "id": "rf_self_harm_2",
+   "problems": [
+    "self_harm"
+   ],
+   "all": [
+    {
+     "field": "selfHarmNow",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Feels unsafe now.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_self_harm_3",
+   "problems": [
+    "self_harm"
+   ],
+   "all": [
+    {
+     "field": "selfHarmPlan",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Has a plan.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_self_harm_4",
+   "problems": [
+    "self_harm"
+   ],
+   "all": [
+    {
+     "field": "selfHarm",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Thoughts of self-harm.",
+   "say": "You are not alone. Call Tele-MANAS 14416 now, or 112."
+  },
+  {
+   "id": "rf_low_sugar_1",
+   "problems": [
+    "low_sugar"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "under 54"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sugar under 54 mg/dL (severe low).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_low_sugar_2",
+   "problems": [
+    "low_sugar"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low sugar with confusion.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_low_sugar_3",
+   "problems": [
+    "low_sugar"
+   ],
+   "all": [
+    {
+     "field": "hardToWake",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low sugar and hard to wake.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_low_sugar_4",
+   "problems": [
+    "low_sugar"
+   ],
+   "all": [
+    {
+     "field": "cantSwallowWater",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot swallow, so cannot take sugar by mouth.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_low_sugar_5",
+   "problems": [
+    "low_sugar"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "54 to 69"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sugar 54 to 69 mg/dL (low).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_low_sugar_6",
+   "problems": [
+    "low_sugar"
+   ],
+   "all": [
+    {
+     "field": "sweating",
+     "is": true
+    },
+    {
+     "field": "shaky",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sweaty and shaky (low sugar signs).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_high_sugar_1",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "High sugar with confusion.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_high_sugar_2",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "High sugar with fast or hard breathing (possible acid build-up).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_high_sugar_3",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "over 300"
+    },
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sugar over 300 with vomiting.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_high_sugar_4",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "over 300"
+    },
+    {
+     "field": "bellyPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sugar over 300 with belly pain.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_high_sugar_5",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    },
+    {
+     "field": "diabetes",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Diabetes with vomiting.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_high_sugar_6",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "sugarBand",
+     "is": "over 300"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sugar over 300 mg/dL.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_high_sugar_7",
+   "problems": [
+    "high_sugar"
+   ],
+   "all": [
+    {
+     "field": "veryThirsty",
+     "is": true
+    },
+    {
+     "field": "peeingMore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Thirsty and passing much urine with high sugar.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_foot_numb_1",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "footColdPale",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cold, pale or blue foot (blocked blood flow).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_foot_numb_2",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Numb between legs or bladder or bowel trouble (cauda equina).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_foot_numb_3",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "weakOneSide",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "One-sided weakness or numbness (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_foot_numb_4",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "spreadingUp",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Numbness climbing from feet.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_foot_numb_5",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "diabetes",
+     "is": true
+    },
+    {
+     "field": "footSore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Diabetes with foot wound and numbness.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_foot_numb_6",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "footSore",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Foot wound with numbness.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_foot_numb_7",
+   "problems": [
+    "foot_numb"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Numbness came on suddenly.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_lump_1",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "cannotPushBack",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Painful lump that will not go back (trapped hernia).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_lump_2",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "lumpRedHot",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Red hot lump with fever (spreading infection).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_lump_3",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "lumpRedHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red, hot or leaking lump.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_lump_4",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "lumpGrowing",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lump getting bigger.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_lump_5",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "lumpHard",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hard fixed lump.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_lump_6",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lump present 3 weeks or more.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_lump_7",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lump with weight loss.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_lump_8",
+   "problems": [
+    "lump"
+   ],
+   "all": [
+    {
+     "field": "lumpWhere",
+     "is": "breast"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast lump.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_pale_1",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "chestDiscomfort",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pale with chest pain.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_pale_2",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "blackStool",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pale with black sticky stool (gut bleeding).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_pale_3",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pale with a faint.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_pale_4",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pale with hard breathing.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_pale_5",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pale and on a blood thinner (bleeding risk).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_pale_6",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "heavyPeriods",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pale with heavy bleeding.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_pale_7",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "dizzyOnStanding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pale and dizzy on standing.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_pale_8",
+   "problems": [
+    "pale"
+   ],
+   "all": [
+    {
+     "field": "fastHeart",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pale with fast heart.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_side_effect_1",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swelling of lips, face or tongue after medicine (allergy).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_side_effect_2",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "throatTight",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Tight throat or voice change after medicine (allergy).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_side_effect_3",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard breathing after medicine (allergy).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_side_effect_4",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "skinPeeling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blisters or peeling skin (severe skin reaction).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_side_effect_5",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "lostConsciousness",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Faint after medicine.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_side_effect_6",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "rashHives",
+     "is": true
+    },
+    {
+     "field": "whenAfterMedicine",
+     "is": "within an hour"
+    }
+   ],
+   "level": "RED",
+   "reason": "Hives within an hour of medicine (allergy).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_side_effect_7",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "rashHives",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Rash after medicine.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_side_effect_8",
+   "problems": [
+    "side_effect"
+   ],
+   "all": [
+    {
+     "field": "unusualBleeding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Unusual bleeding or bruising on medicine.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_walking_1",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "weakOneSide",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "One-sided weakness (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_walking_2",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face drooping (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_walking_3",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "speech",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Slurred speech (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_walking_4",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Numb between legs or bladder or bowel trouble (cauda equina).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_walking_5",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    },
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Head knock on a blood thinner.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_walking_6",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "hitHead",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Head knock with a fall.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_walking_7",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "legSwollen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One leg swollen or sore (clot).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_walking_8",
+   "problems": [
+    "trouble_walking"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Walking trouble began suddenly.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_eating_1",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "cantSwallowWater",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot swallow water.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_eating_2",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swallow trouble with hard breathing.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_eating_3",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "faceDroop",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden swallow trouble with face droop (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_trouble_eating_4",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "coughsChokes",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Coughs or chokes when eating (food going to lungs).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_eating_5",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with swallow trouble.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_eating_6",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "painSwallowing",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pain when swallowing.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_trouble_eating_7",
+   "problems": [
+    "trouble_eating"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swallow trouble began suddenly.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_toilet_accident_1",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "New accidents with numbness between legs (cauda equina).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_toilet_accident_2",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "weakOneSide",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Accidents with one-sided weakness (stroke).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_toilet_accident_3",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "cannotPass",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot pass urine (retention with overflow).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_toilet_accident_4",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Accidents with new confusion (delirium or infection).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_toilet_accident_5",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "burnsPeeing",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Urine burning with fever (kidney infection).",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_toilet_accident_6",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "burnsPeeing",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burning when passing urine.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_toilet_accident_7",
+   "problems": [
+    "toilet_accident"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Accidents began suddenly.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_pain_1",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain spreading to arm, jaw or back.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_night_pain_2",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "painWhere",
+     "is": "chest"
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain waking from sleep.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_night_pain_3",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Pain with numbness between legs or bladder or bowel trouble.",
+   "say": "Please get medical help now. Call 108 or go to hospital."
+  },
+  {
+   "id": "rf_night_pain_4",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "cancerHistory",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night pain with past cancer (bone spread possible).",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_pain_5",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "unplannedWeightLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Night pain with weight loss.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_pain_6",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pain 8 or more out of 10.",
+   "say": "Please see a doctor today."
+  },
+  {
+   "id": "rf_night_pain_7",
+   "problems": [
+    "night_pain"
+   ],
+   "all": [
+    {
+     "field": "painWhere",
+     "is": "belly"
+    },
+    {
+     "field": "severity",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe belly pain waking from sleep.",
+   "say": "Please see a doctor today."
+  }
+ ]
+}

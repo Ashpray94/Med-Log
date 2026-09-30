@@ -38,6 +38,12 @@ object Wording {
     fun message(name: String, text: String, voice: Boolean) =
         "MedLog: ${n(name)} says \"$text\"" + if (voice) " (a voice message, in MedLog on your phone)" else ""
 
+    /** Family hear how a reminder they were told about ended. */
+    fun doseAnswered(name: String, medicine: String, what: String) = "MedLog: ${n(name)} $what $medicine. No need to call about it."
+
+    /** Notification title on the phone that receives a synced entry. */
+    fun entryAddedTitle(by: String) = "Entry added by ${by.ifBlank { "family" }}"
+
     fun answer(name: String, answer: String) = "${n(name)}: $answer"
 
     /** Titles on the helper's phone. */

@@ -1,0 +1,7085 @@
+{
+ "fields": {
+  "chestFaint": {
+   "label": "Fainted or nearly fainted",
+   "type": "yesno",
+   "danger": true,
+   "help": "Passing out, or feeling you would.\nFainting with chest or heart signs can mean danger."
+  },
+  "chestSick": {
+   "label": "Feel sick or vomited",
+   "type": "yesno",
+   "help": "Feeling sick or throwing up with the pain.\nSome heart attacks show as sickness."
+  },
+  "painMinutes": {
+   "label": "Pain so far, in minutes",
+   "type": "number",
+   "unit": "minutes",
+   "help": "How long the pain has gone on until now.\nPain past 15 minutes needs urgent care."
+  },
+  "worseBreathing": {
+   "label": "Worse when you breathe in or cough",
+   "type": "yesno",
+   "help": "The pain changes with each breath.\nThis helps tell lung pain from heart pain."
+  },
+  "palpMinutes": {
+   "label": "Minutes it has lasted",
+   "type": "number",
+   "unit": "minutes",
+   "help": "How long this spell has gone on.\nLong spells need a heart check."
+  },
+  "palpRegular": {
+   "label": "Beat steady or uneven",
+   "type": "choice",
+   "choices": [
+    "steady",
+    "uneven",
+    "not sure"
+   ],
+   "help": "Steady means evenly spaced beats.\nAn uneven beat needs a heart check."
+  },
+  "pulseRate": {
+   "label": "Pulse, if counted",
+   "type": "number",
+   "unit": "beats/min",
+   "help": "Beats in one minute, felt at the wrist.\nA very fast pulse needs care."
+  },
+  "palpChest": {
+   "label": "Chest pain with it",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain or tightness in the chest during the spell.\nChest pain with a racing heart is urgent."
+  },
+  "palpFaint": {
+   "label": "Faint or dizzy with it",
+   "type": "yesno",
+   "danger": true,
+   "help": "Light-headed, or about to pass out.\nIt can mean the heart is not pumping well."
+  },
+  "breathTalk": {
+   "label": "Out of breath when talking",
+   "type": "yesno",
+   "danger": true,
+   "help": "You cannot finish a sentence without a gasp.\nIt shows how severe the breathing trouble is."
+  },
+  "blueLips": {
+   "label": "Blue or grey lips",
+   "type": "yesno",
+   "danger": true,
+   "help": "A blue or grey tinge on lips or face.\nIt means low oxygen. It is an emergency."
+  },
+  "breathChest": {
+   "label": "Chest pain when breathing in",
+   "type": "yesno",
+   "danger": true,
+   "help": "A sharp pain with each deep breath.\nIt can point to a lung clot or lung problem."
+  },
+  "oxygenBand": {
+   "label": "Oxygen reading",
+   "type": "choice",
+   "choices": [
+    "95 or more",
+    "92 to 94",
+    "below 92",
+    "no reading"
+   ],
+   "danger": true,
+   "help": "The number on a finger oxygen meter.\nLow readings need care the same day."
+  },
+  "usesInhaler": {
+   "label": "Uses a puffer",
+   "type": "yesno",
+   "help": "A breathing inhaler.\nTells us if this has happened before."
+  },
+  "inhalerNoHelp": {
+   "label": "Puffer not helping",
+   "type": "yesno",
+   "danger": true,
+   "gate": {
+    "field": "usesInhaler",
+    "any": [
+     true
+    ]
+   },
+   "help": "The puffer gave little or no relief.\nA puffer that fails is an emergency sign."
+  },
+  "bloodAmount": {
+   "label": "How much blood",
+   "type": "choice",
+   "choices": [
+    "a few streaks",
+    "about a teaspoon",
+    "a cupful or more"
+   ],
+   "danger": true,
+   "help": "A rough amount of blood coughed up.\nMore blood means more danger."
+  },
+  "coughFever": {
+   "label": "Fever with it",
+   "type": "yesno",
+   "help": "Feeling hot, or a high temperature.\nFever with blood in cough needs a doctor."
+  },
+  "weightLossLately": {
+   "label": "Lost weight without trying",
+   "type": "yesno",
+   "help": "Weight fell, and you did not diet.\nThis can be a warning sign."
+  },
+  "weightUp": {
+   "label": "Weight up fast",
+   "type": "yesno",
+   "help": "Weight went up quickly, over days.\nIt can mean the body is holding water."
+  },
+  "swellDays": {
+   "label": "Days swollen",
+   "type": "number",
+   "unit": "days",
+   "help": "How long the swelling has been there.\nNew swelling is checked sooner."
+  },
+  "legPainful": {
+   "label": "Calf painful",
+   "type": "yesno",
+   "gate": {
+    "field": "oneSide",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pain or tenderness in the calf.\nOne painful swollen leg needs a same-day check."
+  },
+  "snoreLoud": {
+   "label": "Loud snoring",
+   "type": "yesno",
+   "help": "Loud enough for others to hear.\nLoud snoring with pauses is a warning sign."
+  },
+  "apneaWitnessed": {
+   "label": "Seen to stop breathing",
+   "type": "yesno",
+   "help": "Someone saw pauses in your breathing.\nPauses strain the heart and brain."
+  },
+  "wakeGasping": {
+   "label": "Wake up gasping",
+   "type": "yesno",
+   "help": "Waking suddenly short of breath.\nIt shows the breathing stops at night."
+  },
+  "daySleepy": {
+   "label": "Very sleepy in the day",
+   "type": "yesno",
+   "help": "You doze off when sitting or reading.\nDaytime sleep raises the risk of accidents."
+  },
+  "bpToldHigh": {
+   "label": "Told BP is high",
+   "type": "yesno",
+   "help": "A doctor said your pressure is high.\nNight breathing problems and BP go together."
+  },
+  "snoreDrive": {
+   "label": "Nodding off while driving",
+   "type": "yesno",
+   "danger": true,
+   "help": "You doze at the wheel or in traffic.\nThis is a road safety danger."
+  },
+  "nightChest": {
+   "label": "Chest pain or racing heart at night",
+   "type": "yesno",
+   "danger": true,
+   "help": "Chest pain or fast beats that wake you.\nIt can mean the heart is strained."
+  },
+  "sysBp": {
+   "label": "Top BP number",
+   "type": "number",
+   "unit": "mmHg",
+   "help": "The first, larger number of a BP reading.\nVery high numbers need same-day care."
+  },
+  "diaBp": {
+   "label": "Bottom BP number",
+   "type": "number",
+   "unit": "mmHg",
+   "help": "The second, smaller number of a BP reading.\nA very high bottom number also needs care."
+  },
+  "onBpTablets": {
+   "label": "Takes BP tablets",
+   "type": "yesno",
+   "help": "Daily tablets for blood pressure.\nMissed tablets often explain high readings."
+  },
+  "missedBpTablets": {
+   "label": "Missed BP tablets",
+   "type": "yesno",
+   "gate": {
+    "field": "onBpTablets",
+    "any": [
+     true
+    ]
+   },
+   "help": "Skipped or forgotten doses.\nIt may be the simple cause."
+  },
+  "strokeSigns": {
+   "label": "Weak arm, face droop or slurred speech",
+   "type": "yesno",
+   "danger": true,
+   "help": "Sudden weakness on one side, or speech trouble.\nThese are signs of a stroke. Time matters."
+  },
+  "bpChest": {
+   "label": "Chest pain",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain or pressure in the chest.\nChest pain with BP trouble is urgent."
+  },
+  "lowBpBand": {
+   "label": "Top BP number band",
+   "type": "choice",
+   "choices": [
+    "100 or more",
+    "90 to 99",
+    "below 90",
+    "no reading"
+   ],
+   "help": "The first number of your BP reading.\nBelow 90 is low and needs care."
+  },
+  "lowFluidLoss": {
+   "label": "Vomiting, loose motions or poor drinking",
+   "type": "yesno",
+   "help": "Losing or not taking in enough fluid.\nDry body is a common cause of low BP."
+  },
+  "faintWeak": {
+   "label": "Faint, dizzy or very weak",
+   "type": "yesno",
+   "danger": true,
+   "help": "Light-headed, unsteady or drained.\nIt can mean blood loss or low BP."
+  },
+  "bellyBlood": {
+   "label": "Vomited blood or black stool",
+   "type": "yesno",
+   "danger": true,
+   "help": "Blood from the mouth, or tar-like stool.\nThis means bleeding inside the gut."
+  },
+  "hoursPain": {
+   "label": "Hours so far",
+   "type": "number",
+   "unit": "hours",
+   "help": "How long the pain has gone on.\nPain that lasts hours needs a doctor."
+  },
+  "bellyWhere": {
+   "label": "Where in the belly",
+   "type": "choice",
+   "choices": [
+    "upper middle",
+    "upper right",
+    "upper left",
+    "lower right",
+    "lower left",
+    "lower middle",
+    "around belly button",
+    "all over"
+   ],
+   "help": "The spot that hurts most.\nThe spot helps the doctor judge the cause."
+  },
+  "bellyHard": {
+   "label": "Belly hard or very sore",
+   "type": "yesno",
+   "danger": true,
+   "help": "The belly is stiff, or hurts on a light touch.\nIt can mean a serious problem inside."
+  },
+  "noWind": {
+   "label": "Cannot pass wind or stool",
+   "type": "yesno",
+   "danger": true,
+   "help": "Nothing is coming out, not even wind.\nIt can mean the gut is blocked."
+  },
+  "bellyBloat": {
+   "label": "Belly swollen",
+   "type": "yesno",
+   "help": "The belly looks or feels bigger than usual.\nSwelling with a blocked gut is urgent."
+  },
+  "vomitWith": {
+   "label": "Vomiting with it",
+   "type": "yesno",
+   "help": "Throwing up along with the problem.\nVomiting with other signs can mean a block."
+  },
+  "daysSoFar": {
+   "label": "Days so far",
+   "type": "number",
+   "unit": "days",
+   "help": "How long since it started.\nLonger illness needs a check."
+  },
+  "newMedicine": {
+   "label": "Started a new medicine",
+   "type": "yesno",
+   "help": "A new tablet, syrup or injection.\nMany medicines cause this."
+  },
+  "cantKeepFluids": {
+   "label": "Cannot keep even water down",
+   "type": "yesno",
+   "danger": true,
+   "help": "You throw up every sip of water.\nThe body can dry out fast."
+  },
+  "noUrine8h": {
+   "label": "No urine in 8 hours",
+   "type": "yesno",
+   "danger": true,
+   "help": "No urine at all for 8 hours.\nIt can mean the body is very dry."
+  },
+  "headNeck": {
+   "label": "Bad headache, stiff neck or confusion",
+   "type": "yesno",
+   "danger": true,
+   "minAge": 3,
+   "help": "A very bad headache, neck too stiff to bend, or muddled thinking.\nSickness with these can be a brain danger."
+  },
+  "nauseaChest": {
+   "label": "Chest pain or tightness",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain or pressure in the chest.\nFeeling sick can be a heart sign."
+  },
+  "vomitGreen": {
+   "label": "Green vomit",
+   "type": "yesno",
+   "danger": true,
+   "help": "Bright green or yellow-green fluid.\nIt can mean the gut is blocked."
+  },
+  "projectile": {
+   "label": "Forceful vomiting",
+   "type": "yesno",
+   "maxAge": 1,
+   "help": "Vomit that shoots out far.\nIn young babies it can mean a blocked stomach outlet."
+  },
+  "vomitBloodAmount": {
+   "label": "How much blood",
+   "type": "choice",
+   "choices": [
+    "a few streaks",
+    "a mouthful",
+    "a cupful or more"
+   ],
+   "danger": true,
+   "help": "A rough amount of blood in the vomit.\nMore blood means more danger."
+  },
+  "takesPainkillers": {
+   "label": "Takes aspirin or painkiller tablets",
+   "type": "yesno",
+   "help": "Tablets such as aspirin or ibuprofen.\nThey can hurt the stomach lining."
+  },
+  "daysNoStool": {
+   "label": "Days since last stool",
+   "type": "number",
+   "unit": "days",
+   "help": "Days since the last proper stool.\nMore than a week needs a check."
+  },
+  "bowelChange": {
+   "label": "Bowels changed for weeks",
+   "type": "yesno",
+   "help": "A new, lasting change in your bowel habit.\nA lasting change needs a check."
+  },
+  "stoolBloodColour": {
+   "label": "Colour of blood",
+   "type": "choice",
+   "choices": [
+    "bright red",
+    "dark red or maroon",
+    "mixed in the stool",
+    "black and sticky"
+   ],
+   "danger": true,
+   "help": "The colour of blood in your stool.\nDark blood comes from higher up in the gut."
+  },
+  "stoolBloodAmount": {
+   "label": "How much blood",
+   "type": "choice",
+   "choices": [
+    "streaks on paper",
+    "drops in the bowl",
+    "bowl turned red"
+   ],
+   "danger": true,
+   "help": "A rough amount of blood.\nMore blood means more danger."
+  },
+  "vomitBloodToo": {
+   "label": "Vomited blood too",
+   "type": "yesno",
+   "danger": true,
+   "help": "Blood or dark fluid coming up.\nIt means bleeding higher up in the gut."
+  },
+  "flankPain": {
+   "label": "Pain in the side or back",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain below the ribs, to one side.\nIt can mean a kidney problem."
+  },
+  "rigors": {
+   "label": "Shaking chills",
+   "type": "yesno",
+   "danger": true,
+   "help": "Shivering you cannot stop.\nIt can mean infection in the blood."
+  },
+  "urinePerDay": {
+   "label": "Times passing urine in a day",
+   "type": "number",
+   "unit": "times",
+   "help": "Number of times in 24 hours.\nIt helps judge how bad this is."
+  },
+  "nightTimes": {
+   "label": "Times at night",
+   "type": "number",
+   "unit": "times",
+   "help": "Trips to the toilet at night.\nMany night trips need a check."
+  },
+  "veryThirsty": {
+   "label": "Very thirsty",
+   "type": "yesno",
+   "help": "Drinking much more than usual.\nIt can go with high blood sugar."
+  },
+  "noEmpty": {
+   "label": "Bladder never feels empty",
+   "type": "yesno",
+   "help": "You still feel full after passing urine.\nIt can mean the bladder is not emptying."
+  },
+  "bladderPain": {
+   "label": "Lower belly pain or full feeling",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain or tightness low in the belly.\nIt means the bladder may be full."
+  },
+  "dropsOnly": {
+   "label": "Only drops coming",
+   "type": "yesno",
+   "help": "A weak dribble, not a stream.\nIt can mean the flow is blocked."
+  },
+  "saddleNumb": {
+   "label": "Numb around bottom or new leg weakness",
+   "type": "yesno",
+   "danger": true,
+   "help": "No feeling where you sit, or legs giving way.\nIt can mean nerve pressure in the back."
+  },
+  "urineBloodColour": {
+   "label": "Colour of urine",
+   "type": "choice",
+   "choices": [
+    "pink or tea colour",
+    "bright red",
+    "red with clots"
+   ],
+   "danger": true,
+   "help": "The colour of the urine with blood.\nClots and bright red mean more danger."
+  },
+  "leakWhen": {
+   "label": "When it leaks",
+   "type": "choice",
+   "choices": [
+    "cough or sneeze",
+    "sudden urge",
+    "both",
+    "constant dribble",
+    "only at night"
+   ],
+   "help": "What brings on the leak.\nThe pattern helps find the cause."
+  },
+  "bowelLeak": {
+   "label": "Stool leaking too",
+   "type": "yesno",
+   "danger": true,
+   "help": "Stool comes out without warning.\nWith urine leak it can mean nerve trouble."
+  },
+  "painWaves": {
+   "label": "Pain comes in waves",
+   "type": "yesno",
+   "help": "It rises, eases, then rises again.\nWave pain can mean a stone."
+  },
+  "urineBloodSeen": {
+   "label": "Blood in urine",
+   "type": "yesno",
+   "help": "Red or pink urine.\nIt helps find a kidney or bladder cause."
+  },
+  "swollenLegsToo": {
+   "label": "Legs swollen too",
+   "type": "yesno",
+   "help": "Swelling of feet or ankles.\nFace and leg swelling can mean kidney or heart trouble."
+  },
+  "foamyUrine": {
+   "label": "Foamy urine",
+   "type": "yesno",
+   "help": "Lots of froth that stays.\nFroth can mean protein leaking."
+  },
+  "lessUrine": {
+   "label": "Passing much less urine",
+   "type": "yesno",
+   "help": "Clearly less than your usual amount.\nThe kidneys may not be working well."
+  },
+  "periodPainNew": {
+   "label": "New or much worse than usual",
+   "type": "yesno",
+   "help": "Not your usual period pain.\nNew pain needs a check."
+  },
+  "periodLate": {
+   "label": "Period is late",
+   "type": "yesno",
+   "minAge": 12,
+   "maxAge": 55,
+   "help": "More than a week past the due date.\nA late period changes what the pain could be."
+  },
+  "maybePregnant": {
+   "label": "Could be pregnant",
+   "type": "yesno",
+   "danger": true,
+   "minAge": 12,
+   "maxAge": 50,
+   "help": "You might be pregnant.\nPregnancy changes how urgent this is."
+  },
+  "padsHour": {
+   "label": "Soaking a pad every hour",
+   "type": "yesno",
+   "danger": true,
+   "minAge": 10,
+   "help": "A full pad each hour for 2 hours or more.\nThis is dangerous blood loss."
+  },
+  "bleedDays": {
+   "label": "Days of bleeding",
+   "type": "number",
+   "unit": "days",
+   "help": "Days since the bleeding began.\nBleeding past 7 days needs a check."
+  },
+  "bigClots": {
+   "label": "Big clots",
+   "type": "yesno",
+   "help": "Clots bigger than a one rupee coin.\nBig clots show heavy bleeding."
+  },
+  "monthsSincePeriod": {
+   "label": "Months since last period",
+   "type": "number",
+   "unit": "months",
+   "minAge": 40,
+   "help": "Months without a period.\nA year or more means periods have stopped."
+  },
+  "bleedAmount": {
+   "label": "How much bleeding",
+   "type": "choice",
+   "choices": [
+    "spots",
+    "like a light period",
+    "heavy"
+   ],
+   "danger": true,
+   "help": "A rough amount of bleeding.\nHeavier bleeding needs faster care."
+  },
+  "onHrt": {
+   "label": "On hormone tablets or patches",
+   "type": "yesno",
+   "help": "Hormones for menopause.\nThey can cause some bleeding."
+  },
+  "pelvicPain": {
+   "label": "Pain low in the belly",
+   "type": "yesno",
+   "danger": true,
+   "help": "Pain below the belly button.\nIt can mean infection or another cause."
+  },
+  "dischargeColour": {
+   "label": "Colour of discharge",
+   "type": "choice",
+   "choices": [
+    "white or clear",
+    "yellow or green",
+    "grey",
+    "brown or bloody",
+    "pink"
+   ],
+   "help": "The colour you see.\nColour helps tell the cause."
+  },
+  "fishySmell": {
+   "label": "Fishy smell",
+   "type": "yesno",
+   "help": "A strong, fish-like smell.\nSmell helps tell the cause."
+  },
+  "riskSex": {
+   "label": "New partner or unprotected sex",
+   "type": "yesno",
+   "help": "Sex without a condom, or with someone new.\nIt tells if an infection test is needed."
+  },
+  "lumpGrowing": {
+   "label": "Lump is growing",
+   "type": "yesno",
+   "help": "It is larger than before.\nGrowing lumps are checked sooner."
+  },
+  "lumpHard": {
+   "label": "Lump is hard and fixed",
+   "type": "yesno",
+   "danger": true,
+   "help": "It feels like a stone under the skin.\nHard fixed lumps need urgent testing."
+  },
+  "skinChange": {
+   "label": "Skin dimpled or like orange peel",
+   "type": "yesno",
+   "danger": true,
+   "help": "Puckered or pitted breast skin.\nIt is a warning sign."
+  },
+  "nippleChange": {
+   "label": "Nipple turned in or leaking",
+   "type": "yesno",
+   "danger": true,
+   "help": "A new nipple change or a bloody leak.\nIt is a warning sign."
+  },
+  "armpitLump": {
+   "label": "Lump in the armpit",
+   "type": "yesno",
+   "help": "A swelling under the arm.\nIt may need testing."
+  },
+  "painCyclic": {
+   "label": "Worse before period",
+   "type": "yesno",
+   "help": "Pain rises in the week before a period.\nThis pattern is usually harmless."
+  },
+  "breastLump": {
+   "label": "Felt a lump",
+   "type": "yesno",
+   "danger": true,
+   "help": "A hard spot in the breast.\nA lump needs a doctor within 2 weeks."
+  },
+  "breastfeeding": {
+   "label": "Breastfeeding",
+   "type": "yesno",
+   "help": "Feeding a baby with breast milk.\nFeeding can cause a blocked or infected breast."
+  },
+  "flushPerDay": {
+   "label": "Flushes in a day",
+   "type": "number",
+   "unit": "times",
+   "help": "Count of hot spells in 24 hours.\nIt tells how much this affects you."
+  },
+  "periodsChanged": {
+   "label": "Periods stopped or changed",
+   "type": "yesno",
+   "minAge": 35,
+   "help": "Late, missed or different periods.\nIt fits the change of life."
+  },
+  "nightSoaking": {
+   "label": "Soaking night sweats",
+   "type": "yesno",
+   "help": "Night sweat that wets clothes or sheets.\nSoaking sweats can have other causes."
+  },
+  "racingHeart": {
+   "label": "Racing heart",
+   "type": "yesno",
+   "help": "Fast or pounding beats.\nA racing heart with heat can be another cause."
+  },
+  "bleedAfterStop": {
+   "label": "Bleeding after periods stopped",
+   "type": "yesno",
+   "danger": true,
+   "help": "Blood from the vagina after menopause.\nIt always needs a check."
+  },
+  "bloatDaily": {
+   "label": "Bloated most days",
+   "type": "yesno",
+   "help": "Bloating on most days of the month.\nDaily bloating that lasts needs a check."
+  },
+  "earlySatiety": {
+   "label": "Full after a few bites",
+   "type": "yesno",
+   "help": "You cannot finish a normal meal.\nIt can be an early warning sign."
+  },
+  "bellySwollenFast": {
+   "label": "Belly swelling fast",
+   "type": "yesno",
+   "help": "It grows over days or weeks.\nFast swelling needs a check."
+  },
+  "foodSticks": {
+   "label": "Food sticks",
+   "type": "yesno",
+   "danger": true,
+   "help": "Food seems to stop in the chest or throat.\nIt needs a check within days."
+  },
+  "chokeCough": {
+   "label": "Choke or cough when eating",
+   "type": "yesno",
+   "help": "Food or drink goes down the wrong way.\nFood in the lungs can cause a chest infection."
+  },
+  "regurgitate": {
+   "label": "Food comes back up",
+   "type": "yesno",
+   "help": "Whole food returns to the mouth.\nIt can mean food is held up."
+  },
+  "swallowWhat": {
+   "label": "What is hard to swallow",
+   "type": "choice",
+   "choices": [
+    "only hard food",
+    "soft food too",
+    "even water"
+   ],
+   "danger": true,
+   "help": "The food that gives trouble.\nIt shows how bad the block is."
+  },
+  "droolSaliva": {
+   "label": "Cannot swallow spit",
+   "type": "yesno",
+   "danger": true,
+   "help": "Spit pools or drools out.\nIt means a full block. It is an emergency."
+  },
+  "foodStuckNow": {
+   "label": "Food stuck now",
+   "type": "yesno",
+   "danger": true,
+   "help": "Food is stuck and will not go down.\nA stuck lump can block breathing."
+  },
+  "hiccupHours": {
+   "label": "Hours of hiccups",
+   "type": "number",
+   "unit": "hours",
+   "help": "Hours since they began.\nHiccups over 48 hours need a check."
+  },
+  "darkUrine": {
+   "label": "Dark urine",
+   "type": "yesno",
+   "help": "Brown or tea colour.\nDark urine goes with liver or bile trouble."
+  },
+  "paleStool": {
+   "label": "Pale stool",
+   "type": "yesno",
+   "help": "Stool lost its brown colour.\nIt means bile may be blocked."
+  },
+  "upperRightPain": {
+   "label": "Pain in upper right belly",
+   "type": "yesno",
+   "help": "Pain under the right ribs.\nIt can mean a bile duct problem."
+  },
+  "tooManyTablets": {
+   "label": "Took too much paracetamol",
+   "type": "yesno",
+   "danger": true,
+   "help": "More tablets than the pack says.\nToo much harms the liver, even if you feel fine."
+  },
+  "pillows": {
+   "label": "Pillows needed to sleep",
+   "type": "number",
+   "unit": "pillows",
+   "gate": {
+    "field": "lyingFlat",
+    "any": [
+     true
+    ]
+   },
+   "help": "Pillows you stack to breathe easier.\nNeeding more pillows can mean fluid in the lungs."
+  }
+ },
+ "questions": {
+  "q_chestFaint": {
+   "field": "chestFaint",
+   "ask": "Did you faint, or nearly faint?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Passing out, or feeling you would.\nFainting with chest or heart signs can mean danger."
+  },
+  "q_chestSick": {
+   "field": "chestSick",
+   "ask": "Do you feel sick, or have you vomited?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Feeling sick or throwing up with the pain.\nSome heart attacks show as sickness."
+  },
+  "q_painMinutes": {
+   "field": "painMinutes",
+   "ask": "How many minutes has it lasted so far?",
+   "type": "number",
+   "priority": 60,
+   "help": "How long the pain has gone on until now.\nPain past 15 minutes needs urgent care."
+  },
+  "q_worseBreathing": {
+   "field": "worseBreathing",
+   "ask": "Is it worse when you breathe in or cough?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "The pain changes with each breath.\nThis helps tell lung pain from heart pain."
+  },
+  "q_palpMinutes": {
+   "field": "palpMinutes",
+   "ask": "How many minutes has it lasted?",
+   "type": "number",
+   "priority": 60,
+   "help": "How long this spell has gone on.\nLong spells need a heart check."
+  },
+  "q_palpRegular": {
+   "field": "palpRegular",
+   "ask": "Is the beat steady or uneven?",
+   "type": "choice",
+   "priority": 55,
+   "help": "Steady means evenly spaced beats.\nAn uneven beat needs a heart check."
+  },
+  "q_pulseRate": {
+   "field": "pulseRate",
+   "ask": "If you counted your pulse, say the number.",
+   "type": "number",
+   "priority": 50,
+   "help": "Beats in one minute, felt at the wrist.\nA very fast pulse needs care."
+  },
+  "q_palpChest": {
+   "field": "palpChest",
+   "ask": "Do you have chest pain with it?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Pain or tightness in the chest during the spell.\nChest pain with a racing heart is urgent."
+  },
+  "q_palpFaint": {
+   "field": "palpFaint",
+   "ask": "Do you feel faint or dizzy with it?",
+   "type": "yesno",
+   "priority": 92,
+   "help": "Light-headed, or about to pass out.\nIt can mean the heart is not pumping well."
+  },
+  "q_breathTalk": {
+   "field": "breathTalk",
+   "ask": "Do you run out of breath when you talk?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "You cannot finish a sentence without a gasp.\nIt shows how severe the breathing trouble is."
+  },
+  "q_blueLips": {
+   "field": "blueLips",
+   "ask": "Are your lips or face blue or grey?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "A blue or grey tinge on lips or face.\nIt means low oxygen. It is an emergency."
+  },
+  "q_breathChest": {
+   "field": "breathChest",
+   "ask": "Is there chest pain when you breathe in?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "A sharp pain with each deep breath.\nIt can point to a lung clot or lung problem."
+  },
+  "q_oxygenBand": {
+   "field": "oxygenBand",
+   "ask": "What was your oxygen reading?",
+   "type": "choice",
+   "priority": 90,
+   "help": "The number on a finger oxygen meter.\nLow readings need care the same day."
+  },
+  "q_usesInhaler": {
+   "field": "usesInhaler",
+   "ask": "Do you use a puffer?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "A breathing inhaler.\nTells us if this has happened before."
+  },
+  "q_inhalerNoHelp": {
+   "field": "inhalerNoHelp",
+   "ask": "Is the puffer not helping enough?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "The puffer gave little or no relief.\nA puffer that fails is an emergency sign.",
+   "gate": {
+    "field": "usesInhaler",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_bloodAmount": {
+   "field": "bloodAmount",
+   "ask": "How much blood was in it?",
+   "type": "choice",
+   "priority": 93,
+   "help": "A rough amount of blood coughed up.\nMore blood means more danger."
+  },
+  "q_coughFever": {
+   "field": "coughFever",
+   "ask": "Have you had fever with it?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Feeling hot, or a high temperature.\nFever with blood in cough needs a doctor."
+  },
+  "q_weightLossLately": {
+   "field": "weightLossLately",
+   "ask": "Have you lost weight without trying?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Weight fell, and you did not diet.\nThis can be a warning sign."
+  },
+  "q_weightUp": {
+   "field": "weightUp",
+   "ask": "Have you put on weight fast in a few days?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Weight went up quickly, over days.\nIt can mean the body is holding water."
+  },
+  "q_swellDays": {
+   "field": "swellDays",
+   "ask": "For how many days has it been swollen?",
+   "type": "number",
+   "priority": 45,
+   "help": "How long the swelling has been there.\nNew swelling is checked sooner."
+  },
+  "q_legPainful": {
+   "field": "legPainful",
+   "ask": "Is the calf painful?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Pain or tenderness in the calf.\nOne painful swollen leg needs a same-day check.",
+   "gate": {
+    "field": "oneSide",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_snoreLoud": {
+   "field": "snoreLoud",
+   "ask": "Is your snoring loud?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Loud enough for others to hear.\nLoud snoring with pauses is a warning sign."
+  },
+  "q_apneaWitnessed": {
+   "field": "apneaWitnessed",
+   "ask": "Has anyone seen you stop breathing in sleep?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Someone saw pauses in your breathing.\nPauses strain the heart and brain."
+  },
+  "q_wakeGasping": {
+   "field": "wakeGasping",
+   "ask": "Do you wake up gasping or choking?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Waking suddenly short of breath.\nIt shows the breathing stops at night."
+  },
+  "q_daySleepy": {
+   "field": "daySleepy",
+   "ask": "Are you very sleepy in the day?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "You doze off when sitting or reading.\nDaytime sleep raises the risk of accidents."
+  },
+  "q_bpToldHigh": {
+   "field": "bpToldHigh",
+   "ask": "Have you been told your BP is high?",
+   "type": "yesno",
+   "priority": 40,
+   "help": "A doctor said your pressure is high.\nNight breathing problems and BP go together."
+  },
+  "q_snoreDrive": {
+   "field": "snoreDrive",
+   "ask": "Do you nod off while driving?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "You doze at the wheel or in traffic.\nThis is a road safety danger."
+  },
+  "q_nightChest": {
+   "field": "nightChest",
+   "ask": "Chest pain or racing heart in your sleep?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Chest pain or fast beats that wake you.\nIt can mean the heart is strained."
+  },
+  "q_sysBp": {
+   "field": "sysBp",
+   "ask": "What is the top BP number?",
+   "type": "number",
+   "priority": 80,
+   "help": "The first, larger number of a BP reading.\nVery high numbers need same-day care."
+  },
+  "q_diaBp": {
+   "field": "diaBp",
+   "ask": "What is the bottom BP number?",
+   "type": "number",
+   "priority": 75,
+   "help": "The second, smaller number of a BP reading.\nA very high bottom number also needs care."
+  },
+  "q_onBpTablets": {
+   "field": "onBpTablets",
+   "ask": "Do you take BP tablets?",
+   "type": "yesno",
+   "priority": 45,
+   "help": "Daily tablets for blood pressure.\nMissed tablets often explain high readings."
+  },
+  "q_missedBpTablets": {
+   "field": "missedBpTablets",
+   "ask": "Have you missed any BP tablets lately?",
+   "type": "yesno",
+   "priority": 44,
+   "help": "Skipped or forgotten doses.\nIt may be the simple cause.",
+   "gate": {
+    "field": "onBpTablets",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_strokeSigns": {
+   "field": "strokeSigns",
+   "ask": "Any weak arm, drooping face or slurred speech?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Sudden weakness on one side, or speech trouble.\nThese are signs of a stroke. Time matters."
+  },
+  "q_bpChest": {
+   "field": "bpChest",
+   "ask": "Do you have any chest pain?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "Pain or pressure in the chest.\nChest pain with BP trouble is urgent."
+  },
+  "q_lowBpBand": {
+   "field": "lowBpBand",
+   "ask": "What was the top BP number?",
+   "type": "choice",
+   "priority": 80,
+   "help": "The first number of your BP reading.\nBelow 90 is low and needs care."
+  },
+  "q_lowFluidLoss": {
+   "field": "lowFluidLoss",
+   "ask": "Lately, vomiting, loose motions or drinking little?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Losing or not taking in enough fluid.\nDry body is a common cause of low BP."
+  },
+  "q_faintWeak": {
+   "field": "faintWeak",
+   "ask": "Do you feel faint, dizzy or very weak?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Light-headed, unsteady or drained.\nIt can mean blood loss or low BP."
+  },
+  "q_bellyBlood": {
+   "field": "bellyBlood",
+   "ask": "Have you vomited blood, or passed black sticky stool?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Blood from the mouth, or tar-like stool.\nThis means bleeding inside the gut."
+  },
+  "q_hoursPain": {
+   "field": "hoursPain",
+   "ask": "For how many hours has it lasted?",
+   "type": "number",
+   "priority": 50,
+   "help": "How long the pain has gone on.\nPain that lasts hours needs a doctor."
+  },
+  "q_bellyWhere": {
+   "field": "bellyWhere",
+   "ask": "Where is the pain in your belly?",
+   "type": "choice",
+   "priority": 70,
+   "help": "The spot that hurts most.\nThe spot helps the doctor judge the cause."
+  },
+  "q_bellyHard": {
+   "field": "bellyHard",
+   "ask": "Is your belly hard, or very sore if touched?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "The belly is stiff, or hurts on a light touch.\nIt can mean a serious problem inside."
+  },
+  "q_noWind": {
+   "field": "noWind",
+   "ask": "Can you not pass wind or stool?",
+   "type": "yesno",
+   "priority": 93,
+   "help": "Nothing is coming out, not even wind.\nIt can mean the gut is blocked."
+  },
+  "q_bellyBloat": {
+   "field": "bellyBloat",
+   "ask": "Is your belly swollen?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "The belly looks or feels bigger than usual.\nSwelling with a blocked gut is urgent."
+  },
+  "q_vomitWith": {
+   "field": "vomitWith",
+   "ask": "Have you been vomiting with it?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "Throwing up along with the problem.\nVomiting with other signs can mean a block."
+  },
+  "q_daysSoFar": {
+   "field": "daysSoFar",
+   "ask": "For how many days has this gone on?",
+   "type": "number",
+   "priority": 45,
+   "help": "How long since it started.\nLonger illness needs a check."
+  },
+  "q_newMedicine": {
+   "field": "newMedicine",
+   "ask": "Did you start a new medicine lately?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "A new tablet, syrup or injection.\nMany medicines cause this."
+  },
+  "q_cantKeepFluids": {
+   "field": "cantKeepFluids",
+   "ask": "Can you not keep even water down?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "You throw up every sip of water.\nThe body can dry out fast."
+  },
+  "q_noUrine8h": {
+   "field": "noUrine8h",
+   "ask": "Have you passed no urine in 8 hours?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "No urine at all for 8 hours.\nIt can mean the body is very dry."
+  },
+  "q_headNeck": {
+   "field": "headNeck",
+   "ask": "Bad headache, stiff neck or confusion?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "A very bad headache, neck too stiff to bend, or muddled thinking.\nSickness with these can be a brain danger."
+  },
+  "q_nauseaChest": {
+   "field": "nauseaChest",
+   "ask": "Any chest pain or chest tightness?",
+   "type": "yesno",
+   "priority": 95,
+   "help": "Pain or pressure in the chest.\nFeeling sick can be a heart sign."
+  },
+  "q_vomitGreen": {
+   "field": "vomitGreen",
+   "ask": "Is the vomit green or yellow-green?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Bright green or yellow-green fluid.\nIt can mean the gut is blocked."
+  },
+  "q_coffee_v": {
+   "field": "coffeeGround",
+   "ask": "Did it look like coffee grounds?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Dark brown specks, like coffee powder.\nIt shows old blood from the stomach.",
+   "gate": {
+    "field": "blood",
+    "any": [
+     true
+    ]
+   }
+  },
+  "q_projectile": {
+   "field": "projectile",
+   "ask": "Does the baby vomit with force, shooting out?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Vomit that shoots out far.\nIn young babies it can mean a blocked stomach outlet."
+  },
+  "q_vomitBloodAmount": {
+   "field": "vomitBloodAmount",
+   "ask": "How much blood?",
+   "type": "choice",
+   "priority": 95,
+   "help": "A rough amount of blood in the vomit.\nMore blood means more danger."
+  },
+  "q_takesPainkillers": {
+   "field": "takesPainkillers",
+   "ask": "Do you take aspirin or painkiller tablets?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Tablets such as aspirin or ibuprofen.\nThey can hurt the stomach lining."
+  },
+  "q_daysNoStool": {
+   "field": "daysNoStool",
+   "ask": "How many days since you passed stool?",
+   "type": "number",
+   "priority": 70,
+   "help": "Days since the last proper stool.\nMore than a week needs a check."
+  },
+  "q_bowelChange": {
+   "field": "bowelChange",
+   "ask": "Have your bowels changed for 6 weeks or more?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "A new, lasting change in your bowel habit.\nA lasting change needs a check."
+  },
+  "q_stoolBloodColour": {
+   "field": "stoolBloodColour",
+   "ask": "What colour was the blood?",
+   "type": "choice",
+   "priority": 93,
+   "help": "The colour of blood in your stool.\nDark blood comes from higher up in the gut."
+  },
+  "q_stoolBloodAmount": {
+   "field": "stoolBloodAmount",
+   "ask": "How much blood was there?",
+   "type": "choice",
+   "priority": 90,
+   "help": "A rough amount of blood.\nMore blood means more danger."
+  },
+  "q_vomitBloodToo": {
+   "field": "vomitBloodToo",
+   "ask": "Did you also vomit blood or coffee-like fluid?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "Blood or dark fluid coming up.\nIt means bleeding higher up in the gut."
+  },
+  "q_flankPain": {
+   "field": "flankPain",
+   "ask": "Do you have pain in your side or back?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "Pain below the ribs, to one side.\nIt can mean a kidney problem."
+  },
+  "q_rigors": {
+   "field": "rigors",
+   "ask": "Do you have shaking chills?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Shivering you cannot stop.\nIt can mean infection in the blood."
+  },
+  "q_urinePerDay": {
+   "field": "urinePerDay",
+   "ask": "How many times do you pass urine in a day?",
+   "type": "number",
+   "priority": 55,
+   "help": "Number of times in 24 hours.\nIt helps judge how bad this is."
+  },
+  "q_nightTimes": {
+   "field": "nightTimes",
+   "ask": "How many times do you wake to pass urine?",
+   "type": "number",
+   "priority": 55,
+   "help": "Trips to the toilet at night.\nMany night trips need a check."
+  },
+  "q_veryThirsty": {
+   "field": "veryThirsty",
+   "ask": "Are you very thirsty?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Drinking much more than usual.\nIt can go with high blood sugar."
+  },
+  "q_noEmpty": {
+   "field": "noEmpty",
+   "ask": "Does your bladder never feel empty?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "You still feel full after passing urine.\nIt can mean the bladder is not emptying."
+  },
+  "q_bladderPain": {
+   "field": "bladderPain",
+   "ask": "Is your lower belly painful or very full?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "Pain or tightness low in the belly.\nIt means the bladder may be full."
+  },
+  "q_dropsOnly": {
+   "field": "dropsOnly",
+   "ask": "Are only drops coming out?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "A weak dribble, not a stream.\nIt can mean the flow is blocked."
+  },
+  "q_saddleNumb": {
+   "field": "saddleNumb",
+   "ask": "Numb around your bottom, or new weak legs?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "No feeling where you sit, or legs giving way.\nIt can mean nerve pressure in the back."
+  },
+  "q_urineBloodColour": {
+   "field": "urineBloodColour",
+   "ask": "What colour is the urine?",
+   "type": "choice",
+   "priority": 85,
+   "help": "The colour of the urine with blood.\nClots and bright red mean more danger."
+  },
+  "q_leakWhen": {
+   "field": "leakWhen",
+   "ask": "When does it leak?",
+   "type": "choice",
+   "priority": 60,
+   "help": "What brings on the leak.\nThe pattern helps find the cause."
+  },
+  "q_bowelLeak": {
+   "field": "bowelLeak",
+   "ask": "Are you also leaking stool?",
+   "type": "yesno",
+   "priority": 94,
+   "help": "Stool comes out without warning.\nWith urine leak it can mean nerve trouble."
+  },
+  "q_painWaves": {
+   "field": "painWaves",
+   "ask": "Does the pain come in waves?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "It rises, eases, then rises again.\nWave pain can mean a stone."
+  },
+  "q_urineBloodSeen": {
+   "field": "urineBloodSeen",
+   "ask": "Is there blood in your urine?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Red or pink urine.\nIt helps find a kidney or bladder cause."
+  },
+  "q_swollenLegsToo": {
+   "field": "swollenLegsToo",
+   "ask": "Are your legs swollen too?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Swelling of feet or ankles.\nFace and leg swelling can mean kidney or heart trouble."
+  },
+  "q_foamyUrine": {
+   "field": "foamyUrine",
+   "ask": "Is your urine foamy?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Lots of froth that stays.\nFroth can mean protein leaking."
+  },
+  "q_lessUrine": {
+   "field": "lessUrine",
+   "ask": "Are you passing much less urine?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "Clearly less than your usual amount.\nThe kidneys may not be working well."
+  },
+  "q_periodPainNew": {
+   "field": "periodPainNew",
+   "ask": "Is the pain new, or much worse than usual?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Not your usual period pain.\nNew pain needs a check."
+  },
+  "q_periodLate": {
+   "field": "periodLate",
+   "ask": "Is your period late?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "More than a week past the due date.\nA late period changes what the pain could be."
+  },
+  "q_maybePregnant": {
+   "field": "maybePregnant",
+   "ask": "Could you be pregnant?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "You might be pregnant.\nPregnancy changes how urgent this is."
+  },
+  "q_padsHour": {
+   "field": "padsHour",
+   "ask": "Are you soaking a pad every hour?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "A full pad each hour for 2 hours or more.\nThis is dangerous blood loss."
+  },
+  "q_bleedDays": {
+   "field": "bleedDays",
+   "ask": "For how many days have you bled?",
+   "type": "number",
+   "priority": 60,
+   "help": "Days since the bleeding began.\nBleeding past 7 days needs a check."
+  },
+  "q_bigClots": {
+   "field": "bigClots",
+   "ask": "Are there big clots, as large as a coin?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Clots bigger than a one rupee coin.\nBig clots show heavy bleeding."
+  },
+  "q_monthsSincePeriod": {
+   "field": "monthsSincePeriod",
+   "ask": "How many months since your last period?",
+   "type": "number",
+   "priority": 80,
+   "help": "Months without a period.\nA year or more means periods have stopped."
+  },
+  "q_bleedAmount": {
+   "field": "bleedAmount",
+   "ask": "How much are you bleeding?",
+   "type": "choice",
+   "priority": 90,
+   "help": "A rough amount of bleeding.\nHeavier bleeding needs faster care."
+  },
+  "q_onHrt": {
+   "field": "onHrt",
+   "ask": "Do you use hormone tablets or patches?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Hormones for menopause.\nThey can cause some bleeding."
+  },
+  "q_pelvicPain": {
+   "field": "pelvicPain",
+   "ask": "Do you have pain low in the belly?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "Pain below the belly button.\nIt can mean infection or another cause."
+  },
+  "q_dischargeColour": {
+   "field": "dischargeColour",
+   "ask": "What colour is the discharge?",
+   "type": "choice",
+   "priority": 70,
+   "help": "The colour you see.\nColour helps tell the cause."
+  },
+  "q_fishySmell": {
+   "field": "fishySmell",
+   "ask": "Does it have a fishy smell?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "A strong, fish-like smell.\nSmell helps tell the cause."
+  },
+  "q_riskSex": {
+   "field": "riskSex",
+   "ask": "Any new partner or unprotected sex lately?",
+   "type": "yesno",
+   "priority": 60,
+   "help": "Sex without a condom, or with someone new.\nIt tells if an infection test is needed."
+  },
+  "q_lumpGrowing": {
+   "field": "lumpGrowing",
+   "ask": "Is the lump getting bigger?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "It is larger than before.\nGrowing lumps are checked sooner."
+  },
+  "q_lumpHard": {
+   "field": "lumpHard",
+   "ask": "Is the lump hard, and does it not move?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "It feels like a stone under the skin.\nHard fixed lumps need urgent testing."
+  },
+  "q_skinChange": {
+   "field": "skinChange",
+   "ask": "Is the skin dimpled, like orange peel?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "Puckered or pitted breast skin.\nIt is a warning sign."
+  },
+  "q_nippleChange": {
+   "field": "nippleChange",
+   "ask": "Is the nipple turned in, or leaking blood?",
+   "type": "yesno",
+   "priority": 85,
+   "help": "A new nipple change or a bloody leak.\nIt is a warning sign."
+  },
+  "q_armpitLump": {
+   "field": "armpitLump",
+   "ask": "Is there a lump in the armpit?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "A swelling under the arm.\nIt may need testing."
+  },
+  "q_painCyclic": {
+   "field": "painCyclic",
+   "ask": "Is it worse before your period?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Pain rises in the week before a period.\nThis pattern is usually harmless."
+  },
+  "q_breastLump": {
+   "field": "breastLump",
+   "ask": "Have you felt a lump?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "A hard spot in the breast.\nA lump needs a doctor within 2 weeks."
+  },
+  "q_breastfeeding": {
+   "field": "breastfeeding",
+   "ask": "Are you breastfeeding?",
+   "type": "yesno",
+   "priority": 55,
+   "help": "Feeding a baby with breast milk.\nFeeding can cause a blocked or infected breast."
+  },
+  "q_flushPerDay": {
+   "field": "flushPerDay",
+   "ask": "How many flushes a day?",
+   "type": "number",
+   "priority": 45,
+   "help": "Count of hot spells in 24 hours.\nIt tells how much this affects you."
+  },
+  "q_periodsChanged": {
+   "field": "periodsChanged",
+   "ask": "Have your periods stopped or changed?",
+   "type": "yesno",
+   "priority": 50,
+   "help": "Late, missed or different periods.\nIt fits the change of life."
+  },
+  "q_nightSoaking": {
+   "field": "nightSoaking",
+   "ask": "Do you soak the bed with sweat at night?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Night sweat that wets clothes or sheets.\nSoaking sweats can have other causes."
+  },
+  "q_racingHeart": {
+   "field": "racingHeart",
+   "ask": "Does your heart race?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Fast or pounding beats.\nA racing heart with heat can be another cause."
+  },
+  "q_bleedAfterStop": {
+   "field": "bleedAfterStop",
+   "ask": "Any bleeding after your periods stopped?",
+   "type": "yesno",
+   "priority": 90,
+   "help": "Blood from the vagina after menopause.\nIt always needs a check."
+  },
+  "q_bloatDaily": {
+   "field": "bloatDaily",
+   "ask": "Are you bloated most days?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Bloating on most days of the month.\nDaily bloating that lasts needs a check."
+  },
+  "q_earlySatiety": {
+   "field": "earlySatiety",
+   "ask": "Do you feel full after a few bites?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "You cannot finish a normal meal.\nIt can be an early warning sign."
+  },
+  "q_bellySwollenFast": {
+   "field": "bellySwollenFast",
+   "ask": "Is your belly swelling fast?",
+   "type": "yesno",
+   "priority": 75,
+   "help": "It grows over days or weeks.\nFast swelling needs a check."
+  },
+  "q_foodSticks": {
+   "field": "foodSticks",
+   "ask": "Does food stick when you swallow?",
+   "type": "yesno",
+   "priority": 88,
+   "help": "Food seems to stop in the chest or throat.\nIt needs a check within days."
+  },
+  "q_chokeCough": {
+   "field": "chokeCough",
+   "ask": "Do you choke or cough when you eat?",
+   "type": "yesno",
+   "priority": 70,
+   "help": "Food or drink goes down the wrong way.\nFood in the lungs can cause a chest infection."
+  },
+  "q_regurgitate": {
+   "field": "regurgitate",
+   "ask": "Does food come back up unchanged?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Whole food returns to the mouth.\nIt can mean food is held up."
+  },
+  "q_swallowWhat": {
+   "field": "swallowWhat",
+   "ask": "What is hard to swallow?",
+   "type": "choice",
+   "priority": 80,
+   "help": "The food that gives trouble.\nIt shows how bad the block is."
+  },
+  "q_droolSaliva": {
+   "field": "droolSaliva",
+   "ask": "Can you not swallow your own spit?",
+   "type": "yesno",
+   "priority": 98,
+   "help": "Spit pools or drools out.\nIt means a full block. It is an emergency."
+  },
+  "q_foodStuckNow": {
+   "field": "foodStuckNow",
+   "ask": "Is food stuck right now?",
+   "type": "yesno",
+   "priority": 96,
+   "help": "Food is stuck and will not go down.\nA stuck lump can block breathing."
+  },
+  "q_hiccupHours": {
+   "field": "hiccupHours",
+   "ask": "For how many hours have the hiccups gone on?",
+   "type": "number",
+   "priority": 70,
+   "help": "Hours since they began.\nHiccups over 48 hours need a check."
+  },
+  "q_darkUrine": {
+   "field": "darkUrine",
+   "ask": "Is your urine dark, like tea?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Brown or tea colour.\nDark urine goes with liver or bile trouble."
+  },
+  "q_paleStool": {
+   "field": "paleStool",
+   "ask": "Is your stool pale or clay coloured?",
+   "type": "yesno",
+   "priority": 65,
+   "help": "Stool lost its brown colour.\nIt means bile may be blocked."
+  },
+  "q_upperRightPain": {
+   "field": "upperRightPain",
+   "ask": "Do you have pain in the upper right belly?",
+   "type": "yesno",
+   "priority": 80,
+   "help": "Pain under the right ribs.\nIt can mean a bile duct problem."
+  },
+  "q_tooManyTablets": {
+   "field": "tooManyTablets",
+   "ask": "Did you take more paracetamol than advised?",
+   "type": "yesno",
+   "priority": 97,
+   "help": "More tablets than the pack says.\nToo much harms the liver, even if you feel fine."
+  },
+  "q_pillows": {
+   "field": "pillows",
+   "ask": "How many pillows do you need to sleep?",
+   "type": "number",
+   "priority": 55,
+   "help": "Pillows you stack to breathe easier.\nNeeding more pillows can mean fluid in the lungs.",
+   "gate": {
+    "field": "lyingFlat",
+    "any": [
+     true
+    ]
+   }
+  }
+ },
+ "problems": {
+  "chest_pain": {
+   "fields": [
+    "painMinutes",
+    "character",
+    "exertion",
+    "worseBreathing"
+   ],
+   "fu": [
+    "q_armjaw",
+    "q_sweat",
+    "q_breathless",
+    "q_chestFaint",
+    "q_worst"
+   ]
+  },
+  "chest_tight": {
+   "fields": [
+    "painMinutes",
+    "exertion",
+    "atRest",
+    "chestSick"
+   ],
+   "fu": [
+    "q_armjaw",
+    "q_sweat",
+    "q_breathless",
+    "q_chestFaint"
+   ]
+  },
+  "palpitations": {
+   "fields": [
+    "palpMinutes",
+    "palpRegular",
+    "pulseRate"
+   ],
+   "fu": [
+    "q_breathless",
+    "q_palpChest",
+    "q_palpFaint"
+   ]
+  },
+  "breathless": {
+   "fields": [
+    "onset",
+    "atRest",
+    "lyingFlat",
+    "pillows",
+    "oxygenBand"
+   ],
+   "fu": [
+    "q_breathTalk",
+    "q_blueLips",
+    "q_breathChest",
+    "q_confused"
+   ]
+  },
+  "wheeze": {
+   "fields": [
+    "onset",
+    "usesInhaler",
+    "inhalerNoHelp",
+    "atRest",
+    "oxygenBand"
+   ],
+   "fu": [
+    "q_breathTalk",
+    "q_blueLips",
+    "q_lips"
+   ]
+  },
+  "cough_blood": {
+   "fields": [
+    "bloodAmount",
+    "count",
+    "weeks",
+    "coughFever",
+    "weightLossLately"
+   ],
+   "fu": [
+    "q_breathless",
+    "q_breathChest",
+    "q_thinner"
+   ]
+  },
+  "low_oxygen": {
+   "fields": [
+    "oxygenBand",
+    "atRest"
+   ],
+   "fu": [
+    "q_breathless",
+    "q_breathTalk",
+    "q_blueLips",
+    "q_confused"
+   ]
+  },
+  "swollen_ankles": {
+   "fields": [
+    "swellDays",
+    "oneSide",
+    "legPainful",
+    "redHot",
+    "lyingFlat",
+    "weightUp"
+   ],
+   "fu": [
+    "q_breathless",
+    "q_breathChest"
+   ]
+  },
+  "snoring": {
+   "fields": [
+    "weeks",
+    "snoreLoud",
+    "apneaWitnessed",
+    "wakeGasping",
+    "daySleepy",
+    "bpToldHigh"
+   ],
+   "fu": [
+    "q_snoreDrive",
+    "q_nightChest"
+   ]
+  },
+  "high_bp": {
+   "fields": [
+    "sysBp",
+    "diaBp",
+    "onBpTablets",
+    "missedBpTablets"
+   ],
+   "fu": [
+    "q_worst",
+    "q_vision",
+    "q_strokeSigns",
+    "q_bpChest",
+    "q_breathless"
+   ]
+  },
+  "low_bp": {
+   "fields": [
+    "lowBpBand",
+    "onStanding",
+    "onBpTablets",
+    "lowFluidLoss"
+   ],
+   "fu": [
+    "q_faintWeak",
+    "q_bellyBlood",
+    "q_bpChest",
+    "q_confused",
+    "q_temp"
+   ]
+  },
+  "stomach_pain": {
+   "fields": [
+    "hoursPain",
+    "onset",
+    "bellyWhere",
+    "severity"
+   ],
+   "fu": [
+    "q_bellyHard",
+    "q_noWind",
+    "q_bellyBlood",
+    "q_temp",
+    "q_faintWeak"
+   ]
+  },
+  "acidity": {
+   "fields": [
+    "weeks",
+    "exertion",
+    "weightLossLately",
+    "foodSticks"
+   ],
+   "fu": [
+    "q_armjaw",
+    "q_sweat",
+    "q_bellyBlood",
+    "q_breathless"
+   ]
+  },
+  "nausea": {
+   "fields": [
+    "daysSoFar",
+    "newMedicine",
+    "cantKeepFluids",
+    "noUrine8h"
+   ],
+   "fu": [
+    "q_headNeck",
+    "q_nauseaChest",
+    "q_bellyBlood",
+    "q_bellyHard"
+   ]
+  },
+  "vomiting": {
+   "fields": [
+    "count",
+    "daysSoFar",
+    "blood",
+    "cantKeepFluids",
+    "noUrine8h",
+    "projectile"
+   ],
+   "fu": [
+    "q_coffee_v",
+    "q_vomitGreen",
+    "q_bellyHard",
+    "q_headNeck"
+   ]
+  },
+  "vomit_blood": {
+   "fields": [
+    "count",
+    "vomitBloodAmount",
+    "coffeeGround",
+    "blackStool",
+    "faintWeak",
+    "takesPainkillers"
+   ],
+   "fu": [
+    "q_thinner"
+   ]
+  },
+  "bloating": {
+   "fields": [
+    "weeks",
+    "bloatDaily",
+    "earlySatiety",
+    "weightLossLately",
+    "bellySwollenFast"
+   ],
+   "fu": [
+    "q_noWind",
+    "q_vomitWith",
+    "q_bellyHard",
+    "q_bellyBlood"
+   ]
+  },
+  "burp": {
+   "fields": [
+    "weeks",
+    "weightLossLately",
+    "foodSticks",
+    "exertion"
+   ],
+   "fu": [
+    "q_armjaw",
+    "q_sweat",
+    "q_bellyBlood",
+    "q_vomitWith"
+   ]
+  },
+  "hiccup": {
+   "fields": [
+    "hiccupHours",
+    "newMedicine"
+   ],
+   "fu": [
+    "q_strokeSigns",
+    "q_breathless",
+    "q_armjaw",
+    "q_vomitWith"
+   ]
+  },
+  "swallowing": {
+   "fields": [
+    "weeks",
+    "swallowWhat",
+    "weightLossLately",
+    "chokeCough",
+    "regurgitate"
+   ],
+   "fu": [
+    "q_droolSaliva",
+    "q_foodStuckNow",
+    "q_bellyBlood",
+    "q_breathless"
+   ]
+  },
+  "jaundice": {
+   "fields": [
+    "daysSoFar",
+    "darkUrine",
+    "paleStool",
+    "itchy",
+    "upperRightPain"
+   ],
+   "fu": [
+    "q_temp",
+    "q_confused",
+    "q_tooManyTablets",
+    "q_bellyBlood"
+   ]
+  },
+  "loose_motions": {
+   "fields": [
+    "daysSoFar",
+    "count",
+    "blood",
+    "cantKeepFluids",
+    "noUrine8h"
+   ],
+   "fu": [
+    "q_black_stool",
+    "q_temp",
+    "q_bellyHard",
+    "q_confused"
+   ]
+  },
+  "constipation": {
+   "fields": [
+    "daysNoStool",
+    "bowelChange",
+    "newMedicine",
+    "blood"
+   ],
+   "fu": [
+    "q_noWind",
+    "q_bellyBloat",
+    "q_vomitWith",
+    "q_bellyHard"
+   ]
+  },
+  "blood_stool": {
+   "fields": [
+    "stoolBloodColour",
+    "stoolBloodAmount",
+    "count",
+    "painful",
+    "bowelChange",
+    "weightLossLately"
+   ],
+   "fu": [
+    "q_thinner",
+    "q_faintWeak",
+    "q_bellyHard"
+   ]
+  },
+  "black_stool": {
+   "fields": [
+    "count",
+    "daysSoFar"
+   ],
+   "fu": [
+    "q_vomitBloodToo",
+    "q_faintWeak",
+    "q_thinner",
+    "q_breathless"
+   ]
+  },
+  "burning_urine": {
+   "fields": [
+    "daysSoFar",
+    "frequent",
+    "blood",
+    "flankPain",
+    "noUrine8h"
+   ],
+   "fu": [
+    "q_temp",
+    "q_rigors",
+    "q_confused",
+    "q_cantKeepFluids"
+   ]
+  },
+  "frequent_urine": {
+   "fields": [
+    "weeks",
+    "urinePerDay",
+    "nightTimes",
+    "veryThirsty",
+    "weightLossLately",
+    "burning",
+    "blood"
+   ],
+   "fu": [
+    "q_noEmpty",
+    "q_temp"
+   ]
+  },
+  "no_urine": {
+   "fields": [
+    "hours",
+    "bladderPain",
+    "dropsOnly",
+    "cantKeepFluids"
+   ],
+   "fu": [
+    "q_saddleNumb",
+    "q_temp",
+    "q_confused"
+   ]
+  },
+  "blood_urine": {
+   "fields": [
+    "urineBloodColour",
+    "daysSoFar",
+    "burning",
+    "flankPain",
+    "weightLossLately"
+   ],
+   "fu": [
+    "q_thinner",
+    "q_temp",
+    "q_noUrine8h"
+   ]
+  },
+  "leaking_urine": {
+   "fields": [
+    "onset",
+    "weeks",
+    "leakWhen",
+    "noEmpty",
+    "burning"
+   ],
+   "fu": [
+    "q_saddleNumb",
+    "q_bowelLeak",
+    "q_confused",
+    "q_temp"
+   ]
+  },
+  "kidney_pain": {
+   "fields": [
+    "onset",
+    "side",
+    "severity",
+    "painWaves",
+    "urineBloodSeen"
+   ],
+   "fu": [
+    "q_temp",
+    "q_rigors",
+    "q_noUrine8h",
+    "q_faintWeak"
+   ]
+  },
+  "face_swelling_morning": {
+   "fields": [
+    "onset",
+    "weeks",
+    "swollenLegsToo",
+    "foamyUrine",
+    "lessUrine"
+   ],
+   "fu": [
+    "q_lips",
+    "q_breathless",
+    "q_vision"
+   ]
+  },
+  "period_pain": {
+   "fields": [
+    "severity",
+    "side",
+    "periodPainNew",
+    "periodLate",
+    "maybePregnant"
+   ],
+   "fu": [
+    "q_faintWeak",
+    "q_temp",
+    "q_padsHour",
+    "q_bellyHard"
+   ]
+  },
+  "heavy_bleeding": {
+   "fields": [
+    "bleedDays",
+    "padsHour",
+    "bigClots",
+    "maybePregnant",
+    "periodLate"
+   ],
+   "fu": [
+    "q_faintWeak",
+    "q_breathless",
+    "q_thinner"
+   ]
+  },
+  "postmeno_bleeding": {
+   "fields": [
+    "monthsSincePeriod",
+    "bleedAmount",
+    "bleedDays",
+    "onHrt"
+   ],
+   "fu": [
+    "q_faintWeak",
+    "q_thinner",
+    "q_pelvicPain"
+   ]
+  },
+  "discharge": {
+   "fields": [
+    "daysSoFar",
+    "dischargeColour",
+    "fishySmell",
+    "itchy",
+    "burning",
+    "riskSex",
+    "maybePregnant"
+   ],
+   "fu": [
+    "q_pelvicPain",
+    "q_temp"
+   ]
+  },
+  "breast_lump": {
+   "fields": [
+    "side",
+    "weeks",
+    "lumpGrowing",
+    "lumpHard",
+    "skinChange",
+    "nippleChange",
+    "armpitLump",
+    "redHot"
+   ],
+   "fu": [
+    "q_temp"
+   ]
+  },
+  "breast_pain": {
+   "fields": [
+    "side",
+    "weeks",
+    "painCyclic",
+    "breastLump",
+    "redHot",
+    "breastfeeding"
+   ],
+   "fu": [
+    "q_temp",
+    "q_armjaw",
+    "q_breathless"
+   ]
+  },
+  "hot_flush": {
+   "fields": [
+    "weeks",
+    "flushPerDay",
+    "periodsChanged",
+    "nightSoaking",
+    "weightLossLately",
+    "racingHeart"
+   ],
+   "fu": [
+    "q_temp",
+    "q_bleedAfterStop"
+   ]
+  }
+ },
+ "redFlags": [
+  {
+   "id": "rf_chest_pain_1",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain spreading to arm, jaw or back. Possible heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_pain_2",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "sweating",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain with sweating. Possible heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_pain_3",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain with breathlessness. Possible heart or lung emergency.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_pain_4",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "chestFaint",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain with fainting or near-fainting.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_pain_5",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden worst-ever chest pain. Possible aortic or lung emergency.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_pain_6",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "painMinutes",
+     "gte": 15
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain lasting 15 minutes or more. Possible heart attack.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_chest_pain_7",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chest pain on effort. Possible angina; needs same-day assessment.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_chest_pain_8",
+   "problems": [
+    "chest_pain"
+   ],
+   "all": [
+    {
+     "field": "worseBreathing",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pain worse on breathing in. Possible lung cause.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_chest_tight_1",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest tightness spreading to arm, jaw or back.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_tight_2",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "sweating",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest tightness with sweating.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_tight_3",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest tightness with breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_tight_4",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "chestFaint",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest tightness with fainting or near-fainting.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_chest_tight_5",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "atRest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest tightness at rest. Possible unstable angina or heart attack.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_chest_tight_6",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "chestSick",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest tightness with sickness. Atypical heart attack features.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_chest_tight_7",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "painMinutes",
+     "gte": 15
+    }
+   ],
+   "level": "RED",
+   "reason": "Tightness lasting 15 minutes or more.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_chest_tight_8",
+   "problems": [
+    "chest_tight"
+   ],
+   "all": [
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Tightness on effort. Possible angina.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_palpitations_1",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "palpChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Palpitations with chest pain.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_palpitations_2",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "palpFaint",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Palpitations with faintness or near-fainting.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_palpitations_3",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Palpitations with breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_palpitations_4",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "pulseRate",
+     "gte": 150
+    }
+   ],
+   "level": "RED",
+   "reason": "Pulse 150 or more per minute.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_palpitations_5",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "pulseRate",
+     "gte": 120
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pulse 120 or more per minute at rest.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_palpitations_6",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "palpRegular",
+     "is": "uneven"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Uneven heartbeat. Possible atrial fibrillation.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_palpitations_7",
+   "problems": [
+    "palpitations"
+   ],
+   "all": [
+    {
+     "field": "palpMinutes",
+     "gte": 30
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spell lasting 30 minutes or more.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_breathless_1",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "breathTalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot speak full sentences. Severe breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_breathless_2",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "blueLips",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blue or grey lips. Low oxygen.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_breathless_3",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "atRest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Breathless at rest.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_breathless_4",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Breathless with confusion. Possible low oxygen.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_breathless_5",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "oxygenBand",
+     "is": "below 92"
+    }
+   ],
+   "level": "RED",
+   "reason": "Oxygen reading below 92 percent.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_breathless_6",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "oxygenBand",
+     "is": "92 to 94"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Oxygen reading 92 to 94 percent.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_breathless_7",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "breathChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden breathlessness with pleuritic chest pain. Possible lung clot or collapsed lung.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_breathless_8",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_breathless_9",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "breathChest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chest pain on breathing in.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_breathless_10",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "lyingFlat",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Worse lying flat. Possible heart failure.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_breathless_11",
+   "problems": [
+    "breathless"
+   ],
+   "all": [
+    {
+     "field": "pillows",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Needs 3 or more pillows to sleep. Possible heart failure.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_wheeze_1",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "breathTalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Wheeze with inability to speak full sentences.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_wheeze_2",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "blueLips",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Wheeze with blue or grey lips.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_wheeze_3",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Wheeze with lip, face or tongue swelling. Possible allergic emergency.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_wheeze_4",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "inhalerNoHelp",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Inhaler not relieving wheeze. Possible severe attack.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_wheeze_5",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "oxygenBand",
+     "is": "below 92"
+    }
+   ],
+   "level": "RED",
+   "reason": "Oxygen reading below 92 percent.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_wheeze_6",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "oxygenBand",
+     "is": "92 to 94"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Oxygen reading 92 to 94 percent.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wheeze_7",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "atRest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Wheeze at rest.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_wheeze_8",
+   "problems": [
+    "wheeze"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden-onset wheeze.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cough_blood_1",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "bloodAmount",
+     "is": "a cupful or more"
+    }
+   ],
+   "level": "RED",
+   "reason": "Coughing up a cupful or more of blood.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_cough_blood_2",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Coughing blood with breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_cough_blood_3",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "breathChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Coughing blood with pain on breathing. Possible lung clot.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_cough_blood_4",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Coughing blood while on a blood thinner.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_cough_blood_5",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "bloodAmount",
+     "is": "about a teaspoon"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Coughing up about a teaspoon of blood.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_cough_blood_6",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "bloodAmount",
+     "is": "a few streaks"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Streaks of blood in cough. Needs tests.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_cough_blood_7",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "coughFever",
+     "is": true
+    },
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cough with blood, fever and weight loss. TB or cancer screen.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_cough_blood_8",
+   "problems": [
+    "cough_blood"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 2
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cough with blood for 2 weeks or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_low_oxygen_1",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "oxygenBand",
+     "is": "below 92"
+    }
+   ],
+   "level": "RED",
+   "reason": "Oxygen reading below 92 percent.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_low_oxygen_2",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low oxygen with breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_low_oxygen_3",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "breathTalk",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low oxygen, cannot speak full sentences.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_low_oxygen_4",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "blueLips",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low oxygen with blue or grey lips.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_low_oxygen_5",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low oxygen with confusion.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_low_oxygen_6",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "oxygenBand",
+     "is": "92 to 94"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Oxygen reading 92 to 94 percent.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_low_oxygen_7",
+   "problems": [
+    "low_oxygen"
+   ],
+   "all": [
+    {
+     "field": "atRest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Low oxygen with breathlessness at rest.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swollen_ankles_1",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Leg swelling with breathlessness. Possible heart failure or lung clot.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_swollen_ankles_2",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "breathChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Leg swelling with chest pain on breathing. Possible lung clot.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_swollen_ankles_3",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "oneSide",
+     "is": true
+    },
+    {
+     "field": "legPainful",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "One painful swollen leg. Possible clot; needs same-day scan.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swollen_ankles_4",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "oneSide",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swelling in one leg only.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swollen_ankles_5",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red, hot swollen leg. Possible skin infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swollen_ankles_6",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "lyingFlat",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swelling with breathlessness lying flat. Possible heart failure.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_swollen_ankles_7",
+   "problems": [
+    "swollen_ankles"
+   ],
+   "all": [
+    {
+     "field": "weightUp",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fast weight gain with swelling. Possible fluid build-up.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_snoring_1",
+   "problems": [
+    "snoring"
+   ],
+   "all": [
+    {
+     "field": "snoreDrive",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Falls asleep while driving. Road safety risk.",
+   "say": "Do not drive. See a doctor soon."
+  },
+  {
+   "id": "rf_snoring_2",
+   "problems": [
+    "snoring"
+   ],
+   "all": [
+    {
+     "field": "nightChest",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chest pain or racing heart in sleep.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_snoring_3",
+   "problems": [
+    "snoring"
+   ],
+   "all": [
+    {
+     "field": "wakeGasping",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Wakes gasping or choking.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_snoring_4",
+   "problems": [
+    "snoring"
+   ],
+   "all": [
+    {
+     "field": "apneaWitnessed",
+     "is": true
+    },
+    {
+     "field": "daySleepy",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Witnessed pauses in breathing with daytime sleepiness. Possible sleep apnoea.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_high_bp_1",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 180
+    },
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "BP 180 or more with sudden severe headache.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_high_bp_2",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 180
+    },
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "BP 180 or more with stroke signs.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_high_bp_3",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 180
+    },
+    {
+     "field": "bpChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "BP 180 or more with chest pain.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_high_bp_4",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 180
+    },
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "BP 180 or more with breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_high_bp_5",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 180
+    },
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "BP 180 or more with vision change.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_high_bp_6",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Stroke signs.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_high_bp_7",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "bpChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Chest pain with BP trouble.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_high_bp_8",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "worstEver",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden worst-ever headache.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_high_bp_9",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Breathlessness with high BP.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_high_bp_10",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 180
+    }
+   ],
+   "level": "AMBER",
+   "reason": "BP 180 or more top number. Needs same-day check.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_high_bp_11",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "diaBp",
+     "gte": 120
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bottom BP number 120 or more. Needs same-day check.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_high_bp_12",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Vision change with high BP.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_high_bp_13",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "sysBp",
+     "gte": 160
+    }
+   ],
+   "level": "AMBER",
+   "reason": "BP 160 or more top number.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_high_bp_14",
+   "problems": [
+    "high_bp"
+   ],
+   "all": [
+    {
+     "field": "diaBp",
+     "gte": 100
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bottom BP number 100 or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_low_bp_1",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low BP with faintness or weakness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_low_bp_2",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low BP with vomited blood or black stool. Possible gut bleed.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_low_bp_3",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "bpChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low BP with chest pain.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_low_bp_4",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Low BP with confusion. Possible sepsis or shock.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_low_bp_5",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "lowBpBand",
+     "is": "below 90"
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Low BP with fever. Possible sepsis.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_low_bp_6",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "lowBpBand",
+     "is": "below 90"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Top BP number below 90.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_low_bp_7",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Fever with low BP reading.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_low_bp_8",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "lowFluidLoss",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Low BP with fluid loss. Possible dehydration.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_low_bp_9",
+   "problems": [
+    "low_bp"
+   ],
+   "all": [
+    {
+     "field": "onStanding",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "BP drop on standing. Falls risk.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_stomach_pain_1",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard or very tender belly. Possible peritonitis or perforation.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_stomach_pain_2",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "noWind",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot pass wind or stool. Possible bowel blockage.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_stomach_pain_3",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Belly pain with vomited blood or black stool.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_stomach_pain_4",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Belly pain with faintness. Possible internal bleeding.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_stomach_pain_5",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "RED",
+   "reason": "Severe belly pain, 8 or more out of 10.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_stomach_pain_6",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "severity",
+     "gte": 6
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden severe belly pain.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_stomach_pain_7",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 6
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Belly pain 6 or more out of 10.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_stomach_pain_8",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Belly pain with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_stomach_pain_9",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "bellyWhere",
+     "is": "lower right"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lower right belly pain. Possible appendicitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_stomach_pain_10",
+   "problems": [
+    "stomach_pain"
+   ],
+   "all": [
+    {
+     "field": "hoursPain",
+     "gte": 24
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Belly pain lasting a day or more.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_acidity_1",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning chest spreading to arm or jaw. Treat as heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_acidity_2",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "sweating",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning chest with sweating. Treat as heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_acidity_3",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning chest with breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_acidity_4",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomited blood or black stool. Gut bleed.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_acidity_5",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burning chest on effort. Possible angina.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_acidity_6",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "foodSticks",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Food sticking. Alarm feature.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_acidity_7",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with indigestion. Alarm feature.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_acidity_8",
+   "problems": [
+    "acidity"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Symptoms for 4 weeks or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_nausea_1",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "headNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nausea with severe headache, stiff neck or confusion.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_nausea_2",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "nauseaChest",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nausea with chest pain. Possible heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_nausea_3",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nausea with vomited blood or black stool.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_nausea_4",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Nausea with hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_nausea_5",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    },
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot keep fluids down and no urine for 8 hours. Dehydration.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_nausea_6",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep fluids down.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_nausea_7",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No urine for 8 hours.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_nausea_8",
+   "problems": [
+    "nausea"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Nausea for a week or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_vomiting_1",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "blood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in vomit. Possible upper gut bleed.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomiting_2",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "coffeeGround",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Coffee-ground vomit. Old blood from the stomach.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomiting_3",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomiting with hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_vomiting_4",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "headNeck",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomiting with severe headache, stiff neck or confusion.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_vomiting_5",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "vomitGreen",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Green (bile) vomit. Possible bowel blockage.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_vomiting_6",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    },
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot keep fluids down and no urine for 8 hours. Dehydration.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_vomiting_7",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "projectile",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Forceful vomiting in a young baby.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_vomiting_8",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep fluids down.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_vomiting_9",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 2
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Vomiting for 2 days or more.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_vomiting_10",
+   "problems": [
+    "vomiting"
+   ],
+   "all": [
+    {
+     "field": "count",
+     "gte": 6
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Vomited 6 or more times.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_vomit_blood_1",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "count",
+     "gte": 1
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomiting blood. Possible upper gut bleed.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_2",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitBloodAmount",
+     "is": "a few streaks"
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in vomit.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_3",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitBloodAmount",
+     "is": "a mouthful"
+    }
+   ],
+   "level": "RED",
+   "reason": "Mouthful of blood in vomit.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_4",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "vomitBloodAmount",
+     "is": "a cupful or more"
+    }
+   ],
+   "level": "RED",
+   "reason": "Large blood vomit.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_5",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "coffeeGround",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Coffee-ground vomit.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_6",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "blackStool",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood vomit with black stool.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_7",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood vomit with faintness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_vomit_blood_8",
+   "problems": [
+    "vomit_blood"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood vomit on a blood thinner.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_bloating_1",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "noWind",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bloating with no wind or stool. Possible blockage.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_bloating_2",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bloating with hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_bloating_3",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bloating with vomited blood or black stool.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_bloating_4",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "vomitWith",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bloating with vomiting.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bloating_5",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "earlySatiety",
+     "is": true
+    },
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Early fullness and weight loss. Needs cancer screen.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_bloating_6",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "bellySwollenFast",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Belly swelling fast.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_bloating_7",
+   "problems": [
+    "bloating"
+   ],
+   "all": [
+    {
+     "field": "bloatDaily",
+     "is": true
+    },
+    {
+     "field": "weeks",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Daily bloating for 3 weeks or more. Ovarian cancer screen in women.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_burp_1",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burping with pain spreading to arm or jaw. Treat as heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_burp_2",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "sweating",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burping with sweating and chest discomfort.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_burp_3",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Vomited blood or black stool.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_burp_4",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "exertion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Chest discomfort on effort. Possible angina.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burp_5",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "foodSticks",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Food sticking. Alarm feature.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_burp_6",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Weight loss with burping. Alarm feature.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_burp_7",
+   "problems": [
+    "burp"
+   ],
+   "all": [
+    {
+     "field": "vomitWith",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burping with vomiting.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hiccup_1",
+   "problems": [
+    "hiccup"
+   ],
+   "all": [
+    {
+     "field": "strokeSigns",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hiccups with stroke signs.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_hiccup_2",
+   "problems": [
+    "hiccup"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hiccups with breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_hiccup_3",
+   "problems": [
+    "hiccup"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hiccups with pain spreading to arm or jaw.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_hiccup_4",
+   "problems": [
+    "hiccup"
+   ],
+   "all": [
+    {
+     "field": "hiccupHours",
+     "gte": 48
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hiccups lasting 48 hours or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hiccup_5",
+   "problems": [
+    "hiccup"
+   ],
+   "all": [
+    {
+     "field": "vomitWith",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hiccups with vomiting.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_swallowing_1",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "droolSaliva",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot swallow saliva. Complete block.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_swallowing_2",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "foodStuckNow",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Food stuck now.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_swallowing_3",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swallowing trouble with breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_swallowing_4",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swallowing trouble with bleeding.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_swallowing_5",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "swallowWhat",
+     "is": "even water"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot swallow even water.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_swallowing_6",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "swallowWhat",
+     "is": "soft food too"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Trouble with soft food. Needs fast-track review.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_swallowing_7",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "swallowWhat",
+     "is": "only hard food"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Trouble with hard food. Needs review.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_swallowing_8",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Swallowing trouble with weight loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_swallowing_9",
+   "problems": [
+    "swallowing"
+   ],
+   "all": [
+    {
+     "field": "chokeCough",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Choking or coughing with food. Risk of chest infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_jaundice_1",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Jaundice with confusion. Possible liver failure.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_jaundice_2",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "tooManyTablets",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Too much paracetamol. Possible liver damage.",
+   "say": "Go to hospital now."
+  },
+  {
+   "id": "rf_jaundice_3",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "bellyBlood",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Jaundice with vomited blood or black stool.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_jaundice_4",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    },
+    {
+     "field": "upperRightPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Jaundice with fever and upper right pain. Possible bile duct infection.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_jaundice_5",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Jaundice with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_jaundice_6",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 0
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New yellow eyes or skin need blood tests within a day.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_jaundice_7",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "darkUrine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Jaundice with dark urine.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_jaundice_8",
+   "problems": [
+    "jaundice"
+   ],
+   "all": [
+    {
+     "field": "paleStool",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Jaundice with pale stool. Possible bile block.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_loose_motions_1",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "blackStool",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Black stool. Possible upper gut bleed.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_loose_motions_2",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Loose motions with hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_loose_motions_3",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Loose motions with confusion. Dehydration or infection.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_loose_motions_4",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    },
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot keep fluids and no urine for 8 hours.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_loose_motions_5",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "blood",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in loose motions.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_loose_motions_6",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep fluids down.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_loose_motions_7",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No urine for 8 hours.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_loose_motions_8",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Loose motions with high fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_loose_motions_9",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "count",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "8 or more loose motions in a day.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_loose_motions_10",
+   "problems": [
+    "loose_motions"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Loose motions for a week or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_constipation_1",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "noWind",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "No stool and no wind. Possible bowel blockage.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_constipation_2",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "bellyBloat",
+     "is": true
+    },
+    {
+     "field": "vomitWith",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swollen belly with vomiting and constipation. Possible blockage.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_constipation_3",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Constipation with hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_constipation_4",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "vomitWith",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Constipation with vomiting.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_constipation_5",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "daysNoStool",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No stool for a week or more.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_constipation_6",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "blood",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Constipation with blood.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_constipation_7",
+   "problems": [
+    "constipation"
+   ],
+   "all": [
+    {
+     "field": "bowelChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Lasting change in bowel habit.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blood_stool_1",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodColour",
+     "is": "black and sticky"
+    }
+   ],
+   "level": "RED",
+   "reason": "Black sticky stool. Upper gut bleed.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_blood_stool_2",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodColour",
+     "is": "dark red or maroon"
+    }
+   ],
+   "level": "RED",
+   "reason": "Dark red or maroon blood. Possible heavy bleed.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_blood_stool_3",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodAmount",
+     "is": "bowl turned red"
+    }
+   ],
+   "level": "RED",
+   "reason": "Large amount of blood.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_blood_stool_4",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in stool with faintness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_blood_stool_5",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in stool with hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_blood_stool_6",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding while on a blood thinner.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_stool_7",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "count",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood on 3 or more passes.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_stool_8",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodColour",
+     "is": "bright red"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bright red blood. Needs an exam.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blood_stool_9",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "stoolBloodColour",
+     "is": "mixed in the stool"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood mixed in stool. Needs tests.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blood_stool_10",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "bowelChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood with a lasting change in bowels.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blood_stool_11",
+   "problems": [
+    "blood_stool"
+   ],
+   "all": [
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in stool with weight loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_black_stool_1",
+   "problems": [
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "count",
+     "gte": 1
+    }
+   ],
+   "level": "RED",
+   "reason": "Black tarry stool. Upper gut bleed until proven otherwise.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_black_stool_2",
+   "problems": [
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "vomitBloodToo",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Black stool with vomited blood.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_black_stool_3",
+   "problems": [
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Black stool with faintness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_black_stool_4",
+   "problems": [
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Black stool on a blood thinner.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_black_stool_5",
+   "problems": [
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Black stool with breathlessness. Possible heavy blood loss.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_black_stool_6",
+   "problems": [
+    "black_stool"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 0
+    }
+   ],
+   "level": "RED",
+   "reason": "Black stool needs same-day care.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_1",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning with no urine for 8 hours. Possible retention.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_2",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "rigors",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning urine with shaking chills. Possible blood infection.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_3",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning urine with confusion. Possible sepsis.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_4",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "flankPain",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Side pain with fever. Possible kidney infection.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_5",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 102
+    }
+   ],
+   "level": "RED",
+   "reason": "Burning urine with high fever.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_6",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Fever with no fluids kept down.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_burning_urine_7",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "flankPain",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burning urine with side pain. Possible kidney infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burning_urine_8",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burning urine with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burning_urine_9",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot keep fluids down.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_burning_urine_10",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "blood",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Burning urine with blood.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_burning_urine_11",
+   "problems": [
+    "burning_urine"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Symptoms for 3 days or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_frequent_urine_1",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "noEmpty",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bladder not emptying. Possible blockage.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_frequent_urine_2",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "veryThirsty",
+     "is": true
+    },
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Frequent urine, thirst and weight loss. Possible diabetes.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_frequent_urine_3",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "veryThirsty",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Frequent urine with thirst. Check blood sugar.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_frequent_urine_4",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Frequent urine with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_frequent_urine_5",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "blood",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Frequent urine with blood.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_frequent_urine_6",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "burning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Frequent urine with burning. Possible infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_frequent_urine_7",
+   "problems": [
+    "frequent_urine"
+   ],
+   "all": [
+    {
+     "field": "nightTimes",
+     "gte": 3
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Waking 3 or more times to pass urine.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_no_urine_1",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "bladderPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot pass urine with painful full bladder. Acute retention.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_no_urine_2",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot pass urine with numb bottom or weak legs. Possible nerve compression.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_no_urine_3",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot pass urine with confusion.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_no_urine_4",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Cannot pass urine with fever. Possible infection.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_no_urine_5",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "hours",
+     "gte": 6
+    }
+   ],
+   "level": "RED",
+   "reason": "No urine for 6 hours or more.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_no_urine_6",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "hours",
+     "gte": 1
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Cannot pass urine.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_no_urine_7",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "dropsOnly",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Only drops of urine.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_no_urine_8",
+   "problems": [
+    "no_urine"
+   ],
+   "all": [
+    {
+     "field": "cantKeepFluids",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "No urine and cannot keep fluids down.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_urine_1",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in urine with no urine for 8 hours. Possible clot retention.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_blood_urine_2",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "flankPain",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Blood in urine with side pain and fever.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_blood_urine_3",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "urineBloodColour",
+     "is": "red with clots"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Clots in urine. Risk of blockage.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_urine_4",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "urineBloodColour",
+     "is": "bright red"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bright red urine.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_urine_5",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "urineBloodColour",
+     "is": "pink or tea colour"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Pink or tea coloured urine. Needs tests.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_blood_urine_6",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in urine on a blood thinner.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_urine_7",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "flankPain",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in urine with side pain. Possible stone.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_urine_8",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    },
+    {
+     "field": "burning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in urine with burning and fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_blood_urine_9",
+   "problems": [
+    "blood_urine"
+   ],
+   "all": [
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Blood in urine with weight loss.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_leaking_urine_1",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "saddleNumb",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Urine leak with numb bottom or weak legs. Possible nerve compression.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_leaking_urine_2",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "bowelLeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Urine and stool leak together. Possible nerve compression.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_leaking_urine_3",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "noEmpty",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden leak with bladder not emptying. Possible retention.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_leaking_urine_4",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "confusion",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New leak with confusion. Possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_leaking_urine_5",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "noEmpty",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Leak with bladder not emptying. Overflow possible.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_leaking_urine_6",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    },
+    {
+     "field": "burning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Leak with burning and fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_leaking_urine_7",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "burning",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Leak with burning. Possible infection.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_leaking_urine_8",
+   "problems": [
+    "leaking_urine"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden new leaking.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_kidney_pain_1",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Side pain with fever. Possible infected blocked kidney.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_kidney_pain_2",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "rigors",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Side pain with shaking chills.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_kidney_pain_3",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "noUrine8h",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Side pain with no urine for 8 hours.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_kidney_pain_4",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Side pain with faintness. Possible aortic or bleeding emergency.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_kidney_pain_5",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    },
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "RED",
+   "reason": "Sudden severe side pain.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_kidney_pain_6",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 7
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe side pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_kidney_pain_7",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "urineBloodSeen",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Side pain with blood in urine. Possible stone.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_kidney_pain_8",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "painWaves",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Side pain in waves. Possible stone.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_kidney_pain_9",
+   "problems": [
+    "kidney_pain"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden side pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_face_swelling_morning_1",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "lipSwelling",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face swelling with lip or tongue swelling. Possible allergic emergency.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_face_swelling_morning_2",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Face swelling with breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_face_swelling_morning_3",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "swollenLegsToo",
+     "is": true
+    },
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Swollen face and legs with breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_face_swelling_morning_4",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "onset",
+     "is": "sudden"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Sudden face swelling.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_face_swelling_morning_5",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "visionChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Puffy face with vision change. Check BP.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_face_swelling_morning_6",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "lessUrine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Puffy face with much less urine. Kidney check.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_face_swelling_morning_7",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "foamyUrine",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Puffy face with foamy urine. Kidney check.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_face_swelling_morning_8",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "swollenLegsToo",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Puffy face and swollen legs.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_face_swelling_morning_9",
+   "problems": [
+    "face_swelling_morning"
+   ],
+   "all": [
+    {
+     "field": "weeks",
+     "gte": 2
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Puffy face for 2 weeks or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_period_pain_1",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Period pain with faintness. Possible internal bleeding.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_period_pain_2",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "maybePregnant",
+     "is": true
+    },
+    {
+     "field": "severity",
+     "gte": 5
+    }
+   ],
+   "level": "RED",
+   "reason": "Possible pregnancy with belly pain. Rule out ectopic pregnancy.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_period_pain_3",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "periodLate",
+     "is": true
+    },
+    {
+     "field": "severity",
+     "gte": 5
+    }
+   ],
+   "level": "RED",
+   "reason": "Late period with belly pain. Rule out ectopic pregnancy.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_period_pain_4",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "bellyHard",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Hard or very tender belly.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_period_pain_5",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "padsHour",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Soaking a pad every hour.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_period_pain_6",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "severity",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Severe period pain, 8 or more.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_period_pain_7",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Period pain with fever. Possible pelvic infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_period_pain_8",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "periodPainNew",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "New or worse period pain.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_period_pain_9",
+   "problems": [
+    "period_pain"
+   ],
+   "all": [
+    {
+     "field": "maybePregnant",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Possible pregnancy with pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_heavy_bleeding_1",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "padsHour",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Soaking a pad every hour for 2 hours.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_heavy_bleeding_2",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding with faintness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_heavy_bleeding_3",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding with breathlessness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_heavy_bleeding_4",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "maybePregnant",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding in possible pregnancy. Miscarriage or ectopic risk.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_heavy_bleeding_5",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "periodLate",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding with a late period. Miscarriage risk.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_heavy_bleeding_6",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedDays",
+     "gte": 8
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding for 8 days or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_heavy_bleeding_7",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bigClots",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Clots bigger than a coin.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_heavy_bleeding_8",
+   "problems": [
+    "heavy_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Heavy bleeding on a blood thinner.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_postmeno_bleeding_1",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedAmount",
+     "is": "heavy"
+    }
+   ],
+   "level": "RED",
+   "reason": "Heavy bleeding after menopause.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_postmeno_bleeding_2",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "faintWeak",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Bleeding after menopause with faintness.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_postmeno_bleeding_3",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedAmount",
+     "is": "like a light period"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Period-like bleeding after menopause. Needs urgent gynae referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_postmeno_bleeding_4",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bleedAmount",
+     "is": "spots"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Spotting after menopause. Needs urgent gynae referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_postmeno_bleeding_5",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "monthsSincePeriod",
+     "gte": 12
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding after 12 months without periods. Urgent cancer pathway.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_postmeno_bleeding_6",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "pelvicPain",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding with pelvic pain.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_postmeno_bleeding_7",
+   "problems": [
+    "postmeno_bleeding"
+   ],
+   "all": [
+    {
+     "field": "bloodThinner",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding on a blood thinner.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_discharge_1",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "pelvicPain",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "RED",
+   "reason": "Discharge with low belly pain and fever. Possible pelvic infection.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_discharge_2",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "maybePregnant",
+     "is": true
+    },
+    {
+     "field": "pelvicPain",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Discharge with pain in possible pregnancy.",
+   "say": "Get urgent help now."
+  },
+  {
+   "id": "rf_discharge_3",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "pelvicPain",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Discharge with low belly pain. Possible pelvic infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_discharge_4",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Discharge with fever.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_discharge_5",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "dischargeColour",
+     "is": "brown or bloody"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Brown or bloody discharge. Needs a check.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_discharge_6",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "maybePregnant",
+     "is": true
+    },
+    {
+     "field": "dischargeColour",
+     "is": "yellow or green"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Yellow or green discharge in possible pregnancy.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_discharge_7",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "riskSex",
+     "is": true
+    },
+    {
+     "field": "dischargeColour",
+     "is": "yellow or green"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Yellow or green discharge after new partner or unprotected sex. Infection test.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_discharge_8",
+   "problems": [
+    "discharge"
+   ],
+   "all": [
+    {
+     "field": "daysSoFar",
+     "gte": 14
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Discharge for 2 weeks or more.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_breast_lump_1",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "left"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast lump. Needs a 2-week referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_breast_lump_2",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "right"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast lump. Needs a 2-week referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_breast_lump_3",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "side",
+     "is": "both"
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast lumps on both sides. Needs a 2-week referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_breast_lump_4",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "lumpHard",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Hard, fixed lump. Urgent referral.",
+   "say": "See a doctor within days."
+  },
+  {
+   "id": "rf_breast_lump_5",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "skinChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Skin dimpling or orange-peel. Urgent referral.",
+   "say": "See a doctor within days."
+  },
+  {
+   "id": "rf_breast_lump_6",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "nippleChange",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Nipple change or bloody leak. Urgent referral.",
+   "say": "See a doctor within days."
+  },
+  {
+   "id": "rf_breast_lump_7",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "armpitLump",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast lump with armpit lump. Urgent referral.",
+   "say": "See a doctor within days."
+  },
+  {
+   "id": "rf_breast_lump_8",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "lumpGrowing",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Growing breast lump.",
+   "say": "See a doctor within days."
+  },
+  {
+   "id": "rf_breast_lump_9",
+   "problems": [
+    "breast_lump"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot lump with fever. Possible abscess.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_breast_pain_1",
+   "problems": [
+    "breast_pain"
+   ],
+   "all": [
+    {
+     "field": "armJaw",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Left-sided pain spreading to arm or jaw. Treat as heart attack.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_breast_pain_2",
+   "problems": [
+    "breast_pain"
+   ],
+   "all": [
+    {
+     "field": "breathless",
+     "is": true
+    }
+   ],
+   "level": "RED",
+   "reason": "Breast or chest pain with breathlessness.",
+   "say": "Call for an ambulance now."
+  },
+  {
+   "id": "rf_breast_pain_3",
+   "problems": [
+    "breast_pain"
+   ],
+   "all": [
+    {
+     "field": "breastLump",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast pain with a lump. Needs a 2-week referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_breast_pain_4",
+   "problems": [
+    "breast_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot breast with fever. Possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_breast_pain_5",
+   "problems": [
+    "breast_pain"
+   ],
+   "all": [
+    {
+     "field": "redHot",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Red hot breast. Possible infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_breast_pain_6",
+   "problems": [
+    "breast_pain"
+   ],
+   "all": [
+    {
+     "field": "breastfeeding",
+     "is": true
+    },
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Breast pain with fever while feeding. Possible mastitis.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hot_flush_1",
+   "problems": [
+    "hot_flush"
+   ],
+   "all": [
+    {
+     "field": "bleedAfterStop",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Bleeding after periods stopped. Urgent gynae referral.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hot_flush_2",
+   "problems": [
+    "hot_flush"
+   ],
+   "all": [
+    {
+     "field": "nightSoaking",
+     "is": true
+    },
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Soaking night sweats with weight loss. Needs tests.",
+   "say": "See a doctor soon."
+  },
+  {
+   "id": "rf_hot_flush_3",
+   "problems": [
+    "hot_flush"
+   ],
+   "all": [
+    {
+     "field": "temperature",
+     "gte": 100.4
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Flushes with fever. Look for infection.",
+   "say": "See a doctor today."
+  },
+  {
+   "id": "rf_hot_flush_4",
+   "problems": [
+    "hot_flush"
+   ],
+   "all": [
+    {
+     "field": "racingHeart",
+     "is": true
+    },
+    {
+     "field": "weightLossLately",
+     "is": true
+    }
+   ],
+   "level": "AMBER",
+   "reason": "Racing heart with weight loss. Possible thyroid cause.",
+   "say": "See a doctor soon."
+  }
+ ]
+}

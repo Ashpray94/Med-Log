@@ -26,13 +26,14 @@ val hasKey = keystore.getProperty("storePassword") != null
 android {
     namespace = "com.suryaprakash.medlog"
     compileSdk = 35
+    flavorDimensions += "env"
 
     defaultConfig {
         applicationId = "com.suryaprakash.medlog"
         minSdk = 23
         targetSdk = 35
-        versionCode = 290
-        versionName = "2.9.0"
+        versionCode = 2150
+        versionName = "2.15.0"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -56,6 +57,21 @@ android {
         debug {
             // same key as release, so a debug build can be upgraded to release without losing data
             if (hasKey) signingConfig = signingConfigs.getByName("shared")
+        }
+    }
+
+    productFlavors {
+        create("prod") {
+            dimension = "env"
+            buildConfigField("String", "ENV", "\"prod\"")
+            resValue("string", "app_name", "MedLog")
+        }
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "ENV", "\"dev\"")
+            resValue("string", "app_name", "MedLog Dev")
         }
     }
 

@@ -1,0 +1,587 @@
+{
+ "problems": {
+  "fever": [
+   "systemic"
+  ],
+  "chills": [
+   "systemic"
+  ],
+  "tired": [
+   "systemic",
+   "sleep"
+  ],
+  "weakness": [
+   "systemic",
+   "sensation"
+  ],
+  "unwell": [
+   "systemic"
+  ],
+  "no_appetite": [
+   "systemic"
+  ],
+  "weight_loss": [
+   "systemic"
+  ],
+  "night_sweats": [
+   "systemic"
+  ],
+  "thirsty": [
+   "systemic",
+   "reading_monitoring"
+  ],
+  "dehydrated": [
+   "systemic"
+  ],
+  "headache": [
+   "pain",
+   "neuro"
+  ],
+  "migraine": [
+   "pain",
+   "neuro"
+  ],
+  "dizzy": [
+   "neuro",
+   "collapse"
+  ],
+  "fainted": [
+   "collapse"
+  ],
+  "fits": [
+   "collapse",
+   "neuro"
+  ],
+  "face_droop": [
+   "neuro"
+  ],
+  "speech_trouble": [
+   "neuro"
+  ],
+  "one_side_weak": [
+   "neuro",
+   "sensation"
+  ],
+  "numbness": [
+   "sensation"
+  ],
+  "tingling": [
+   "sensation"
+  ],
+  "confusion": [
+   "neuro",
+   "mind"
+  ],
+  "memory": [
+   "mind",
+   "neuro"
+  ],
+  "tremor": [
+   "neuro"
+  ],
+  "balance": [
+   "neuro"
+  ],
+  "earache": [
+   "pain",
+   "eye_ear_nose_throat"
+  ],
+  "ear_discharge": [
+   "eye_ear_nose_throat",
+   "substance"
+  ],
+  "ringing_ears": [
+   "eye_ear_nose_throat"
+  ],
+  "hearing_loss": [
+   "eye_ear_nose_throat"
+  ],
+  "sore_throat": [
+   "pain",
+   "nose_throat"
+  ],
+  "hoarse": [
+   "nose_throat"
+  ],
+  "runny_nose": [
+   "nose_throat"
+  ],
+  "blocked_nose": [
+   "nose_throat"
+  ],
+  "sneeze": [
+   "nose_throat"
+  ],
+  "nosebleed": [
+   "bleeding",
+   "nose_throat"
+  ],
+  "sinus": [
+   "pain",
+   "nose_throat"
+  ],
+  "no_smell": [
+   "nose_throat"
+  ],
+  "eye_pain": [
+   "pain",
+   "eye_ear_nose_throat"
+  ],
+  "red_eye": [
+   "eye_ear_nose_throat"
+  ],
+  "watery_eye": [
+   "eye_ear_nose_throat"
+  ],
+  "blurred_vision": [
+   "eye_ear_nose_throat"
+  ],
+  "vision_loss": [
+   "eye_ear_nose_throat",
+   "neuro"
+  ],
+  "double_vision": [
+   "eye_ear_nose_throat",
+   "neuro"
+  ],
+  "dry_eyes": [
+   "eye_ear_nose_throat"
+  ],
+  "floaters": [
+   "eye_ear_nose_throat"
+  ],
+  "itchy_eyes": [
+   "eye_ear_nose_throat"
+  ],
+  "toothache": [
+   "pain",
+   "mouth_teeth"
+  ],
+  "bleeding_gums": [
+   "bleeding",
+   "mouth_teeth"
+  ],
+  "mouth_ulcer": [
+   "pain",
+   "mouth_teeth"
+  ],
+  "denture_pain": [
+   "pain",
+   "mouth_teeth"
+  ],
+  "dry_mouth": [
+   "mouth_teeth"
+  ],
+  "chest_pain": [
+   "pain",
+   "breathing"
+  ],
+  "chest_tight": [
+   "pain",
+   "breathing"
+  ],
+  "palpitations": [
+   "heart"
+  ],
+  "breathless": [
+   "breathing"
+  ],
+  "wheeze": [
+   "breathing"
+  ],
+  "cough": [
+   "breathing",
+   "substance"
+  ],
+  "cough_blood": [
+   "breathing",
+   "substance"
+  ],
+  "low_oxygen": [
+   "breathing",
+   "reading_monitoring"
+  ],
+  "swollen_ankles": [
+   "swelling",
+   "breathing"
+  ],
+  "snoring": [
+   "sleep",
+   "breathing"
+  ],
+  "high_bp": [
+   "reading_monitoring",
+   "systemic"
+  ],
+  "low_bp": [
+   "reading_monitoring",
+   "systemic"
+  ],
+  "stomach_pain": [
+   "pain",
+   "digestive"
+  ],
+  "acidity": [
+   "digestive"
+  ],
+  "nausea": [
+   "digestive"
+  ],
+  "vomiting": [
+   "substance",
+   "digestive"
+  ],
+  "vomit_blood": [
+   "substance",
+   "bleeding"
+  ],
+  "loose_motions": [
+   "substance",
+   "urinary_bowel_function"
+  ],
+  "constipation": [
+   "urinary_bowel_function",
+   "digestive"
+  ],
+  "blood_stool": [
+   "substance",
+   "bleeding"
+  ],
+  "black_stool": [
+   "substance"
+  ],
+  "bloating": [
+   "digestive"
+  ],
+  "burp": [
+   "digestive"
+  ],
+  "hiccup": [
+   "digestive"
+  ],
+  "swallowing": [
+   "digestive",
+   "pain"
+  ],
+  "jaundice": [
+   "skin",
+   "systemic"
+  ],
+  "burning_urine": [
+   "urinary_bowel_function"
+  ],
+  "frequent_urine": [
+   "urinary_bowel_function"
+  ],
+  "no_urine": [
+   "urinary_bowel_function"
+  ],
+  "blood_urine": [
+   "substance",
+   "urinary_bowel_function"
+  ],
+  "leaking_urine": [
+   "urinary_bowel_function"
+  ],
+  "kidney_pain": [
+   "pain",
+   "urinary_bowel_function"
+  ],
+  "face_swelling_morning": [
+   "swelling",
+   "urinary_bowel_function"
+  ],
+  "back_pain": [
+   "pain",
+   "sensation"
+  ],
+  "neck_pain": [
+   "pain",
+   "sensation"
+  ],
+  "knee_pain": [
+   "pain",
+   "daily_function"
+  ],
+  "hip_pain": [
+   "pain",
+   "daily_function"
+  ],
+  "shoulder_pain": [
+   "pain"
+  ],
+  "joint_swelling": [
+   "swelling",
+   "pain"
+  ],
+  "morning_stiffness": [
+   "pain",
+   "daily_function"
+  ],
+  "cramps": [
+   "pain"
+  ],
+  "leg_pain": [
+   "pain",
+   "swelling"
+  ],
+  "arm_pain": [
+   "pain"
+  ],
+  "foot_pain": [
+   "pain"
+  ],
+  "gout": [
+   "swelling",
+   "pain"
+  ],
+  "body_ache": [
+   "pain",
+   "systemic"
+  ],
+  "rash": [
+   "skin"
+  ],
+  "itching": [
+   "skin"
+  ],
+  "hives": [
+   "skin",
+   "medicine_effect"
+  ],
+  "allergic_reaction": [
+   "skin",
+   "breathing"
+  ],
+  "blisters": [
+   "skin"
+  ],
+  "sunburn": [
+   "skin"
+  ],
+  "wound_not_healing": [
+   "skin",
+   "substance"
+  ],
+  "bed_sore": [
+   "skin"
+  ],
+  "mole": [
+   "skin"
+  ],
+  "hair_loss": [
+   "skin"
+  ],
+  "fungal": [
+   "skin"
+  ],
+  "bruising_easily": [
+   "skin",
+   "bleeding"
+  ],
+  "low_mood": [
+   "mind"
+  ],
+  "anxious": [
+   "mind"
+  ],
+  "cant_sleep": [
+   "sleep",
+   "mind"
+  ],
+  "sleep_too_much": [
+   "sleep"
+  ],
+  "lonely": [
+   "mind"
+  ],
+  "hallucination": [
+   "mind"
+  ],
+  "self_harm": [
+   "mind"
+  ],
+  "fall": [
+   "injury",
+   "collapse"
+  ],
+  "near_fall": [
+   "collapse"
+  ],
+  "head_injury": [
+   "injury",
+   "neuro"
+  ],
+  "cut": [
+   "injury",
+   "bleeding"
+  ],
+  "bleeding": [
+   "bleeding"
+  ],
+  "burn": [
+   "injury",
+   "skin"
+  ],
+  "bruise": [
+   "injury",
+   "swelling"
+  ],
+  "swelling": [
+   "injury",
+   "swelling"
+  ],
+  "sprain": [
+   "injury",
+   "pain"
+  ],
+  "broken_bone": [
+   "injury",
+   "pain"
+  ],
+  "bite": [
+   "injury",
+   "skin"
+  ],
+  "sting": [
+   "skin",
+   "injury"
+  ],
+  "choking": [
+   "breathing"
+  ],
+  "period_pain": [
+   "womens",
+   "pain"
+  ],
+  "heavy_bleeding": [
+   "womens",
+   "bleeding"
+  ],
+  "postmeno_bleeding": [
+   "womens",
+   "bleeding"
+  ],
+  "discharge": [
+   "womens",
+   "substance"
+  ],
+  "breast_lump": [
+   "swelling",
+   "womens"
+  ],
+  "breast_pain": [
+   "womens",
+   "pain"
+  ],
+  "hot_flush": [
+   "womens",
+   "systemic"
+  ],
+  "low_sugar": [
+   "reading_monitoring",
+   "systemic"
+  ],
+  "high_sugar": [
+   "reading_monitoring",
+   "systemic"
+  ],
+  "foot_numb": [
+   "sensation"
+  ],
+  "lump": [
+   "swelling"
+  ],
+  "pale": [
+   "systemic"
+  ],
+  "side_effect": [
+   "medicine_effect"
+  ],
+  "trouble_walking": [
+   "daily_function",
+   "neuro"
+  ],
+  "trouble_eating": [
+   "daily_function",
+   "digestive"
+  ],
+  "toilet_accident": [
+   "daily_function",
+   "urinary_bowel_function"
+  ],
+  "night_pain": [
+   "pain"
+  ]
+ },
+ "waive": {
+  "memory": {
+   "duration_each": "Memory loss is gradual, not episodic, so episode length, side and trigger do not apply; sudden onset and stroke signs are covered by speed_of_onset and the danger screen.",
+   "one_sided": "Memory loss is gradual, not episodic, so episode length, side and trigger do not apply; sudden onset and stroke signs are covered by speed_of_onset and the danger screen.",
+   "trigger": "Memory loss is gradual, not episodic, so episode length, side and trigger do not apply; sudden onset and stroke signs are covered by speed_of_onset and the danger screen."
+  },
+  "tremor": {
+   "consciousness": "Tremor does not alter awareness; loss of consciousness is asked under fainted and fits."
+  },
+  "sunburn": {
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people."
+  },
+  "wound_not_healing": {
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people."
+  },
+  "bed_sore": {
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people."
+  },
+  "mole": {
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people.",
+   "fever": "Fever is not a feature of a changing mole or of hair loss; systemic illness is screened elsewhere if the person reports it."
+  },
+  "hair_loss": {
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people.",
+   "fever": "Fever is not a feature of a changing mole or of hair loss; systemic illness is screened elsewhere if the person reports it."
+  },
+  "bruising_easily": {
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people."
+  },
+  "head_injury": {
+   "weight_bearing": "Head injury; standing and walking are assessed under fall and trouble_walking, and imbalance under the neuro danger screen."
+  },
+  "cut": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "weight_bearing": "Wound, burn or sting of skin does not by itself limit standing or walking; limb function is captured under broken_bone and sprain.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough)."
+  },
+  "burn": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "weight_bearing": "Wound, burn or sting of skin does not by itself limit standing or walking; limb function is captured under broken_bone and sprain.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough).",
+   "anticoagulant": "Bleeding tendency matters for cuts, bruises and head injury; not a factor in the clinical course of a burn, sting or sprain.",
+   "contacts": "Not a contagious or shared-exposure problem; contacts are asked only for rashes that can spread between people."
+  },
+  "bruise": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough)."
+  },
+  "swelling": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough)."
+  },
+  "sprain": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "weight_bearing": "Wound, burn or sting of skin does not by itself limit standing or walking; limb function is captured under broken_bone and sprain.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough).",
+   "anticoagulant": "Bleeding tendency matters for cuts, bruises and head injury; not a factor in the clinical course of a burn, sting or sprain.",
+   "bleeding": "Closed ligament injury; visible bleeding is not part of a sprain (bruising is handled under bruise)."
+  },
+  "bite": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough)."
+  },
+  "sting": {
+   "consciousness": "Limb or skin injury with no head strike, electrical shock or smoke exposure; loss of consciousness is screened by the head_injury problem and the danger screen.",
+   "weight_bearing": "Wound, burn or sting of skin does not by itself limit standing or walking; limb function is captured under broken_bone and sprain.",
+   "deformity": "Soft-tissue injury; bone deformity and open fracture are screened by broken_bone (looksBent, boneThrough).",
+   "anticoagulant": "Bleeding tendency matters for cuts, bruises and head injury; not a factor in the clinical course of a burn, sting or sprain."
+  }
+ }
+}
