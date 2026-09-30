@@ -1,6 +1,7 @@
 package com.suryaprakash.medlog.ui.screens
 
 import android.content.Context
+import android.os.SystemClock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -17,7 +18,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text as MaterialText
@@ -30,20 +30,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.suryaprakash.medlog.help.FamilyChat
-import com.suryaprakash.medlog.ui.Announce
 import com.suryaprakash.medlog.ui.Hs
 import com.suryaprakash.medlog.ui.LocalPalette
 import com.suryaprakash.medlog.ui.Text
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import org.json.JSONObject
 
 /** Chat message model. */
 data class ChatMsg(
@@ -95,7 +93,18 @@ fun ChatView(
     val p = LocalPalette.current
     val listState = rememberLazyListState()
     var textInput by remember { mutableStateOf("") }
+    var lastSubmissionAt by remember { mutableStateOf<Long?>(null) }
     val quickReplies = listOf("OK", "On my way", "Call me", "Thanks")
+
+    fun submitMessage(message: String, clearComposer: Boolean = false) {
+        val submitted = message.trim()
+        if (submitted.isEmpty()) return
+        val now = SystemClock.elapsedRealtime()
+        if (lastSubmissionAt?.let { now - it < 600L } == true) return
+        lastSubmissionAt = now
+        onSend(submitted)
+        if (clearComposer) textInput = ""
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -119,20 +128,9 @@ fun ChatView(
                 state = listState,
                 reverseLayout = true
             ) {
-                itemsIndexed(msgs.asReversed()) { idx, msg ->
-                    val showDateSeparator = idx == 0 || {
-                        val current = msgs[msgs.size - 1 - idx].at
-                        val prev = msgs[msgs.size - 2 - idx].at
-                        isSameDay(prev, current)
-                    }()
-
-                    if (idx == 0 || !isSameDay(
-                            msgs[msgs.size - 1 - idx].at,
-                            msgs[msgs.size - 2 - idx].at
-                        )
-                    ) {
-                        DateSeparator(msgs[msgs.size - 1 - idx].at)
-                    }
+                val newestFirst = msgs.asReversed()
+                itemsIndexed(newestFirst) { idx, msg ->
+                    if (shouldShowDateSeparator(newestFirst, idx)) DateSeparator(msg.at)
 
                     ChatBubble(msg, onRetry)
                 }
@@ -152,12 +150,14 @@ fun ChatView(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
                         .background(p.card)
+                        .clickable(role = Role.Button) { submitMessage(reply) }
+                        .heightIn(min = 56.dp)
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         reply,
-                        fontSize = 13.sp,
+                        fontSize = 16.sp,
                         color = p.ink,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -179,27 +179,39 @@ fun ChatView(
                 onValueChange = { textInput = it },
                 modifier = Modifier
                     .weight(1f)
-                    .heightIn(min = 18.sp.value.dp),
+                    .heightIn(min = 56.dp),
                 placeholder = { MaterialText("Message", fontSize = 18.sp) },
                 textStyle = androidx.compose.material3.LocalTextStyle.current.copy(fontSize = 18.sp),
                 singleLine = false
             )
             Box(
                 modifier = Modifier
+                    .heightIn(min = 56.dp)
+                    .widthIn(min = 64.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (textInput.isNotBlank()) Hs.Blue else p.inkSoft.copy(alpha = 0.3f))
+                    .clickable(
+                        enabled = textInput.isNotBlank(),
+                        role = Role.Button
+                    ) { submitMessage(textInput, clearComposer = true) }
                     .padding(12.dp),
                 contentAlignment = Alignment.Center
             ) {
                 MaterialText(
                     "Send",
                     color = if (textInput.isNotBlank()) Color.White else p.ink.copy(alpha = 0.3f),
-                    fontSize = 14.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
             }
         }
     }
+}
+
+internal fun shouldShowDateSeparator(newestFirst: List<ChatMsg>, index: Int): Boolean {
+    val message = newestFirst.getOrNull(index) ?: return false
+    val newerAt = newestFirst.getOrNull(index - 1)?.at
+    return index == 0 || (newerAt != null && !isSameDay(message.at, newerAt))
 }
 
 @Composable

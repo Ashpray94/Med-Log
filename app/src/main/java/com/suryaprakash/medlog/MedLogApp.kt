@@ -32,8 +32,8 @@ class MedLogApp : Application() {
     val repo by lazy { Repo(db, catalogue, describe) }
     fun repoFor(d: MedDb) = Repo(d, catalogue, describe)
     /** Screens may show a paired patient's local copy; background tasks keep the phone's own records. */
-    val viewDb: MedDb get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.let { com.suryaprakash.medlog.data.Mirror.db(this, it) } ?: db
-    val viewRepo: Repo get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.let { com.suryaprakash.medlog.data.Mirror.repo(this, it) } ?: repo
+    val viewDb: MedDb get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.takeIf { settings.value.role == "helper" }?.let { com.suryaprakash.medlog.data.Mirror.db(this, it) } ?: db
+    val viewRepo: Repo get() = com.suryaprakash.medlog.data.Viewing.pairId.value?.takeIf { settings.value.role == "helper" }?.let { com.suryaprakash.medlog.data.Mirror.repo(this, it) } ?: repo
     val speaker by lazy { Speaker(this) { settings.value.speechRate } }
     override fun onCreate() {
         super.onCreate()

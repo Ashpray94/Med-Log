@@ -50,6 +50,10 @@ import java.util.Locale
 /** Helpers tab: Tools | Helpers chat | Patient chat. */
 @Composable
 fun HelpTabScreen(nav: Nav) {
+    if (com.suryaprakash.medlog.ui.LocalSettings.current.role != "helper") {
+        HelpScreen(nav)
+        return
+    }
     val ctx = LocalContext.current
     val p = LocalPalette.current
     var seg by remember { mutableStateOf(0) }
@@ -85,8 +89,8 @@ private fun ToolsSegment(nav: Nav) {
     ToolButton("My helpers", Icons.Rounded.Groups, onClick = { nav.go(Route.Helpers) })
     ToolButton("Connect phone", Icons.Rounded.Phone, onClick = { nav.go(Route.Pair) })
     ToolButton("SOS", Icons.Rounded.Call, onClick = { nav.go(Route.Emergency) })
-    ToolButton("Nearby help", Icons.Rounded.LocationOn, onClick = { })
-    ToolButton("Share doctor page", Icons.Rounded.Share, onClick = { })
+    ToolButton("Nearby help", Icons.Rounded.LocationOn, onClick = { nav.go(Route.Devices) })
+    ToolButton("Doctor page", Icons.Rounded.Share, onClick = { nav.go(Route.Doctor) })
 }
 
 @Composable

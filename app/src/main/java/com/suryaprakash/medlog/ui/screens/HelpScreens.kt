@@ -471,6 +471,9 @@ fun HelperHomeScreen(nav: Nav) {
     val paired = people.isNotEmpty()
     var chosen by remember { mutableStateOf(0) }
     val person = people.getOrNull(chosen.coerceAtMost((people.size - 1).coerceAtLeast(0)))
+    LaunchedEffect(s.role, person?.pairId) {
+        com.suryaprakash.medlog.data.Viewing.pairId.value = if (s.role == "helper") person?.pairId else null
+    }
     val asking by Nearby.asking.collectAsState()
     val who = person?.name?.ifBlank { "them" } ?: "them"
     var settings by remember { mutableStateOf(false) }

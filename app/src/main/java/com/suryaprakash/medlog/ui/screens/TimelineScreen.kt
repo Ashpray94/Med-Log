@@ -76,6 +76,9 @@ import java.util.Locale
 fun TimelineScreen(nav: Nav) {
     val ctx = LocalContext.current
     val app = ctx.medlog
+    val viewingPairId by com.suryaprakash.medlog.data.Viewing.pairId.collectAsState()
+    val viewDb = app.viewDb
+    val viewRepo = app.viewRepo
     val p = LocalPalette.current
     val s = LocalSettings.current
     val scope = rememberCoroutineScope()
@@ -88,10 +91,10 @@ fun TimelineScreen(nav: Nav) {
 
     val (from, to) = TimelineLogic.dayBounds(if (isHelper) dayOffset else 0, now)
 
-    val notesFlow by app.repo.db.notes().betweenFlow(from, to).collectAsState(initial = emptyList())
-    val dosesFlow by app.repo.db.doses().betweenFlow(from, to).collectAsState(initial = emptyList())
-    val medsFlow by app.repo.db.medicines().activeFlow().collectAsState(initial = emptyList())
-    val appointmentsFlow by app.repo.db.appointments().upcomingFlow(from).collectAsState(initial = emptyList())
+    val notesFlow by viewDb.notes().betweenFlow(from, to).collectAsState(initial = emptyList())
+    val dosesFlow by viewDb.doses().betweenFlow(from, to).collectAsState(initial = emptyList())
+    val medsFlow by viewDb.medicines().activeFlow().collectAsState(initial = emptyList())
+    val appointmentsFlow by viewDb.appointments().upcomingFlow(from).collectAsState(initial = emptyList())
 
     val medsById = medsFlow.associateBy { it.id }
     val dosesById = dosesFlow.associateBy { it.medicineId }
@@ -109,7 +112,7 @@ fun TimelineScreen(nav: Nav) {
             at = d.scheduledAt,
             title = med.name,
             line = "${med.strength} ${med.form} - ${med.amount}",
-            by = "You",
+            by = if (viewingPairId == null) "You" else "Recorded",
             status = status,
             ref = d.id,
             kind = "DOSE"
@@ -147,7 +150,7 @@ fun TimelineScreen(nav: Nav) {
                 at = apt.at,
                 title = apt.doctor.ifBlank { "Appointment" },
                 line = apt.place,
-                by = "You",
+                by = if (viewingPairId == null) "You" else "Recorded",
                 ref = apt.id,
                 kind = "APPT"
             ))
@@ -267,19 +270,35 @@ fun TimelineScreen(nav: Nav) {
                                     val dose = dosesFlow.firstOrNull { it.id == entry.ref }
                                     val med = dose?.medicineId?.let { medsById[it] }
                                     TimelineRow(entry, medsById, dose, med,
-                                        { med?.let { nav.go(Route.MedEdit(med.id)) } },
+                                        { if (viewingPairId == null) med?.let { nav.go(Route.MedEdit(med.id)) } },
                                         { when (entry.kind) {
-                                            "FOOD" -> nav.go(Route.FoodPick(entry.ref))
-                                            "READING" -> nav.go(Route.Readings)
-                                            "SYMPTOM" -> nav.go(Route.Tell(noteId = entry.ref))
-                                            "APPT" -> nav.go(Route.Appointments)
+                                            "FOOD" -> if (viewingPairId == null) nav.go(Route.FoodPick(entry.ref))
+                                            "READING" -> if (viewingPairId == null) nav.go(Route.Readings)
+                                            "SYMPTOM" -> if (viewingPairId == null) nav.go(Route.Tell(noteId = entry.ref))
+                                            "APPT" -> if (viewingPairId == null) nav.go(Route.Appointments)
                                             else -> {}
                                         }},
-                                        { scope.launch { app.repo.remove(listOf(entry.ref)); Announce.done(ctx, null, "removed ${entry.title}", "delete", entry.ref) } },
-                                        entry.type == EntryType.MEDICINE,
-                                        { doseId -> scope.launch { Scheduler.take(ctx, doseId); Announce.done(ctx, null, "took ${entry.title}", "take", doseId) } },
-                                        { doseId -> scope.launch { Scheduler.untake(ctx, doseId) } },
-                                        { doseId -> scope.launch { Scheduler.skip(ctx, doseId, "Missed") } }
+                                        { scope.launch {
+                                            if (viewingPairId == com.suryaprakash.medlog.data.Viewing.pairId.value && entry.kind != "APPT") {
+                                                viewRepo.remove(listOf(entry.ref))
+                                                Announce.done(ctx, null, "removed ${entry.title}", "delete", entry.ref)
+                                            }
+                                        } },
+                                        entry.type == EntryType.MEDICINE && viewingPairId == null,
+                                        viewingPairId == null,
+                                        entry.kind in setOf("FOOD", "READING", "SYMPTOM"),
+                                        { doseId -> scope.launch {
+                                            if (viewingPairId == null && com.suryaprakash.medlog.data.Viewing.pairId.value == null) {
+                                                if (Scheduler.take(ctx, doseId) == Scheduler.Taken.OK)
+                                                    Announce.done(ctx, null, "took ${entry.title}", "take", doseId)
+                                            }
+                                        } },
+                                        { doseId -> scope.launch {
+                                            if (viewingPairId == null && com.suryaprakash.medlog.data.Viewing.pairId.value == null) Scheduler.untake(ctx, doseId)
+                                        } },
+                                        { doseId -> scope.launch {
+                                            if (viewingPairId == null && com.suryaprakash.medlog.data.Viewing.pairId.value == null) Scheduler.skip(ctx, doseId, "Missed")
+                                        } }
                                     )
                                 }
                             }
@@ -302,6 +321,8 @@ private fun TimelineRow(
     onEditNote: () -> Unit,
     onDelete: () -> Unit,
     isMedicine: Boolean,
+    allowActions: Boolean,
+    allowDelete: Boolean,
     onTaken: (Long) -> Unit,
     onUndo: (Long) -> Unit,
     onSkip: (Long) -> Unit,
@@ -350,7 +371,14 @@ private fun TimelineRow(
                     }
                 }
             }
-            RowActions(entry.title, onEditNote, onDelete)
+            if (allowActions && allowDelete) RowActions(entry.title, onEditNote, onDelete)
+            else if (allowDelete) Box(
+                Modifier.fillMaxWidth().heightIn(min = 56.dp).clip(RoundedCornerShape(Hs.Radius)).background(Hs.Paper)
+                    .steady("Delete ${entry.title}", onClick = onDelete).padding(horizontal = 16.dp, vertical = 12.dp),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Text("Delete", fontSize = Hs.Body, fontWeight = FontWeight.SemiBold, color = Hs.Red)
+            }
             Box(Modifier.fillMaxWidth().height(1.dp).background(Hs.Ink.copy(alpha = 0.05f)))
         }
     }
