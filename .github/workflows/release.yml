@@ -59,6 +59,9 @@ jobs:
           { echo "MEDLOG_STORE_FILE=$K"; echo "MEDLOG_STORE_PASSWORD=$SP"; echo "MEDLOG_KEY_ALIAS=$KA"
             echo "MEDLOG_KEY_PASSWORD=$KP"; echo "PUBLISH=$PUBLISH"; } >> "$GITHUB_ENV"
 
+      - name: Clinical completeness
+        run: python3 tools/merge_audit.py --check && python3 tools/lint_completeness.py
+
       - name: Test and build
         run: gradle --no-daemon :app:testProdDebugUnitTest :app:assembleProdRelease
 
