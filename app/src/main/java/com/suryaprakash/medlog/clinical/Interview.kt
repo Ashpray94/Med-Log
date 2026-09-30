@@ -119,6 +119,18 @@ object Interview {
         Choice("comes and goes", "Comes and goes", listOf("comes and goes", "sometimes", "on and off", "kabhi kabhi", "appappo", "appudappudu")),
     ), core = false)
 
+    val COURSE = Ask("course", "course", "Is it getting better, worse, or the same?", Kind.CHOICE, listOf(
+        Choice("better", "Better", listOf("better", "improving", "theek", "kuraivu")),
+        Choice("same", "Same", listOf("same", "no change", "waisa hi", "appadiye")),
+        Choice("worse", "Worse", listOf("worse", "getting worse", "zyada", "adhigam")),
+    ), core = false)
+
+    val IMPACT = Ask("impact", "impact", "Is it stopping you from doing things?", Kind.CHOICE, listOf(
+        Choice("no", "No", listOf("no", "nahi", "illai")),
+        Choice("some", "A little", listOf("a little", "some", "thoda", "konjam")),
+        Choice("a lot", "A lot", listOf("a lot", "very much", "bahut", "romba")),
+    ), core = false)
+
     val WORSE = Ask("worse", "worse", "What makes it worse?", Kind.MULTI, listOf(
         Choice("moving", "Moving", listOf("moving", "move", "hilna", "asaivu")), Choice("walking", "Walking", listOf("walking", "walk", "chalna", "nadakka")),
         Choice("eating", "Eating", listOf("eating", "food", "khana", "saapadu", "annam")), Choice("lying down", "Lying down", listOf("lying", "lie down", "letna", "padukka")),
@@ -172,11 +184,11 @@ object Interview {
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
         dangerQuestions(cat, p).take(2).forEach(::add)
-        if (p.id in COUNTABLE) add(COUNT)
         if (locatable(p)) add(WHERE)
         if (p.id in BURNS) { add(BURN_LOOK); add(BURN_SIZE) }
-        if (p.id !in NO_SEVERITY) add(scaleFor(p))
-        return out
+        // Core is at most 5 and always keeps severity (last). Burn size moves to "Tell more" if room is short.
+        val sev = scaleFor(p).takeIf { p.id !in NO_SEVERITY && !facts.containsKey(it.field) }
+        return out.take(if (sev != null) 4 else 5) + listOfNotNull(sev)
     }
 
     /** Extended questions (only after the person agrees to tell more). */
@@ -189,6 +201,7 @@ object Interview {
             if (maxAge != null && age > maxAge) return true
             return false
         }
+        if (p.id in COUNTABLE) add(COUNT)
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
         dangerQuestions(cat, p).drop(2).forEach(::add)
@@ -218,10 +231,13 @@ object Interview {
         }
         if (locatable(p) || "pattern" in p.fields || p.region == "whole") add(PATTERN)
         if (locatable(p)) { add(WORSE); add(BETTER) }
+        if (p.id in BURNS) add(BURN_SIZE)
+        add(COURSE)
+        add(IMPACT)
         add(TOOK_MED)
         add(ANYTHING)
-        // Extended questions are optional ("tell more"), gated, and can be stopped at any time; substance chains need room.
-        return out.take(14)
+        // Extended questions are optional ("tell more"), gated, and can be stopped at any time.
+        return out
     }
 
     private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> =

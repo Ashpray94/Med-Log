@@ -26,6 +26,8 @@ object Help {
         "character" to "What pain feels like helps doctors find the cause.\nSharp pain is different from aching pain.",
 
         // Pattern and modifiers
+        "course" to "Is this improving, the same, or getting worse?\nGetting worse can mean you need a doctor sooner.",
+        "impact" to "Does it stop you walking, eating, sleeping or daily things?\nHow much it stops you shows how serious it is.",
         "pattern" to "Whether pain comes and goes helps doctors understand it.\nConstant pain is different from intermittent.",
         "worse" to "What makes it worse helps find the cause.\nPain worse with movement suggests muscle problems.",
         "better" to "What helps find effective treatments.\nPain better with rest suggests muscle strain.",

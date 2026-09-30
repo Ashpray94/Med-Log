@@ -415,7 +415,9 @@
  "implicit": [
   "onset",
   "severity",
-  "tried"
+  "tried",
+  "course",
+  "impact"
  ],
- "implicitNote": "Interview.kt asks these of every problem: WHEN (onset), the severity scale, and TOOK_MED (tried). 'course' and 'impact' are NOT asked anywhere yet: real gaps."
+ "implicitNote": "Interview.kt asks these of every problem: WHEN (onset), severity scale, TOOK_MED (tried), COURSE, IMPACT (Tell more)."
 }

@@ -39,7 +39,7 @@ data class PersonContext(
  * NOT YET CLINICIAN-REVIEWED — see catalogue "reviewNote".
  */
 object DangerRules {
-    const val VERSION = "rules-0.2.0-unreviewed"
+    const val VERSION = "rules-0.3.0-unreviewed"
 
     private fun yes(f: Map<String, Fact>, k: String) = f[k]?.value == true
     private fun no(f: Map<String, Fact>, k: String) = f[k]?.value == false
