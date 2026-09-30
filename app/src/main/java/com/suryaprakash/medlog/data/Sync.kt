@@ -41,7 +41,9 @@ object Sync {
     }
 
     /** Publish a local entry to other phones. Called from Repo after mutations. */
-    fun local(type: String, op: String, localId: Long) {
+    fun local(type: String, op0: String, localId: Long) {
+        // callers say "add"/"edit"/"delete"; older code said "insert"/"update"
+        val op = when (op0) { "add" -> "insert"; "edit" -> "update"; else -> op0 }
         val a = app ?: return
         val ctx = a.applicationContext
         scope.launch {
