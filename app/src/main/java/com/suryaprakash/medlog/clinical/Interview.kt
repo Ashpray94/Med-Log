@@ -167,7 +167,7 @@ object Interview {
     fun deepable(p: Problem) = locatable(p) && p.region !in SHALLOW_REGIONS
 
     /** Core questions for [p], skipping anything already known. */
-    fun core(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
+    fun core(cat: Catalogue, p: Problem, facts: Map<String, Fact>, age: Int? = null): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field)) out += a }
         add(WHEN)
@@ -180,31 +180,39 @@ object Interview {
     }
 
     /** Extended questions (only after the person agrees to tell more). */
-    fun extended(cat: Catalogue, p: Problem, facts: Map<String, Fact>): List<Ask> {
+    fun extended(cat: Catalogue, p: Problem, facts: Map<String, Fact>, age: Int? = null): List<Ask> {
         val out = ArrayList<Ask>()
         fun add(a: Ask) { if (!facts.containsKey(a.field) && out.none { it.field == a.field }) out += a.copy(core = false) }
+        fun isAgeExcluded(minAge: Int?, maxAge: Int?): Boolean {
+            if (age == null) return false
+            if (minAge != null && age < minAge) return true
+            if (maxAge != null && age > maxAge) return true
+            return false
+        }
         if (deepable(p)) add(DEPTH)
         if ("character" in p.fields) add(CHARACTER)
         dangerQuestions(cat, p).drop(2).forEach(::add)
-        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q -> fromQuestion(cat, q)?.let(::add) }
+        p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority < 85 }.forEach { q ->
+            if (!isAgeExcluded(q.minAge, q.maxAge)) fromQuestion(cat, q)?.let(::add)
+        }
         // other catalogue fields that have simple answers
         for (f in p.fields) {
             val field = cat.field(f) ?: continue
             if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "pillows", "timeOnFloor", "sleepHours")) continue
 
-            // special cases for cough problem
-            if (p.id == "cough") {
-                when (f) {
-                    "dryWet" -> { add(Ask("f_dryWet", "dryWet", "Is the cough dry, or wet?", Kind.CHOICE, listOf(Choice("dry", "Dry"), Choice("wet", "Wet")), core = false)); continue }
-                    "phlegm" -> { add(Ask("f_phlegm", "phlegm", "Did any phlegm come up?", Kind.YESNO, core = false, gate = Gate("dryWet", setOf("wet")))); continue }
-                    "colour" -> { add(Ask("f_colour", "colour", "What colour was the phlegm?", Kind.CHOICE, listOf(Choice("clear", "Clear"), Choice("white", "White"), Choice("yellow", "Yellow"), Choice("green", "Green"), Choice("brown", "Brown"), Choice("pink", "Pink"), Choice("red", "Red"), Choice("black", "Black")), core = false, gate = Gate("phlegm", setOf(true)))); continue }
-                    "shade" -> { add(Ask("f_shade", "shade", "Pale or dark?", Kind.CHOICE, listOf(Choice("pale", "Pale (light)"), Choice("dark", "Dark (deep)")), core = false, gate = Gate("phlegm", setOf(true)))); continue }
-                }
-            }
+            if (isAgeExcluded(field.minAge, field.maxAge)) continue
 
             when (field.type) {
-                FieldType.YESNO -> add(Ask("f_$f", f, yesNoText(field.label), Kind.YESNO, core = false, danger = field.danger))
-                FieldType.CHOICE -> add(Ask("f_$f", f, choiceText(f, field.label), Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false))
+                FieldType.YESNO -> {
+                    val text = field.help?.split("\n")?.firstOrNull() ?: yesNoText(field.label)
+                    val help = field.help ?: Help.of("f_$f", f)
+                    add(Ask("f_$f", f, text, Kind.YESNO, core = false, danger = field.danger, gate = field.gate, help = help))
+                }
+                FieldType.CHOICE -> {
+                    val text = field.help?.split("\n")?.firstOrNull() ?: choiceText(f, field.label)
+                    val help = field.help ?: Help.of("f_$f", f)
+                    add(Ask("f_$f", f, text, Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false, gate = field.gate, help = help))
+                }
                 else -> {}
             }
         }
@@ -218,12 +226,15 @@ object Interview {
     private fun dangerQuestions(cat: Catalogue, p: Problem): List<Ask> =
         p.followUps.mapNotNull { cat.questions[it] }.filter { it.priority >= 85 }.sortedByDescending { it.priority }.mapNotNull { fromQuestion(cat, it)?.copy(danger = true) }
 
-    private fun fromQuestion(cat: Catalogue, q: Question): Ask? = when (q.type) {
-        FieldType.YESNO -> Ask(q.id, q.field, q.ask, Kind.YESNO)
-        FieldType.NUMBER -> Ask(q.id, q.field, q.ask, Kind.NUMBER)
-        FieldType.TEMP -> Ask(q.id, q.field, q.ask, Kind.TEMP)
-        FieldType.SCALE -> SEVERITY
-        else -> null
+    private fun fromQuestion(cat: Catalogue, q: Question): Ask? {
+        val help = q.help ?: Help.of(q.id, q.field)
+        return when (q.type) {
+            FieldType.YESNO -> Ask(q.id, q.field, q.ask, Kind.YESNO, gate = q.gate, help = help)
+            FieldType.NUMBER -> Ask(q.id, q.field, q.ask, Kind.NUMBER, gate = q.gate, help = help)
+            FieldType.TEMP -> Ask(q.id, q.field, q.ask, Kind.TEMP, gate = q.gate, help = help)
+            FieldType.SCALE -> SEVERITY.copy(gate = q.gate, help = help)
+            else -> null
+        }
     }
 
     private fun yesNoText(label: String) = when {
@@ -233,9 +244,10 @@ object Interview {
 
     private fun choiceText(field: String, label: String) = when (field) {
         "colour" -> "What colour was it?"
+        "phlegmColour" -> "What colour was the phlegm?"
         "content" -> "What came out?"
         "stoolType" -> "What was it like?"
-        "dryWet" -> "Is the cough dry, or with phlegm?"
+        "dryWet" -> "Is the cough dry, or wet?"
         else -> "$label?"
     }
 

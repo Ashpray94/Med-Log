@@ -26,9 +26,34 @@ data class Field(
     val choices: List<String>,
     val unit: String?,
     val danger: Boolean,
+    val gate: Interview.Gate? = null,
+    val minAge: Int? = null,
+    val maxAge: Int? = null,
+    val help: String? = null,
 )
 
-data class Question(val id: String, val field: String, val ask: String, val type: FieldType, val priority: Int)
+data class Question(
+    val id: String,
+    val field: String,
+    val ask: String,
+    val type: FieldType,
+    val priority: Int,
+    val gate: Interview.Gate? = null,
+    val minAge: Int? = null,
+    val maxAge: Int? = null,
+    val help: String? = null,
+)
+
+data class Cond(val field: String, val isValue: Any? = null, val gte: Double? = null)
+
+data class RedFlag(
+    val id: String,
+    val problems: List<String>,
+    val all: List<Cond>,
+    val level: String,
+    val reason: String,
+    val say: String,
+)
 
 data class Group(val id: String, val label: String, val glyph: String)
 
@@ -43,6 +68,7 @@ class Catalogue(
     val fields: Map<String, Field>,
     val questions: Map<String, Question>,
     val problems: List<Problem>,
+    val redFlags: List<RedFlag> = emptyList(),
 ) {
     private val byId = problems.associateBy { it.id }
 
@@ -51,6 +77,30 @@ class Catalogue(
     fun inGroup(group: String) = problems.filter { it.group == group }
 
     companion object {
+        private fun parseGate(json: JSONObject?): Interview.Gate? {
+            if (json == null) return null
+            val field = json.getString("field")
+            val any = mutableSetOf<Any?>()
+            json.optJSONArray("any")?.let { a ->
+                for (i in 0 until a.length()) {
+                    when {
+                        a.isNull(i) -> any.add(null)
+                        i < a.length() -> {
+                            val v = a.get(i)
+                            when (v) {
+                                is Boolean -> any.add(v)
+                                is Number -> any.add(v)
+                                is String -> any.add(v)
+                                else -> any.add(v.toString())
+                            }
+                        }
+                    }
+                }
+            }
+            val negate = json.optBoolean("not", false)
+            return Interview.Gate(field, any, negate)
+        }
+
         fun parse(json: String): Catalogue {
             val o = JSONObject(json)
             val groups = o.getJSONArray("groups").let { a ->
@@ -66,12 +116,26 @@ class Catalogue(
                     choices = f.optJSONArray("choices")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
                     unit = f.optString("unit").ifEmpty { null },
                     danger = f.optBoolean("danger"),
+                    gate = parseGate(f.optJSONObject("gate")),
+                    minAge = f.optInt("minAge").takeIf { it != 0 },
+                    maxAge = f.optInt("maxAge").takeIf { it != 0 },
+                    help = f.optString("help").ifEmpty { null },
                 )
             }
             val qo = o.getJSONObject("questions")
             val questions = qo.keys().asSequence().associateWith { k ->
                 val q = qo.getJSONObject(k)
-                Question(k, q.getString("field"), q.getString("ask"), FieldType.valueOf(q.getString("type").uppercase()), q.optInt("priority"))
+                Question(
+                    k,
+                    q.getString("field"),
+                    q.getString("ask"),
+                    FieldType.valueOf(q.getString("type").uppercase()),
+                    q.optInt("priority"),
+                    gate = parseGate(q.optJSONObject("gate")),
+                    minAge = q.optInt("minAge").takeIf { it != 0 },
+                    maxAge = q.optInt("maxAge").takeIf { it != 0 },
+                    help = q.optString("help").ifEmpty { null },
+                )
             }
             val pa = o.getJSONArray("problems")
             val problems = (0 until pa.length()).map { pa.getJSONObject(it) }.map { p ->
@@ -89,7 +153,38 @@ class Catalogue(
                     red = p.optBoolean("red"),
                 )
             }
-            return Catalogue(o.getString("version"), o.optBoolean("reviewed"), groups, fields, questions, problems)
+            val redFlags = o.optJSONArray("redFlags")?.let { a ->
+                (0 until a.length()).map { a.getJSONObject(it) }.map { rf ->
+                    RedFlag(
+                        id = rf.getString("id"),
+                        problems = rf.optJSONArray("problems")?.let { a -> (0 until a.length()).map { a.getString(it) } } ?: emptyList(),
+                        all = rf.optJSONArray("all")?.let { a ->
+                            (0 until a.length()).map { a.getJSONObject(it) }.map { c ->
+                                Cond(
+                                    field = c.getString("field"),
+                                    isValue = when {
+                                        c.has("is") -> {
+                                            val v = c.get("is")
+                                            when (v) {
+                                                is Boolean -> v
+                                                is Number -> v
+                                                is String -> v
+                                                else -> v.toString()
+                                            }
+                                        }
+                                        else -> null
+                                    },
+                                    gte = c.optDouble("gte").takeIf { it != 0.0 },
+                                )
+                            }
+                        } ?: emptyList(),
+                        level = rf.getString("level"),
+                        reason = rf.getString("reason"),
+                        say = rf.getString("say"),
+                    )
+                }
+            } ?: emptyList()
+            return Catalogue(o.getString("version"), o.optBoolean("reviewed"), groups, fields, questions, problems, redFlags)
         }
     }
 }

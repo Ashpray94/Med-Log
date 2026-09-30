@@ -139,7 +139,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
 
     suspend fun evaluate(): Triage {
         val p = problem ?: return Triage.OK
-        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.repo.recentForRules(), app.repo.person())
+        return DangerRules.evaluate(p.id, facts, parsed?.readings.orEmpty(), app.repo.recentForRules(), app.repo.person(), redFlags = cat.redFlags)
     }
 
     /** Saves progress: the note exists from the start, so nothing is ever lost. */

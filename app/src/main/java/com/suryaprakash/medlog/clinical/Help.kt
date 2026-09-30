@@ -8,6 +8,7 @@ object Help {
     private val BY_FIELD = mapOf(
         "f_dryWet" to "Dry means nothing comes up. Wet means you can feel phlegm.\nWet and dry coughs have different causes.",
         "f_phlegm" to "Phlegm is the thick wet stuff that comes up from the chest when you cough.\nColour and amount help your doctor tell what is wrong.",
+        "f_phlegmColour" to "Colour tells your doctor what is happening.\nDark or deep colours can mean older infection or blood.",
         "f_shade" to "Colour tells your doctor what is happening.\nDark or deep colours can mean older infection or blood.",
         "f_colour" to "Colour tells your doctor what is happening.\nDark or deep colours can mean older infection or blood.",
 

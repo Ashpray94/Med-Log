@@ -74,7 +74,7 @@ class InterviewTest {
 
     @Test fun coughFieldsGated() {
         val cough = CAT.problem("cough")!!
-        // with empty facts, dryWet should apply but phlegm/colour/shade should not
+        // with empty facts, dryWet should apply but phlegm/phlegmColour/shade should not
         val ext0 = Interview.extended(CAT, cough, emptyMap())
         val dryWetAsk = ext0.firstOrNull { it.field == "dryWet" }
         assertTrue("dryWet should be in extended asks", dryWetAsk != null)
@@ -88,13 +88,13 @@ class InterviewTest {
         val facts1 = mapOf("dryWet" to Fact("wet", Source.ASKED))
         assertTrue("phlegm should apply with dryWet=wet", Interview.applies(phlegmAsk, facts1))
 
-        // with phlegm=true, colour and shade should apply
+        // with phlegm=true, phlegmColour and shade should apply
         val facts2 = mapOf("phlegm" to Fact(true, Source.ASKED))
-        val colourAsk = ext0.firstOrNull { it.field == "colour" }
+        val phlegmColourAsk = ext0.firstOrNull { it.field == "phlegmColour" }
         val shadeAsk = ext0.firstOrNull { it.field == "shade" }
-        assertTrue("colour should be in extended asks", colourAsk != null)
+        assertTrue("phlegmColour should be in extended asks", phlegmColourAsk != null)
         assertTrue("shade should be in extended asks", shadeAsk != null)
-        assertTrue("colour should apply with phlegm=true", Interview.applies(colourAsk!!, facts2))
+        assertTrue("phlegmColour should apply with phlegm=true", Interview.applies(phlegmColourAsk!!, facts2))
         assertTrue("shade should apply with phlegm=true", Interview.applies(shadeAsk!!, facts2))
     }
 
@@ -102,6 +102,36 @@ class InterviewTest {
         val cough = CAT.problem("cough")!!
         val all = Interview.core(CAT, cough, emptyMap()) + Interview.extended(CAT, cough, emptyMap())
         assertTrue("cough should not have coffeeGround field", all.none { it.field == "coffeeGround" })
+    }
+
+    @Test fun ageGating() {
+        val headache = CAT.problem("headache")!!
+        // With age 50, should not exclude any fields by age
+        val ext50 = Interview.extended(CAT, headache, emptyMap(), age = 50)
+        assertTrue("extended questions for age 50 should not be empty", ext50.isNotEmpty())
+
+        // With age null, should keep all fields
+        val extNull = Interview.extended(CAT, headache, emptyMap(), age = null)
+        assertTrue("extended questions for age null should not be empty", extNull.isNotEmpty())
+    }
+
+    @Test fun redFlagTest() {
+        val redFlagList = listOf(
+            com.suryaprakash.medlog.clinical.RedFlag(
+                id = "test_rf",
+                problems = listOf("headache"),
+                all = listOf(
+                    com.suryaprakash.medlog.clinical.Cond(field = "worstEver", isValue = true)
+                ),
+                level = "RED",
+                reason = "Test red flag",
+                say = "This is a test"
+            )
+        )
+        val facts = mapOf("worstEver" to Fact(true, Source.ASKED))
+        val result = DangerRules.evaluate("headache", facts, emptyList(), emptyList(), PersonContext(78, false), redFlags = redFlagList)
+        assertEquals(Level.RED, result.level)
+        assertTrue(result.reasons.contains("Test red flag"))
     }
 
     @Test fun allAsksHaveHelp() {

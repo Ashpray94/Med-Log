@@ -245,7 +245,29 @@
   },
   "phlegm": {
    "label": "Phlegm came up",
-   "type": "yesno"
+   "type": "yesno",
+   "gate": {
+    "field": "dryWet",
+    "any": ["wet"]
+   }
+  },
+  "phlegmColour": {
+   "label": "Phlegm colour",
+   "type": "choice",
+   "choices": [
+    "clear",
+    "white",
+    "yellow",
+    "green",
+    "brown",
+    "pink",
+    "red",
+    "black"
+   ],
+   "gate": {
+    "field": "phlegm",
+    "any": [true]
+   }
   },
   "shade": {
    "label": "Shade",
@@ -253,7 +275,11 @@
    "choices": [
     "pale",
     "dark"
-   ]
+   ],
+   "gate": {
+    "field": "phlegm",
+    "any": [true]
+   }
   },
   "dryWet": {
    "label": "Dry or wet",
@@ -2127,7 +2153,7 @@
    "fields": [
     "dryWet",
     "phlegm",
-    "colour",
+    "phlegmColour",
     "shade",
     "blood",
     "weeks",
