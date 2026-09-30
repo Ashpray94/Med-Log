@@ -1,6 +1,6 @@
 # System audit — 2026-09-30
 
-Status: initial source and sync audit. No app code changed. Integration decision pending.
+Status: source integration in progress. See the continuation below for current changes and checks. Initial findings are retained as baseline evidence.
 
 ## Verified baseline
 
@@ -47,3 +47,24 @@ Preserve 11dc03c data/sync/safety foundation, retain current CLAUDE.md Rule 0 an
 6. Verify dev patient screens with largest text, pictorial answers and speech; retain clinician sign-off as pending.
 
 No production release or installation was requested or performed in this audit. No merge is claimed complete.
+
+## Continuation: implemented and verified
+
+The owner asked us to choose the sensible integration. Preserve the shipped 2.14.1 foundation while retaining Rule 0 and draft clinical additions. History shows divergent development from 2.9.0; no evidence that removal was intentional.
+
+Completed commits on codex/medlog-system-audit:
+- f1fb9a3: draft builds cannot publish production updates.
+- caa0acc: conditional choice questions retain their choices, explanation and gate.
+- f5d1878: database version 5 migrates both incompatible version-4 layouts without destructive reset. Tests construct both exported schemas and preserve records, identifiers and tombstones.
+- 54a640c: explicit impaired consciousness/unsafe swallowing suppresses oral-sugar first aid. Content remains unreviewed.
+- 6fa4f9b: accurate existing dimension tags; no fabricated clinical coverage. Missing dimensions reduced from 861 to 819; still a release blocker.
+
+GitHub Actions 36716244036 passed: 93 tests, zero failures/errors/skips. Schema and XML evidence downloaded outside the checkout. No device, largest-font, TalkBack or two-phone test has occurred.
+
+In progress (not yet verified): restore paired sync, per-patient mirror databases, stable medicine references, durable row/checkpoint catch-up, connectivity retries and nearby dispatch from 2.14.1. The draft incorrectly used helper-only family chat for health records. Timestamp batch boundaries need regression coverage before claiming complete catch-up.
+
+Still required: finish source parity and lost safety suites; connect helper screens to explicitly selected patient mirrors; restore functional, isolated live chat; appointments/tombstones and remote change notifications; bidirectional nearby checks; remaining clinical patches; all patient screens at largest text size. The old initial-status and line references above describe the original draft, not current code.
+
+Keep the real phone on 2.14.1. Test dev first. Settings → Backup before any real-app upgrade. No production installation or completed source merge is claimed.
+
+UI continuation: `29903e1` isolates simple patient help, connects helper selection to mirror timeline reads, prevents mirror editing through screens that still target the phone's own DB, repairs chat date indexing and functional send controls. This is an interim read-only mirror view; full helper CRUD and live chat remain unfinished. Actions run `36720071073` pending. Review `docs/DEV_ACCEPTANCE.md` before device testing.

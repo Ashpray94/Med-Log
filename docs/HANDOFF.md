@@ -1,3 +1,20 @@
+# Continuation checkpoint — 2026-09-30
+
+Read CLAUDE.md first. This checkpoint corrects historical facts below; the original handoff remains preserved.
+
+- Active work: `codex/medlog-system-audit`, isolated checkout `D:/Code/Mockup Pro/MedLog-audit`. The original MedLog checkout contains other work: do not commit or overwrite it.
+- Owner supplied `11dc03c`: tag `v2.14.1` is the actual source in this repository. PR #3 diverged from the 2.9.0 base and missed subsequent shipped changes. No evidence of intentional feature removal. Owner asked us to choose the sensible approach; preserve 2.14.1 foundations, retain Rule 0 and integrate draft additions. A wholesale merge had 35 conflicts and was aborted. Full source parity is NOT complete.
+- Requirements are in `codex.md`; detailed findings and implemented commits in `docs/SYSTEM_AUDIT.md`.
+- Both shipped and draft schemas claimed Room version 4 but differed. Version 5 migration now supports both; 93 unit tests passed in Actions run `36716244036`, including both complete historical schemas. Content still unreviewed; completeness still has 819 missing dimensions.
+- Source sync restored in `aeb94fd`: stable UID medicine/dose mapping; per-patient Mirror; persistent row/checkpoint catch-up; startup/network retry; paired topic authentication; timestamp ties; atomic receive; nearby dispatch. Actions run `36719492624` is pending at this checkpoint. Do not treat it as passed without checking.
+- Draft builds now generate artifacts without publishing production releases. No local Android build; use workflow_dispatch `release.yml` on the active branch. Test dev first; real phone stays on 2.14.1. Settings → Backup before any production upgrade.
+- No device, two-phone, largest-font, Hindi/Tamil, pictorial answer or TalkBack verification has occurred.
+
+Next bounded work: verify latest CI; finish selected-patient screen routing and safe mirrored dose actions; implement live chat with authenticated per-patient identity (existing inbox has no peer identifier), persisted delivery state and correct patient transport; synchronize appointment tombstones; notify real remote changes once; restore applicable lost 2.14.1 safety suites; clinical patches through merge_audit with credible sources; dev device validation. Never substitute generic tags/questions to erase gaps or bypass medicine guards when editing a mirror.
+
+Agent execution uses `gpt-6-luna`, narrow file ownership, no builds/commits by agents. Main reviews and runs CI. Current UI work may be uncommitted: inspect git status before changing files.
+
+---
 # MedLog handoff (detailed). Read fully before touching anything.
 
 Repo `Ashpray94/Med-Log`, branch `claude/determined-noether-sc7tr7`, base `main`. Android, Kotlin, Compose, package `com.suryaprakash.medlog`.
