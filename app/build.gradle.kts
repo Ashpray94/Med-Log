@@ -26,6 +26,7 @@ val hasKey = keystore.getProperty("storePassword") != null
 android {
     namespace = "com.suryaprakash.medlog"
     compileSdk = 35
+    flavorDimensions += "env"
 
     defaultConfig {
         applicationId = "com.suryaprakash.medlog"
@@ -56,6 +57,21 @@ android {
         debug {
             // same key as release, so a debug build can be upgraded to release without losing data
             if (hasKey) signingConfig = signingConfigs.getByName("shared")
+        }
+    }
+
+    productFlavors {
+        create("prod") {
+            dimension = "env"
+            buildConfigField("String", "ENV", "\"prod\"")
+            resValue("string", "app_name", "MedLog")
+        }
+        create("dev") {
+            dimension = "env"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            buildConfigField("String", "ENV", "\"dev\"")
+            resValue("string", "app_name", "MedLog Dev")
         }
     }
 

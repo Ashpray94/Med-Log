@@ -3,6 +3,7 @@ package com.suryaprakash.medlog.help
 import android.content.Context
 import android.util.Base64
 import android.util.Log
+import com.suryaprakash.medlog.BuildConfig
 import com.suryaprakash.medlog.data.Keys
 import com.suryaprakash.medlog.medlog
 import kotlinx.coroutines.CoroutineScope
@@ -42,7 +43,7 @@ object Relay {
     /** The helper phone's connection to the relay, shown on the helper's home screen. */
     val link = MutableStateFlow(Link.OFF)
 
-    fun enabled(ctx: Context) = ctx.medlog.settings.value.internetLink
+    fun enabled(ctx: Context) = BuildConfig.ENV != "dev" && ctx.medlog.settings.value.internetLink
     fun base(ctx: Context) = ctx.medlog.settings.value.relayUrl.trim().trimEnd('/').ifBlank { DEFAULT_URL }
 
     /** Mailbox name for one direction of one pairing: "medlog-" + 32 hex characters from HMAC-SHA256(key). */
