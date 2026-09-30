@@ -177,15 +177,13 @@ fun SettingsScreen(nav: Nav) {
             val helpers by app.db.helpers().flow().collectAsState(emptyList())
             val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
             fun langs() = s.languages.joinToString(", ") { t -> com.suryaprakash.medlog.clinical.Lang.ALL.firstOrNull { it.tag == t }?.name ?: t }
-            com.suryaprakash.medlog.ui.Section("You")
+            com.suryaprakash.medlog.ui.Section("Care")
             com.suryaprakash.medlog.ui.Group {
-                com.suryaprakash.medlog.ui.ValueRow("My details", profile.name.ifBlank { null }) { section = "me" }
+                com.suryaprakash.medlog.ui.ValueRow("Medicine reminders", "Again in ${s.snoozeMinutes} min") { section = "reminders" }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("My doctors", plan.doctors.size.takeIf { it > 0 }?.toString()) { section = "doctors" }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("My helpers", helpers.size.takeIf { it > 0 }?.toString()) { nav.go(Route.Helpers) }
-                com.suryaprakash.medlog.ui.GroupLine()
-                com.suryaprakash.medlog.ui.ValueRow("My messages", s.messages.size.takeIf { it > 0 }?.toString()) { nav.go(Route.Messages) }
             }
             com.suryaprakash.medlog.ui.Section("Seeing and hearing")
             com.suryaprakash.medlog.ui.Group {
@@ -195,14 +193,6 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Languages", langs()) { section = "lang" }
             }
-            com.suryaprakash.medlog.ui.Section("Care")
-            com.suryaprakash.medlog.ui.Group {
-                com.suryaprakash.medlog.ui.ValueRow("Medicine reminders", "Again in ${s.snoozeMinutes} min") { section = "reminders" }
-                com.suryaprakash.medlog.ui.GroupLine()
-                com.suryaprakash.medlog.ui.ValueRow("Daily check-in", if (s.checkInEnabled) s.checkInTime else "Off") { section = "care" }
-                com.suryaprakash.medlog.ui.GroupLine()
-                com.suryaprakash.medlog.ui.ValueRow("SOS", "Calls ${s.emergencyNumber} last") { section = "sos" }
-            }
             com.suryaprakash.medlog.ui.Section("This phone")
             com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("Home-screen widget", "Add") { pinWidget(ctx) }
@@ -210,20 +200,20 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.ValueRow("Permissions", null) { nav.go(Route.Permissions) }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Backup and new phone", null) { nav.go(Route.Backup) }
-                if (com.suryaprakash.medlog.Updater.allowed(ctx)) {
-                    com.suryaprakash.medlog.ui.GroupLine()
-                    com.suryaprakash.medlog.ui.ValueRow("Updates", com.suryaprakash.medlog.BuildConfig.VERSION_NAME) { section = "update" }
-                }
-            }
-            com.suryaprakash.medlog.ui.Section("More")
-            com.suryaprakash.medlog.ui.Group {
-                com.suryaprakash.medlog.ui.ValueRow("Add my old reports", null, sub = "Photos or PDFs") { nav.go(Route.Import) }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Bluetooth machines", null, sub = "BP, oxygen, thermometer, scale") { nav.go(Route.Devices) }
-                com.suryaprakash.medlog.ui.GroupLine()
-                com.suryaprakash.medlog.ui.ValueRow("Helper controls", if (s.helperPin.isNotBlank()) "PIN set" else null, sub = "Hide features, lock settings") { section = "helperlock" }
-                com.suryaprakash.medlog.ui.GroupLine()
+                if (com.suryaprakash.medlog.Updater.allowed(ctx)) {
+                    com.suryaprakash.medlog.ui.GroupLine()
+                    com.suryaprakash.medlog.ui.ValueRow("About", com.suryaprakash.medlog.BuildConfig.VERSION_NAME) { section = "update" }
+                }
+            }
+            com.suryaprakash.medlog.ui.Section("Privacy")
+            com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
+            }
+            com.suryaprakash.medlog.ui.Section(null)
+            androidx.compose.foundation.layout.Box(Modifier.padding(vertical = 12.dp)) {
+                Text("Switch to helper mode", fontSize = LocalScale.current.small, color = LocalPalette.current.inkSoft, modifier = Modifier.fillMaxWidth().padding(16.dp))
             }
             Hint("MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
         }
