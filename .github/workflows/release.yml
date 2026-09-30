@@ -22,9 +22,6 @@ permissions:
 jobs:
   apk:
     runs-on: ubuntu-latest
-    concurrency:
-      group: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/codex/medlog-system-audit' && 'medlog-dev-latest' || format('medlog-release-{0}', github.ref) }}
-      cancel-in-progress: false
     env:
       SIGNING: ${{ secrets.MEDLOG_SIGNING }}
     steps:
