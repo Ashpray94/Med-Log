@@ -76,6 +76,7 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
             val id = db.notes().insert(note)
             if (group == null) { group = id; db.notes().update(note.copy(id = id, groupId = id)) }
             ids += id
+            Sync.local("note", "insert", id)
         }
         for (r in readings) ids += addReading(r, transcript = null, at = occurredAt, group = group)
         for (med in medicinesTaken) ids += addMedicineTaken(med, occurredAt, group)
@@ -90,6 +91,7 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
             count = (facts["count"]?.value as? Number)?.toInt(),
             text = n.problemId?.let { describe.line(it, facts) } ?: n.text,
         ))
+        Sync.local("note", "update", id)
     }
 
     suspend fun updateTriage(id: Long, t: Triage) {
@@ -115,34 +117,57 @@ class Repo(val db: MedDb, private val cat: Catalogue, private val describe: Desc
 
     // ───────── other notes ─────────
 
-    suspend fun addWater(glasses: Int = 1, at: Long = System.currentTimeMillis()): Long =
-        db.notes().insert(Note(kind = Kind.WATER, occurredAt = at, count = glasses, text = "Water: $glasses ${if (glasses == 1) "glass" else "glasses"}"))
+    suspend fun addWater(glasses: Int = 1, at: Long = System.currentTimeMillis()): Long {
+        val id = db.notes().insert(Note(kind = Kind.WATER, occurredAt = at, count = glasses, text = "Water: $glasses ${if (glasses == 1) "glass" else "glasses"}"))
+        Sync.local("note", "insert", id)
+        return id
+    }
 
     suspend fun waterToday(): Int {
         val start = LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
         return db.notes().kindSince(Kind.WATER, start).sumOf { it.count ?: 1 }
     }
 
-    suspend fun addFood(text: String, photo: String?, at: Long = System.currentTimeMillis()): Long =
-        db.notes().insert(Note(kind = Kind.FOOD, occurredAt = at, transcript = text, photoPath = photo, text = "Ate: $text".trim()))
+    suspend fun addFood(text: String, photo: String?, at: Long = System.currentTimeMillis()): Long {
+        val id = db.notes().insert(Note(kind = Kind.FOOD, occurredAt = at, transcript = text, photoPath = photo, text = "Ate: $text".trim()))
+        Sync.local("note", "insert", id)
+        return id
+    }
 
     suspend fun addReading(r: Reading, transcript: String?, at: Long = System.currentTimeMillis(), group: Long? = null): Long {
         val d = JSONObject().put("type", r.type).put("v1", r.v1).put("unit", r.unit)
         r.v2?.let { d.put("v2", it) }
-        return db.notes().insert(Note(kind = Kind.READING, occurredAt = at, transcript = transcript, details = d.toString(), groupId = group, text = r.label()))
+        val id = db.notes().insert(Note(kind = Kind.READING, occurredAt = at, transcript = transcript, details = d.toString(), groupId = group, text = r.label()))
+        Sync.local("note", "insert", id)
+        return id
     }
 
-    suspend fun addMedicineTaken(name: String, at: Long = System.currentTimeMillis(), group: Long? = null): Long =
-        db.notes().insert(Note(kind = Kind.MED_TAKEN, occurredAt = at, groupId = group, details = JSONObject().put("name", name).toString(), text = "Took $name"))
+    suspend fun addMedicineTaken(name: String, at: Long = System.currentTimeMillis(), group: Long? = null): Long {
+        val id = db.notes().insert(Note(kind = Kind.MED_TAKEN, occurredAt = at, groupId = group, details = JSONObject().put("name", name).toString(), text = "Took $name"))
+        Sync.local("note", "insert", id)
+        return id
+    }
 
-    suspend fun addQuestion(text: String): Long =
-        db.notes().insert(Note(kind = Kind.QUESTION, occurredAt = System.currentTimeMillis(), transcript = text, text = "Question for doctor: $text"))
+    suspend fun addQuestion(text: String): Long {
+        val id = db.notes().insert(Note(kind = Kind.QUESTION, occurredAt = System.currentTimeMillis(), transcript = text, text = "Question for doctor: $text"))
+        Sync.local("note", "insert", id)
+        return id
+    }
 
-    suspend fun addEvent(kind: String, text: String, details: String = "{}"): Long =
-        db.notes().insert(Note(kind = kind, occurredAt = System.currentTimeMillis(), details = details, text = text))
+    suspend fun addEvent(kind: String, text: String, details: String = "{}"): Long {
+        val id = db.notes().insert(Note(kind = kind, occurredAt = System.currentTimeMillis(), details = details, text = text))
+        Sync.local("note", "insert", id)
+        return id
+    }
 
-    suspend fun remove(ids: List<Long>) = ids.forEach { db.notes().remove(it) }
-    suspend fun restore(ids: List<Long>) = ids.forEach { db.notes().restore(it) }
+    suspend fun remove(ids: List<Long>) = ids.forEach {
+        db.notes().remove(it)
+        Sync.local("note", "delete", it)
+    }
+    suspend fun restore(ids: List<Long>) = ids.forEach {
+        db.notes().restore(it)
+        Sync.local("note", "update", it)
+    }
     suspend fun purgeRemoved() = db.notes().purge(System.currentTimeMillis() - 30 * DAY)
 
     // ───────── widget / home: which problems to show (plan 6.2) ─────────

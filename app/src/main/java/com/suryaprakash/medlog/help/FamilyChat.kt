@@ -89,6 +89,10 @@ object FamilyChat {
 
     /** Another helper wrote. A quiet notification, not an alarm. */
     fun received(ctx: Context, o: JSONObject) {
+        if (o.optInt("sync") == 1) {
+            com.suryaprakash.medlog.data.Sync.receive(ctx, o)
+            return
+        }
         if (o.optString("dev") == device(ctx)) return
         val app = ctx.medlog
         app.scope.launch {
