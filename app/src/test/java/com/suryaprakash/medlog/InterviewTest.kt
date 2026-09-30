@@ -71,4 +71,47 @@ class InterviewTest {
         assertEquals("stomach_pain", p.parse("vayiru vali").main!!.problemId)
         assertEquals("dizzy", p.parse("chakkar aa raha hai").main!!.problemId)
     }
+
+    @Test fun coughFieldsGated() {
+        val cough = CAT.problem("cough")!!
+        // with empty facts, dryWet should apply but phlegm/colour/shade should not
+        val ext0 = Interview.extended(CAT, cough, emptyMap())
+        val dryWetAsk = ext0.firstOrNull { it.field == "dryWet" }
+        assertTrue("dryWet should be in extended asks", dryWetAsk != null)
+        assertTrue("dryWet should apply with empty facts", Interview.applies(dryWetAsk!!, emptyMap()))
+
+        val phlegmAsk = ext0.firstOrNull { it.field == "phlegm" }
+        assertTrue("phlegm should be in extended asks", phlegmAsk != null)
+        assertTrue("phlegm should NOT apply with empty facts", !Interview.applies(phlegmAsk!!, emptyMap()))
+
+        // with dryWet=wet, phlegm should apply
+        val facts1 = mapOf("dryWet" to Fact("wet", Source.ASKED))
+        assertTrue("phlegm should apply with dryWet=wet", Interview.applies(phlegmAsk, facts1))
+
+        // with phlegm=true, colour and shade should apply
+        val facts2 = mapOf("phlegm" to Fact(true, Source.ASKED))
+        val colourAsk = ext0.firstOrNull { it.field == "colour" }
+        val shadeAsk = ext0.firstOrNull { it.field == "shade" }
+        assertTrue("colour should be in extended asks", colourAsk != null)
+        assertTrue("shade should be in extended asks", shadeAsk != null)
+        assertTrue("colour should apply with phlegm=true", Interview.applies(colourAsk!!, facts2))
+        assertTrue("shade should apply with phlegm=true", Interview.applies(shadeAsk!!, facts2))
+    }
+
+    @Test fun coughNoCoffeeGround() {
+        val cough = CAT.problem("cough")!!
+        val all = Interview.core(CAT, cough, emptyMap()) + Interview.extended(CAT, cough, emptyMap())
+        assertTrue("cough should not have coffeeGround field", all.none { it.field == "coffeeGround" })
+    }
+
+    @Test fun allAsksHaveHelp() {
+        for (p in CAT.problems) {
+            val all = Interview.core(CAT, p, emptyMap()) + Interview.extended(CAT, p, emptyMap())
+            for (a in all) {
+                assertTrue("Ask ${a.id} for problem ${p.id} should have non-empty help", a.help.isNotEmpty())
+                assertTrue("Ask ${a.id} should have what part", a.what.isNotEmpty())
+                assertTrue("Ask ${a.id} should have why part", a.why.isNotEmpty())
+            }
+        }
+    }
 }

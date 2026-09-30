@@ -244,8 +244,16 @@
    "type": "yesno"
   },
   "phlegm": {
-   "label": "Brings up phlegm",
+   "label": "Phlegm came up",
    "type": "yesno"
+  },
+  "shade": {
+   "label": "Shade",
+   "type": "choice",
+   "choices": [
+    "pale",
+    "dark"
+   ]
   },
   "dryWet": {
    "label": "Dry or wet",
@@ -2118,7 +2126,9 @@
    ],
    "fields": [
     "dryWet",
+    "phlegm",
     "colour",
+    "shade",
     "blood",
     "weeks",
     "context"

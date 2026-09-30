@@ -61,6 +61,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.suryaprakash.medlog.MedLogApp
 import com.suryaprakash.medlog.care.FollowUp
 import com.suryaprakash.medlog.clinical.DangerRules
@@ -162,7 +163,14 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
     }
 
     fun advance() {
-        if (index + 1 < queue.size) { index++; return }
+        if (index + 1 < queue.size) {
+            index++
+            // skip any asks that don't apply due to gates
+            while (index < queue.size && !Interview.applies(queue[index], facts)) {
+                index++
+            }
+            return
+        }
         if (reAsk) { reAsk = false; toSummary(); return }
         val p = problem ?: return toSummary()
         if (!offeredMore) {
@@ -244,7 +252,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
             val q = "Is it ${label.lowercase()}?"
             fun yes() = begin(m.problemId, m.facts, pr.others, pr.transcript)
             LaunchedEffect(q) { if (s.autoRead && s.readAloud) speak(app, q, lang) }
-            Conversation("Tell how you feel", cat.problem(m.problemId), null, { phase = Phase.PICK }, null, q, lang, onSkip = null, onDone = null) {
+            Conversation("Tell how you feel", cat.problem(m.problemId), null, { phase = Phase.PICK }, null, q, lang, "", "", onSkip = null, onDone = null) {
                 YesNoBig(onYes = { yes() }, onNo = { phase = Phase.PICK })
             }
         }
@@ -260,6 +268,10 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
         // ───────────── one question at a time ─────────────
         Phase.ASK -> {
             val pr = problem
+            // skip to first applicable ask
+            while (index < queue.size && !Interview.applies(queue[index], facts)) {
+                index++
+            }
             val a = queue.getOrNull(index)
             if (pr == null || a == null) { Box(Modifier.fillMaxSize().background(p.paper)); return }
             val question = a.text
@@ -270,6 +282,7 @@ fun TellScreen(nav: Nav, route: Route.Tell) {
                 title = pr.label, problem = pr, onChange = { phase = Phase.PICK },
                 onBack = { if (index > 0) index-- else nav.back() },
                 progress = progress, question = question, lang = lang,
+                what = a.what, why = a.why,
                 onSkip = if (a.id == Interview.MORE.id) null else ({ advance() }),
                 onDone = { toSummary() },
             ) {
@@ -352,6 +365,8 @@ private fun Conversation(
     progress: String?,
     question: String,
     lang: String,
+    what: String = "",
+    why: String = "",
     onSkip: (() -> Unit)?,
     onDone: (() -> Unit)?,
     answers: @Composable ColumnScope.() -> Unit,
@@ -376,6 +391,15 @@ private fun Conversation(
             Text(question, fontSize = sc.question, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.question * 1.18f,
                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite; heading() })
             if (local != null) Text(local, fontSize = sc.headline, color = p.inkSoft, lineHeight = sc.headline * 1.35f)
+            if (what.isNotEmpty()) {
+                Text(what, fontSize = 18.sp, color = p.inkSoft)
+            }
+            if (why.isNotEmpty()) {
+                var showWhy by remember { mutableStateOf(false) }
+                Text("Why ask?", fontSize = sc.body, color = p.brand, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.steady("Why ask?") { showWhy = !showWhy })
+                if (showWhy) Text(why, fontSize = 14.sp, color = p.inkSoft)
+            }
             Spacer(Modifier.height(4.dp))
             answers()
             Spacer(Modifier.height(8.dp))

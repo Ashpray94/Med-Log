@@ -1,139 +1,55 @@
 package com.suryaprakash.medlog.clinical
 
 /**
- * The two-line explanation behind every question: line 1 says what the question means, line 2 says why it is asked.
- * Plain words (about grade 5). Looked up by question id first, then by the field the answer is stored in.
- * The app shows it small, under the question, behind a "Why ask?" button.
+ * Help text for questions: what the question means, then why it is asked.
+ * Two lines per entry, ≤12 words per line.
  */
 object Help {
-    private fun h(what: String, why: String) = "$what\n$why"
+    private val BY_FIELD = mapOf(
+        "f_dryWet" to "Dry means nothing comes up. Wet means you can feel phlegm.\nWet and dry coughs have different causes.",
+        "f_phlegm" to "Phlegm is the thick wet stuff that comes up from the chest when you cough.\nColour and amount help your doctor tell what is wrong.",
+        "f_shade" to "Colour tells your doctor what is happening.\nDark or deep colours can mean older infection or blood.",
+        "f_colour" to "Colour tells your doctor what is happening.\nDark or deep colours can mean older infection or blood.",
 
-    fun of(id: String, field: String): String = BY_ID[id] ?: BY_FIELD[field] ?: ""
+        // Core and fixed questions
+        "when" to "Knowing when it started helps understand the cause.\nSudden things need urgent attention.",
+        "count" to "How often it happens tells doctors how serious it is.\nFrequent episodes need more care.",
+        "where" to "Where it is helps find what caused it.\nPain in ribs is different from stomach pain.",
+        "depth" to "Knowing how deep helps find the problem.\nSurface rashes need different care than deep pain.",
+        "severity" to "How bad it is tells doctors how urgent it is.\nVery severe pain needs urgent attention.",
+        "pain" to "How much it hurts helps doctors understand the problem.\nIntense pain may mean something serious.",
+        "itch" to "How itchy something is helps find what caused it.\nSevere itch affects daily living.",
+        "strength" to "How strong a sensation is helps doctors understand it.\nWorsening weakness needs urgent attention.",
+        "burnLook" to "What the burn looks like shows how deep it is.\nCharred skin means a severe burn.",
+        "burnSize" to "Burn size tells doctors how serious it is.\nLarge burns need urgent hospital care.",
+        "character" to "What pain feels like helps doctors find the cause.\nSharp pain is different from aching pain.",
 
-    fun what(help: String) = help.substringBefore('\n')
-    fun why(help: String) = help.substringAfter('\n', "")
+        // Pattern and modifiers
+        "pattern" to "Whether pain comes and goes helps doctors understand it.\nConstant pain is different from intermittent.",
+        "worse" to "What makes it worse helps find the cause.\nPain worse with movement suggests muscle problems.",
+        "better" to "What helps find effective treatments.\nPain better with rest suggests muscle strain.",
 
-    private const val COLOUR_WHAT = "Pick the nearest colour. Pale means light, like weak tea. Dark means deep, like strong tea."
-
-    val BY_ID: Map<String, String> = mapOf(
-        // fixed questions
-        "when" to h("How long ago you first noticed it.", "New problems and old problems need different care."),
-        "count" to h("Count each time it happened today.", "More times can mean it is getting worse."),
-        "where" to h("Touch the picture where you feel it.", "The place helps your doctor find the cause."),
-        "depth" to h("Is it on the skin, or far inside the body?", "Deep pain and skin pain have different causes."),
-        "severity" to h("Pick how strong it is right now.", "Your doctor uses this to see if it gets better or worse."),
-        "pain" to h("0 is no hurt. 10 is the worst hurt you can think of.", "Your doctor uses this to see if it gets better or worse."),
-        "itch" to h("0 is no itch. 10 is an itch you cannot stop scratching.", "Strong itch can mean an allergy or a skin problem."),
-        "strength" to h("0 is nothing. 10 is the strongest you can imagine.", "Your doctor uses this to see if it gets better or worse."),
-        "burnLook" to h("Look at the skin. Is it only red, blistered, or white, brown or black?", "Deeper burns need a hospital, even if they hurt less."),
-        "burnSize" to h("Compare the burn with the flat of your own hand.", "Bigger burns need a doctor sooner."),
-        "character" to h("Pick the words that sound like your pain.", "The feel of the pain points to the cause."),
-        "more" to h("A few more questions, about 2 minutes.", "More detail helps your doctor. You can stop at any time."),
-        "pattern" to h("Is it there all day, or does it go away and come back?", "Pain that comes and goes has different causes."),
-        "worse" to h("Things that make it hurt more or feel worse.", "Triggers help find the cause."),
-        "better" to h("Things that make it feel better.", "What helps tells your doctor about the cause."),
-        "tookMed" to h("Any tablet, syrup, balm or drops for this problem.", "Your doctor needs to know what you already tried."),
-        "whichMed" to h("Say or write the medicine name. A photo of the strip also works later.", "The right medicine depends on what you already took."),
-        "anything" to h("Any other detail that worries you.", "You know your body best."),
-        "onset" to h("Did it hit you in a moment, or build up slowly?", "Sudden problems are often more serious."),
-        "duration" to h("How long one attack lasts, from start to end.", "Short and long attacks have different causes."),
-        "context" to h("When does it usually happen?", "A pattern, like after food or at night, points to the cause."),
-        "impact" to h("Things you cannot do because of it.", "It shows how much this problem is hurting your life."),
-        "radiation" to h("Does the pain travel to another place?", "Pain that travels can show which nerve or organ is involved."),
-        "side" to h("Left or right, as you look at yourself.", "One-sided problems can need different care."),
-        "pillows" to h("How many pillows you pile up to sleep.", "Needing more pillows can mean fluid in the lungs."),
-        "floorTime" to h("How long you stayed on the floor before help or getting up.", "A long time on the floor can hurt muscles and kidneys."),
-        "hours" to h("Hours since you last passed urine.", "Not passing urine for many hours can mean the kidneys or bladder are in trouble."),
-        "weeks" to h("Count the weeks since it began.", "Problems that last weeks need a check even if mild."),
-        "sleepHours" to h("Hours you actually sleep at night.", "Too little or too much sleep affects mood and health."),
-        // questions that share a field, worded for their problem
-        "q_blood_vomit" to h("Red or dark blood in the vomit.", "Blood in vomit can mean bleeding in the stomach. It needs a doctor fast."),
-        "q_blood_stool" to h("Red or dark blood in the stool, or on the paper.", "Blood in stool can mean bleeding in the gut. It needs a doctor."),
-        "q_blood_cough" to h("Blood mixed in the phlegm, or coughed up pure.", "Coughing blood can mean a serious lung problem."),
-        "q_severity" to h("Pick how strong it is right now.", "Your doctor uses this to see if it gets better or worse."),
-        "f_coffeeGround" to h("Vomit that looks like dark brown coffee powder. This is called coffee-ground vomit and can mean old blood.", "Old blood in the stomach needs a doctor quickly."),
+        // Pattern and follow-up
+        "more" to "More details help doctors make better decisions.\nYou can stop anytime if you're tired.",
+        "tookMed" to "Whether you took medicine helps doctors understand what you tried.\nSome medicines change symptoms significantly.",
+        "whichMed" to "Which medicine helps doctors see what worked or didn't.\nDifferent medicines help different problems.",
+        "anything" to "Other details you think matter help your doctor.\nDon't hold back anything you think is important.",
     )
 
-    val BY_FIELD: Map<String, String> = mapOf(
-        "started" to h("How long ago you first noticed it.", "New problems and old problems need different care."),
-        "blood" to h("Any red or dark blood that you can see.", "Blood can mean a problem that needs a doctor soon."),
-        "coffeeGround" to h("Vomit that looks like dark brown coffee powder. This is called coffee-ground vomit and can mean old blood.", "Old blood in the stomach needs a doctor quickly."),
-        "keepWater" to h("After a few small sips, does the water stay down?", "If not, the body can run out of water fast."),
-        "urineToday" to h("Passing urine at least once in the last 8 hours.", "Little or no urine is a sign the body is short of water."),
-        "projectile" to h("Vomit that shoots out far, not one that just spills.", "It can mean a block in the gut, or a problem in the head."),
-        "content" to h("What was in the vomit.", "It shows if the stomach was empty, and if there was blood."),
-        "colour" to h(COLOUR_WHAT, "Dark yellow or green can mean infection. Red, pink, brown or black can mean blood."),
-        "stoolType" to h("Pick the picture or words closest to your stool.", "Hard, soft and watery stool have different causes."),
-        "blackStool" to h("Black, sticky stool that smells very bad, like tar.", "It can mean old blood from high up in the gut."),
-        "mucus" to h("Clear or white slime mixed in the stool.", "Slime can mean a gut infection or swelling."),
-        "temperature" to h("Put a thermometer under the tongue or arm, then say the number.", "Fever shows the body is fighting an infection."),
-        "chills" to h("Shaking or shivering, even under a blanket.", "Shivering with fever can mean a stronger infection."),
-        "sweating" to h("Heavy or cold sweat that is not from heat or work.", "Sweating with pain or weakness can be a heart warning."),
-        "confusion" to h("Not knowing where you are, or talking without making sense.", "Confusion can mean infection, low sugar or a brain problem."),
-        "breathless" to h("Feeling you cannot get enough air.", "Trouble breathing can be a heart or lung emergency."),
-        "atRest" to h("Hard to breathe even when you sit still.", "Breathless at rest is more serious than breathless after a walk."),
-        "lyingFlat" to h("Do you need to sit up or use more pillows to breathe?", "It can mean fluid in the lungs or a weak heart."),
-        "pillows" to h("How many pillows you pile up to sleep.", "Needing more pillows can mean fluid in the lungs."),
-        "armJaw" to h("Pain moving from the chest to the arm, jaw or back.", "This pattern can be a heart problem."),
-        "exertion" to h("It starts when you walk fast or climb steps, and eases with rest.", "Pain from effort can mean the heart or blood flow is under strain."),
-        "phlegm" to h("Thick spit that comes up from deep in the chest. Not just saliva.", "Phlegm shows if the chest has an infection or swelling."),
-        "dryWet" to h("Dry is a tickle with nothing coming up. Wet sounds rattly.", "Dry and wet coughs have different causes."),
-        "weeks" to h("Count the weeks since it began.", "Problems that last weeks need a check even if mild."),
-        "hitHead" to h("Any knock to the head, even a small one.", "A head knock can cause bleeding inside, which may show up later."),
-        "couldGetUp" to h("Did you stand up on your own, or did someone help?", "Not being able to get up can mean a bone or head injury."),
-        "timeOnFloor" to h("How long you stayed on the floor before help or getting up.", "A long time on the floor can hurt muscles and kidneys."),
-        "dizzyBefore" to h("Feeling light-headed or spinning just before.", "Dizziness first can mean low blood pressure, low sugar or a heart rhythm problem."),
-        "worstEver" to h("A headache that hits in seconds and is the worst of your life.", "A sudden, terrible headache can mean bleeding in the brain."),
-        "visionChange" to h("Blurry, double, dark spots, or losing part of what you see.", "Eyesight changes with pain or headache need checking soon."),
-        "stiffNeck" to h("You cannot bend your chin down to your chest.", "A stiff neck with fever can mean an infection around the brain."),
-        "faceDroop" to h("One side of the face hangs lower, or the smile is crooked.", "It is a sign of stroke. Every minute counts."),
-        "armWeak" to h("One arm or leg feels heavy, weak or will not lift.", "It is a sign of stroke. Every minute counts."),
-        "speech" to h("Words come out slurred, mixed up, or you cannot find them.", "It is a sign of stroke. Every minute counts."),
-        "spinning" to h("You or the room feels like it is going round.", "Spinning points to the inner ear. Light-headed points to blood pressure."),
-        "onStanding" to h("It comes when you get up from sitting or lying.", "It can mean blood pressure drops when you stand."),
-        "itchy" to h("A need to scratch.", "Itch points to allergy, fungus or dry skin."),
-        "spreading" to h("Bigger, or more of it, than a day ago.", "Fast spread can mean infection or allergy."),
-        "blisters" to h("Small bubbles filled with clear fluid.", "Blisters help tell the cause, such as burn, allergy or infection."),
-        "newMedicine" to h("Any new tablet, syrup, injection or cream in the last few weeks.", "New medicines can cause rashes and other side effects."),
-        "lipSwelling" to h("Lips, tongue or face look puffy.", "It can be a severe allergy that blocks breathing."),
-        "oneSide" to h("Is it on one side only, or on both?", "One side only can mean a clot, a nerve problem or a stroke."),
-        "redHot" to h("Skin that is redder and warmer than the other side.", "Red, hot skin can mean infection, a clot or gout."),
-        "painful" to h("It hurts when touched or moved.", "Pain helps tell the cause."),
-        "burning" to h("A burning or stinging feeling when you pass urine.", "It is a common sign of a urine infection."),
-        "frequent" to h("More often than your usual.", "A big change from your usual can mean an illness."),
-        "cannotPass" to h("You try, but no urine comes, or only drops.", "A blocked bladder is an emergency."),
-        "selfHarm" to h("Thoughts of hurting yourself or ending your life.", "We ask everyone who feels low. Help is available."),
-        "wound" to h("Skin that is broken or open.", "Open skin can get infected."),
-        "discharge" to h("Wet, cloudy or yellow fluid coming out of the wound.", "Pus or fluid can mean infection."),
-        "bleedingStops" to h("Press firmly with a clean cloth for 10 minutes. Did it stop?", "Bleeding that does not stop needs a doctor now."),
-        "bloodThinner" to h("Tablets like warfarin, apixaban, rivaroxaban, aspirin or clopidogrel.", "Blood thinners make bleeding harder to stop."),
-        "choking" to h("Something stuck in the throat, hard to breathe or speak.", "Choking is an emergency."),
-        "fits" to h("Shaking of the whole body, or staring and not answering.", "A fit needs a doctor to find the cause."),
-        "lostConsciousness" to h("You fell unconscious, or do not remember some moments.", "Passing out can be a heart, brain or blood pressure problem."),
-        "swallowWater" to h("Can you swallow a sip of water without choking?", "Not being able to swallow can dry the body out fast."),
-        "cannotSwallow" to h("Can you swallow a sip of water without choking?", "Not being able to swallow can dry the body out fast."),
-        "count" to h("Count each time it happened today.", "More times can mean it is getting worse."),
-        "severity" to h("Pick how strong it is right now.", "Your doctor uses this to see if it gets better or worse."),
-        "reading" to h("Use your meter or machine and say the number shown.", "A number is more exact than a guess."),
-        "hours" to h("Hours since you last passed urine.", "Not passing urine for many hours can mean the kidneys or bladder are in trouble."),
-        "sleepHours" to h("Hours you actually sleep at night.", "Too little or too much sleep affects mood and health."),
-        "onset" to h("Did it hit you in a moment, or build up slowly?", "Sudden problems are often more serious."),
-        "duration" to h("How long one attack lasts, from start to end.", "Short and long attacks have different causes."),
-        "context" to h("When does it usually happen?", "A pattern, like after food or at night, points to the cause."),
-        "impact" to h("Things you cannot do because of it.", "It shows how much this problem is hurting your life."),
-        "radiation" to h("Does the pain travel to another place?", "Pain that travels can show which nerve or organ is involved."),
-        "side" to h("Left or right, as you look at yourself.", "One-sided problems can need different care."),
-        "pattern" to h("Is it there all day, or does it go away and come back?", "Pain that comes and goes has different causes."),
-        "worse" to h("Things that make it hurt more or feel worse.", "Triggers help find the cause."),
-        "better" to h("Things that make it feel better.", "What helps tells your doctor about the cause."),
-        "burnDepth" to h("Look at the skin. Is it only red, blistered, or white, brown or black?", "Deeper burns need a hospital, even if they hurt less."),
-        "burnSize" to h("Compare the burn with the flat of your own hand.", "Bigger burns need a doctor sooner."),
-        "character" to h("Pick the words that sound like your pain.", "The feel of the pain points to the cause."),
-        "depth" to h("Is it on the skin, or far inside the body?", "Deep pain and skin pain have different causes."),
-        "note" to h("Any other detail that worries you.", "You know your body best."),
-        "tookMedicine" to h("Any tablet, syrup, balm or drops for this problem.", "Your doctor needs to know what you already tried."),
-        "medicineTaken" to h("Say or write the medicine name.", "The right medicine depends on what you already took."),
-        "site" to h("Touch the picture where you feel it.", "The place helps your doctor find the cause."),
-        "more" to h("A few more questions, about 2 minutes.", "More detail helps your doctor. You can stop at any time."),
-    )
+    /**
+     * Get combined help text (what + why) for a question by id, or fall back to field.
+     */
+    fun of(id: String, field: String): String {
+        return BY_FIELD[id] ?: BY_FIELD[field] ?: "$field.\nThis helps your doctor understand your condition."
+    }
+
+    /**
+     * Extract the "what" part (first line).
+     */
+    fun what(help: String): String = help.split("\n").firstOrNull().orEmpty()
+
+    /**
+     * Extract the "why" part (second line).
+     */
+    fun why(help: String): String = help.split("\n").getOrNull(1).orEmpty()
 }

@@ -191,6 +191,17 @@ object Interview {
         for (f in p.fields) {
             val field = cat.field(f) ?: continue
             if (f in setOf("severity", "count", "character", "side", "context", "worse", "better", "note", "radiation", "duration", "impact", "onset", "pattern", "reading", "temperature", "hours", "weeks", "pillows", "timeOnFloor", "sleepHours")) continue
+
+            // special cases for cough problem
+            if (p.id == "cough") {
+                when (f) {
+                    "dryWet" -> { add(Ask("f_dryWet", "dryWet", "Is the cough dry, or wet?", Kind.CHOICE, listOf(Choice("dry", "Dry"), Choice("wet", "Wet")), core = false)); continue }
+                    "phlegm" -> { add(Ask("f_phlegm", "phlegm", "Did any phlegm come up?", Kind.YESNO, core = false, gate = Gate("dryWet", setOf("wet")))); continue }
+                    "colour" -> { add(Ask("f_colour", "colour", "What colour was the phlegm?", Kind.CHOICE, listOf(Choice("clear", "Clear"), Choice("white", "White"), Choice("yellow", "Yellow"), Choice("green", "Green"), Choice("brown", "Brown"), Choice("pink", "Pink"), Choice("red", "Red"), Choice("black", "Black")), core = false, gate = Gate("phlegm", setOf(true)))); continue }
+                    "shade" -> { add(Ask("f_shade", "shade", "Pale or dark?", Kind.CHOICE, listOf(Choice("pale", "Pale (light)"), Choice("dark", "Dark (deep)")), core = false, gate = Gate("phlegm", setOf(true)))); continue }
+                }
+            }
+
             when (field.type) {
                 FieldType.YESNO -> add(Ask("f_$f", f, yesNoText(field.label), Kind.YESNO, core = false, danger = field.danger))
                 FieldType.CHOICE -> add(Ask("f_$f", f, choiceText(f, field.label), Kind.CHOICE, field.choices.map { Choice(it, it.replaceFirstChar(Char::uppercase), listOf(it)) }, core = false))
