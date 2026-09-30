@@ -98,7 +98,7 @@ def main():
             required.update(archetype_dims)
 
         # Compute covered dimensions
-        covered = set()
+        covered = set(standard.get("implicit", []))  # asked of every problem by the fixed questions (Interview.kt)
 
         # Add dims from fields in problem.fields
         for field_id in problem_data.get("fields", []):

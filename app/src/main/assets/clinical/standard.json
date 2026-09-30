@@ -411,5 +411,11 @@
   "timing_vs_dose": "When it began compared with taking the medicine.",
   "new_or_changed": "Whether a medicine or routine is new or changed.",
   "stopped_helps": "Whether it eases when the medicine is stopped or held."
- }
+ },
+ "implicit": [
+  "onset",
+  "severity",
+  "tried"
+ ],
+ "implicitNote": "Interview.kt asks these of every problem: WHEN (onset), the severity scale, and TOOK_MED (tried). 'course' and 'impact' are NOT asked anywhere yet: real gaps."
 }
