@@ -65,7 +65,7 @@ jobs:
           python3 tools/lint_completeness.py || echo "::warning::clinical completeness gaps remain (see docs/HANDOFF.md); make this step blocking once the gap count is zero"
 
       - name: Test and build
-        run: gradle --no-daemon :app:testProdDebugUnitTest :app:assembleProdRelease
+        run: gradle --no-daemon :app:testProdDebugUnitTest :app:assembleProdRelease :app:assembleDevRelease
 
       - name: Name the files
         id: files
@@ -79,6 +79,17 @@ jobs:
           sed -n '/## What.s new/,$p' out/notes.md | grep '^- ' | sed 's/\*\*//g' > out/short.txt
           python3 scripts/app_release.py out "$V" "$C" out out/short.txt --release
           echo "version=$V" >> "$GITHUB_OUTPUT"
+
+      # dev build: separate app (MedLog Dev, id .dev) that installs next to the real one
+      - name: Dev APK
+        run: |
+          mkdir dev-out
+          cp "$(ls app/build/outputs/apk/dev/release/*arm64-v8a*.apk | head -1)" dev-out/MedLog-dev-arm64.apk
+          cp "$(ls app/build/outputs/apk/dev/release/*x86_64*.apk | head -1)" dev-out/MedLog-dev-x86_64-emulator.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MedLog-dev
+          path: dev-out/*.apk
 
       # the app files stay with the run even when nothing is published
       - uses: actions/upload-artifact@v4
