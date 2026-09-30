@@ -168,13 +168,7 @@ private fun pressScale(pressed: Boolean): Float {
 
 // ───────────────────────── feedback ─────────────────────────
 
-fun savedFeedback(ctx: android.content.Context) {
-    runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 60).startTone(ToneGenerator.TONE_PROP_ACK, 180) }
-    runCatching {
-        val v = ctx.getSystemService(android.os.Vibrator::class.java)
-        if (android.os.Build.VERSION.SDK_INT >= 26) v?.vibrate(android.os.VibrationEffect.createOneShot(120, 180)) else @Suppress("DEPRECATION") v?.vibrate(120)
-    }
-}
+fun savedFeedback(ctx: android.content.Context) = Announce.feedback(ctx)
 
 // ───────────────────────── undo ─────────────────────────
 
@@ -241,7 +235,7 @@ fun Screen(
     val ctx = LocalContext.current
     val nav = LocalNav.current
     val full = "$title. $speak"
-    val hasNav = nav != null && s.role != "helper"
+    val hasNav = nav != null
     LaunchedEffect(full) { ReadAloud.text = full }
     LaunchedEffect(title) { if (s.autoRead && s.readAloud) { delay(350); ctx.medlog.speaker.say(full) } }
     Box(Modifier.fillMaxSize().background(background ?: p.paper)) {
@@ -343,50 +337,40 @@ private fun BackLink(onBack: () -> Unit) {
     }
 }
 
-/** The person's navigation: Home, History, SOS, Family, and Read aloud (when on). Same places, same order, always. */
+/** The bottom bar: Home, Timeline, Helpers, Settings. Shown on those four root screens only. */
 @Composable
 fun BottomBar(@Suppress("UNUSED_PARAMETER") onHome: (() -> Unit)?) {
     val p = LocalPalette.current
     val s = LocalSettings.current
     val sc = LocalScale.current
-    val ctx = LocalContext.current
     val nav = LocalNav.current ?: return
-    val speaking by ctx.medlog.speaker.speaking.collectAsState()
-    val read = { if (speaking) ctx.medlog.speaker.stop() else ctx.medlog.speaker.say(ReadAloud.text) }
+    val here = nav.current
+    if (!here.isRootTab()) return
+    val helper = s.role == "helper"
+    val homeRoot: Route = if (helper) Route.HelperHome else Route.Home
+    val settingsRoot: Route = if (helper) Route.HelperSettings else Route.Settings
+    fun open(r: Route) { nav.home(homeRoot); if (r != homeRoot) nav.go(r) }
+    val tabs = listOf(
+        Triple("Home", Icons.Rounded.Home, here == Route.Home || here == Route.HelperHome) to { open(homeRoot) },
+        Triple("Timeline", Icons.Rounded.History, here == Route.Timeline) to { open(Route.Timeline) },
+        Triple("Helpers", Icons.Rounded.Groups, here == Route.HelpTab || here == Route.Help) to { open(Route.HelpTab) },
+        Triple("Settings", Icons.Rounded.Settings, here == Route.Settings || here == Route.HelperSettings) to { open(settingsRoot) },
+    )
+    val ordered = if (s.leftHand) tabs.reversed() else tabs
     Column(Modifier.fillMaxWidth().background(p.paper)) {
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-        val here = nav.current
-        val tabs = listOfNotNull(
-            Triple("Home", Icons.Rounded.Home, here == Route.Home) to { nav.home() },
-            Triple("SOS", Icons.Rounded.Sos, here == Route.Emergency) to { if (here != Route.Emergency) nav.go(Route.Emergency) },
-            Triple("Family", Icons.Rounded.Groups, here == Route.Help) to { nav.home(); nav.go(Route.Help) },
-        )
-        val ordered = if (s.leftHand) tabs.reversed() else tabs
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp)) {
             ordered.forEach { (t, go) ->
                 val (label, icon, on) = t
-                if (label == "SOS") {
-                    // the one thing that must always be reachable: a solid red button, bigger than the rest
-                    Column(
-                        Modifier.weight(1f).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp)).steady("SOS, emergency help", onClick = go),
-                        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                    ) {
-                        Box(Modifier.size(if (sc.big) 62.dp else 58.dp).clip(RoundedCornerShape(18.dp)).background(p.red), contentAlignment = Alignment.Center) {
-                            Text("SOS", color = Color.White, fontSize = sc.body, fontWeight = FontWeight.ExtraBold)
-                        }
-                    }
-                    return@forEach
-                }
-                val tint = if (on) p.brand else p.inkSoft
-                // the current place sits on a soft teal square, in teal
+                val tint = if (on) Hs.Blue else Hs.Ink
                 Column(
-                    Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = sc.target + 6.dp).clip(RoundedCornerShape(16.dp))
-                        .background(if (on) p.brandSoft else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
+                    Modifier.weight(1f).padding(horizontal = 3.dp).heightIn(min = Hs.TargetPrimary).clip(RoundedCornerShape(Hs.Radius))
+                        .background(if (on) Hs.Blue.copy(alpha = 0.12f) else Color.Transparent).steady(label, onClick = go).padding(vertical = 6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(icon, null, tint = tint, modifier = Modifier.size(if (sc.big) 30.dp else 26.dp))
                     Spacer(Modifier.height(3.dp))
-                    Text(label, fontSize = sc.small * 0.9f, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, color = if (on) p.brand else p.inkSoft, maxLines = 1)
+                    Text(label, fontSize = Hs.Label, fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Medium, color = tint, maxLines = 1)
                 }
             }
         }

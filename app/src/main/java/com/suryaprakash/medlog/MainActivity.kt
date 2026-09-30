@@ -77,9 +77,9 @@ class MainActivity : ComponentActivity() {
                         medlog.speaker.say("Sending: ${m.substringAfter('|')}")
                     }
                 }
-                Route.Help
+                Route.HelpTab
             }
-            "messages" -> Route.Messages
+            "messages" -> Route.HelpTab
             "call" -> { medlog.scope.launch { medlog.db.helpers().all().firstOrNull()?.let { com.suryaprakash.medlog.help.Calls.call(this@MainActivity, it.phone) } }; null }
             "emergency" -> Route.Emergency
             "sos" -> { Sos.start(this, "SOS"); null }
@@ -87,7 +87,7 @@ class MainActivity : ComponentActivity() {
             // any main screen by name (used by shortcuts and for checking screens)
             "open" -> when (uri.getQueryParameter("name")) {
                 "meds" -> Route.Meds; "medadd" -> Route.MedEdit(null); "didtake" -> Route.DidITake; "food" -> Route.Food; "readings" -> Route.Readings
-                "family" -> Route.Help; "messages" -> Route.Messages; "helpers" -> Route.Helpers; "helperadd" -> Route.HelperEdit(null); "pair" -> Route.Pair
+                "family" -> Route.HelpTab; "messages" -> Route.HelpTab; "timeline" -> Route.Timeline; "helpers" -> Route.Helpers; "helperadd" -> Route.HelperEdit(null); "pair" -> Route.Pair
                 "visit" -> Route.Visit; "appointments" -> Route.Appointments; "reports" -> Route.Reports; "settings" -> Route.Settings
                 "easy" -> Route.EasySettings; "permissions" -> Route.Permissions; "backup" -> Route.Backup; "privacy" -> Route.Privacy
                 "search" -> Route.Search; "removed" -> Route.Removed; "import" -> Route.Import; "devices" -> Route.Devices; "history" -> Route.Notes
@@ -100,7 +100,7 @@ class MainActivity : ComponentActivity() {
             "feature" -> when (uri.getQueryParameter("feature")?.lowercase()?.trim()) {
                 "tell", "tell how i feel", "log", "symptom" -> Route.Tell()
                 "medicines", "medicine", "meds", "pills" -> Route.Meds
-                "help" -> Route.Help
+                "help" -> Route.HelpTab
                 "sos", "emergency" -> Route.Emergency
                 "doctor", "doctor page" -> Route.Doctor
                 else -> Route.Home
@@ -173,7 +173,9 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             is Route.FoodPick -> FoodPickScreen(nav, r.noteId)
             Route.FeedNew -> FeedNewScreen(nav)
             Route.Readings -> ReadingsScreen(nav)
-            Route.Help -> HelpScreen(nav)
+            Route.Help, Route.HelpTab -> HelpTabScreen(nav)
+            Route.Timeline -> TimelineScreen(nav)
+            Route.HelperSettings -> HelperSettingsScreen(nav)
             Route.Messages -> com.suryaprakash.medlog.ui.screens.MessagesScreen(nav)
             Route.Emergency -> com.suryaprakash.medlog.ui.screens.EmergencyScreen(nav)
             Route.Helpers -> HelpersScreen(nav)
@@ -185,7 +187,7 @@ private fun BaseScreens(nav: Nav, route: Route, reduce: Boolean) {
             Route.Appointments -> AppointmentsScreen(nav)
             Route.Reports -> ReportsScreen(nav)
             Route.Nutrition -> NutritionScreen(nav)
-            Route.Settings -> SettingsScreen(nav)
+            Route.Settings -> if (com.suryaprakash.medlog.ui.LocalSettings.current.role == "helper") HelperSettingsScreen(nav) else SettingsScreen(nav)
             Route.EasySettings -> EasySettingsScreen(nav)
             Route.Permissions -> PermissionsScreen(nav)
             Route.Backup -> BackupScreen(nav)

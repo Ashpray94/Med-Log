@@ -26,6 +26,9 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.ChatBubble
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.Insights
@@ -75,6 +78,7 @@ import com.suryaprakash.medlog.ui.LocalScale
 import com.suryaprakash.medlog.ui.LocalSettings
 import com.suryaprakash.medlog.ui.Nav
 import com.suryaprakash.medlog.ui.Perms
+import com.suryaprakash.medlog.ui.Hs
 import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.RoundIcon
 import com.suryaprakash.medlog.ui.Screen
@@ -95,132 +99,61 @@ fun HomeScreen(nav: Nav) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val p = LocalPalette.current
-    val sc = LocalScale.current
     val s = LocalSettings.current
-    val scope = rememberCoroutineScope()
     var name by remember { mutableStateOf("") }
-    var recent by remember { mutableStateOf<List<Repo.Recent>>(emptyList()) }
-    var next by remember { mutableStateOf<Pair<Dose, Medicine>?>(null) }
-    var todays by remember { mutableStateOf<List<Pair<Dose, Medicine>>>(emptyList()) }
-    var askBetter by remember { mutableStateOf<String?>(null) }
     var remindersBlocked by remember { mutableStateOf(false) }
-    var version by remember { mutableStateOf(0) }
 
-    LaunchedEffect(version) {
+    LaunchedEffect(Unit) {
         name = app.repo.profile().name
-        recent = app.repo.recentProblems(3)
-        next = Scheduler.nextDose(ctx)
-        val (from, to) = Scheduler.today()
-        val meds = app.db.medicines().all().associateBy { it.id }
-        todays = app.db.doses().between(from, to).mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
-        val now = System.currentTimeMillis()
-        askBetter = recent.firstOrNull { it.ongoing && now - it.lastAt > 20 * 3600_000L && app.settings.getString("asked_better_${it.problemId}") != java.time.LocalDate.now().toString() }?.problemId
         remindersBlocked = !Perms.exactAlarmsOk(ctx) || !Perms.has(ctx, *Perms.NOTIFY)
     }
     val hour = LocalTime.now().hour
     val greeting = when { hour < 12 -> "Good morning"; hour < 17 -> "Good afternoon"; else -> "Good evening" }
     val first = name.split(" ").first()
-    val hello = if (first.isNotBlank()) "$greeting, $first" else greeting
     val today = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(Date())
-    val due = next?.let { it.first.scheduledAt <= System.currentTimeMillis() + 10 * 60_000 } == true
-    val speak = "Tap How are you feeling to choose. " + (next?.let { "Next medicine at ${DoseActivity.time(it.first.scheduledAt)}, ${it.second.name}. " } ?: "") + "Help is at the bottom of every screen."
 
-    Screen(if (first.isNotBlank()) first else greeting, speak, onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
+    Screen(if (first.isNotBlank()) first else greeting, "Tap a picture to open it.", onHome = null, subtitle = today, eyebrow = if (first.isNotBlank()) greeting else "") {
         PersonaSwitch(nav)
-        // ── the one main action ──
-        HeroTell { nav.go(Route.Tell()) }
 
         // a new version, found by the daily check
         val update by com.suryaprakash.medlog.Updater.state.collectAsState()
         if (update !is com.suryaprakash.medlog.Updater.State.Idle && update !is com.suryaprakash.medlog.Updater.State.UpToDate && update !is com.suryaprakash.medlog.Updater.State.Checking) UpdateCard()
 
-        if (remindersBlocked) Card(border = p.amber, onClick = { nav.go(Route.Permissions) }, label = "Reminders are off. Tap to fix.") {
+        if (remindersBlocked) Card(border = Hs.Amber, onClick = { nav.go(Route.Permissions) }, label = "Reminders are off. Tap to fix.") {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Warning, null, tint = p.amber, modifier = Modifier.size(26.dp)); Spacer(Modifier.width(12.dp))
-                Column { Text("Reminders are off", color = p.amber, fontWeight = FontWeight.Bold, fontSize = sc.body); Text("Tap to turn them on", color = p.amber, fontSize = sc.small) }
+                Icon(Icons.Rounded.Warning, null, tint = Hs.Amber, modifier = Modifier.size(28.dp)); Spacer(Modifier.width(12.dp))
+                Text("Reminders are off. Fix", color = Hs.Ink, fontWeight = FontWeight.Bold, fontSize = Hs.Body)
             }
         }
 
-        askBetter?.let { pid ->
-            val label = app.catalogue.problem(pid)?.label ?: return@let
-            Card {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    SpriteIcon(pid, 56.dp); Spacer(Modifier.width(14.dp))
-                    Text("Is your ${label.lowercase()} better now?", fontSize = sc.headline, fontWeight = FontWeight.SemiBold, color = p.ink)
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BigButton("Yes, better", Modifier.weight(1f), Tone.OK, onClick = { scope.launch { app.repo.markBetter(pid); app.settings.putString("asked_better_$pid", java.time.LocalDate.now().toString()); app.refreshWidgets(); version++ } })
-                    BigButton("Still there", Modifier.weight(1f), Tone.SECONDARY, onClick = { app.settings.putString("asked_better_$pid", java.time.LocalDate.now().toString()); nav.go(Route.Tell(pid)) })
-                }
-            }
-        }
-
-        // ── next medicine ──
-        if ("meds" !in s.hidden) {
-            val takenCount = todays.count { it.first.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN }
-            com.suryaprakash.medlog.ui.SectionHeader("Today's medicines",
-                if (todays.isEmpty()) "Nothing to take today" else if (takenCount == todays.size) "All ${todays.size} taken" else "$takenCount of ${todays.size} taken",
-                if (todays.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
-            if (todays.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
-            todays.forEach { (d, m) ->
-                DoseCard(d, m, onOpen = { nav.go(Route.Meds) },
-                    onTaken = { scope.launch { Scheduler.take(ctx, d.id); savedFeedback(ctx); version++ } },
-                    onUndo = { scope.launch { Scheduler.untake(ctx, d.id); version++ } })
-            }
-        }
-
-        // ── recent problems: one tap to tell more ──
-        if (recent.isNotEmpty()) {
-            Title("Recent")
-            TileGrid(recent, 3, aspect = 0.84f) { r, m ->
-                val pr = app.catalogue.problem(r.problemId)
-                Tile((pr?.label ?: "") + if (r.todayCount > 0) ", ${r.todayCount} today" else "", m, onClick = { nav.go(Route.Tell(r.problemId)) }) {
-                    SpriteIcon(r.problemId, sc.target * 1.4f)
-                    Spacer(Modifier.height(6.dp))
-                    Text(pr?.label ?: "", fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2, minLines = 2, lineHeight = sc.small * 1.15f, overflow = TextOverflow.Ellipsis)
-                    Text(if (r.todayCount > 0) "${r.todayCount} today" else " ", fontSize = sc.small, color = p.amber, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
-
-        // ── everything else, equal tiles ──
+        // every feature, one flat grid: one icon, one or two words
         val tiles = listOfNotNull(
-            if ("food" !in s.hidden) HomeTile("Food & water", Icons.Rounded.Restaurant, p.tintGreen) { nav.go(Route.Food) } else null,
-            if ("readings" !in s.hidden) HomeTile("BP & sugar", Icons.Rounded.MonitorHeart, p.tintPink) { nav.go(Route.Readings) } else null,
-            if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, p.tintBlue) { nav.go(Route.Doctor) } else null,
-            if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, p.tintPurple) { nav.go(Route.Reports) } else null,
-            if ("meds" !in s.hidden) HomeTile("Medicines", Icons.Rounded.Medication, p.tintOrange) { nav.go(Route.Meds) } else null,
-            HomeTile("Settings", Icons.Rounded.Settings, Color(0xFF5F6368)) { nav.go(Route.Settings) },
+            HomeTile("How do you feel", Icons.Rounded.ChatBubble, Hs.Blue) { nav.go(Route.Tell()) },
+            if ("meds" !in s.hidden) HomeTile("Medicines", Icons.Rounded.Medication, Hs.Ink) { nav.go(Route.Meds) } else null,
+            if ("meds" !in s.hidden) HomeTile("Did I take it", Icons.Rounded.Checklist, Hs.Ink) { nav.go(Route.DidITake) } else null,
+            if ("food" !in s.hidden) HomeTile("Food & water", Icons.Rounded.Restaurant, Hs.Ink) { nav.go(Route.Food) } else null,
+            if ("readings" !in s.hidden) HomeTile("BP & sugar", Icons.Rounded.MonitorHeart, Hs.Ink) { nav.go(Route.Readings) } else null,
+            if ("doctor" !in s.hidden) HomeTile("Doctor page", Icons.Rounded.LocalHospital, Hs.Ink) { nav.go(Route.Doctor) } else null,
+            if ("reports" !in s.hidden) HomeTile("My health", Icons.Rounded.Insights, Hs.Ink) { nav.go(Route.Reports) } else null,
+            HomeTile("History", Icons.Rounded.History, Hs.Ink) { nav.go(Route.Notes) },
+            HomeTile("Appointments", Icons.Rounded.CalendarMonth, Hs.Ink) { nav.go(Route.Appointments) },
+            HomeTile("Helpers", Icons.Rounded.Groups, Hs.Ink) { nav.go(Route.HelpTab) },
+            HomeTile("SOS", Icons.Rounded.Sos, Hs.Red) { nav.go(Route.Emergency) },
         )
-        // ── history: what you've noted, one tap away ──
-        run {
-            val last = recent.maxByOrNull { it.lastAt }
-            val lastWords = last?.let { r ->
-                val label = app.catalogue.problem(r.problemId)?.label ?: return@let null
-                "Last: $label, " + SimpleDateFormat("d MMMM", Locale.getDefault()).format(Date(r.lastAt))
-            } ?: "Everything you have noted"
-            val hsh = RoundedCornerShape(sc.radius)
-            Row(Modifier.fillMaxWidth().clip(hsh).background(p.card).border(1.dp, p.line, hsh).steady("History. $lastWords") { nav.go(Route.Notes) }
-                .padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconTile(Icons.Rounded.History, p.tintTeal, 56.dp)
-                Spacer(Modifier.width(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("History", fontSize = sc.cardTitle, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text(lastWords, fontSize = sc.body, color = p.inkSoft, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                }
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.size(28.dp))
+        TileGrid(tiles, 2, aspect = 1.45f) { t, m ->
+            val sh = RoundedCornerShape(Hs.Radius)
+            val sos = t.label == "SOS"
+            val solid = sos || t.tint == Hs.Blue
+            val fg = if (solid) Color.White else Hs.Ink
+            Column(
+                m.clip(sh).background(if (solid) t.tint else Hs.Paper).border(2.dp, if (solid) t.tint else Hs.Ink, sh).steady(t.label, onClick = t.onClick).padding(8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(t.icon, null, tint = if (solid) Color.White else t.tint, modifier = Modifier.size(40.dp))
+                Spacer(Modifier.height(6.dp))
+                Text(t.label, fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = fg, textAlign = TextAlign.Center, maxLines = 2)
             }
         }
-
-        Title("More")
-        TileGrid(tiles, if (sc.big) 2 else 3, aspect = if (sc.big) 1.25f else 1f) { t, m ->
-            Tile(t.label, m, onClick = t.onClick) {
-                IconTile(t.icon, t.tint, if (sc.big) 56.dp else 48.dp)
-                Spacer(Modifier.height(10.dp))
-                Text(t.label, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.ink, textAlign = TextAlign.Center, maxLines = 2, lineHeight = sc.small * 1.15f)
-            }
-        }
-
     }
 }
 

@@ -90,3 +90,16 @@ so it never scrolls away.
 - NHS design system, radios and checkboxes: https://service-manual.nhs.uk/design-system/components/radios ·
   https://service-manual.nhs.uk/design-system/components/checkboxes
 - NHS accessibility guidance: https://service-manual.nhs.uk/accessibility/design
+
+## Hospital-sign + Apple HIG rules
+
+Tokens live in `ui/Tokens.kt` (`Hs`). Follow them on every new screen.
+
+- **Sizes:** body 18 sp or more, labels 16 sp or more, titles 24 sp or more. Touch targets 48 dp at least, 56 dp for primary actions. Corner radius 12 dp. Side gutter 16 dp.
+- **Colour:** near-black #0B0F14 on white. Sign-blue #0057B8 (main action, current tab), sign-green #007A3D (done, OK), alert-red #C8102E (SOS, danger), amber #B26A00 (watch). Text contrast is 7:1 or more. Colour never carries meaning alone.
+- **Icon plus word:** every action has one icon and a one or two word label. No sub text on tiles.
+- **One action per row.** A row does one thing when tapped. Extra actions go in a trailing overflow menu or a swipe.
+- **Cards are for items only:** a medicine, a message, an alert. Never use a card as a wrapper around a section.
+- **Edit and delete:** live in the trailing overflow or a swipe, plus a visible Edit button. The Details button is small and quiet.
+- **Root screens:** Home, Timeline, Helpers, Settings show the bottom bar. Every other screen has Back and no bar.
+- **Announce what happened** with `Announce.done(ctx, actor, what)`: one short toast, "You took Metformin".
