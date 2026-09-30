@@ -39,7 +39,7 @@ data class PersonContext(
  * NOT YET CLINICIAN-REVIEWED — see catalogue "reviewNote".
  */
 object DangerRules {
-    const val VERSION = "rules-0.3.0-unreviewed"
+    const val VERSION = "rules-0.3.1-unreviewed"
 
     private fun yes(f: Map<String, Fact>, k: String) = f[k]?.value == true
     private fun no(f: Map<String, Fact>, k: String) = f[k]?.value == false
@@ -261,6 +261,18 @@ object DangerRules {
                     }
                 }
             }
+        }
+
+        // Oral sugar is unsafe when recorded facts indicate impaired consciousness or swallowing.
+        // Unknown swallowing status does not count as safe; the guard only activates on an explicit unsafe fact.
+        val unsafeForOralSugar = yes(facts, "hardToWake") ||
+            yes(facts, "lostResponse") ||
+            yes(facts, "lostConsciousness") ||
+            yes(facts, "cantSwallowWater") ||
+            no(facts, "swallowWater")
+        if (firstAid == SUGAR_AID && unsafeForOralSugar) {
+            firstAid = null
+            red += "Unsafe to take oral sugar"
         }
 
         val tips = careTips(problemId, facts)
