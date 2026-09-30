@@ -3,6 +3,20 @@
 MedLog is a health-logging app for older people and their carers. Mistakes here can hurt someone. These rules are strict.
 Read `docs/HANDOFF.md` (state of work), `docs/DESIGN.md` (look and feel) and `PLAN.md` (product) before changing anything.
 
+## 0. The user test (overrides every other rule when they conflict)
+**A 90-year-old with cognitive impairment, who can still recognise pictures and visual cues, must be able to use this app alone to navigate and log her data.**
+Clinical depth, reports and sync are backend work: they must never add a word, a choice, a step or a risk on her screens. Before shipping any patient-facing change ask:
+could she do this with one finger, no reading, no memory and no fear of breaking it? If not, the change is wrong.
+- **Picture first, word second.** Every choice is a large icon or pictogram with a 1-3 word label (labels ≤5 words). Meaning never depends on colour alone.
+- **One thing per screen,** one obvious main button (≥88dp tall for the main action), same place every time. Back and Home are always visible and always in the same spot.
+- **Tap only.** No swipe-only, long-press, double-tap, drag or shake-only actions. Shake feedback is optional extra and must never be required. Spacing between targets ≥12dp.
+- **No time pressure, no surprises.** Nothing disappears on a timer; no countdowns on the patient's own screens (only the spoken SOS cancel). Every destructive action has big
+  Yes/No with icons and an Undo. Nothing she does can be lost or broken by a wrong tap.
+- **Spoken and seen.** Each question/alert is read aloud automatically (with a speaker button to repeat); "Why ask?" text is hidden behind a speaker icon for her and shown as text only in helper mode.
+- **Size and contrast:** body ≥20sp on patient screens (≥18sp elsewhere), labels ≥16sp, contrast ≥7:1, targets ≥56dp, primary ≥88dp.
+- **Helpers carry the complexity:** filters, edit/delete menus, settings depth, chat, reports and audit detail live in helper mode or behind a clearly secondary "More" area.
+- Test new screens with the largest text size setting, TalkBack-style reading order, and one-handed reach.
+
 ## 1. Clinical conduct (non-negotiable)
 1. **History-taking follows recognised methods:** OPQRST / SOCRATES for symptoms (onset, provocation/palliation, quality, region/radiation, severity,
    timing), plus associated symptoms, red flags, past history, medicines, allergies. Never invent a custom questioning scheme.
