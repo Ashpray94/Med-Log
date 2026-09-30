@@ -36,6 +36,7 @@ import com.suryaprakash.medlog.data.Dose
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Medicine
 import com.suryaprakash.medlog.medlog
+import com.suryaprakash.medlog.notify.NotifySpec
 import com.suryaprakash.medlog.pictogram.Picture
 import com.suryaprakash.medlog.ui.BigButton
 import com.suryaprakash.medlog.ui.Body
@@ -60,7 +61,7 @@ class DoseActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
         else @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        AlarmTone.start(this, intent.getBooleanExtra("louder", false))
+        if (intent.getLongExtra("skipDose", 0) == 0L) AlarmTone.start(this, intent.getBooleanExtra("louder", false))
         setContent {
             val s by medlog.settings.flow.collectAsState()
             MedTheme(s) { DoseScreen { finish() } }
@@ -86,10 +87,21 @@ class DoseActivity : ComponentActivity() {
             due = medlog.db.doses().between(now - 3 * 3600_000L, now + 60_000)
                 .filter { (it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED) && (it.snoozeUntil == null || it.snoozeUntil <= now + 60_000) }
                 .mapNotNull { d -> meds[d.medicineId]?.let { d to it } }
+            if (version == 0) intent.getLongExtra("skipDose", 0).takeIf { it > 0 }?.let { id -> skipping = medlog.db.doses().get(id) }
             loaded = true
-            if (due.isEmpty() && version > 0) { AlarmTone.stop(); onClose() }
+            if (skipping == null && due.isEmpty() && version > 0) { AlarmTone.stop(); onClose() }
         }
         if (!loaded) return
+        skipping?.let { d ->
+            Screen("Why skip?", "Why are you skipping it? Tap one.", onHome = null) {
+                listOf("Feeling sick", "Ran out", "Doctor said stop", "Other").forEach { r ->
+                    BigButton(r, tone = Tone.SECONDARY, onClick = { scope.launch { Scheduler.skip(this@DoseActivity, d.id, r); skipping = null; version++ } })
+                }
+                BigButton("Back", tone = Tone.QUIET, onClick = { skipping = null })
+            }
+            return
+        }
+
         if (due.isEmpty()) {
             Screen("No medicine due", "Nothing is due right now.", onHome = null) { BigButton("Close", onClick = onClose) }
             return
@@ -107,16 +119,6 @@ class DoseActivity : ComponentActivity() {
             }
             return
         }
-        skipping?.let { d ->
-            Screen("Why skip?", "Why are you skipping it? Tap one.", onHome = null) {
-                listOf("Feeling sick", "Ran out", "Doctor said stop", "Other").forEach { r ->
-                    BigButton(r, tone = Tone.SECONDARY, onClick = { scope.launch { Scheduler.skip(this@DoseActivity, d.id, r); skipping = null; version++ } })
-                }
-                BigButton("Back", tone = Tone.QUIET, onClick = { skipping = null })
-            }
-            return
-        }
-
         Screen(if (feeding) "Feed time" else if (due.size == 1) "Medicine time" else "Medicine time (${due.size})", say, onHome = null) {
             due.forEach { (d, m) ->
                 Card(border = if (m.critical) p.red else p.brand) {
@@ -142,11 +144,14 @@ class DoseActivity : ComponentActivity() {
                         }
                     })
                     if (m.form != "feed") Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        BigButton("In ${medlog.settings.value.snoozeMinutes} min", Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.Snooze, onClick = { scope.launch { Scheduler.snooze(this@DoseActivity, d.id); version++ } })
+                        BigButton(NotifySpec.label(NotifySpec.Type.DOSE_DUE, "snooze", medlog.settings.value.snoozeMinutes), Modifier.weight(1f), Tone.QUIET, icon = Icons.Rounded.Snooze, onClick = { scope.launch { Scheduler.snooze(this@DoseActivity, d.id); version++ } })
                         BigButton("Skip", Modifier.weight(1f), Tone.SECONDARY, onClick = { skipping = d })
                     }
                 }
             }
+            BigButton(NotifySpec.label(NotifySpec.Type.DOSE_DUE, "later"), tone = Tone.QUIET, onClick = {
+                scope.launch { due.forEach { Scheduler.notNow(this@DoseActivity, it.first.id) }; onClose() }
+            })
             if (due.size > 1) BigButton("I took them all", tone = Tone.OK, onClick = {
                 scope.launch { due.forEach { Scheduler.take(this@DoseActivity, it.first.id) }; savedFeedback(this@DoseActivity); version++ }
             })

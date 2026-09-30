@@ -16,6 +16,7 @@ import com.suryaprakash.medlog.data.HOUR
 import com.suryaprakash.medlog.data.Medicine
 import com.suryaprakash.medlog.help.Alerts
 import com.suryaprakash.medlog.medlog
+import com.suryaprakash.medlog.notify.NotifySpec
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -40,7 +41,7 @@ import java.time.ZoneId
 object Scheduler {
     private const val TAG = "MedLogScheduler"
     private val lock = Mutex()
-    const val MISS_AFTER = 3 * HOUR
+    const val MISS_AFTER = NotifySpec.MISS_AFTER_MIN * 60_000L
     const val MT_GRACE = 2 * 60_000L
 
     /** Dose times for one medicine in [from, to). */
@@ -93,8 +94,8 @@ object Scheduler {
         val list = ArrayList<Long>()
         val showAt = if (meetingTimer && d.shownBy == null && d.snoozeUntil == null) d.scheduledAt + MT_GRACE else base
         if (d.reminded == 0 || (d.snoozeUntil != null && d.reminded < 99)) list += showAt
-        if (d.reminded in 1..2) list += base + d.reminded * snooze * 60_000L
-        if (!d.helperAlerted) list += d.scheduledAt + (if (m.critical) escalateCritical else escalate) * 60_000L
+        if (d.reminded in 1..NotifySpec.doseRepeats) list += base + d.reminded * snooze * 60_000L
+        if (!d.helperAlerted) list += d.scheduledAt + NotifySpec.helperDelayMin(m.critical, escalate, escalateCritical) * 60_000L
         list += d.scheduledAt + MISS_AFTER
         return list
     }
@@ -126,11 +127,12 @@ object Scheduler {
             // missed
             if (now >= d.scheduledAt + MISS_AFTER) {
                 app.db.doses().update(d.copy(status = DoseStatus.MISSED))
+                DoseAlert.showMissed(ctx, d, m)
                 checkMissedInARow(ctx, m)
                 continue
             }
             // escalate to helpers
-            val escAt = d.scheduledAt + (if (m.critical) s.escalateCriticalMinutes else s.escalateMinutes) * 60_000L
+            val escAt = d.scheduledAt + NotifySpec.helperDelayMin(m.critical, s.escalateMinutes, s.escalateCriticalMinutes) * 60_000L
             if (!d.helperAlerted && now >= escAt) {
                 dose = dose.copy(helperAlerted = true)
                 val name = app.repo.profile().name.ifBlank { "Your family member" }
@@ -142,7 +144,7 @@ object Scheduler {
             val firstAt = if (s.useMeetingTimer && d.shownBy == null && d.snoozeUntil == null) d.scheduledAt + MT_GRACE else base
             if (d.reminded == 0 && now >= firstAt || (d.snoozeUntil != null && now >= d.snoozeUntil && d.reminded == 0)) {
                 dose = dose.copy(reminded = 1, shownBy = dose.shownBy ?: "medlog"); toShow += dose
-            } else if (d.reminded in 1..2 && now >= base + d.reminded * s.snoozeMinutes * 60_000L) {
+            } else if (d.reminded in 1..NotifySpec.doseRepeats && now >= base + d.reminded * s.snoozeMinutes * 60_000L) {
                 dose = dose.copy(reminded = d.reminded + 1); toShow += dose; louder = true
             }
             if (dose != d) app.db.doses().update(dose)
@@ -178,6 +180,7 @@ object Scheduler {
         }
         DoseAlert.cancel(ctx, doseId)
         app.refreshWidgets()
+        answered(ctx, d, "take", "took")
         reschedule(ctx)
         return Taken.OK
     }
@@ -200,7 +203,24 @@ object Scheduler {
         val d = app.db.doses().get(doseId) ?: return
         app.db.doses().update(d.copy(status = DoseStatus.SNOOZED, snoozeUntil = System.currentTimeMillis() + app.settings.value.snoozeMinutes * 60_000L, reminded = 0))
         DoseAlert.cancel(ctx, doseId)
+        answered(ctx, d, "snooze", "snoozed")
         reschedule(ctx)
+    }
+
+    /** "Not now": silence this reminder; the repeats and helper alert carry on as scheduled. */
+    suspend fun notNow(ctx: Context, doseId: Long) {
+        val d = ctx.medlog.db.doses().get(doseId) ?: return
+        DoseAlert.dismiss(ctx)
+        answered(ctx, d, "later", "put off")
+    }
+
+    /** Tells the other parties about an answer, as the NotifySpec table says (only after helpers were alerted, for take/skip). */
+    suspend fun answered(ctx: Context, d: Dose, respId: String, verb: String, type: NotifySpec.Type = NotifySpec.Type.DOSE_DUE) {
+        val tell = NotifySpec.responded(type, respId, NotifySpec.Who.PATIENT, escalated = d.helperAlerted)
+        if (NotifySpec.Who.HELPERS !in tell) return
+        val app = ctx.medlog
+        val med = app.db.medicines().get(d.medicineId)?.name ?: "a medicine"
+        Alerts.send(ctx, Alerts.Type.MESSAGE, com.suryaprakash.medlog.help.Wording.doseAnswered(app.repo.profile().name, med, if (verb == "skipped") "skipped" else verb), alsoNearby = true)
     }
 
     suspend fun skip(ctx: Context, doseId: Long, reason: String) {
@@ -209,6 +229,7 @@ object Scheduler {
         app.db.doses().update(d.copy(status = DoseStatus.SKIPPED, actedAt = System.currentTimeMillis(), reason = reason, snoozeUntil = null))
         DoseAlert.cancel(ctx, doseId)
         app.refreshWidgets()
+        answered(ctx, d, "skip", "skipped")
         reschedule(ctx)
     }
 
