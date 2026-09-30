@@ -243,6 +243,23 @@ interface AppointmentDao {
     @Query("DELETE FROM appointments WHERE id = :id") suspend fun delete(id: Long)
 }
 
+/** Sync bookkeeping: one row per entry shared between phones. [uid] is the same on every phone; [localId] is this phone's row id. */
+@Entity(tableName = "sync_meta", indices = [Index(value = ["type", "localId"])])
+data class SyncMeta(
+    @PrimaryKey val uid: String,
+    val type: String,
+    val localId: Long,
+    val updatedAt: Long,
+    val deleted: Boolean,
+)
+
+@Dao
+interface SyncDao {
+    @Query("SELECT * FROM sync_meta WHERE uid = :uid") suspend fun get(uid: String): SyncMeta?
+    @Query("SELECT * FROM sync_meta WHERE type = :type AND localId = :localId LIMIT 1") suspend fun byLocal(type: String, localId: Long): SyncMeta?
+    @Insert(onConflict = OnConflictStrategy.REPLACE) suspend fun put(m: SyncMeta)
+}
+
 @Dao
 interface DocLineDao {
     @Insert suspend fun insertAll(lines: List<DocLine>)
@@ -259,8 +276,8 @@ interface InboxDao {
 }
 
 @Database(
-    entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 3,
+    entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class, SyncMeta::class],
+    version = 4,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -272,6 +289,7 @@ abstract class MedDb : RoomDatabase() {
     abstract fun appointments(): AppointmentDao
     abstract fun docLines(): DocLineDao
     abstract fun inbox(): InboxDao
+    abstract fun sync(): SyncDao
 
     companion object {
         fun open(ctx: Context): MedDb {
@@ -280,8 +298,16 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, "medlog.db")
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2, M2_3)
+                .addMigrations(M1_2, M2_3, M3_4)
                 .build()
+        }
+
+        /** Entries sync between phones. */
+        private val M3_4 = object : androidx.room.migration.Migration(3, 4) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sync_meta` (`uid` TEXT NOT NULL, `type` TEXT NOT NULL, `localId` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `deleted` INTEGER NOT NULL, PRIMARY KEY(`uid`))")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_meta_type_localId` ON `sync_meta` (`type`, `localId`)")
+            }
         }
 
         /** 2.9: what a medicine looks like. */

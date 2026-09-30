@@ -24,7 +24,26 @@ object Interview {
         val choices: List<Choice> = emptyList(),
         val core: Boolean = true,
         val danger: Boolean = false,
-    )
+        /** Two short lines: what the question means, then why it is asked (see [Help]). Shown under the question. */
+        val help: String = Help.of(id, field),
+        /** The question is only asked when this holds (for example, colour of phlegm only if phlegm came up). */
+        val gate: Gate? = null,
+    ) {
+        val what: String get() = Help.what(help)
+        val why: String get() = Help.why(help)
+    }
+
+    /** "Ask only if [field] was answered with one of [any]" ([negate]: only if it was not; an unanswered field then counts as "not"). */
+    data class Gate(val field: String, val any: Set<Any?>, val negate: Boolean = false) {
+        fun open(facts: Map<String, Fact>): Boolean {
+            val v = facts[field]?.value ?: return negate
+            val hit = v in any
+            return if (negate) !hit else hit
+        }
+    }
+
+    /** False when an earlier answer makes [a] pointless. */
+    fun applies(a: Ask, facts: Map<String, Fact>) = a.gate?.open(facts) ?: true
 
     // ── fixed questions ──
 

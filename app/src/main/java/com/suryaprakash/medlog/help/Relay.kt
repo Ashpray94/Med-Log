@@ -143,7 +143,7 @@ object Relay {
                                 val m = parse(line) ?: continue
                                 if (synchronized(handled) { handled.put(m.id, true) } != null) continue
                                 val key = map[m.topic] ?: continue
-                                open(key, m)?.let { onNote(m.topic, it) }
+                                open(key, m)?.let { if (!com.suryaprakash.medlog.data.Sync.onNote(ctx, m.topic, it)) onNote(m.topic, it) }
                                 if (m.time > 0) app.settings.putLong("relay_since", m.time)
                             }
                         }

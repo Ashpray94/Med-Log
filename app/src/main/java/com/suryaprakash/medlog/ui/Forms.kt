@@ -51,6 +51,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.MoreVert
 
 /** A large, clearly labelled text box. The label stays visible above it (never a disappearing placeholder). */
 @Composable
@@ -309,4 +312,57 @@ fun StepperRow(label: String, value: String, canMinus: Boolean, canPlus: Boolean
         }
         Counter(value, canMinus, canPlus, onMinus, onPlus, label)
     }
+}
+
+/**
+ * The actions under every list item: a visible Edit (pencil and word, the primary action), a small quiet Details
+ * (only when [onDetails] is given) and a trailing overflow menu that holds Delete.
+ */
+@Composable
+fun RowActions(what: String, onEdit: () -> Unit, onDelete: () -> Unit, modifier: Modifier = Modifier, onDetails: (() -> Unit)? = null) {
+    val p = LocalPalette.current
+    var open by remember { mutableStateOf(false) }
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.weight(1f).heightIn(min = Hs.TargetPrimary).clip(RoundedCornerShape(Hs.Radius)).background(Hs.Blue).steady("Edit $what", onClick = onEdit).padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Edit, null, tint = Color.White, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text("Edit", fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+        if (onDetails != null) {
+            Spacer(Modifier.width(4.dp))
+            Box(Modifier.heightIn(min = Hs.TargetMin).clip(RoundedCornerShape(Hs.Radius)).steady("Details of $what", onClick = onDetails).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Text("Details", fontSize = Hs.Body, fontWeight = FontWeight.Medium, color = p.inkSoft)
+            }
+        }
+        Box {
+            Box(Modifier.size(Hs.TargetMin).clip(RoundedCornerShape(Hs.Radius)).steady("More for $what") { open = true }, contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.MoreVert, null, tint = Hs.Ink, modifier = Modifier.size(28.dp))
+            }
+            androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text("Delete", fontSize = Hs.Body, fontWeight = FontWeight.SemiBold, color = Hs.Red) },
+                    leadingIcon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Delete, null, tint = Hs.Red) },
+                    modifier = Modifier.heightIn(min = Hs.TargetMin),
+                    onClick = { open = false; onDelete() })
+            }
+        }
+    }
+}
+
+/**
+ * Unsaved-change guard for an edit screen. Returns the function to call for Back / Close: it leaves at once when nothing
+ * changed, otherwise asks "Discard changes?". The system Back button is covered too.
+ */
+@Composable
+fun rememberLeaveGuard(dirty: Boolean, onLeave: () -> Unit): () -> Unit {
+    var ask by remember { mutableStateOf(false) }
+    androidx.activity.compose.BackHandler(enabled = dirty) { ask = true }
+    if (ask) androidx.compose.material3.AlertDialog(
+        onDismissRequest = { ask = false },
+        title = { Text("Discard changes?", fontSize = Hs.Title, fontWeight = FontWeight.Bold) },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = { ask = false; onLeave() }, modifier = Modifier.heightIn(min = Hs.TargetMin)) { Text("Discard", fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = Hs.Red) } },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { ask = false }, modifier = Modifier.heightIn(min = Hs.TargetMin)) { Text("Keep editing", fontSize = Hs.Body, fontWeight = FontWeight.Bold, color = Hs.Blue) } },
+    )
+    return { if (dirty) ask = true else onLeave() }
 }
