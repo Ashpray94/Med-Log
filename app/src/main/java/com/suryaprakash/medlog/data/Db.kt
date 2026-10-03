@@ -142,6 +142,7 @@ data class Dose(
     val snoozeUntil: Long? = null,
     val reminded: Int = 0,
     val helperAlerted: Boolean = false,
+    @androidx.room.ColumnInfo(defaultValue = "") val snapshot: String = "",
     val shownBy: String? = null,      // "medlog" / "meetingtimer"
     /** Shared between paired phones: the same entry has the same [uid] everywhere; [updatedAt] says which copy is newer. */
     @androidx.room.ColumnInfo(defaultValue = "") val uid: String = "",
@@ -235,6 +236,7 @@ interface MedicineDao {
     @Query("SELECT MAX(updatedAt) FROM medicines") suspend fun lastChange(): Long?
     @Query("SELECT * FROM medicines WHERE active = 1 ORDER BY name") fun activeFlow(): Flow<List<Medicine>>
     @Query("SELECT * FROM medicines WHERE active = 1 ORDER BY name") suspend fun active(): List<Medicine>
+    @Query("SELECT * FROM medicines ORDER BY active DESC, name") fun allFlow(): Flow<List<Medicine>>
     @Query("SELECT * FROM medicines ORDER BY active DESC, name") suspend fun all(): List<Medicine>
     @Query("SELECT * FROM medicines WHERE id = :id") suspend fun get(id: Long): Medicine?
     @Insert suspend fun insert(m: Medicine): Long
@@ -258,6 +260,8 @@ interface DoseDao {
     suspend fun restoreScheduled(med: Long, at: Long): Int
     @Query("UPDATE doses SET status = 'CANCELLED', reason = 'Schedule replaced', snoozeUntil = NULL WHERE id = :id AND updatedAt = :expectedUpdated AND actedAt IS NULL AND status IN ('DUE','SNOOZED','MISSED')")
     suspend fun cancelUnconfirmed(id: Long, expectedUpdated: Long): Int
+    @Query("UPDATE doses SET status = 'CANCELLED', reason = :reason, snoozeUntil = NULL WHERE medicineId = :med AND actedAt IS NULL AND status IN ('DUE','SNOOZED')")
+    suspend fun cancelForMedicine(med: Long, reason: String): Int
     @Update suspend fun update(d: Dose)
     @Query("UPDATE doses SET status = 'SKIPPED', reason = :reason, actedAt = :at, snoozeUntil = NULL WHERE medicineId = :med AND status IN ('DUE','SNOOZED')") suspend fun skipOpen(med: Long, reason: String, at: Long)
     @Query("DELETE FROM doses WHERE medicineId = :med AND status = 'DUE' AND scheduledAt > :after") suspend fun dropFuture(med: Long, after: Long)
@@ -290,7 +294,7 @@ interface InboxDao {
 
 @Database(
     entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -304,6 +308,11 @@ abstract class MedDb : RoomDatabase() {
     abstract fun inbox(): InboxDao
 
     companion object {
+        internal val M6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE doses ADD COLUMN snapshot TEXT NOT NULL DEFAULT ''")
+            }
+        }
         fun open(ctx: Context): MedDb = open(ctx, "medlog.db")
 
         /** This phone's own records ("medlog.db"), or the copy of someone it helps ("mirror_<pairing>.db"). */
@@ -317,7 +326,7 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, file)
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2, M2_3, M3_4, M4_6, M5_6)
+                .addMigrations(M1_2, M2_3, M3_4, M4_6, M5_6, M6_7)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
                     // every open: the stamps are always the current version, and any row missing its id is put right

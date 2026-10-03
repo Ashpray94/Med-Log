@@ -121,7 +121,7 @@ fun DoctorScreen(nav: Nav) {
             awaitClose { db.invalidationTracker.removeObserver(observer) }
         }.conflate().collect {
             note = withContext(Dispatchers.IO) { buildNote(ctx, days) }
-            nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)) }
+            nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, days) }
         }
     }
     val nutShown = nut?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }
@@ -131,11 +131,15 @@ fun DoctorScreen(nav: Nav) {
     // Share used to make a PDF without it (only the first page)
     fun pdf(then: (java.io.File) -> Unit) { scope.launch {
         busy = true
+        try {
         val f = withContext(Dispatchers.IO) {
-            val r = com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)).also { nut = it }
+            val r = com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, days).also { nut = it }
             Pdf.write(ctx, buildNote(ctx, days), r.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() })
         }
-        busy = false; then(f)
+        then(f)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            android.widget.Toast.makeText(ctx, "Could not prepare the report. Please try again.", android.widget.Toast.LENGTH_LONG).show()
+        } finally { busy = false }
     } }
 
     var doctors by remember { mutableStateOf<List<com.suryaprakash.medlog.data.CarePlan.Doctor>>(emptyList()) }
@@ -155,7 +159,7 @@ fun DoctorScreen(nav: Nav) {
         Stats(n)
 
         if (n.concerns.isNotEmpty()) {
-            Section("Most important")
+            Section("Symptoms at a glance")
             // each opens its own history: a symptom's every entry, a medicine's page
             Group { n.concerns.forEachIndexed { i, c ->
                 if (i > 0) Line()
@@ -171,7 +175,7 @@ fun DoctorScreen(nav: Nav) {
 
         Section("Symptoms")
         if (n.symptoms.isEmpty()) Group { Plain("No symptoms noted in this time.") }
-        n.symptoms.forEach { r -> SymptomCard(r, n.days) { nav.go(Route.ProblemHistory(r.problemId)) } }
+        n.symptoms.forEach { r -> SymptomCard(r, n.days) { nav.go(Route.ProblemHistory(r.problemId, days)) } }
 
         if (n.medicines.isNotEmpty()) {
             Section("Medicines")
@@ -303,7 +307,7 @@ private fun Stats(n: DoctorNote) {
     val pct = if (due == 0) null else done * 100 / due
     Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("${n.symptoms.size}", "Symptoms", p.ink, p.card)
-        StatCard("${urgent + watch}", "Recorded alerts", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
+        StatCard("${n.symptoms.sumOf { it.reportCount }}", "Notes", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
         // doses taken are told with the medicines below, where they make sense
         @Suppress("UNUSED_VARIABLE") val unused = pct
     }
@@ -347,45 +351,46 @@ private fun ConcernRow(text: String, level: String, onClick: () -> Unit) {
 
 /** Front and/or back with numbered pins. Pain "all over" tints the whole figure. */
 @Composable
-private fun BodyPins(n: DoctorNote) {
+private fun BodyPins(n: DoctorNote) = RecordedBodyMap(n.pins, n.symptoms.associate { it.n to it.name })
+
+/** Dots stay at the recorded position. Offset numbered labels connect with lines, avoiding overlap. */
+@Composable
+fun RecordedBodyMap(pins: List<Pair<Int, String>>, labels: Map<Int, String>, compact: Boolean = false) {
     val ctx = LocalContext.current
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val urgency = n.symptoms.associate { it.n to it.urgent }
-    val views = listOf(false, true).filter { b -> n.pins.any { it.second.startsWith("back") == b } }
-    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+    val marks = remember(pins) { com.suryaprakash.medlog.doctor.BodyMarkers.layout(pins) }
+    val views = listOf(false, true).filter { back -> marks.any { it.back == back } }
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             for (back in views) {
                 val art by produceState<ImageBitmap?>(null, back) { value = withContext(Dispatchers.IO) { BodyArt.bitmap(ctx, back, WHOLE, 500)?.asImageBitmap() } }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val mine = n.pins.filter { it.second.startsWith("back") == back }
-                    Canvas(Modifier.height(280.dp).aspectRatio(100f / 170f)) {
+                    Canvas(Modifier.height(if (compact) 190.dp else 280.dp).aspectRatio(100f / 170f)) {
                         val u = size.width / 100f
-                        val box = IntSize(size.width.toInt(), size.height.toInt())
-                        art?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = box) }
-                        mine.filter { it.second.endsWith(":all") }.forEach { (num, _) ->
-                            art?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = box, alpha = 0.4f, colorFilter = ColorFilter.tint(levelColor(urgency[num] ?: "GREEN", p), BlendMode.SrcIn)) }
-                        }
+                        art?.let { drawImage(it, dstSize = IntSize(size.width.toInt(), size.height.toInt())) }
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                            color = android.graphics.Color.WHITE; textSize = 12.dp.toPx(); textAlign = android.graphics.Paint.Align.CENTER; isFakeBoldText = true
+                            color = android.graphics.Color.WHITE; textSize = 10f * u; textAlign = android.graphics.Paint.Align.CENTER; isFakeBoldText = true
                         }
-                        for ((num, code) in mine) {
-                            val xy = if (code.endsWith(":all")) listOf(50f, 62f) else code.substringAfter(":").split(",").mapNotNull { it.toFloatOrNull() }
-                            if (xy.size != 2) continue
-                            val c = Offset(xy[0] * u, xy[1] * u)
-                            drawCircle(Color.White, 12.dp.toPx(), c)
-                            drawCircle(levelColor(urgency[num] ?: "GREEN", p), 10.dp.toPx(), c)
-                            drawContext.canvas.nativeCanvas.drawText("$num", c.x, c.y + 4.3.dp.toPx(), paint)
+                        for (mark in marks.filter { it.back == back }) {
+                            val anchor = Offset(mark.x * u, mark.y * u)
+                            val label = Offset(mark.labelX * u, mark.labelY * u)
+                            if (mark.all) art?.let { drawImage(it, dstSize = IntSize(size.width.toInt(), size.height.toInt()), alpha = 0.25f,
+                                colorFilter = ColorFilter.tint(p.brand, BlendMode.SrcIn)) }
+                            drawLine(p.inkSoft, anchor, label, 1.2f * u)
+                            drawCircle(p.brand, 2.5f * u, anchor)
+                            drawCircle(Color.White, 10f * u, label)
+                            drawCircle(p.brand, 8.5f * u, label)
+                            drawContext.canvas.nativeCanvas.drawText("${mark.number}", label.x, label.y + 3.5f * u, paint)
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
                     Text(if (back) "Back" else "Front", fontSize = sc.small, color = p.inkSoft)
                 }
             }
         }
-        if (n.pins.any { it.second.endsWith(":all") }) {
-            Spacer(Modifier.height(10.dp))
-            Text("Shaded body: felt all over", fontSize = sc.small, color = p.inkSoft)
+        marks.map { it.number }.distinct().forEach { number ->
+            Text("$number. ${labels[number].orEmpty()}" + if (marks.any { it.number == number && it.all }) " - all over" else "",
+                fontSize = sc.small, color = p.ink, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp))
         }
     }
 }
@@ -410,12 +415,12 @@ private fun SymptomCard(r: DoctorNote.Row, days: Int, onClick: () -> Unit) {
         }
         // the two numbers a doctor asks first
         Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniCard("Symptom reports", "${r.reportCount}", if (r.total > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
-            r.sevHigh?.let { MiniCard("Highest severity recorded", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
+            MiniCard("Times noted", "${r.reportCount}", if (r.reportCount > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
+            r.sevHigh?.let { MiniCard("Highest severity", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
         }
-        if (r.daily.count { it > 0 } > 1) DayStrip(r.daily, tone, days)
+        if (r.daily.isNotEmpty()) DayStrip(r.daily, tone, days)
         Spacer(Modifier.height(4.dp))
-        Line(); Fact("Last 24 hours", "${r.reports24h} symptom reports recorded")
+        r.lastNoted?.let { Line(); Fact("Last noted", it) }
         r.began?.let { Line(); Fact("Started", it) }
         r.trend?.let { t ->
             Line()
@@ -427,7 +432,7 @@ private fun SymptomCard(r: DoctorNote.Row, days: Int, onClick: () -> Unit) {
         }
         if (r.places.isNotEmpty()) { Line(); Fact("Where", r.places.joinToString(", ")) }
         if (r.feels.isNotEmpty()) { Line(); Fact("What it feels like", r.feels.joinToString(", ")) }
-        if (r.flags.isNotEmpty()) { Line(); Fact("Warning signs", r.flags.joinToString(", ") { it.replaceFirstChar(Char::uppercase) }, p.red) }
+
         r.quote?.let { Line(); Fact("Additional note" + (r.quoteDate?.let { date -> " · $date" } ?: ""), "“$it”") }
         Spacer(Modifier.height(4.dp))
     }
@@ -454,18 +459,24 @@ private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
     val sc = LocalScale.current
     val max = (daily.maxOrNull() ?: 1).coerceAtLeast(1)
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Recorded daily counts; empty days mean no report", fontSize = sc.small, color = p.inkSoft)
-        Canvas(Modifier.fillMaxWidth().height(32.dp)) {
+        Text("Times noted each day", fontSize = sc.small, color = p.inkSoft)
+        Canvas(Modifier.fillMaxWidth().height(48.dp)) {
             val slot = size.width / daily.size
             val bw = (slot * 0.64f).coerceAtLeast(1.5f)
             daily.forEachIndexed { i, v ->
                 val x = i * slot + (slot - bw) / 2
-                val bh = if (v == 0) 2.dp.toPx() else size.height * (0.3f + 0.7f * v / max)
+                val plotHeight = size.height - 14.dp.toPx()
+                val bh = if (v == 0) 2.dp.toPx() else plotHeight * v / max
                 drawRoundRect(if (v == 0) Color(0x1F000000) else tone, Offset(x, size.height - bh), Size(bw, bh), CornerRadius(minOf(bw / 2, 3.dp.toPx())))
+                if (v > 0 && daily.size <= 31) {
+                    val label = "$v"
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.DKGRAY; textSize = 12.dp.toPx() }
+                    drawContext.canvas.nativeCanvas.drawText(label, x + bw/2 - paint.measureText(label)/2, size.height - bh - 3.dp.toPx(), paint)
+                }
             }
         }
         Row {
-            Text("$days days ago", fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
+            Text("${days - 1} days ago", fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
             Text("Today", fontSize = sc.small, color = p.inkSoft)
         }
     }

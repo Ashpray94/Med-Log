@@ -39,7 +39,8 @@ object Pdf {
 
     fun write(ctx: Context, n: DoctorNote, nut: com.suryaprakash.medlog.nutrition.Nutrition.Report? = null): File {
         val doc = PdfDocument()
-        val w = Writer(doc)
+        ReportValidation.requireAccurate(n)
+        val w = Writer(doc, n.period, n.footer)
         w.page()
 
         // ── heading ──
@@ -51,26 +52,18 @@ object Pdf {
         if (n.currentMeds.isNotBlank()) w.kv("Medicines", n.currentMeds)
         w.rule()
 
-        // ── main concerns, with the body diagram beside them ──
-        val diagramW = 150f
-        val top = w.y
-        if (n.concerns.isNotEmpty()) w.section("Main concerns", right = diagramW + 12f)
-        n.concerns.forEachIndexed { i, c -> w.text("${i + 1}.  $c", 10.5f, bold = i == 0, right = diagramW + 12f) }
-        if (n.pins.isNotEmpty()) {
-            w.bodyDiagram(W - M - diagramW, top + 2f, diagramW, n.pins) { back -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 400) }
-            w.y = maxOf(w.y, top + diagramW * 1.05f)
-        }
-        w.gap(4f)
-
-        // ── symptoms table ──
+        // Overview uses the same note counts as the page and the dated appendix.
         if (n.symptoms.isNotEmpty()) {
-            w.section("Symptoms")
-            w.table(
-                listOf("#", "Symptom", "When", "Where", "Character", "Notes"),
-                floatArrayOf(0.04f, 0.15f, 0.22f, 0.17f, 0.17f, 0.25f),
-                n.symptoms.map { r -> listOf("${r.n}", r.name, r.whenText, r.where, r.nature, r.notes) to (if (r.urgent == "RED") RED else if (r.urgent == "AMBER") AMBER else INK) },
-                dropEmpty = true,
-            )
+            w.section("Symptoms in the selected period")
+            w.text("Counts show how often a symptom was noted, not how many episodes occurred.", 10f, color = SOFT)
+            w.table(listOf("Symptom", "Times noted", "Last noted", "Started (if given)"), floatArrayOf(0.22f, 0.12f, 0.30f, 0.36f),
+                n.symptoms.map { r -> listOf("${r.n}. ${r.name}", "${r.reportCount}", r.lastNoted.orEmpty(), r.began.orEmpty()) to INK })
+            if (n.pins.isNotEmpty()) {
+                w.section("Body locations - overview")
+                w.mapBlock(n.pins) { back -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 500) }
+                n.symptoms.filter { row -> n.pins.any { it.first == row.n } }.forEach { w.text("${it.n}. ${it.name}", 10f) }
+                w.text("Dots mark the locations given. Lines connect each dot to its numbered label.", 9f, color = SOFT)
+            }
         }
         if (n.medicines.isNotEmpty()) {
             w.section("Medicines in this period")
@@ -79,7 +72,20 @@ object Pdf {
         if (n.readings.isNotEmpty()) { w.section("Readings"); n.readings.forEach { w.text(it, 10f) } }
         if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text(it, 10f, color = SOFT) } }
         if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
-        w.footer(n.footer)
+        // One symptom, one graph and every dated entry. Depth is included only when supplied.
+        for (r in n.symptoms) {
+            w.page()
+            w.pair("${r.n}. ${r.name}", n.period, 15f)
+            w.text("${r.name} was noted ${r.reportCount} ${if (r.reportCount == 1) "time" else "times"} in this period.", 12f, bold = true)
+            r.lastNoted?.let { w.kv("Last noted", it) }
+            r.began?.let { w.kv("Started", it) }
+            r.quote?.let { w.kv("Remark", it + r.quoteDate?.let { date -> " ($date)" }.orEmpty()) }
+            w.chart(r.daily, n.from, n.to)
+            w.section("Entries - oldest first")
+            for (entry in n.entries.filter { it.symptomNumber == r.n }) w.entry(entry) { back ->
+                com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 500)
+            }
+        }
         // ── nutrition: its own page, verdict first, detail after ──
         // only when food or feeds were logged; days with nothing logged, and "nothing logged" findings, are left out
         nut?.takeIf { r -> r.days.any { it.logged } || r.feeds.isNotEmpty() }?.let { r ->
@@ -106,8 +112,7 @@ object Pdf {
             if (r.changes.isNotEmpty()) { w.section("What changed"); r.changes.forEach { w.text("•  $it", 10f) } }
             if (r.observed.isNotEmpty()) { w.section("Also noticed"); r.observed.forEach { w.text("•  $it", 10f) } }
             if (logged.isNotEmpty()) w.text("Food values are estimates for home cooking.", 9f, color = SOFT)
-            w.footer(n.footer)
-        }
+            }
         w.finish()
 
         // a new name each time, so a viewer never shows a copy it kept from before; older ones are cleared
@@ -119,20 +124,20 @@ object Pdf {
         return f
     }
 
-    private class Writer(val doc: PdfDocument) {
+    private class Writer(val doc: PdfDocument, val period: String, val footerText: String) {
         var page: PdfDocument.Page? = null
         lateinit var c: Canvas
         var y = M
         var n = 0
         val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
-        val bottom = H - 40f
+        val bottom = H - 64f
         val regular: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
         val bold: Typeface = Typeface.create("sans-serif", Typeface.BOLD)
         val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         val lp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = LINE; strokeWidth = 0.8f }
 
-        fun page() { finish(); n++; page = doc.startPage(PdfDocument.PageInfo.Builder(W, H, n).create()); c = page!!.canvas; y = M }
-        fun finish() { page?.let { doc.finishPage(it) }; page = null }
+        fun page() { finish(); n++; page = doc.startPage(PdfDocument.PageInfo.Builder(W, H, n).create()); c = page!!.canvas; y = M; if (n > 1) { text(period, 9f, color = SOFT); gap(5f) } }
+        fun finish() { page?.let { footer("$footerText  Page $n"); doc.finishPage(it) }; page = null }
         private fun ensure(h: Float) { if (y + h > bottom) page() }
 
         private fun layout(s: String, size: Float, tf: Typeface, color: Int, width: Int): StaticLayout {
@@ -142,9 +147,16 @@ object Pdf {
 
         fun text(s: String, size: Float, bold: Boolean = false, color: Int = INK, right: Float = 0f) {
             val l = layout(s, size, if (bold) this.bold else regular, color, (W - 2 * M - right).toInt())
-            ensure(l.height.toFloat())
-            c.save(); c.translate(M, y); l.draw(c); c.restore()
-            y += l.height + 3f
+            var first = 0
+            while (first < l.lineCount) {
+                ensure(l.getLineBottom(first).toFloat() - l.getLineTop(first))
+                var last = first
+                while (last + 1 < l.lineCount && y + l.getLineBottom(last+1) - l.getLineTop(first) <= bottom) last++
+                val top = l.getLineTop(first); val height = l.getLineBottom(last)-top
+                c.save(); c.translate(M,y-top); c.clipRect(0f,top.toFloat(),(W-2*M-right), (top+height).toFloat()); l.draw(c); c.restore()
+                y += height + 3f; first = last + 1
+                if (first < l.lineCount) page()
+            }
         }
 
         fun pair(left: String, right: String, size: Float) {
@@ -155,10 +167,12 @@ object Pdf {
             y += size + 10f
         }
 
-        fun kv(k: String, v: String, color: Int = INK) {
+        fun kv(k: String, v: String, color: Int = INK, right: Float = 0f) {
             val kl = layout(k, 9.5f, medium, SOFT, 70)
-            val vl = layout(v, 10f, if (color == RED) bold else regular, color, (W - 2 * M - 76).toInt())
-            ensure(vl.height.toFloat())
+            val vl = layout(v, 10f, if (color == RED) bold else regular, color, (W - 2 * M - 76 - right).toInt())
+            val height = maxOf(kl.height, vl.height).toFloat()
+            if (height > bottom - M - 30) { text("$k: $v", 10f, color = color, right = right); return }
+            ensure(height)
             c.save(); c.translate(M, y + 0.5f); kl.draw(c); c.restore()
             c.save(); c.translate(M + 76, y); vl.draw(c); c.restore()
             y += maxOf(kl.height, vl.height) + 3f
@@ -202,37 +216,80 @@ object Pdf {
             y += 4f
         }
 
-        /** Two small silhouettes (front, back) with numbered pins. */
+        /** Actual anchors and separate numbered labels, shared with the on-screen map. */
         fun bodyDiagram(x: Float, top: Float, width: Float, pins: List<Pair<Int, String>>, art: (Boolean) -> android.graphics.Bitmap?) {
+            val marks = BodyMarkers.layout(pins)
             val fig = width / 2f - 4f
             val u = fig / 100f
             val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
             for ((k, back) in listOf(0 to false, 1 to true)) {
                 val ox = x + k * (fig + 8f)
                 art(back)?.let { c.drawBitmap(it, null, RectF(ox, top, ox + 100f * u, top + 170f * u), paint) }
-                tp.textSize = 7f; tp.typeface = regular; tp.color = SOFT
+                tp.textSize = 8f; tp.typeface = regular; tp.color = SOFT
                 val lbl = if (back) "Back" else "Front"
-                c.drawText(lbl, ox + (fig - tp.measureText(lbl)) / 2, top + 170f * u + 8f, tp)
-                val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = RED }
-                for ((num, code) in pins) {
-                    val isBack = code.startsWith("back")
-                    if (isBack != back) continue
-                    val all = code.endsWith(":all")
-                    if (all) art(back)?.let { a ->
-                        // the whole figure, tinted: "all over the body"
-                        c.drawBitmap(a, null, RectF(ox, top, ox + 100f * u, top + 170f * u), Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                            colorFilter = android.graphics.PorterDuffColorFilter(RED, android.graphics.PorterDuff.Mode.SRC_IN); alpha = 90
-                        })
-                    }
-                    val xy = if (all) listOf(50f, 62f) else code.substringAfter(":").split(",").mapNotNull { it.toFloatOrNull() }
-                    if (xy.size != 2) continue
-                    val (px, py) = xy[0] to xy[1]
-                    val cx = ox + px * u; val cy = top + py * u
-                    c.drawCircle(cx, cy, 5.5f, dot)
-                    tp.textSize = 6.5f; tp.typeface = bold; tp.color = Color.WHITE
-                    val t = "$num"; c.drawText(t, cx - tp.measureText(t) / 2, cy + 2.3f, tp)
+                c.drawText(lbl, ox + (fig - tp.measureText(lbl)) / 2, top + 170f * u + 12f, tp)
+                for (mark in marks.filter { it.back == back }) {
+                    if (mark.all) art(back)?.let { a -> c.drawBitmap(a, null, RectF(ox, top, ox + 100f * u, top + 170f * u), Paint(paint).apply {
+                        colorFilter = android.graphics.PorterDuffColorFilter(AMBER, android.graphics.PorterDuff.Mode.SRC_IN); alpha = 70
+                    }) }
+                    val ax = ox + mark.x * u; val ay = top + mark.y * u
+                    val lx = ox + mark.labelX * u; val ly = top + mark.labelY * u
+                    paint.color = SOFT; paint.strokeWidth = 0.8f
+                    c.drawLine(ax, ay, lx, ly, paint)
+                    paint.color = INK; c.drawCircle(ax, ay, 2.5f * u, paint)
+                    paint.color = Color.WHITE; c.drawCircle(lx, ly, 10f * u, paint)
+                    paint.color = AMBER; c.drawCircle(lx, ly, 8.5f * u, paint)
+                    tp.textSize = 10f * u; tp.typeface = bold; tp.color = Color.WHITE
+                    val t = "${mark.number}"; c.drawText(t, lx - tp.measureText(t)/2, ly + 3.5f*u, tp)
                 }
             }
+        }
+
+        fun mapBlock(pins: List<Pair<Int, String>>, art: (Boolean) -> android.graphics.Bitmap?) {
+            val width = 220f; val h = (width/2-4) * 1.7f + 18f
+            ensure(h)
+            bodyDiagram(M, y, width, pins, art)
+            y += h + 6f
+        }
+
+        fun chart(daily: List<Int>, from: Long, to: Long) {
+            if (daily.isEmpty()) return
+            ensure(112f)
+            text("Times noted each day", 10f, bold = true)
+            val top = y; val height = 52f; val width = W - 2*M - 20f
+            val maximum = (daily.maxOrNull() ?: 0).coerceAtLeast(1)
+            val slot = width / daily.size
+            tp.textSize = 8f; tp.color = SOFT; tp.typeface = regular
+            c.drawText("$maximum", M, top+7, tp); c.drawText("0", M, top+height, tp)
+            c.drawLine(M+16, top+height, W-M, top+height, lp)
+            val bar = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER }
+            daily.forEachIndexed { i, count ->
+                if (count > 0) {
+                    val x = M+20+i*slot; val h = height*count/maximum
+                    c.drawRect(x+slot*0.15f, top+height-h, x+slot*0.85f, top+height, bar)
+                    if (daily.size <= 31) { tp.color = INK; tp.textSize = 8f; c.drawText("$count", x+slot/2-tp.measureText("$count")/2, top+height-h-3, tp) }
+                }
+            }
+            y = top + height + 7f
+            val df = java.text.SimpleDateFormat("d MMM yyyy", java.util.Locale.ENGLISH)
+            pair(df.format(java.util.Date(from)), df.format(java.util.Date(to-1)), 9f)
+            text("An empty day means the symptom was not noted that day.", 9f, color = SOFT)
+        }
+
+        fun entry(e: DoctorNote.Entry, art: (Boolean) -> android.graphics.Bitmap?) {
+            val fields = listOfNotNull(e.site?.let { "Location" to it }, e.depth?.let { "Depth" to it }) + e.facts
+            val map = e.pins.isNotEmpty()
+            val right = if (map) 180f else 0f
+            val width = (W-2*M-76-right).toInt()
+            val height = maxOf(if (map) 166f else 0f, fields.sumOf { maxOf(layout(it.first, 9.5f, medium, SOFT, 70).height, layout(it.second, 10f, regular, INK, width).height) + 3 }.toFloat()) + 46f
+            ensure(height.coerceAtMost(bottom-M))
+            text(e.date + if (e.noted) " - symptom noted" else " - update", 11f, bold = true)
+            val top = y
+            if (map) bodyDiagram(W-M-170f, top, 170f, e.pins.map { e.symptomNumber to it }, art)
+            fields.forEach { (key,value) -> kv(key, value, right = right) }
+            y = maxOf(y, top + if (map) 160f else 0f)
+            e.remark?.takeIf { it.isNotBlank() }?.let { kv("Remark", it) }
+            rule()
         }
 
         fun footer(s: String) {

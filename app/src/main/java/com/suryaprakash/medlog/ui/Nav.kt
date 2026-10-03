@@ -11,7 +11,7 @@ sealed interface Route {
     data object Home : Route
     data class Tell(val problemId: String? = null, val text: String? = null, val pick: Boolean = false, val noteId: Long? = null, val speak: Boolean = false) : Route
     data object Notes : Route
-    data class ProblemHistory(val problemId: String) : Route
+    data class ProblemHistory(val problemId: String, val days: Int = 90) : Route
     data class NoteDetail(val id: Long) : Route
     data object Removed : Route
     data object Meds : Route
@@ -26,6 +26,7 @@ sealed interface Route {
     data class Output(val tab: Int = -1) : Route
     data class FoodPick(val noteId: Long? = null) : Route
     data object FeedNew : Route
+    data class FeedEdit(val id: Long) : Route
     data object Readings : Route
     data object Help : Route
     data object Messages : Route

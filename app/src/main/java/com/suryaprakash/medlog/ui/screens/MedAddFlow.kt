@@ -339,14 +339,7 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                             changedAt = m.changedAt,
                             changeNote = change,
                         )
-                        val scheduleChanged = original?.let { com.suryaprakash.medlog.data.MedicineSchedule.changed(it, prepared) } == true
-                        val saved = prepared.copy(changedAt = if (original == null || scheduleChanged || change != original?.changeNote) now else prepared.changedAt,
-                            changeNote = if (scheduleChanged) "times changed" else change)
-                        val mid = if (id == null) app.viewDb.medicines().insert(saved) else { app.viewDb.medicines().update(saved); id }
-                        // Obsolete reminders are cancelled and synced; completed history is retained.
-                        Scheduler.reconcileSchedules(ctx, app.viewDb)
-                        Scheduler.reschedule(ctx)
-                        app.viewDb.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
+                        val mid = com.suryaprakash.medlog.data.MedicineRecords.save(ctx, original, prepared)
                         savedFeedback(ctx); app.refreshWidgets(); nav.back()
                     }
                 }) {
@@ -379,9 +372,13 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                 var editing by remember { mutableStateOf<String?>(null) }
                 Section("Details")
                 Group {
+                    ValueRow("Start date", java.text.SimpleDateFormat("d MMM yyyy").format(java.util.Date(m.startDate)), onClick = {
+                        val day = java.time.Instant.ofEpochMilli(m.startDate).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                        android.app.DatePickerDialog(ctx, { _, year, month, date -> m = m.copy(startDate = java.time.LocalDate.of(year, month + 1, date).atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()) }, day.year, day.monthValue - 1, day.dayOfMonth).show()
+                    }); GroupLine()
                     ValueRow("What it's for", m.purpose.ifBlank { null }, onClick = { editing = "purpose" }); GroupLine()
                     ValueRow("Tablets left", pills.ifBlank { null }, onClick = { editing = "pills" }); GroupLine()
-                    ValueRow("How long", daysCount.takeIf { it.isNotBlank() }?.let { "$it days" } ?: "Always", onClick = { editing = "days" })
+                    ValueRow("How long", daysCount.takeIf { it.isNotBlank() }?.let { "$it days" } ?: m.endDate?.let { "Until " + java.text.SimpleDateFormat("d MMM yyyy").format(java.util.Date(it)) } ?: "Always", onClick = { editing = "days" })
                 }
                 Section("Alerts")
                 Group {
@@ -394,22 +391,25 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                         "pills" -> CounterSheet("How many do you have?", "Tablets left", pills.toIntOrNull() ?: 0, zero = "None", unitWord = "", quick = listOf(10, 30),
                             onDone = { v -> pills = if (v == 0) "" else v.toString(); editing = null }, onDismiss = { editing = null })
                         "days" -> CounterSheet("For how many days?", "Days", daysCount.toIntOrNull() ?: 0, zero = "Always", unitWord = "days", quick = listOf(7, 30),
-                            onDone = { v -> daysCount = if (v == 0) "" else v.toString(); editing = null }, onDismiss = { editing = null })
+                            onDone = { v -> daysCount = if (v == 0) "" else v.toString(); if (v == 0) m = m.copy(endDate = null); editing = null }, onDismiss = { editing = null })
                         else -> PurposeSheet(m.purpose, onDone = { v -> m = m.copy(purpose = v); editing = null }, onDismiss = { editing = null })
                     }
                 }
-                if (id != null) Text("Stop this medicine", fontSize = sc.button, fontWeight = FontWeight.SemiBold, color = p.red, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = sc.target).clip(RoundedCornerShape(16.dp))
-                        .border(1.5.dp, p.red.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                        .steady("Stop this medicine") {
-                            scope.launch {
-                                val stopped = m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped")
-                                app.viewDb.medicines().update(stopped)
-                                app.viewDb.doses().dropFuture(stopped.id, System.currentTimeMillis())
-                                CalendarSync.removeMedicine(ctx, stopped)
-                                Scheduler.stopMedicine(ctx, stopped); nav.back()
-                            }
-                        }.wrapContentHeight(Alignment.CenterVertically))
+                if (id != null) {
+                    com.suryaprakash.medlog.ui.SwitchRow("Currently taking", m.active, "Turn on to restart this medicine") { m = m.copy(active = it) }
+                    var removing by remember { mutableStateOf(false) }
+                    BigButton("Remove from my medicines", tone = Tone.OUTLINE, onClick = { removing = true })
+                    if (removing) com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = { removing = false }, containerColor = p.paper) {
+                        Column(Modifier.fillMaxWidth().padding(sc.margin), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text("Remove ${m.name}?", fontSize = sc.title, fontWeight = FontWeight.Bold)
+                            Hint("Reminders will stop. Past doses stay in your history.")
+                            BigButton("Remove medicine", tone = Tone.OUTLINE, onClick = { scope.launch {
+                                com.suryaprakash.medlog.data.MedicineRecords.remove(ctx, id); nav.back()
+                            } })
+                            BigButton("Keep medicine", tone = Tone.QUIET, onClick = { removing = false })
+                        }
+                    }
+                }
             }
         }
     }
