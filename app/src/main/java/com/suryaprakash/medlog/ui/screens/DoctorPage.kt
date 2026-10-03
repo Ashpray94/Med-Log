@@ -460,13 +460,19 @@ private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
     val max = (daily.maxOrNull() ?: 1).coerceAtLeast(1)
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Times noted each day", fontSize = sc.small, color = p.inkSoft)
-        Canvas(Modifier.fillMaxWidth().height(32.dp)) {
+        Canvas(Modifier.fillMaxWidth().height(48.dp)) {
             val slot = size.width / daily.size
             val bw = (slot * 0.64f).coerceAtLeast(1.5f)
             daily.forEachIndexed { i, v ->
                 val x = i * slot + (slot - bw) / 2
-                val bh = if (v == 0) 2.dp.toPx() else size.height * (0.3f + 0.7f * v / max)
+                val plotHeight = size.height - 14.dp.toPx()
+                val bh = if (v == 0) 2.dp.toPx() else plotHeight * v / max
                 drawRoundRect(if (v == 0) Color(0x1F000000) else tone, Offset(x, size.height - bh), Size(bw, bh), CornerRadius(minOf(bw / 2, 3.dp.toPx())))
+                if (v > 0 && daily.size <= 31) {
+                    val label = "$v"
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.DKGRAY; textSize = 12.dp.toPx() }
+                    drawContext.canvas.nativeCanvas.drawText(label, x + bw/2 - paint.measureText(label)/2, size.height - bh - 3.dp.toPx(), paint)
+                }
             }
         }
         Row {
