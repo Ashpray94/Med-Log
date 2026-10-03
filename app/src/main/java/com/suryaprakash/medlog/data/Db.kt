@@ -129,7 +129,7 @@ data class Medicine(
     @androidx.room.ColumnInfo(defaultValue = "0") val updatedAt: Long = 0,
 )
 
-object DoseStatus { const val DUE = "DUE"; const val TAKEN = "TAKEN"; const val SKIPPED = "SKIPPED"; const val MISSED = "MISSED"; const val SNOOZED = "SNOOZED" }
+object DoseStatus { const val DUE = "DUE"; const val TAKEN = "TAKEN"; const val SKIPPED = "SKIPPED"; const val MISSED = "MISSED"; const val SNOOZED = "SNOOZED"; const val CANCELLED = "CANCELLED" }
 
 @Entity(tableName = "doses", indices = [Index(value = ["medicineId", "scheduledAt"], unique = true), Index("scheduledAt"), Index("uid"), Index("updatedAt")])
 data class Dose(
@@ -254,6 +254,10 @@ interface DoseDao {
     @Query("SELECT * FROM doses WHERE id = :id") suspend fun get(id: Long): Dose?
     @Query("SELECT * FROM doses") suspend fun everything(): List<Dose>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(d: Dose): Long
+    @Query("UPDATE doses SET status = 'DUE', reason = NULL, snoozeUntil = NULL WHERE medicineId = :med AND scheduledAt = :at AND status = 'CANCELLED' AND reason = 'Schedule replaced' AND actedAt IS NULL")
+    suspend fun restoreScheduled(med: Long, at: Long): Int
+    @Query("UPDATE doses SET status = 'CANCELLED', reason = 'Schedule replaced', snoozeUntil = NULL WHERE id = :id AND updatedAt = :expectedUpdated AND actedAt IS NULL AND status IN ('DUE','SNOOZED','MISSED')")
+    suspend fun cancelUnconfirmed(id: Long, expectedUpdated: Long): Int
     @Update suspend fun update(d: Dose)
     @Query("UPDATE doses SET status = 'SKIPPED', reason = :reason, actedAt = :at, snoozeUntil = NULL WHERE medicineId = :med AND status IN ('DUE','SNOOZED')") suspend fun skipOpen(med: Long, reason: String, at: Long)
     @Query("DELETE FROM doses WHERE medicineId = :med AND status = 'DUE' AND scheduledAt > :after") suspend fun dropFuture(med: Long, after: Long)
@@ -286,7 +290,7 @@ interface InboxDao {
 
 @Database(
     entities = [Profile::class, Helper::class, Note::class, Medicine::class, Dose::class, Appointment::class, DocLine::class, InboxItem::class],
-    version = 4,
+    version = 6,
     exportSchema = true,
 )
 abstract class MedDb : RoomDatabase() {
@@ -313,13 +317,56 @@ abstract class MedDb : RoomDatabase() {
             return Room.databaseBuilder(ctx, MedDb::class.java, file)
                 .openHelperFactory(SupportOpenHelperFactory(key))
                 .setJournalMode(JournalMode.WRITE_AHEAD_LOGGING)
-                .addMigrations(M1_2, M2_3, M3_4)
+                .addMigrations(M1_2, M2_3, M3_4, M4_6, M5_6)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
                     // every open: the stamps are always the current version, and any row missing its id is put right
                     override fun onOpen(db: androidx.sqlite.db.SupportSQLiteDatabase) = stamps(db, file.startsWith("mirror_"))
                 })
                 .build()
+        }
+
+        internal val M4_6 = object : androidx.room.migration.Migration(4, 6) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                if (!hasTable(db, "sync_meta")) {
+                    db.execSQL("CREATE TABLE IF NOT EXISTS `sync_meta` (`uid` TEXT NOT NULL, `type` TEXT NOT NULL, `localId` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `deleted` INTEGER NOT NULL, PRIMARY KEY(`uid`))")
+                }
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_sync_meta_type_localId` ON `sync_meta` (`type`, `localId`)")
+                for (table in listOf("notes", "medicines", "doses")) {
+                    val type = when (table) { "notes" -> "note"; "medicines" -> "medicine"; else -> "dose" }
+                    val oldColumns = columns(db, table)
+                    if ("uid" !in oldColumns) db.execSQL("ALTER TABLE `$table` ADD COLUMN `uid` TEXT NOT NULL DEFAULT ''")
+                    if ("updatedAt" !in oldColumns) db.execSQL("ALTER TABLE `$table` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0")
+                    dropStampTriggers(db, table)
+                    db.execSQL("UPDATE `$table` SET uid = CASE WHEN uid = '' THEN COALESCE((SELECT uid FROM sync_meta WHERE type = '$type' AND localId = `$table`.id), lower(hex(randomblob(16)))) ELSE uid END, " +
+                        "updatedAt = CASE WHEN updatedAt = 0 THEN COALESCE((SELECT updatedAt FROM sync_meta WHERE type = '$type' AND localId = `$table`.id), $NOW_MS) ELSE updatedAt END")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_${table}_uid` ON `$table` (`uid`)")
+                    db.execSQL("CREATE INDEX IF NOT EXISTS `index_${table}_updatedAt` ON `$table` (`updatedAt`)")
+                    val deleted = if (table == "notes") "CASE WHEN deletedAt IS NULL THEN 0 ELSE 1 END" else "0"
+                    db.execSQL("INSERT OR IGNORE INTO sync_meta(uid, type, localId, updatedAt, deleted) SELECT uid, '$type', id, updatedAt, $deleted FROM `$table`")
+                }
+                if ("updatedAt" !in columns(db, "profile"))
+                    db.execSQL("ALTER TABLE `profile` ADD COLUMN `updatedAt` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE profile SET updatedAt = $NOW_MS WHERE updatedAt = 0")
+                dropStampTriggers(db, "profile")
+                stamps(db)
+            }
+        }
+
+        internal val M5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) = M4_6.migrate(db)
+        }
+        private fun hasTable(db: androidx.sqlite.db.SupportSQLiteDatabase, table: String): Boolean =
+            db.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", arrayOf(table)).use { it.moveToFirst() }
+
+        private fun columns(db: androidx.sqlite.db.SupportSQLiteDatabase, table: String): Set<String> =
+            db.query("PRAGMA table_info(`$table`)").use { cursor ->
+                buildSet { while (cursor.moveToNext()) add(cursor.getString(cursor.getColumnIndexOrThrow("name"))) }
+            }
+
+        private fun dropStampTriggers(db: androidx.sqlite.db.SupportSQLiteDatabase, table: String) {
+            for (suffix in listOf("uid", "new", "changed", "stamp", "keep"))
+                db.execSQL("DROP TRIGGER IF EXISTS `${table}_$suffix`")
         }
 
         private const val NOW_MS = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)"
@@ -345,8 +392,7 @@ abstract class MedDb : RoomDatabase() {
                     "updatedAt = CASE WHEN NEW.updatedAt = 0 THEN MAX($NOW_MS, OLD.updatedAt + 1) ELSE NEW.updatedAt END WHERE id = NEW.id; END")
                 // rows that lost their id before this was fixed. On this phone's own records: a new id, sent again.
                 // In a helper's copy they were mixed-up merges of different entries: dropped, and the person's phone sends them again.
-                if (mirror) db.execSQL("DELETE FROM $t WHERE uid = ''")
-                else db.execSQL("UPDATE $t SET uid = lower(hex(randomblob(16))), updatedAt = $NOW_MS WHERE uid = ''")
+                db.execSQL("UPDATE $t SET uid = lower(hex(randomblob(16))), updatedAt = $NOW_MS WHERE uid = ''")
                 db.execSQL("UPDATE $t SET updatedAt = $NOW_MS WHERE updatedAt = 0")
             }
             for (old in listOf("new", "changed")) db.execSQL("DROP TRIGGER IF EXISTS profile_$old")

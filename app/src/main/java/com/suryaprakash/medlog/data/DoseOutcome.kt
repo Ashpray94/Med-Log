@@ -13,9 +13,9 @@ const val EXTRA_REMOVED = "Extra feed removed"
 val Dose.extra get() = reason == EXTRA_FEED || reason == EXTRA_REMOVED
 val Dose.removed get() = reason == EXTRA_REMOVED
 /** The doses that were planned: what "3 of 4 given" and every percentage count. */
-fun List<Dose>.planned() = filter { !it.extra }
+fun List<Dose>.planned() = filter { !it.extra && it.status != DoseStatus.CANCELLED && it.reason != "Stopped" }
 /** What to show in a history: planned doses and extra feeds, never a taken-back extra. */
-fun List<Dose>.shown() = filter { !it.removed }
+fun List<Dose>.shown() = filter { !it.removed && it.status != DoseStatus.CANCELLED }
 
 /** A skip reason as words: food in place of a feed is said the one way everywhere. */
 fun reasonWords(r: String?): String? = if (r == FOOD_INSTEAD) FOOD_INSTEAD_WORDS else r

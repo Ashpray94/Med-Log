@@ -19,13 +19,13 @@ object Occurrences {
     fun day(at: Long, zone: ZoneId = ZoneId.systemDefault()): LocalDate = Instant.ofEpochMilli(at).atZone(zone).toLocalDate()
 
     fun perDay(es: List<E>, zone: ZoneId = ZoneId.systemDefault()): Map<LocalDate, Int> =
-        es.groupBy { day(it.at, zone) }.mapValues { (_, l) -> maxOf(l.size, l.maxOf { it.count ?: 0 }) }
+        es.filter { it.count == null || it.count > 0 }.groupBy { day(it.at, zone) }.mapValues { (_, l) -> maxOf(l.size, l.maxOf { it.count ?: 0 }) }
 
     fun total(es: List<E>, zone: ZoneId = ZoneId.systemDefault()): Int = perDay(es, zone).values.sum()
 
     /** A symptom note that says it happened (not "better now", not removed). */
     fun isOccurrence(n: Note): Boolean = n.kind == Kind.SYMPTOM && n.problemId != null && n.deletedAt == null &&
-        factsFromJson(n.details)["better"]?.value != true
+        factsFromJson(n.details)["better"]?.value != true && (n.count == null || n.count > 0)
 
     fun of(notes: List<Note>): List<E> = notes.filter(::isOccurrence).map { E(it.occurredAt, it.count) }
     fun total(notes: List<Note>): Int = total(of(notes))

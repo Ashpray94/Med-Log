@@ -15,6 +15,11 @@ on:
     branches: [main, master, master-ejlvhp]
     paths-ignore: ["README.md", "PLAN.md", "RELEASE_NOTES.md", "docs/**", "design/**"]
   workflow_dispatch:
+    inputs:
+      publish_prod:
+        description: Publish validated build to production
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -87,12 +92,12 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: MedLog-${{ steps.files.outputs.version }}
-          path: out/*.apk
+          path: |
+            out/*
+            app/build/test-results/testDebugUnitTest/*.xml
 
       - uses: softprops/action-gh-release@v2
-        if: env.PUBLISH == 'yes'
-        # some repositories don't let workflows make releases; the build itself still counts
-        continue-on-error: true
+        if: env.PUBLISH == 'yes' && (github.event_name == 'push' || inputs.publish_prod == true)
         with:
           tag_name: v${{ steps.files.outputs.version }}
           name: MedLog ${{ steps.files.outputs.version }}

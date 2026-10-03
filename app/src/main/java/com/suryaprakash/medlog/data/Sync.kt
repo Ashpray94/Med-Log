@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.data
 
+import androidx.room.withTransaction
 import android.content.Context
 import android.util.Base64
 import android.util.Log
@@ -209,7 +210,7 @@ object Sync {
     fun heardAt(ctx: Context, peerId: String): Long = lastHeard.value[peerId] ?: ctx.medlog.settings.getLong("sync_heard_$peerId")
 
     /** Newer copies replace older ones; new entries are added. Their change times are kept, so they aren't sent back. */
-    internal suspend fun apply(db: MedDb, o: JSONObject, hub: Boolean) {
+    internal suspend fun apply(db: MedDb, o: JSONObject, hub: Boolean) = db.withTransaction {
         // the person's phone is the hub: what it takes in is stamped with its own time too, so it reaches every other
         // helper; helpers keep the time as sent, so nothing bounces back and forth
         val now = System.currentTimeMillis()
@@ -217,6 +218,7 @@ object Sync {
         o.optJSONArray("medicines")?.let { a ->
             for (i in 0 until a.length()) {
                 val m = medFrom(a.getJSONObject(i))
+                if (m.uid.isBlank() || m.updatedAt <= 0) continue
                 val old = db.medicines().byUid(m.uid)
                 if (old == null) db.medicines().insert(m.copy(id = 0, updatedAt = t(m.updatedAt)))
                 else if (m.updatedAt > old.updatedAt) db.medicines().update(m.copy(id = old.id, photoPath = old.photoPath, updatedAt = t(m.updatedAt)))
@@ -228,6 +230,7 @@ object Sync {
                 val j = a.getJSONObject(i)
                 val mid = medId[j.optString("med")] ?: continue
                 val d = doseFrom(j, mid)
+                if (d.uid.isBlank() || d.updatedAt <= 0) continue
                 // by id; else the same dose (medicine and time) kept under another id: both phones settle on the smaller id
                 val old = db.doses().byUid(d.uid) ?: db.doses().at(mid, d.scheduledAt)
                 if (old == null) runCatching { db.doses().insert(d.copy(id = 0, updatedAt = t(d.updatedAt))) }
@@ -241,6 +244,7 @@ object Sync {
                 val j = a.getJSONObject(i)
                 // groups are linked by shared id; an older phone sends only its own row number, which means nothing here
                 val n = noteFrom(j).copy(groupId = null)
+                if (n.uid.isBlank() || n.updatedAt <= 0) continue
                 // by id; else the same entry kept here under another id (entries that lost their id before 2.13 were given a
                 // new one on each phone, and came back as copies): both phones settle on the smaller id. Removals match by id only.
                 val old = db.notes().byUid(n.uid) ?: if (n.deletedAt != null) null else db.notes().sameEntry(n.kind, n.problemId.orEmpty(), n.occurredAt, n.createdAt, n.text)
@@ -338,7 +342,7 @@ object Doses {
     suspend fun take(ctx: Context, id: Long, at: Long? = null) {
         if (mirror() == null) { com.suryaprakash.medlog.meds.Scheduler.take(ctx, id, at = at); return }
         val db = ctx.medlog.viewDb
-        db.doses().get(id)?.let { db.doses().update(it.copy(status = DoseStatus.TAKEN, actedAt = at ?: it.actedAt?.takeIf { _ -> it.status == DoseStatus.TAKEN } ?: System.currentTimeMillis(), snoozeUntil = null)) }
+        db.doses().get(id)?.let { db.doses().update(it.copy(status = DoseStatus.TAKEN, reason = null, actedAt = at ?: it.actedAt?.takeIf { _ -> it.status == DoseStatus.TAKEN } ?: System.currentTimeMillis(), snoozeUntil = null)) }
     }
     suspend fun untake(ctx: Context, id: Long) {
         if (mirror() == null) { com.suryaprakash.medlog.meds.Scheduler.untake(ctx, id); return }

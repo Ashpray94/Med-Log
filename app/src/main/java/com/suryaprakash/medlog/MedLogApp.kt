@@ -61,7 +61,8 @@ class MedLogApp : Application() {
                 }
                 settings.putString("resync_v1", "done")
             }
-            if (settings.getString("dedupe_v1") == null) runCatching { repo.removeDuplicates(); settings.putString("dedupe_v1", "done") }
+            // Similar nearby records may be genuine. Never silently remove patient observations.
+            // Legacy Removed entries remain available for manual review and restoration.
             runCatching { com.suryaprakash.medlog.meds.Scheduler.reschedule(this@MedLogApp) }
             runCatching { cleanOldAudio() }
             refreshWidgets()
