@@ -1,6 +1,7 @@
 package com.suryaprakash.medlog.doctor
 
 import com.suryaprakash.medlog.data.planned
+import com.suryaprakash.medlog.data.ReportIntegrity
 import com.suryaprakash.medlog.clinical.Catalogue
 import com.suryaprakash.medlog.clinical.DangerRules
 import com.suryaprakash.medlog.clinical.Describe
@@ -57,6 +58,8 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
     private fun d(t: Long) = dfmt.format(Date(t))
 
     fun build(profile: Profile, from: Long, to: Long, notes: List<Note>, meds: List<Medicine>, doses: List<Dose>, waterGoal: Int, now: Long = System.currentTimeMillis()): Summary {
+        val notes = ReportIntegrity.notes(notes, from, to, now)
+        val doses = ReportIntegrity.doses(doses, meds, from, to, now)
         val symptoms = notes.filter { it.kind == Kind.SYMPTOM && it.problemId != null }
         val facts = symptoms.associate { it.id to factsFromJson(it.details) }
         val byProblem = symptoms.groupBy { it.problemId!! }.filterValues { com.suryaprakash.medlog.data.Occurrences.total(it) > 0 }
@@ -91,10 +94,10 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
                     }
                 }
             }
-            val reasons = list.flatMap { it.triageReasons.lines() }.filter { it.isNotBlank() }.distinct()
-            val text = "$label ${if (total > 1) "$total× " else ""}($span)$trend"
-            val sub = (reasons.map { "Flag: $it" } + keyFacts.take(6)).distinct()
-            val score = when (level) { "RED" -> 3000; "AMBER" -> 2000; else -> 0 } + total * 10 + (if (trend.contains("increasing")) 100 else 0)
+            val reasons = list.flatMap { ReportIntegrity.reasons(it) }.filter { it.isNotBlank() }.distinct()
+            val text = "$label: ${ReportIntegrity.countWords(list)}; recorded daily count $total ($span)"
+            val sub = (reasons.map { "Historical recorded alert: $it" } + keyFacts.take(6)).distinct()
+            val score = when (level) { "RED" -> 3000; "AMBER" -> 2000; else -> 0 } + total * 10
             concerns += score to Summary.Concern(level, text, sub)
         }
         // missed medicines
@@ -102,7 +105,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
             val md = doses.filter { it.medicineId == m.id && it.scheduledAt in from until minOf(to, now) }
             val missed = md.count { it.status == DoseStatus.MISSED || it.status == DoseStatus.SKIPPED }
             if (md.isNotEmpty() && missed > 0 && (missed * 5 >= md.size || m.critical)) {
-                val why = md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key} ×${it.value}" }
+                val why = md.filter { it.status == DoseStatus.SKIPPED }.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.groupingBy { it }.eachCount().entries.joinToString { "${it.key} ×${it.value}" }
                 concerns += (if (m.critical) 2500 else 1500) to Summary.Concern(if (m.critical) "AMBER" else "GREEN", "Missed ${m.name}: $missed of ${md.size} doses${if (why.isNotBlank()) " ($why)" else ""}", emptyList())
             }
         }
@@ -153,10 +156,10 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
                 "${m.strength} ${m.amount} $freq".trim(),
                 if (m.asNeeded) (if (prn > 0) "taken ${prn}×" else "") else if (md.isEmpty()) "" else "$taken/${md.size} (${taken * 100 / md.size}%)",
                 listOfNotNull(
-                    m.changeNote.takeIf { it.isNotBlank() && it != "started" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
+                    m.changeNote.takeIf { it.isNotBlank() && it != "started" && it != "stopped" && m.changedAt >= from }?.let { "$it ${d(m.changedAt)}" },
                     if (m.changeNote == "started" && m.startDate >= from) "started ${d(m.startDate)}" else null,
-                    if (!m.active) "stopped" else null,
-                    md.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.distinct().takeIf { it.isNotEmpty() }?.joinToString(prefix = "skipped: "),
+                    if (ReportIntegrity.continued(m, meds)) "previous list entry; matching medicine currently active" else if (!m.active) "this list entry stopped" else "currently active",
+                    md.filter { it.status == DoseStatus.SKIPPED }.mapNotNull { com.suryaprakash.medlog.data.reasonWords(it.reason) }.distinct().takeIf { it.isNotEmpty() }?.joinToString(prefix = "skipped: "),
                 ).joinToString("; "),
             )
         } + notes.filter { it.kind == Kind.MED_TAKEN }.mapNotNull { runCatching { JSONObject(it.details).optString("name") }.getOrNull() }
@@ -212,24 +215,16 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
 object Patterns {
     fun find(cat: Catalogue, symptoms: List<Note>, facts: Map<Long, Map<String, Fact>>, meds: List<Medicine>, doses: List<Dose>, notes: List<Note>, days: List<LocalDate>, zone: ZoneId): List<String> {
         val out = ArrayList<String>()
-        val byProblem = symptoms.groupBy { it.problemId!! }
+        val byProblem = symptoms.filter(com.suryaprakash.medlog.data.Occurrences::isOccurrence).groupBy { it.problemId!! }
         fun label(pid: String) = cat.problem(pid)?.label ?: pid
         fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
 
-        // 1. began soon after a medicine was started or changed
-        for ((pid, list) in byProblem) {
-            val first = list.minOf { it.occurredAt }
-            for (m in meds) {
-                val changed = m.changedAt
-                val gapDays = (first - changed) / DAY
-                if (first > changed && gapDays in 0..7 && m.changeNote.isNotBlank()) out += "${label(pid)} began $gapDays day${if (gapDays == 1L) "" else "s"} after ${m.name} was ${if (m.changeNote == "started") "started" else m.changeNote}"
-            }
-        }
+        // First logging time is not symptom onset. No medicine-onset link is inferred.
         // 2. after meals
         for ((pid, list) in byProblem) {
             if (list.size < 3) continue
             val after = list.count { n -> (facts[n.id]?.get("context")?.value as? String)?.let { Regex("after (breakfast|lunch|dinner|food|eating|meals?)").containsMatchIn(it) } == true }
-            if (after * 10 >= list.size * 6) out += "${label(pid)} came after meals $after of ${list.size} times"
+            if (after * 10 >= list.size * 6) out += "${label(pid)} reports mentioning after meals: $after of ${list.size}"
         }
         // 3. dehydration risk
         val fluidLoss = (byProblem["vomiting"].orEmpty() + byProblem["loose_motions"].orEmpty() + byProblem["fever"].orEmpty())
@@ -238,7 +233,7 @@ object Patterns {
             val water = lossDays.associateWith { dd -> notes.filter { it.kind == Kind.WATER && day(it.occurredAt) == dd }.sumOf { it.count ?: 1 } }
             val low = water.filter { it.value in 1..3 }
             val noUrine = fluidLoss.any { facts[it.id]?.get("urineToday")?.value == false }
-            if (low.isNotEmpty() || noUrine) out += "Possible dehydration: fluid loss with ${if (low.isNotEmpty()) "low water intake (${low.values.joinToString("/")} glasses)" else ""}${if (noUrine) (if (low.isNotEmpty()) " and " else "") + "reduced urine" else ""}"
+            if (low.isNotEmpty() || noUrine) out += "Recorded fluid-loss reports with ${if (low.isNotEmpty()) "water logged (${low.values.joinToString("/")} glasses; total intake unknown)" else ""}${if (noUrine) (if (low.isNotEmpty()) " and " else "") + "reduced urine" else ""}"
         }
         // 4. symptom within 2 h after a dose, repeatedly
         for ((pid, list) in byProblem) {
@@ -246,7 +241,7 @@ object Patterns {
             for (m in meds) {
                 val taken = doses.filter { it.medicineId == m.id && it.status == DoseStatus.TAKEN }.mapNotNull { it.actedAt }
                 val hits = list.count { n -> taken.any { t -> n.occurredAt - t in 0..(2 * HOUR) } }
-                if (hits >= 3 && hits * 10 >= list.size * 6) out += "${label(pid)} within 2 hours of taking ${m.name}: $hits of ${list.size} times"
+                if (hits >= 3 && hits * 10 >= list.size * 6) out += "${label(pid)} reports recorded within 2 hours of a confirmed ${m.name} dose: $hits of ${list.size}; onset not established"
             }
         }
         // 5. fluid build-up
@@ -259,8 +254,8 @@ object Patterns {
             if (kotlin.math.abs(diff) >= 2.0) out += "Weight ${if (diff > 0) "up" else "down"} ${fmt1(kotlin.math.abs(diff))} kg in ${((weights.last().first - weights.first().first) / DAY).coerceAtLeast(1)} days"
         }
         // 7. doses skipped because of feeling sick
-        val sickSkips = doses.count { it.reason == "Feeling sick" }
-        if (sickSkips >= 2) out += "$sickSkips doses skipped because of feeling sick"
+        val sickSkips = doses.count { it.status == DoseStatus.SKIPPED && it.reason == "Feeling sick" }
+        if (sickSkips >= 2) out += "$sickSkips recorded doses skipped because of feeling sick"
         return out.distinct()
     }
 }

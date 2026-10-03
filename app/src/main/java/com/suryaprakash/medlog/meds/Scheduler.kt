@@ -69,8 +69,24 @@ object Scheduler {
         val now = System.currentTimeMillis()
         val meds = app.db.medicines().active()
         // make sure dose rows exist for the next 2 days (and the last few hours, after a restart)
-        for (m in meds) for (t in times(m, now - 3 * HOUR, now + 2 * DAY)) app.db.doses().insert(Dose(medicineId = m.id, scheduledAt = t))
+        reconcileSchedules(ctx)
+        for (m in meds) for (t in times(m, maxOf(now - 3 * HOUR, m.changedAt.takeIf { m.changeNote == "times changed" } ?: m.startDate), now + 2 * DAY))
+        {
+            app.db.doses().restoreScheduled(m.id, t)
+            app.db.doses().insert(Dose(medicineId = m.id, scheduledAt = t))
+        }
         arm(ctx, nextWake(ctx, now))
+    }
+
+    /** Auditable cancellation, never deletion, so the correction also syncs to helpers. */
+    suspend fun reconcileSchedules(ctx: Context, db: com.suryaprakash.medlog.data.MedDb = ctx.medlog.db) {
+        val medicines = db.medicines().all().associateBy { it.id }
+        for (d in db.doses().everything()) {
+            val m = medicines[d.medicineId] ?: continue
+            if (com.suryaprakash.medlog.data.MedicineSchedule.obsolete(m, d)) {
+                if (db.doses().cancelUnconfirmed(d.id, d.updatedAt) > 0 && db === ctx.medlog.db) DoseAlert.cancel(ctx, d.id)
+            }
+        }
     }
 
     private suspend fun nextWake(ctx: Context, now: Long): Long {
@@ -118,6 +134,7 @@ object Scheduler {
         val app = ctx.medlog
         val s = app.settings.value
         val now = System.currentTimeMillis()
+        reconcileSchedules(ctx)
         val medsById = app.db.medicines().all().associateBy { it.id }
         val toShow = ArrayList<Dose>()
         var louder = false
@@ -182,15 +199,15 @@ object Scheduler {
 
     /** Marks a dose taken. Returns ALREADY if it was already taken (the double-dose guard asks first). */
     /** [at]: when it was really taken, for noting it afterwards (at night, or for an earlier day); now if null. */
-    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false, at: Long? = null): Taken {
+    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false, at: Long? = null): Taken = lock.withLock {
         val app = ctx.medlog
-        val d = app.db.doses().get(doseId) ?: return Taken.OK
+        val d = app.db.doses().get(doseId) ?: return@withLock Taken.OK
         if (d.status == DoseStatus.TAKEN && !force) {
             // already taken: only the time changes
             if (at != null) { app.db.doses().update(d.copy(actedAt = at)); app.refreshWidgets() }
-            return Taken.ALREADY
+            return@withLock Taken.ALREADY
         }
-        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = at ?: System.currentTimeMillis(), snoozeUntil = null))
+        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = at ?: System.currentTimeMillis(), reason = null, snoozeUntil = null))
         app.db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
         if (force && d.status == DoseStatus.TAKEN) {
             val m = app.db.medicines().get(d.medicineId)
@@ -198,9 +215,9 @@ object Scheduler {
         }
         DoseAlert.cancel(ctx, doseId)
         app.refreshWidgets()
-        reschedule(ctx)
-        return Taken.OK
-    }
+        // Release the action lock before rescheduling (reschedule uses the same mutex).
+        return@withLock Taken.OK
+    }.also { reschedule(ctx) }
 
     /** Takes back a "taken" tapped by mistake: the dose is open again and the pill count goes back up. */
     suspend fun untake(ctx: Context, doseId: Long) {

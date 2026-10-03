@@ -50,7 +50,7 @@ data class PersonContext(
  * NOT YET CLINICIAN-REVIEWED — see catalogue "reviewNote".
  */
 object DangerRules {
-    const val VERSION = "rules-0.2.0-unreviewed"
+    const val VERSION = "rules-0.2.1-unreviewed"
 
     /** Cancer AND chemotherapy or radiotherapy (conditions is the comma list from the profile). */
     fun cancerCareOf(conditions: String, treatments: List<String>): Boolean =
@@ -229,7 +229,7 @@ object DangerRules {
             // "how many times today" is a running total, so the notes are counted the one way (data/Occurrences.kt).
             // [recent] never holds the note being evaluated (Repo.recentForRules leaves it out), so it is added once, here.
             // An earlier note with no count and no answers (an abandoned tap) is not one vomit.
-            val last24 = com.suryaprakash.medlog.data.Occurrences.total(recent.filter { it.problemId == problemId && now - it.at <= day && !isEmptyNote(it.count, it.facts) }.map { com.suryaprakash.medlog.data.Occurrences.E(it.at, it.count) } + com.suryaprakash.medlog.data.Occurrences.E(now, num(facts, "count")?.toInt()))
+            val last24 = com.suryaprakash.medlog.data.Occurrences.total(recent.filter { it.problemId == problemId && now - it.at in 0..day && it.facts["better"]?.value != true && !isEmptyNote(it.count, it.facts) }.map { com.suryaprakash.medlog.data.Occurrences.E(it.at, it.count) } + com.suryaprakash.medlog.data.Occurrences.E(now, num(facts, "count")?.toInt()))
             val what = if (problemId == "vomiting") "Vomiting" else "Loose motions"
             val fh = lim.band(if (problemId == "vomiting") "vomit" else "loose")
             // helper lines first; an unset line uses the general number (more than 5, or more than 4 in cancer care)

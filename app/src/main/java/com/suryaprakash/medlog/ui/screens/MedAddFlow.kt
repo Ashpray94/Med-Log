@@ -330,17 +330,21 @@ private fun MedicineFlowPages(nav: Nav, id: Long?) {
                                 else -> o.changeNote
                             }
                         } ?: "started"
-                        val saved = m.copy(
+                        val prepared = m.copy(
                             name = m.name.trim(), strength = m.strength.trim(),
                             times = if (m.asNeeded) "" else times.sorted().joinToString(","),
                             days = if (m.asNeeded || !someDays) "" else m.days,
                             endDate = daysCount.toIntOrNull()?.let { now + it * DAY } ?: m.endDate,
                             pillsLeft = pills.toDoubleOrNull(),
-                            changedAt = if (original == null || change != original?.changeNote) now else m.changedAt,
+                            changedAt = m.changedAt,
                             changeNote = change,
                         )
+                        val scheduleChanged = original?.let { com.suryaprakash.medlog.data.MedicineSchedule.changed(it, prepared) } == true
+                        val saved = prepared.copy(changedAt = if (original == null || scheduleChanged || change != original?.changeNote) now else prepared.changedAt,
+                            changeNote = if (scheduleChanged) "times changed" else change)
                         val mid = if (id == null) app.viewDb.medicines().insert(saved) else { app.viewDb.medicines().update(saved); id }
-                        app.viewDb.doses().dropFuture(mid, now)
+                        // Obsolete reminders are cancelled and synced; completed history is retained.
+                        Scheduler.reconcileSchedules(ctx, app.viewDb)
                         Scheduler.reschedule(ctx)
                         app.viewDb.medicines().get(mid)?.let { CalendarSync.syncMedicine(ctx, it) }
                         savedFeedback(ctx); app.refreshWidgets(); nav.back()

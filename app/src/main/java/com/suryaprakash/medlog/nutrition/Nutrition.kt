@@ -1,5 +1,10 @@
 package com.suryaprakash.medlog.nutrition
 
+import androidx.room.withTransaction
+import com.suryaprakash.medlog.data.ReportIntegrity
+import com.suryaprakash.medlog.data.MedicineSchedule
+import com.suryaprakash.medlog.data.shown
+import com.suryaprakash.medlog.data.Occurrences
 import android.content.Context
 import com.suryaprakash.medlog.data.DAY
 import com.suryaprakash.medlog.data.DoseStatus
@@ -51,14 +56,16 @@ object Nutrition {
 
     suspend fun build(ctx: Context, days: Int, now: Long = System.currentTimeMillis()): Report {
         val app = ctx.medlog
+        val db = app.viewDb
+        return db.withTransaction {
         val zone = ZoneId.systemDefault()
         fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
-        val today = LocalDate.now(zone)
+        val today = day(now)
         val start = today.minusDays(days - 1L)
         val from = start.atStartOfDay(zone).toInstant().toEpochMilli()
 
         // what was eaten
-        val foods = app.viewDb.notes().kindSince(Kind.FOOD, from)
+        val foods = ReportIntegrity.notes(db.notes().kindSince(Kind.FOOD, from), from, now + 1, now)
         val perDay = mutableMapOf<LocalDate, Triple<Double, Double, MutableList<String>>>()
         fun add(dd: LocalDate, k: Double, pr: Double, what: String) {
             val cur = perDay[dd] ?: Triple(0.0, 0.0, mutableListOf())
@@ -72,20 +79,20 @@ object Nutrition {
         }
 
         // feeds: scheduled like medicines, counted when given
-        val meds = app.viewDb.medicines().all().filter { it.form == "feed" }.associateBy { it.id }
+        val meds = db.medicines().all().filter { it.form == "feed" }.associateBy { it.id }
         val infoJson = app.settings.getString("feed_info")
-        val doses = app.viewDb.doses().between(from, now).filter { it.medicineId in meds }
+        val doses = db.doses().between(from, now).shown().filter { it.medicineId in meds && it.reason != "Stopped" && !MedicineSchedule.obsolete(meds.getValue(it.medicineId), it) }
         val missed = mutableListOf<Missed>()
         doses.forEach { dz ->
             val m = meds[dz.medicineId] ?: return@forEach
             val ml = Feeds.ml(m.amount)
             val info = Feeds.infoOf(m, infoJson)
             when {
-                dz.status == DoseStatus.TAKEN -> add(day(dz.actedAt ?: dz.scheduledAt), info?.kcal ?: 0.0, info?.protein ?: 0.0, "${m.name} ${ml.roundToInt()} ml")
-                dz.status == DoseStatus.MISSED || dz.status == DoseStatus.SKIPPED || dz.scheduledAt < now - 2 * 3600_000L -> missed.add(Missed(dz.scheduledAt, m.name, ml))
+                dz.status == DoseStatus.TAKEN && (dz.actedAt ?: dz.scheduledAt) in from..now -> add(day(dz.actedAt ?: dz.scheduledAt), info?.kcal ?: 0.0, info?.protein ?: 0.0, "${m.name} ${ml.roundToInt()} ml")
+                dz.status != DoseStatus.TAKEN && (dz.status == DoseStatus.MISSED || dz.status == DoseStatus.SKIPPED || dz.scheduledAt < now - 2 * 3600_000L) -> missed.add(Missed(dz.scheduledAt, m.name, ml))
             }
         }
-        val water = app.viewDb.notes().kindSince(Kind.WATER, from).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 } }
+        val water = ReportIntegrity.notes(db.notes().kindSince(Kind.WATER, from), from, now + 1, now).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 } }
 
         val dayList = (0 until days).map { k ->
             val dd = start.plusDays(k.toLong())
@@ -98,7 +105,7 @@ object Nutrition {
 
         // weight over the period, or the last 30 days if the period is short
         val wFrom = minOf(from, now - 30 * DAY)
-        val weights = app.viewDb.notes().kindSince(Kind.READING, wFrom).mapNotNull { n ->
+        val weights = ReportIntegrity.notes(db.notes().kindSince(Kind.READING, wFrom), wFrom, now + 1, now).mapNotNull { n ->
             runCatching { JSONObject(n.details) }.getOrNull()?.takeIf { it.optString("type") == "weight" }?.let { n.occurredAt to it.getDouble("v1") }
         }.sortedBy { it.first }
         val weightChange = if (weights.size >= 2) weights.last().second - weights.first().second else null
@@ -116,15 +123,15 @@ object Nutrition {
         kTarget?.takeIf { logged.isNotEmpty() }?.let { t ->
             val pct = 100 * avgKcal / t
             when {
-                pct < 60 -> findings.add(Finding("Eating far too little: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day (${pct.roundToInt()}%)", "RED"))
-                pct < 85 -> findings.add(Finding("Eating less than needed: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day (${pct.roundToInt()}%)", "AMBER"))
-                else -> findings.add(Finding("Calories meet the target: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day", "GREEN"))
+                pct < 60 -> findings.add(Finding("Low logged calories: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day (${pct.roundToInt()}%)", "RED"))
+                pct < 85 -> findings.add(Finding("Logged calories below target: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day (${pct.roundToInt()}%)", "AMBER"))
+                else -> findings.add(Finding("Logged calories meet the target: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day", "GREEN"))
             }
         }
         pTarget?.takeIf { logged.isNotEmpty() }?.let { t ->
             val pct = 100 * avgProtein / t
-            if (pct < 80) findings.add(Finding("Protein low: ${avgProtein.roundToInt()} of ${t.roundToInt()} g a day (${pct.roundToInt()}%)", if (pct < 60) "RED" else "AMBER"))
-            else findings.add(Finding("Protein enough: ${avgProtein.roundToInt()} of ${t.roundToInt()} g a day", "GREEN"))
+            if (pct < 80) findings.add(Finding("Low logged protein: ${avgProtein.roundToInt()} of ${t.roundToInt()} g a day (${pct.roundToInt()}%)", if (pct < 60) "RED" else "AMBER"))
+            else findings.add(Finding("Logged protein meets the target: ${avgProtein.roundToInt()} of ${t.roundToInt()} g a day", "GREEN"))
         }
         weightChange?.let { ch ->
             val pct = 100 * ch / weights.first().second
@@ -138,14 +145,15 @@ object Nutrition {
         if (missed.isNotEmpty()) findings.add(Finding("${missed.size} feed${if (missed.size == 1) "" else "s"} missed", if (missed.size >= 3) "RED" else "AMBER"))
         val gaps = dayList.count { !it.logged && it.date != today }
         if (gaps > 0 && logged.isNotEmpty()) findings.add(Finding("Nothing logged on $gaps day${if (gaps == 1) "" else "s"}", "AMBER"))
+        if (logged.isNotEmpty()) findings.add(Finding("Based on ${logged.size} logged day(s); incomplete meal records cannot establish total intake", "AMBER"))
         val order = mapOf("RED" to 0, "AMBER" to 1, "GREEN" to 2)
         val sorted = findings.sortedBy { order[it.level] }
 
         // what else was noticed that bears on eating
         val watch = mapOf("nausea" to "Nausea", "vomiting" to "Vomiting", "no_appetite" to "No appetite", "diarrhea" to "Loose stools", "diarrhoea" to "Loose stools",
             "constipation" to "Constipation", "swallowing" to "Trouble swallowing", "choking" to "Choking", "weight_loss" to "Losing weight")
-        val observed = app.viewDb.notes().symptomsSince(from).filter { it.problemId in watch }.groupBy { watch[it.problemId]!! }
-            .map { (k, v) -> "$k: ${v.size} time${if (v.size == 1) "" else "s"}, last ${d(v.maxOf { it.occurredAt })}" }
+        val observed = ReportIntegrity.notes(db.notes().symptomsSince(from), from, now + 1, now).filter { Occurrences.isOccurrence(it) && it.problemId in watch }.groupBy { watch[it.problemId]!! }
+            .map { (k, v) -> "$k: ${ReportIntegrity.countWords(v)}, last ${d(v.maxOf { it.occurredAt })}" }
 
         // what changed in the feeds
         val changes = meds.values.filter { it.changedAt >= from }.map { m ->
@@ -163,6 +171,7 @@ object Nutrition {
                 when { m.startDate >= from -> "Started ${d(m.startDate)}"; m.changedAt >= from -> "${m.changeNote.ifBlank { "Changed" }} ${d(m.changedAt)}"; else -> null })
         }
         val headline = sorted.firstOrNull() ?: Finding("Nothing logged yet", "AMBER")
-        return Report(dayList, kTarget, pTarget, docK != null, avgKcal, avgProtein, weights, weightChange, weightDays, headline, sorted, missed, changes, observed, feeds, logged.size, feedLines)
+        Report(dayList, kTarget, pTarget, docK != null, avgKcal, avgProtein, weights, weightChange, weightDays, headline, sorted, missed, changes, observed, feeds, logged.size, feedLines)
+        }
     }
 }

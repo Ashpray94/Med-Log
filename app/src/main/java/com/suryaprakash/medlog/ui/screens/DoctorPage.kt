@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material3.Icon
 import com.suryaprakash.medlog.ui.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +84,9 @@ import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.steady
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -104,7 +108,22 @@ fun DoctorScreen(nav: Nav) {
     var busy by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
     var nut by remember { mutableStateOf<com.suryaprakash.medlog.nutrition.Nutrition.Report?>(null) }
-    LaunchedEffect(days) { note = withContext(Dispatchers.IO) { buildNote(ctx, days) }; nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)) } }
+    val selectedPatient by com.suryaprakash.medlog.data.Viewing.pairId.collectAsState()
+    LaunchedEffect(days, selectedPatient) {
+        note = null; nut = null
+        val db = ctx.medlog.viewDb
+        callbackFlow {
+            val observer = object : androidx.room.InvalidationTracker.Observer("notes", "medicines", "doses", "profile") {
+                override fun onInvalidated(tables: Set<String>) { trySend(Unit) }
+            }
+            db.invalidationTracker.addObserver(observer)
+            trySend(Unit)
+            awaitClose { db.invalidationTracker.removeObserver(observer) }
+        }.conflate().collect {
+            note = withContext(Dispatchers.IO) { buildNote(ctx, days) }
+            nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)) }
+        }
+    }
     val nutShown = nut?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }
     val n = note
     val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share to send it, or Print."
@@ -113,8 +132,8 @@ fun DoctorScreen(nav: Nav) {
     fun pdf(then: (java.io.File) -> Unit) { scope.launch {
         busy = true
         val f = withContext(Dispatchers.IO) {
-            val r = nut ?: com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)).also { nut = it }
-            Pdf.write(ctx, n!!, r.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() })
+            val r = com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)).also { nut = it }
+            Pdf.write(ctx, buildNote(ctx, days), r.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() })
         }
         busy = false; then(f)
     } }
@@ -284,7 +303,7 @@ private fun Stats(n: DoctorNote) {
     val pct = if (due == 0) null else done * 100 / due
     Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("${n.symptoms.size}", "Symptoms", p.ink, p.card)
-        StatCard("${urgent + watch}", "Need care", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
+        StatCard("${urgent + watch}", "Recorded alerts", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
         // doses taken are told with the medicines below, where they make sense
         @Suppress("UNUSED_VARIABLE") val unused = pct
     }
@@ -391,11 +410,12 @@ private fun SymptomCard(r: DoctorNote.Row, days: Int, onClick: () -> Unit) {
         }
         // the two numbers a doctor asks first
         Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniCard("Times", if (r.total == 1) "Once" else "${r.total}", if (r.total > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
-            r.sevHigh?.let { MiniCard("Worst pain", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
+            MiniCard("Symptom reports", "${r.reportCount}", if (r.total > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
+            r.sevHigh?.let { MiniCard("Highest severity recorded", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
         }
         if (r.daily.count { it > 0 } > 1) DayStrip(r.daily, tone, days)
         Spacer(Modifier.height(4.dp))
+        Line(); Fact("Last 24 hours", "${r.reports24h} symptom reports recorded")
         r.began?.let { Line(); Fact("Started", it) }
         r.trend?.let { t ->
             Line()
@@ -408,7 +428,7 @@ private fun SymptomCard(r: DoctorNote.Row, days: Int, onClick: () -> Unit) {
         if (r.places.isNotEmpty()) { Line(); Fact("Where", r.places.joinToString(", ")) }
         if (r.feels.isNotEmpty()) { Line(); Fact("What it feels like", r.feels.joinToString(", ")) }
         if (r.flags.isNotEmpty()) { Line(); Fact("Warning signs", r.flags.joinToString(", ") { it.replaceFirstChar(Char::uppercase) }, p.red) }
-        r.quote?.let { Line(); Fact("In the patient's words", "“$it”") }
+        r.quote?.let { Line(); Fact("Additional note" + (r.quoteDate?.let { date -> " · $date" } ?: ""), "“$it”") }
         Spacer(Modifier.height(4.dp))
     }
 }
@@ -434,7 +454,7 @@ private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
     val sc = LocalScale.current
     val max = (daily.maxOrNull() ?: 1).coerceAtLeast(1)
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Each bar is one day", fontSize = sc.small, color = p.inkSoft)
+        Text("Recorded daily counts; empty days mean no report", fontSize = sc.small, color = p.inkSoft)
         Canvas(Modifier.fillMaxWidth().height(32.dp)) {
             val slot = size.width / daily.size
             val bw = (slot * 0.64f).coerceAtLeast(1.5f)

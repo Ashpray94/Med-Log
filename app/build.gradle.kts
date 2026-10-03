@@ -31,8 +31,8 @@ android {
         applicationId = "com.suryaprakash.medlog"
         minSdk = 23
         targetSdk = 35
-        versionCode = 2141
-        versionName = "2.14.1"
+        versionCode = 2160
+        versionName = "2.16.0"
         vectorDrawables { useSupportLibrary = true }
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Where "Report a problem" sends reports: a PRIVATE GitHub repo. The token is never committed; it comes from the
@@ -60,6 +60,8 @@ android {
             if (hasKey) signingConfig = signingConfigs.getByName("shared")
         }
         debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
             // same key as release, so a debug build can be upgraded to release without losing data
             if (hasKey) signingConfig = signingConfigs.getByName("shared")
         }

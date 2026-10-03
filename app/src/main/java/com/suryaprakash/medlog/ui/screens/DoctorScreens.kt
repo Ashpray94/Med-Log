@@ -61,6 +61,7 @@ import com.suryaprakash.medlog.ui.Title
 import com.suryaprakash.medlog.ui.Toggle
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.savedFeedback
+import androidx.room.withTransaction
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,10 +74,13 @@ suspend fun buildNote(ctx: android.content.Context, days: Int): com.suryaprakash
     val app = ctx.medlog
     val zone = ZoneId.systemDefault()
     val to = LocalDate.now().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-    val from = to - days * DAY
-    return com.suryaprakash.medlog.doctor.DoctorNoteBuilder(app.catalogue, app.describe).build(
-        app.viewRepo.profile(), from, to, app.viewDb.notes().between(from, to), app.viewDb.medicines().all(), app.viewDb.doses().between(from, to),
-        translit = { com.suryaprakash.medlog.speech.Translit.toLatin(it) })
+    val from = LocalDate.now().plusDays(1).minusDays(days.toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
+    val db = app.viewDb
+    return db.withTransaction {
+        com.suryaprakash.medlog.doctor.DoctorNoteBuilder(app.catalogue, app.describe).build(
+            db.profile().get() ?: com.suryaprakash.medlog.data.Profile(), from, to, db.notes().between(from, to), db.medicines().all(), db.doses().between(from, to),
+            translit = { com.suryaprakash.medlog.speech.Translit.toLatin(it) })
+    }
 }
 
 /** After the visit (the appointment-log form you shared): 30 seconds of voice fills it in. */

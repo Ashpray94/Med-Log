@@ -40,7 +40,7 @@ class ClinicalRulesTest {
 
     // ───────── rules version ─────────
 
-    @Test fun versionIsBumped() = assertEquals("rules-0.2.0-unreviewed", DangerRules.VERSION)
+    @Test fun versionIsBumped() = assertEquals("rules-0.2.1-unreviewed", DangerRules.VERSION)
 
     // ───────── cancer care ─────────
 

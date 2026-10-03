@@ -168,7 +168,7 @@ fun NotesScreen(nav: Nav) {
     val medForms by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
     // feeds are food, not medicine: counted in their own group
     val feedIds = medForms.filter { it.form == "feed" }.map { it.id }.toSet()
-    val doses = allDoses.filter { it.medicineId !in feedIds }
+    val doses = allDoses.planned().filter { it.medicineId !in feedIds }
     val feedDoses = allDoses.filter { it.medicineId in feedIds }
     // "Watch" only for something overdue, never for doses still to come later today
     fun late(list: List<com.suryaprakash.medlog.data.Dose>) = list.any { it.status == DoseStatus.MISSED || (it.status != DoseStatus.TAKEN && it.status != DoseStatus.SKIPPED && it.scheduledAt < System.currentTimeMillis() - 30 * 60_000) }
@@ -304,7 +304,7 @@ private fun DaySummary(app: MedLogApp, notes: List<Note>, taken: Int, due: Int, 
         symptoms.groupBy { it.problemId ?: it.text }.forEach { (pid, list) ->
             val label = app.catalogue.problem(pid)?.label ?: list.first().text
             val worst = list.maxByOrNull { levelRank(it.triage) }?.triage ?: "GREEN"
-            HistoryGroup(label, "${list.size} time${if (list.size == 1) "" else "s"} · ${times(list)}", { SpriteIcon(pid, 44.dp) }, worst, open == "s$pid", { toggle("s$pid") }) {
+            HistoryGroup(label, "${com.suryaprakash.medlog.data.ReportIntegrity.countWords(list)} · ${times(list)}", { SpriteIcon(pid, 44.dp) }, worst, open == "s$pid", { toggle("s$pid") }) {
                 list.forEachIndexed { i, n -> val lastE = i == list.lastIndex; Entry(n, label, shortDetail(app, factsFromJson(n.details), n.occurredAt), n.triage, last = lastE) }
             }
         }
@@ -464,15 +464,16 @@ fun ProblemHistoryScreen(nav: Nav, problemId: String) {
     val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list)
     val counts = days.map { d -> perDay[d] ?: 0 }
     val total = com.suryaprakash.medlog.data.Occurrences.total(list)
-    Screen(label, "$label: noted $total times in the last 3 months.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen(label, "$label: ${com.suryaprakash.medlog.data.ReportIntegrity.countWords(list)} in the last 3 months.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SpriteIcon(problemId, 56.dp); Spacer(Modifier.width(14.dp))
                 Column {
-                    Text("$total ${if (total == 1) "time" else "times"}", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text(com.suryaprakash.medlog.data.ReportIntegrity.countWords(list), fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
                     Text("in the last 3 months", fontSize = sc.small, color = p.inkSoft)
                 }
             }
+            Text("Chart: recorded daily counts over the last 14 days", fontSize = sc.small, color = p.inkSoft)
             val max = (counts.maxOrNull() ?: 0).coerceAtLeast(1)
             Canvas(Modifier.fillMaxWidth().height(72.dp)) {
                 val w = size.width / days.size
