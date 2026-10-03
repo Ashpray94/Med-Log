@@ -33,7 +33,7 @@ class ReportIntegrityHotfixTest {
         val r = report(listOf(old, note(2, now - 10 * HOUR), note(3, now - 2 * DAY, better = true)))
         assertEquals(1, r.symptoms.single().reports24h)
         assertEquals(2, r.symptoms.single().reportCount)
-        assertTrue(r.concerns.single().contains("Historical alert recorded"))
+        assertTrue(r.concerns.single().contains("Noted 2 times"))
         assertFalse(r.concerns.joinToString().contains("6 times in 24 hours"))
         assertNull(r.symptoms.single().trend) // old improvement predates recurrence
     }
@@ -42,7 +42,7 @@ class ReportIntegrityHotfixTest {
         val r = report(ns).symptoms.single()
         assertEquals(1, r.reportCount) // bare record is transparently a report, not an episode claim
         assertEquals(1, r.total)
-        assertTrue(r.whenText.contains("symptom report"))
+        assertTrue(r.whenText.contains("Noted once"))
         assertFalse(r.whenText.contains(" times"))
     }
     @Test fun duplicateIdentityUsesNewestIncludingDeletionBeforeFiltering() {
@@ -70,8 +70,8 @@ class ReportIntegrityHotfixTest {
         val active = Medicine(id = 1, name = "Sompraz IT", startDate = now - 5 * DAY, times = "08:00")
         val old = active.copy(id = 2, active = false, changedAt = now - 5 * DAY, changeNote = "stopped")
         val r = report(emptyList(), listOf(active, old))
-        assertTrue(r.medicines.first().change.contains("Currently active"))
-        assertTrue(r.medicines.last().change.contains("matching medicine is currently active"))
+        assertEquals("Sompraz IT", r.medicines.single().name)
+        assertEquals(1, r.medicines.size)
         assertFalse(r.medicines.last().change.contains("stopped"))
         assertFalse(ReportIntegrity.continued(old.copy(strength = "different"), listOf(active)))
     }
@@ -150,6 +150,33 @@ class ReportIntegrityHotfixTest {
         assertTrue(r.missed.isEmpty())
         assertTrue(r.findings.any { "cannot establish total intake" in it.text })
         assertFalse(r.findings.any { "Eating far too little" in it.text })
+    }
+
+    @Test fun medicineEditsKeepIdentityAndPastDoseDetails() = runBlocking {
+        val mid = app.db.medicines().insert(Medicine(name = "Test feed", form = "feed", amount = "100 ml", asNeeded = true, strength = "old recipe"))
+        val old = app.db.medicines().get(mid)!!
+        val did = app.db.doses().insert(Dose(medicineId = mid, scheduledAt = System.currentTimeMillis() - HOUR, status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis() - HOUR))
+        val saved = MedicineRecords.save(app, old, old.copy(name = "Edited feed", amount = "200 ml", strength = "new recipe"))
+        assertEquals(mid, saved)
+        assertEquals(old.uid, app.db.medicines().get(mid)!!.uid)
+        val historical = DoseSnapshot.medicine(app.db.doses().get(did)!!, app.db.medicines().get(mid)!!)
+        assertEquals("100 ml", historical.amount)
+        assertEquals("old recipe", historical.strength)
+        MedicineRecords.remove(app, mid)
+        assertFalse(app.db.medicines().get(mid)!!.active)
+        assertEquals(DoseStatus.TAKEN, app.db.doses().get(did)!!.status)
+    }
+    @Test fun legacySyncDoesNotEraseStoredDoseSnapshot() = runBlocking {
+        val db = MedDb.open(app, "snapshot-sync-fixture")
+        try {
+            val mid = db.medicines().insert(Medicine(name = "Test", asNeeded = true))
+            val med = db.medicines().get(mid)!!
+            val did = db.doses().insert(Dose(medicineId = mid, scheduledAt = now, snapshot = DoseSnapshot.encode(med)))
+            val dose = db.doses().get(did)!!
+            val j = org.json.JSONObject().put("uid", dose.uid).put("u", dose.updatedAt + 1).put("med", med.uid).put("at", now).put("status", DoseStatus.TAKEN).put("acted", now)
+            Sync.apply(db, org.json.JSONObject().put("doses", org.json.JSONArray().put(j)), hub = false)
+            assertEquals(dose.snapshot, db.doses().get(did)!!.snapshot)
+        } finally { db.close() }
     }
 
 }

@@ -24,6 +24,8 @@ class DatabaseUpgradeTest {
 
     @Test fun `repaired v5 upgrades without losing existing records`() = migrateFixture("schema-v5-repair.json", shipped = true)
 
+    @Test fun `production v6 upgrades preserving dose history`() = migrateFixture("schema-v6-hotfix.json", shipped = true)
+
     private fun migrateFixture(resource: String, shipped: Boolean) {
         val context = RuntimeEnvironment.getApplication()
         val name = "upgrade-${resource.hashCode()}-${System.nanoTime()}.db"
@@ -37,7 +39,7 @@ class DatabaseUpgradeTest {
 
         // Opening as the current entity model runs M4_6 and Room's full schema validation.
         val db = Room.databaseBuilder(context, MedDb::class.java, name)
-            .addMigrations(MedDb.M4_6, MedDb.M5_6)
+            .addMigrations(MedDb.M4_6, MedDb.M5_6, MedDb.M6_7)
             .allowMainThreadQueries()
             .build()
         try {

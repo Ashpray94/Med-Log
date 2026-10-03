@@ -84,7 +84,7 @@ object Nutrition {
         val doses = db.doses().between(from, now).shown().filter { it.medicineId in meds && it.reason != "Stopped" && !MedicineSchedule.obsolete(meds.getValue(it.medicineId), it) }
         val missed = mutableListOf<Missed>()
         doses.forEach { dz ->
-            val m = meds[dz.medicineId] ?: return@forEach
+            val m = meds[dz.medicineId]?.let { com.suryaprakash.medlog.data.DoseSnapshot.medicine(dz, it) } ?: return@forEach
             val ml = Feeds.ml(m.amount)
             val info = Feeds.infoOf(m, infoJson)
             when {

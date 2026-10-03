@@ -234,7 +234,7 @@ object Sync {
                 // by id; else the same dose (medicine and time) kept under another id: both phones settle on the smaller id
                 val old = db.doses().byUid(d.uid) ?: db.doses().at(mid, d.scheduledAt)
                 if (old == null) runCatching { db.doses().insert(d.copy(id = 0, updatedAt = t(d.updatedAt))) }
-                else if (d.updatedAt > old.updatedAt) db.doses().update(d.copy(id = old.id, uid = minOf(old.uid, d.uid), updatedAt = t(d.updatedAt)))
+                else if (d.updatedAt > old.updatedAt) db.doses().update(d.copy(id = old.id, uid = minOf(old.uid, d.uid), snapshot = d.snapshot.ifBlank { old.snapshot }, updatedAt = t(d.updatedAt)))
                 else if (d.uid < old.uid) db.doses().update(old.copy(uid = d.uid))
             }
         }
@@ -287,10 +287,10 @@ object Sync {
         pillsLeft = j.optDouble("left", -1.0).takeIf { it >= 0 }, active = j.optBoolean("active", true), bloodThinner = j.optBoolean("thinner"), changedAt = j.optLong("changed"),
         changeNote = j.optString("note"), shape = j.optString("shape"), color = j.optString("color"))
 
-    private fun doseJson(d: Dose, medUid: String) = JSONObject().put("uid", d.uid).put("u", d.updatedAt).put("med", medUid).put("at", d.scheduledAt).put("status", d.status)
+    private fun doseJson(d: Dose, medUid: String) = JSONObject().put("uid", d.uid).put("u", d.updatedAt).put("med", medUid).put("at", d.scheduledAt).put("status", d.status).put("snapshot", d.snapshot)
         .put("acted", d.actedAt ?: 0).put("reason", d.reason ?: "")
     private fun doseFrom(j: JSONObject, medId: Long) = Dose(uid = j.getString("uid"), updatedAt = j.getLong("u"), medicineId = medId, scheduledAt = j.getLong("at"),
-        status = j.optString("status", DoseStatus.DUE), actedAt = j.optLong("acted").takeIf { it > 0 }, reason = j.optString("reason").ifBlank { null })
+        snapshot = j.optString("snapshot"), status = j.optString("status", DoseStatus.DUE), actedAt = j.optLong("acted").takeIf { it > 0 }, reason = j.optString("reason").ifBlank { null })
 
     private fun profileJson(p: Profile) = JSONObject().put("u", p.updatedAt).put("name", p.name).put("dob", p.dob).put("sex", p.sex).put("blood", p.bloodGroup).put("hospitalId", p.hospitalId)
         .put("conditions", p.conditions).put("allergies", p.allergies).put("doctorName", p.doctorName).put("doctorPhone", p.doctorPhone).put("thinner", p.onBloodThinner)
@@ -352,7 +352,7 @@ object Doses {
     /** An extra feed, outside the feed's times: given now or at [at]. */
     suspend fun extra(ctx: Context, medicineId: Long, at: Long = System.currentTimeMillis()) {
         val db = ctx.medlog.viewDb
-        db.doses().insert(Dose(medicineId = medicineId, scheduledAt = at, status = DoseStatus.TAKEN, actedAt = at, reason = EXTRA_FEED))
+        db.doses().insert(Dose(medicineId = medicineId, snapshot = db.medicines().get(medicineId)?.let(DoseSnapshot::encode).orEmpty(), scheduledAt = at, status = DoseStatus.TAKEN, actedAt = at, reason = EXTRA_FEED))
         if (mirror() == null) ctx.medlog.refreshWidgets()
     }
     /** Takes back an extra feed noted by mistake. */

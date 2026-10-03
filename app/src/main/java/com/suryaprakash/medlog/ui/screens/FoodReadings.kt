@@ -1,4 +1,5 @@
 package com.suryaprakash.medlog.ui.screens
+import com.suryaprakash.medlog.data.shown
 import com.suryaprakash.medlog.data.planned
 import com.suryaprakash.medlog.data.extra
 import androidx.compose.material.icons.rounded.Schedule
@@ -118,8 +119,8 @@ fun FoodScreen(nav: Nav) {
     var feedMenu by remember { mutableStateOf<com.suryaprakash.medlog.data.Medicine?>(null) }
     val (start, end) = remember { com.suryaprakash.medlog.meds.Scheduler.today() }
     val todayFood by app.viewDb.notes().kindSinceFlow(Kind.FOOD, start).collectAsState(emptyList())
-    val allMeds by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
-    val feeds = allMeds.filter { it.form == "feed" }
+    val allMeds by app.viewDb.medicines().allFlow().collectAsState(emptyList())
+    val feeds = allMeds.filter { it.form == "feed" && it.active }
     val doses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
     LaunchedEffect(Unit) { water = app.viewRepo.waterToday() }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photo = pending }
@@ -173,7 +174,7 @@ fun FoodScreen(nav: Nav) {
                 }) }
             }
             else -> {
-                val feedDoses = doses.filter { d -> feeds.any { it.id == d.medicineId } }
+                val feedDoses = doses.shown().filter { d -> feeds.any { it.id == d.medicineId } }
                 val planned = feedDoses.planned()
                 com.suryaprakash.medlog.ui.SectionHeader("Today's feeds",
                     if (feeds.isEmpty()) "None set up" else if (feedDoses.isEmpty()) "None due today" else "${planned.count { it.status == com.suryaprakash.medlog.data.DoseStatus.TAKEN || (it.status == com.suryaprakash.medlog.data.DoseStatus.SKIPPED && it.reason == com.suryaprakash.medlog.data.FOOD_INSTEAD) }} of ${planned.size} done",
@@ -194,18 +195,21 @@ fun FoodScreen(nav: Nav) {
                 }
                 // the days before today, right here: each day once, each feed's name once, its times under it
                 if (feeds.isNotEmpty()) FeedHistory(feeds)
+                com.suryaprakash.medlog.ui.SectionHeader("Manage feeds", "Change the recipe, amount or times", null)
+                feeds.forEach { m -> com.suryaprakash.medlog.ui.Group {
+                    com.suryaprakash.medlog.ui.ValueRow(m.name, "Edit", sub = m.amount) { nav.go(Route.FeedEdit(m.id)) }
+                } }
+                allMeds.filter { it.form == "feed" && !it.active && it.changeNote != "removed" }.forEach { m -> com.suryaprakash.medlog.ui.Group {
+                    com.suryaprakash.medlog.ui.ValueRow(m.name, "Edit", sub = "Stopped") { nav.go(Route.FeedEdit(m.id)) }
+                } }
             }
         }
     }
     if (goalSheet) WaterGoalSheet(s.waterGoal, onDone = { g -> app.settings.update { it.copy(waterGoal = g) }; goalSheet = false }, onDismiss = { goalSheet = false })
     feedMenu?.let { m ->
-        FeedMenu(m.name, onDelete = {
+        FeedMenu(m.name, onEdit = { feedMenu = null; nav.go(Route.FeedEdit(m.id)) }, onDelete = {
             feedMenu = null
-            scope.launch {
-                app.viewDb.medicines().update(m.copy(active = false, changedAt = System.currentTimeMillis(), changeNote = "stopped"))
-                app.viewDb.doses().dropFuture(m.id, System.currentTimeMillis())
-                com.suryaprakash.medlog.meds.Scheduler.stopMedicine(ctx, m.copy(active = false))
-            }
+            scope.launch { com.suryaprakash.medlog.data.MedicineRecords.remove(ctx, m.id) }
         }, onDismiss = { feedMenu = null })
     }
     LaunchedEffect(feedSheet) { if (feedSheet) { feedSheet = false; nav.go(Route.FeedNew) } }
@@ -301,13 +305,14 @@ private fun MealMenu(title: String, onChange: () -> Unit, onDelete: () -> Unit, 
 /** Stop a feed: its reminders end; what was given stays in the record. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun FeedMenu(name: String, onDelete: () -> Unit, onDismiss: () -> Unit) {
+private fun FeedMenu(name: String, onEdit: () -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             com.suryaprakash.medlog.ui.SectionHeader(name, "Past feeds stay in the record", null)
-            BigButton("Stop this feed", tone = Tone.OUTLINE, icon = Icons.Rounded.Delete, onClick = onDelete)
+            BigButton("Edit feed", tone = Tone.PRIMARY, icon = Icons.Rounded.Edit, onClick = onEdit)
+            BigButton("Remove feed from list", tone = Tone.OUTLINE, icon = Icons.Rounded.Delete, onClick = onDelete)
         }
     }
 }
@@ -317,29 +322,52 @@ private fun FeedMenu(name: String, onDelete: () -> Unit, onDismiss: () -> Unit) 
  * at a time), how much and how often, and how it's given. Saved, it rings like a medicine.
  */
 @Composable
-fun FeedNewScreen(nav: Nav) {
+fun FeedNewScreen(nav: Nav, id: Long? = null) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val p = LocalPalette.current
     val sc = LocalScale.current
     val scope = rememberCoroutineScope()
+    var original by remember { mutableStateOf<com.suryaprakash.medlog.data.Medicine?>(null) }
     var name by remember { mutableStateOf("") }
     val parts = remember { androidx.compose.runtime.mutableStateListOf<com.suryaprakash.medlog.nutrition.Feeds.Part>() }
     var ml by remember { mutableStateOf(200) }
-    var perDay by remember { mutableStateOf(4) }
     var tube by remember { mutableStateOf(0) }
+    var active by remember { mutableStateOf(true) }
+    var weekdays by remember { mutableStateOf("") }
+    var startDate by remember { mutableStateOf(java.time.LocalDate.now().toString()) }
+    var endDate by remember { mutableStateOf("") }
     var addingPart by remember { mutableStateOf(false) }
-    val times = (0 until perDay).map { i -> val h = if (perDay == 1) 8 else 7 + (14 * i) / (perDay - 1); "%02d:00".format(h) }
-    val ok = name.isNotBlank() && parts.isNotEmpty()
-    Screen("New feed", "Set how it's given, a name, what goes in, then how much and how often.", onHome = { nav.home() }, onBack = { nav.back() },
+    var editingPart by remember { mutableStateOf<Int?>(null) }
+    val times = remember { androidx.compose.runtime.mutableStateListOf("07:00", "11:00", "16:00", "21:00") }
+    val perDay = times.size
+    LaunchedEffect(id) {
+        if (id != null) app.viewDb.medicines().get(id)?.let { m ->
+            original = m; name = m.name; ml = com.suryaprakash.medlog.nutrition.Feeds.ml(m.amount).toInt()
+            active = m.active; weekdays = m.days
+            val zone = java.time.ZoneId.systemDefault()
+            startDate = java.time.Instant.ofEpochMilli(m.startDate).atZone(zone).toLocalDate().toString()
+            endDate = m.endDate?.let { java.time.Instant.ofEpochMilli(it).atZone(zone).toLocalDate().toString() }.orEmpty()
+            times.clear(); times.addAll(m.times.split(",").filter { it.isNotBlank() })
+            com.suryaprakash.medlog.nutrition.Feeds.infoOf(m, app.settings.getString("feed_info"))?.let { info -> parts.clear(); parts.addAll(info.parts); tube = if (info.tube) 1 else 0 }
+        }
+    }
+    val start = runCatching { java.time.LocalDate.parse(startDate) }.getOrNull()
+    val end = endDate.takeIf { it.isNotBlank() }?.let { runCatching { java.time.LocalDate.parse(it) }.getOrNull() }
+    val ok = name.isNotBlank() && (id != null || parts.isNotEmpty()) && times.isNotEmpty() && times.distinct().size == times.size && start != null && (endDate.isBlank() || (end != null && !end.isBefore(start)))
+    Screen(if (id == null) "New feed" else "Edit feed", "Set how it's given, a name, what goes in, then how much and how often.", onHome = { nav.home() }, onBack = { nav.back() },
         subtitle = "Four steps, one at a time",
         actions = {
             BigButton("Done", enabled = ok, onClick = {
                 scope.launch {
-                    app.viewDb.medicines().insert(com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed", amount = "$ml ml", times = times.joinToString(","),
+                    val zone = java.time.ZoneId.systemDefault()
+                    val base = original ?: com.suryaprakash.medlog.data.Medicine(name = name.trim(), form = "feed")
+                    val saved = base.copy(name = name.trim(), form = "feed", amount = "$ml ml", times = times.sorted().joinToString(","), days = weekdays,
+                        active = active, startDate = if (original != null && startDate == java.time.Instant.ofEpochMilli(base.startDate).atZone(zone).toLocalDate().toString()) base.startDate else start!!.atStartOfDay(zone).toInstant().toEpochMilli(),
+                        endDate = end?.atStartOfDay(zone)?.toInstant()?.toEpochMilli(),
                         purpose = if (tube == 1) "Feed by tube" else "Feed by mouth", critical = tube == 1,
-                        strength = com.suryaprakash.medlog.nutrition.Feeds.encode(com.suryaprakash.medlog.nutrition.Feeds.Info(parts.toList(), tube == 1))))
-                    com.suryaprakash.medlog.meds.Scheduler.reschedule(ctx)
+                        strength = com.suryaprakash.medlog.nutrition.Feeds.encode(com.suryaprakash.medlog.nutrition.Feeds.Info(parts.toList(), tube == 1)))
+                    com.suryaprakash.medlog.data.MedicineRecords.save(ctx, original, saved)
                     nav.back()
                 }
             })
@@ -374,7 +402,7 @@ fun FeedNewScreen(nav: Nav) {
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(part.name.replaceFirstChar(Char::uppercase), fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        Text(part.name.replaceFirstChar(Char::uppercase), modifier = Modifier.steady("Edit ${part.name}") { editingPart = i }, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
                         Text(listOf(part.amount, "${part.kcal.toInt()} kcal", "${com.suryaprakash.medlog.nlu.fmt1(part.protein)} g protein").filter { it.isNotBlank() }.joinToString(" · "),
                             fontSize = sc.small, color = p.inkSoft)
                     }
@@ -390,23 +418,48 @@ fun FeedNewScreen(nav: Nav) {
             open == 3, { toggle(3) }) {
             com.suryaprakash.medlog.ui.CounterLine("Each feed", "Millilitres", "$ml ml", ml > 50, ml < 600, { ml -= 50 }, { ml += 50 })
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-            com.suryaprakash.medlog.ui.CounterLine("Feeds a day", "A reminder each time", "$perDay", perDay > 1, perDay < 8, { perDay-- }, { perDay++ })
+            com.suryaprakash.medlog.ui.CounterLine("Feeds a day", "A reminder each time", "$perDay", perDay > 1, perDay < 8, { times.removeAt(times.lastIndex) }, { times.add("%02d:00".format((7 + times.size * 2).coerceAtMost(23))) })
+        }
+        com.suryaprakash.medlog.ui.SectionHeader("Reminder times", "Tap a time to change it", null)
+        times.toList().forEachIndexed { i, t ->
+            com.suryaprakash.medlog.ui.ValueRow("Feed ${i + 1}", timeLabelOf(t)) {
+                val lt = java.time.LocalTime.parse(t)
+                android.app.TimePickerDialog(ctx, { _, h, minute -> times[i] = "%02d:%02d".format(h, minute) }, lt.hour, lt.minute, false).show()
+            }
+        }
+        com.suryaprakash.medlog.ui.SectionHeader("Days and dates", "Leave the end date empty to continue", null)
+        listOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday").forEachIndexed { i, label ->
+            val chosen = weekdays.isBlank() || (i + 1).toString() in weekdays.split(",")
+            com.suryaprakash.medlog.ui.Toggle(label, chosen) { on ->
+                val set = (if (weekdays.isBlank()) (1..7).toSet() else weekdays.split(",").mapNotNull { it.toIntOrNull() }.toSet()).toMutableSet()
+                if (on) set.add(i + 1) else if (set.size > 1) set.remove(i + 1)
+                weekdays = if (set.size == 7) "" else set.sorted().joinToString(",")
+            }
+        }
+        BigField("Start date", startDate, { startDate = it }, hint = "YYYY-MM-DD")
+        BigField("End date (optional)", endDate, { endDate = it }, hint = "YYYY-MM-DD")
+        if (id != null) {
+            com.suryaprakash.medlog.ui.Toggle("Currently giving", active) { active = it }
+            var removing by remember { mutableStateOf(false) }
+            BigButton("Remove feed from list", tone = Tone.OUTLINE, onClick = { removing = true })
+            if (removing) FeedMenu(name, onEdit = { removing = false }, onDelete = { scope.launch { com.suryaprakash.medlog.data.MedicineRecords.remove(ctx, id); nav.back() } }, onDismiss = { removing = false })
         }
         Spacer(Modifier.height(12.dp))
     }
+    editingPart?.let { i -> FeedPartSheet(initial = parts[i], onDone = { parts[i] = it; editingPart = null }, onDismiss = { editingPart = null }) }
     if (addingPart) FeedPartSheet(onDone = { parts.add(it); addingPart = false }, onDismiss = { addingPart = false })
 }
 
 /** One thing that goes into a feed, one box per line. */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-private fun FeedPartSheet(onDone: (com.suryaprakash.medlog.nutrition.Feeds.Part) -> Unit, onDismiss: () -> Unit) {
+private fun FeedPartSheet(initial: com.suryaprakash.medlog.nutrition.Feeds.Part? = null, onDone: (com.suryaprakash.medlog.nutrition.Feeds.Part) -> Unit, onDismiss: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
-    var kcal by remember { mutableStateOf("") }
-    var protein by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf(initial?.name.orEmpty()) }
+    var amount by remember { mutableStateOf(initial?.amount.orEmpty()) }
+    var kcal by remember { mutableStateOf(initial?.kcal?.toInt()?.toString().orEmpty()) }
+    var protein by remember { mutableStateOf(initial?.protein?.toString().orEmpty()) }
     com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper, scroll = false) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp).verticalScroll(androidx.compose.foundation.rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(18.dp)) {
@@ -415,14 +468,14 @@ private fun FeedPartSheet(onDone: (com.suryaprakash.medlog.nutrition.Feeds.Part)
             BigField("Amount", amount, { amount = it }, hint = "For example: 2 scoops, 150 ml")
             BigField("Calories (kcal)", kcal, { kcal = it.filter(Char::isDigit).take(4) }, keyboard = androidx.compose.ui.text.input.KeyboardType.Number)
             BigField("Protein (g)", protein, { protein = it.filter { c -> c.isDigit() || c == '.' }.take(4) }, keyboard = androidx.compose.ui.text.input.KeyboardType.Decimal)
-            BigButton("Add item", enabled = name.isNotBlank() && kcal.isNotBlank(), onClick = {
+            BigButton(if (initial == null) "Add item" else "Save item", enabled = name.isNotBlank() && kcal.isNotBlank(), onClick = {
                 onDone(com.suryaprakash.medlog.nutrition.Feeds.Part(name.trim(), amount.trim(), kcal.toDouble(), protein.toDoubleOrNull() ?: 0.0))
             })
         }
     }
 }
 
-private fun timeLabelOf(t: String): String { val h = t.substringBefore(":").toInt(); return "${if (h % 12 == 0) 12 else h % 12} ${if (h < 12) "am" else "pm"}" }
+private fun timeLabelOf(t: String): String = runCatching { java.time.LocalTime.parse(t).format(java.time.format.DateTimeFormatter.ofPattern("h:mm a")) }.getOrDefault(t)
 
 /** A tall glass split into one segment per glass in the day's goal, filled from the bottom as they're drunk. */
 @Composable

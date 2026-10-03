@@ -451,29 +451,30 @@ private fun Empty(text: String) {
 
 /** Every time one problem was noted: a 14-day chart, then a timeline grouped by date. */
 @Composable
-fun ProblemHistoryScreen(nav: Nav, problemId: String) {
+fun ProblemHistoryScreen(nav: Nav, problemId: String, rangeDays: Int = 90) {
     val ctx = LocalContext.current
     val app = ctx.medlog
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val since = remember { System.currentTimeMillis() - 90 * DAY }
+    val zone = ZoneId.systemDefault()
+    val since = remember(rangeDays) { LocalDate.now().plusDays(1).minusDays(rangeDays.toLong()).atStartOfDay(zone).toInstant().toEpochMilli() }
     val all by app.viewDb.notes().symptomsSinceFlow(since).collectAsState(emptyList())
-    val list = all.filter { it.problemId == problemId }.sortedByDescending { it.occurredAt }
+    val list = com.suryaprakash.medlog.data.ReportIntegrity.notes(all, since, System.currentTimeMillis() + 1, System.currentTimeMillis()).filter { it.problemId == problemId }.sortedByDescending { it.occurredAt }
     val label = app.catalogue.problem(problemId)?.label ?: problemId
-    val days = (13 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
-    val perDay = com.suryaprakash.medlog.data.Occurrences.perDayOf(list)
+    val days = (rangeDays - 1 downTo 0).map { LocalDate.now().minusDays(it.toLong()) }
+    val perDay = com.suryaprakash.medlog.data.ReportIntegrity.reports(list).groupingBy { localDate(it.occurredAt) }.eachCount()
     val counts = days.map { d -> perDay[d] ?: 0 }
     val total = com.suryaprakash.medlog.data.Occurrences.total(list)
-    Screen(label, "$label: ${com.suryaprakash.medlog.data.ReportIntegrity.countWords(list)} in the last 3 months.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen(label, "$label: ${com.suryaprakash.medlog.doctor.notedWords(com.suryaprakash.medlog.data.ReportIntegrity.reports(list).size)} in the selected period.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SpriteIcon(problemId, 56.dp); Spacer(Modifier.width(14.dp))
                 Column {
-                    Text(com.suryaprakash.medlog.data.ReportIntegrity.countWords(list), fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
-                    Text("in the last 3 months", fontSize = sc.small, color = p.inkSoft)
+                    Text(com.suryaprakash.medlog.doctor.notedWords(com.suryaprakash.medlog.data.ReportIntegrity.reports(list).size), fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+                    Text("${dateLabel(days.first())} to ${dateLabel(days.last())}", fontSize = sc.small, color = p.inkSoft)
                 }
             }
-            Text("Chart: recorded daily counts over the last 14 days", fontSize = sc.small, color = p.inkSoft)
+            Text("Times noted each day", fontSize = sc.small, color = p.inkSoft)
             val max = (counts.maxOrNull() ?: 0).coerceAtLeast(1)
             Canvas(Modifier.fillMaxWidth().height(72.dp)) {
                 val w = size.width / days.size
@@ -501,6 +502,11 @@ fun ProblemHistoryScreen(nav: Nav, problemId: String) {
                         level = n.triage,
                         last = di == byDay.lastIndex && ni == notes.lastIndex,
                     ) { nav.go(Route.NoteDetail(n.id)) }
+                    val f = factsFromJson(n.details)
+                    f["pin"]?.value?.toString()?.takeIf { it.isNotBlank() }?.let { pin ->
+                        RecordedBodyMap(listOf(1 to pin), mapOf(1 to "$label - ${timeLabel(n.occurredAt)}"), compact = true)
+                    }
+                    f["note"]?.value?.toString()?.takeIf { it.isNotBlank() }?.let { remark -> Text("Remark: $remark", fontSize = sc.small, color = p.ink, modifier = Modifier.padding(start = 28.dp, bottom = 12.dp)) }
                 }
             }
         }
@@ -606,6 +612,9 @@ fun NoteDetailScreen(nav: Nav, id: Long) {
                     Text(v, fontSize = sc.body, color = p.ink, modifier = Modifier.weight(1f).alignByBaseline())
                 }
             }
+        }
+        facts["pin"]?.value?.toString()?.takeIf { it.isNotBlank() }?.let { pin ->
+            Card { RecordedBodyMap(listOf(1 to pin), mapOf(1 to (problem?.label ?: "Location")), compact = true) }
         }
         n.transcript?.takeIf { it.isNotBlank() }?.let { Card { Hint("In your words"); Body("“$it”") } }
         n.audioPath?.let { path ->

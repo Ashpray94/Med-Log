@@ -95,7 +95,7 @@ class SummaryBuilder(private val cat: Catalogue, private val describe: Describe)
                 }
             }
             val reasons = list.flatMap { ReportIntegrity.reasons(it) }.filter { it.isNotBlank() }.distinct()
-            val text = "$label: ${ReportIntegrity.countWords(list)}; recorded daily count $total ($span)"
+            val text = "$label: ${notedWords(ReportIntegrity.reports(list).size)} in this period ($span)"
             val sub = (reasons.map { "Historical recorded alert: $it" } + keyFacts.take(6)).distinct()
             val score = when (level) { "RED" -> 3000; "AMBER" -> 2000; else -> 0 } + total * 10
             concerns += score to Summary.Concern(level, text, sub)

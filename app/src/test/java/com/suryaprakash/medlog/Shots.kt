@@ -85,7 +85,7 @@ class Shots {
             rule.mainClock.advanceTimeBy(3000)
             rule.waitForIdle()
             if (n == "doctor") rule.waitUntil(30_000) {
-                rule.onAllNodesWithText("Recorded alerts").fetchSemanticsNodes().isNotEmpty()
+                rule.onAllNodesWithText("Notes").fetchSemanticsNodes().isNotEmpty()
             }
             full.split('@').drop(1).forEach { tap ->
                 val exact = runCatching { rule.onAllNodesWithText(tap).onFirst().assertExists() }.isSuccess

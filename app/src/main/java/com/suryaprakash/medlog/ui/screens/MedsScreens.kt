@@ -102,6 +102,7 @@ fun MedsScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     val (start, end) = remember { Scheduler.today() }
     val allDoses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val allMedicines by app.viewDb.medicines().allFlow().collectAsState(emptyList())
     val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList()).let { st -> androidx.compose.runtime.derivedStateOf { st.value.filter { it.form != "feed" } } }
     var confirmDouble by remember { mutableStateOf<Triple<Medicine, Long?, Long?>?>(null) }
     val byId = meds.associateBy { it.id }
@@ -171,7 +172,18 @@ fun MedsScreen(nav: Nav) {
             if (meds.isEmpty()) "None added yet" else "${meds.size} medicine${if (meds.size == 1) "" else "s"} · tap one to change",
             if (meds.isNotEmpty()) "Add" else null, Icons.Rounded.Add) { nav.go(Route.MedEdit(null)) }
         if (meds.isEmpty()) com.suryaprakash.medlog.ui.DashedAddCard("Add a medicine") { nav.go(Route.MedEdit(null)) }
-        meds.filter { m -> doses.none { it.medicineId == m.id } && !m.asNeeded }.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
+        meds.forEach { m ->
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow(m.name, "Edit", sub = "Name, dose, times or remove") { nav.go(Route.MedEdit(m.id)) }
+            }
+        }
+        val stopped = allMedicines.filter { !it.active && it.form != "feed" && it.changeNote != "removed" }
+        if (stopped.isNotEmpty()) {
+            com.suryaprakash.medlog.ui.SectionHeader("Stopped medicines", "Tap to edit or restart", null)
+            stopped.forEach { m -> com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow(m.name, "Edit", sub = "Stopped") { nav.go(Route.MedEdit(m.id)) }
+            } }
+        }
     }
 }
 
@@ -323,6 +335,7 @@ fun DidITakeScreen(nav: Nav) {
     val sc = LocalScale.current
     val (start, end) = remember { Scheduler.today() }
     val doses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val allMedicines by app.viewDb.medicines().allFlow().collectAsState(emptyList())
     val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
     val byId = meds.associateBy { it.id }
     val now = System.currentTimeMillis()
@@ -356,6 +369,7 @@ fun TookNowScreen(nav: Nav) {
     val scope = rememberCoroutineScope()
     val (start, end) = remember { Scheduler.today() }
     val doses by app.viewDb.doses().betweenFlow(start, end).collectAsState(emptyList())
+    val allMedicines by app.viewDb.medicines().allFlow().collectAsState(emptyList())
     val meds by app.viewDb.medicines().activeFlow().collectAsState(emptyList())
     val byId = meds.associateBy { it.id }
     val now = System.currentTimeMillis()

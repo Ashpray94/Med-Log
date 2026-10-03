@@ -73,7 +73,7 @@ object Scheduler {
         for (m in meds) for (t in times(m, maxOf(now - 3 * HOUR, m.changedAt.takeIf { m.changeNote == "times changed" } ?: m.startDate), now + 2 * DAY))
         {
             app.db.doses().restoreScheduled(m.id, t)
-            app.db.doses().insert(Dose(medicineId = m.id, scheduledAt = t))
+            app.db.doses().insert(Dose(medicineId = m.id, scheduledAt = t, snapshot = com.suryaprakash.medlog.data.DoseSnapshot.encode(m)))
         }
         arm(ctx, nextWake(ctx, now))
     }
