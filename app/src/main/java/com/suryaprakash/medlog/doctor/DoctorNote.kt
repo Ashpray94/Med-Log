@@ -229,7 +229,11 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
                 val f = factsFromJson(note.details)
                 val pin = f["pin"]?.value?.toString()?.takeIf { it.isNotBlank() }
                 val fields = f.entries.filter { it.key !in setOf("pin", "depth", "note", "site", "count") && !it.key.startsWith("_") }
-                    .mapNotNull { (key, value) -> describe.fact(key, value)?.let { (cat.field(key)?.label ?: key.replaceFirstChar(Char::uppercase)) to it } }
+                    .mapNotNull { (key, value) -> when {
+                        key == "better" && value.value == true -> "Update" to "Getting better"
+                        key == "started" && value.value is String -> "Started" to com.suryaprakash.medlog.ui.screens.startedWords(value.value as String, note.occurredAt, alwaysDate = true)
+                        else -> describe.fact(key, value)?.let { (cat.field(key)?.label ?: key.replaceFirstChar(Char::uppercase)) to it }
+                    } }
                 DoctorNote.Entry(row.n, row.name, note.id, note.occurredAt, dateTime(note.occurredAt),
                     com.suryaprakash.medlog.data.Occurrences.isOccurrence(note), listOfNotNull(pin),
                     f["site"]?.value?.toString(), f["depth"]?.value?.toString(), fields,
@@ -245,7 +249,7 @@ class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Descri
 
     private fun freq(m: Medicine): String {
         if (m.asNeeded) return "as needed"
-        return when (m.times.split(",").count { it.isNotBlank() }) { 1 -> "OD"; 2 -> "BD"; 3 -> "TDS"; 4 -> "QID"; else -> "" }
+        return when (val n = m.times.split(",").count { it.isNotBlank() }) { 0 -> ""; 1 -> "once a day"; 2 -> "twice a day"; else -> "$n times a day" }
     }
 
     @Suppress("unused") private val keep = DAY

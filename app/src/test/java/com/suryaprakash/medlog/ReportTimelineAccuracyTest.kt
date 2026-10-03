@@ -58,16 +58,16 @@ class ReportTimelineAccuracyTest {
         assertEquals(10, report.entries.count { it.noted })
         assertTrue(ReportValidation.errors(report).isEmpty())
     }
-    @Test fun nativePdfContainsReconciledEntries() {
+    @Test
+    @Config(shadows = [RecordingPdfDocument::class])
+    fun pdfLayoutContainsReconciledEntries() {
         val report = build("vomiting", listOf("2026-09-28T07:45" to false, "2026-09-28T08:43" to false,
             "2026-09-29T18:06" to true, "2026-09-30T09:01" to false, "2026-10-02T22:19" to false))
         val sample = report.copy(patient = "Example patient", pins = listOf(1 to "front:40,96", 1 to "front:51,92", 1 to "front:53,105"),
             entries = report.entries.mapIndexed { i, e -> if (!e.noted) e else e.copy(pins = listOf("front:${40+i*3},96"), site = "Upper stomach", depth = if (i == 0) "Deep inside" else null, remark = if (i == 0) "Example remark supplied with this entry." else null) })
         val file = Pdf.write(app, sample)
-        assertTrue(file.length() > 1000)
-        val out = java.io.File("build/qa/report-clarity-sample.pdf")
-        out.parentFile.mkdirs()
-        file.copyTo(out, overwrite = true)
+        assertTrue(file.exists())
+        assertTrue(RecordingPdfDocument.pages.size >= 2)
     }
 
     @Test fun crowdedLabelsKeepRecordedAnchorsWithoutOverlap() {
@@ -78,6 +78,35 @@ class ReportTimelineAccuracyTest {
         assertEquals(96f, marks.first().y, 0f)
         for (i in marks.indices) for (j in i+1 until marks.size)
             assertTrue(kotlin.math.hypot(marks[i].labelX-marks[j].labelX, marks[i].labelY-marks[j].labelY) >= 21f)
+    }
+
+    /** Robolectric lacks PdfDocument native IO. Record the app's actual Canvas pages for visual QA. */
+    @org.robolectric.annotation.Implements(android.graphics.pdf.PdfDocument::class)
+    class RecordingPdfDocument {
+        private val bitmaps = mutableMapOf<android.graphics.pdf.PdfDocument.Page, android.graphics.Bitmap>()
+        @org.robolectric.annotation.Implementation
+        fun startPage(info: android.graphics.pdf.PdfDocument.PageInfo): android.graphics.pdf.PdfDocument.Page {
+            val bitmap = android.graphics.Bitmap.createBitmap(info.pageWidth * 2, info.pageHeight * 2, android.graphics.Bitmap.Config.ARGB_8888)
+            val canvas = android.graphics.Canvas(bitmap)
+            canvas.drawColor(android.graphics.Color.WHITE)
+            canvas.scale(2f, 2f)
+            val page = org.robolectric.util.ReflectionHelpers.callConstructor(android.graphics.pdf.PdfDocument.Page::class.java,
+                org.robolectric.util.ReflectionHelpers.ClassParameter.from(android.graphics.Canvas::class.java, canvas),
+                org.robolectric.util.ReflectionHelpers.ClassParameter.from(android.graphics.pdf.PdfDocument.PageInfo::class.java, info))
+            bitmaps[page] = bitmap
+            return page
+        }
+        @org.robolectric.annotation.Implementation
+        fun finishPage(page: android.graphics.pdf.PdfDocument.Page) {
+            val bitmap = bitmaps.remove(page)!!
+            val out = java.io.File("build/qa/report-page-${page.info.pageNumber}.png")
+            out.parentFile?.mkdirs()
+            out.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+            pages.add(out)
+        }
+        @org.robolectric.annotation.Implementation fun writeTo(stream: java.io.OutputStream) { stream.write("Layout QA only".toByteArray()) }
+        @org.robolectric.annotation.Implementation fun close() {}
+        companion object { val pages = mutableListOf<java.io.File>() }
     }
 
 }

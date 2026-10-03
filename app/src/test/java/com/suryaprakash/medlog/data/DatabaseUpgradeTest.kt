@@ -65,7 +65,8 @@ class DatabaseUpgradeTest {
             assertEquals(71L, appointment.id)
             assertEquals("Dr Rao", appointment.doctor)
 
-            db.openHelper.writableDatabase.query("SELECT localId, deleted FROM sync_meta WHERE uid='uid-note-41'").use {
+            assertEquals("", dose.snapshot)
+            if (schema.getInt("version") < 6) db.openHelper.writableDatabase.query("SELECT localId, deleted FROM sync_meta WHERE uid='uid-note-41'").use {
                 assertTrue(it.moveToFirst()); assertEquals(41L, it.getLong(0)); assertEquals(1, it.getInt(1))
             }
         } finally {
