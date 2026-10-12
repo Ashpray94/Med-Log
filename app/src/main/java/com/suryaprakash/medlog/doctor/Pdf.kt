@@ -36,6 +36,8 @@ object Pdf {
     private const val LINE = 0xFFD9D6D0.toInt()
     private const val RED = 0xFFB3261E.toInt()
     private const val AMBER = 0xFF8A4B00.toInt()
+    private const val TEAL = 0xFF006B62.toInt()
+    private data class Metric(val label: String, val value: String, val detail: String, val tone: Int = TEAL)
 
     /** Keep abnormal positives; omit routine reassuring answers to red-flag questions from the glance report. */
     internal fun includeGlanceFact(label: String, value: String): Boolean {
@@ -51,10 +53,20 @@ object Pdf {
         }
     }
 
+    /** Use the same ailment-localized crop as the in-app body picker, inferred from the recorded pin. */
+    internal fun localizedView(pins: List<Pair<Int, String>>): com.suryaprakash.medlog.pictogram.View {
+        val mark = BodyMarkers.layout(pins).firstOrNull() ?: return com.suryaprakash.medlog.pictogram.WHOLE
+        val part = com.suryaprakash.medlog.pictogram.Body.parts.filter { it.back == mark.back }.minByOrNull {
+            val dx = (mark.x - it.cx) / (it.rx + 3f); val dy = (mark.y - it.cy) / (it.ry + 3f); dx * dx + dy * dy
+        }
+        return com.suryaprakash.medlog.pictogram.viewFor(part?.region)
+    }
+
     fun write(ctx: Context, n: DoctorNote, nut: com.suryaprakash.medlog.nutrition.Nutrition.Report? = null): File {
         val doc = PdfDocument()
         ReportValidation.requireAccurate(n)
         val w = Writer(doc, n.period, n.footer)
+        val hasNutrition = nut?.let { r -> r.days.any { it.logged } || r.feeds.isNotEmpty() } == true
         w.page()
 
         // Page 1: information a clinician needs before opening the detailed history.
@@ -66,11 +78,22 @@ object Pdf {
         if (n.currentMeds.isNotBlank()) w.kv("Medicines", n.currentMeds)
         w.rule()
 
-        if (n.concerns.isNotEmpty()) {
-            w.section("Priorities for review")
-            n.concerns.forEachIndexed { i, concern -> w.text("${i + 1}. $concern", 11f, bold = true,
-                color = when (n.concernLevels.getOrNull(i)) { "RED" -> RED; "AMBER" -> AMBER; else -> INK }) }
-        }
+        val doseDone = n.medicines.sumOf { it.done }; val doseDue = n.medicines.sumOf { it.due }
+        val metrics = mutableListOf(
+            Metric("SYMPTOMS", "${n.symptoms.size}", "tracked in this period"),
+            Metric("REPORTS", "${n.symptoms.sumOf { it.reportCount }}", "symptom reports"),
+            Metric("LAST 24 HOURS", "${n.symptoms.sumOf { it.reports24h }}", "new reports", if (n.symptoms.sumOf { it.reports24h } > 0) AMBER else TEAL),
+            Metric("MEDICINES", if (doseDue > 0) "$doseDone/$doseDue" else "—", "scheduled doses recorded", if (doseDue > 0 && doseDone * 100 / doseDue < 80) AMBER else TEAL),
+        )
+        nut?.weightChange?.let { metrics += Metric("WEIGHT CHANGE", "${if (it > 0) "+" else ""}${"%.1f".format(it)} kg", "in ${nut.weightDays} days", if (it < 0) RED else TEAL) }
+        nut?.kcalPct?.let { metrics += Metric("LOGGED CALORIES", "$it%", "of estimated target", if (it < 60) RED else if (it < 85) AMBER else TEAL) }
+        w.dashboard(metrics.take(6))
+
+        val attention = buildList {
+            nut?.findings?.filter { it.level == "RED" || it.level == "AMBER" }?.take(2)?.forEach { add(it.text to if (it.level == "RED") RED else AMBER) }
+            n.symptoms.filter { (it.sevHigh ?: 0) >= 7 }.take(2).forEach { add("${it.name}: severity reached ${it.sevHigh}/10" to AMBER) }
+        }.distinctBy { it.first }.take(3)
+        if (attention.isNotEmpty()) { w.section("Needs attention"); w.callouts(attention) }
         if (n.symptoms.isNotEmpty()) {
             w.section("Symptom overview")
             w.table(listOf("Symptom", "Reports", "Severity", "Last noted"), floatArrayOf(0.30f, 0.12f, 0.18f, 0.40f),
@@ -80,11 +103,6 @@ object Pdf {
         }
         if (n.readings.isNotEmpty()) { w.section("Latest readings"); n.readings.forEach { w.text(it, 10f) } }
         if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
-        if (n.medicines.isNotEmpty()) {
-            w.section("Medicines in this period")
-            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
-                n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
-        }
 
         // Pages 2–3: each recurring issue at a glance, while preserving what changed between reports.
         fun issueDetails(rows: List<DoctorNote.Row>) {
@@ -99,15 +117,19 @@ object Pdf {
                 val severities = reports.mapNotNull { e -> e.facts.firstNotNullOfOrNull { (_, value) ->
                     Regex("(\\d+)\\s*out of 10", RegexOption.IGNORE_CASE).find(value)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 } }
-                if (severities.size >= 2) w.miniTrend(severities, "Recorded severity — oldest to latest", 10)
-                else w.miniTrend(r.daily, "Report frequency by day — not a recovery measure")
                 if (reports.isNotEmpty()) {
-                    w.table(listOf("Date", "Specific recorded details"), floatArrayOf(0.25f, 0.75f), reports.map { e ->
+                    val rows = reports.map { e ->
                         val details = (listOfNotNull(e.site, e.depth) + e.facts.filter { includeGlanceFact(it.first, it.second) }
                             .map { "${it.first}: ${it.second}" } + listOfNotNull(e.remark))
                             .filter { it.isNotBlank() }.distinct().joinToString("; ")
-                        listOf(e.date, details.ifBlank { "Symptom reported" }) to INK
-                    })
+                        e.date to details.ifBlank { "Symptom reported" }
+                    }
+                    val pins = reports.flatMap { e -> e.pins.map { r.n to it } }.distinct()
+                    val depths = reports.mapNotNull { it.depth }.distinct()
+                    val bodyView = localizedView(pins)
+                    val art = { back: Boolean -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, bodyView, 500) }
+                    if (severities.size >= 2) w.trendTable(severities, "Recorded severity", 10, rows, pins, depths, bodyView, art = art)
+                    else w.trendTable(r.daily, "Report frequency", null, rows, pins, depths, bodyView, "Frequency does not prove recovery", art)
                 }
                 val updates = n.entries.count { it.symptomNumber == r.n && !it.noted }
                 if (updates > 0) w.text("$updates improvement/update entr${if (updates == 1) "y" else "ies"} recorded separately.", 8.5f, color = SOFT)
@@ -120,6 +142,11 @@ object Pdf {
         w.page()
         w.pair("Other issues and treatment", n.period, 15f)
         issueDetails(n.symptoms.drop(2))
+        if (!hasNutrition && n.medicines.isNotEmpty()) {
+            w.section("Medicines in this period")
+            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
+                n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
+        }
         if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text("•  $it", 10f) } }
 
         // Page 4: nutrition. Only recent representative days are printed; totals cover the selected period.
@@ -140,10 +167,15 @@ object Pdf {
             if (logged.isNotEmpty()) {
                 w.section("Recent logged days")
                 w.table(listOf("Day", "kcal", "Protein", "Water", "What went in"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
-                    logged.takeLast(7).reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), "${d.kcal.toInt()}",
+                    logged.takeLast(5).reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), "${d.kcal.toInt()}",
                         "${d.protein.toInt()} g", if (d.water > 0) "${d.water}" else "", d.items.joinToString(", ").take(110)) to
                         (r.kcalTarget?.let { t -> if (d.kcal < t * 0.6) RED else if (d.kcal < t * 0.85) AMBER else INK } ?: INK) }, dropEmpty = true)
-                if (logged.size > 7) w.text("${logged.size - 7} earlier logged days remain available in MedLog.", 9f, color = SOFT)
+                if (logged.size > 5) w.text("${logged.size - 5} earlier logged days remain available in MedLog.", 9f, color = SOFT)
+            }
+            if (n.medicines.isNotEmpty()) {
+                w.section("Medicines in this period")
+                w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
+                    n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
             }
             if (r.changes.isNotEmpty()) { w.section("What changed"); r.changes.forEach { w.text("•  $it", 10f) } }
             if (r.observed.isNotEmpty()) { w.section("Also noticed"); r.observed.forEach { w.text("•  $it", 10f) } }
@@ -233,6 +265,35 @@ object Pdf {
             if (right == 0f) { c.drawLine(M, y - 3f, W - M, y - 3f, lp) }
         }
 
+        fun dashboard(metrics: List<Metric>) {
+            if (metrics.isEmpty()) return
+            val cols = 3; val gap = 8f; val tileW = (W - 2 * M - gap * (cols - 1)) / cols; val tileH = 58f
+            val rows = (metrics.size + cols - 1) / cols
+            if (!ensure(rows * (tileH + gap))) return
+            metrics.forEachIndexed { i, m ->
+                val x = M + (i % cols) * (tileW + gap); val top = y + (i / cols) * (tileH + gap)
+                val bg = when (m.tone) { RED -> 0xFFFFE9E6.toInt(); AMBER -> 0xFFFFF1D6.toInt(); else -> 0xFFE5F3F1.toInt() }
+                c.drawRoundRect(RectF(x, top, x + tileW, top + tileH), 8f, 8f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = bg })
+                tp.typeface = medium; tp.textSize = 7.5f; tp.color = m.tone; tp.letterSpacing = 0.05f
+                c.drawText(m.label, x + 10f, top + 13f, tp); tp.letterSpacing = 0f
+                tp.typeface = bold; tp.textSize = 16f; tp.color = INK; c.drawText(m.value, x + 10f, top + 34f, tp)
+                val detail = layout(m.detail, 7.5f, regular, SOFT, (tileW - 20f).toInt())
+                c.save(); c.translate(x + 10f, top + 40f); detail.draw(c); c.restore()
+            }
+            y += rows * (tileH + gap) + 2f
+        }
+
+        fun callouts(items: List<Pair<String, Int>>) {
+            items.forEach { (words, tone) ->
+                val l = layout(words, 9.5f, bold, INK, (W - 2 * M - 28f).toInt()); val h = maxOf(30f, l.height + 12f)
+                if (!ensure(h + 5f)) return
+                val bg = if (tone == RED) 0xFFFFE9E6.toInt() else 0xFFFFF1D6.toInt()
+                c.drawRoundRect(RectF(M, y, W - M, y + h), 7f, 7f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = bg })
+                c.drawRoundRect(RectF(M, y, M + 5f, y + h), 3f, 3f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = tone })
+                c.save(); c.translate(M + 16f, y + 6f); l.draw(c); c.restore(); y += h + 5f
+            }
+        }
+
         /** With [dropEmpty], a column with nothing in any row is left out and the others share its width. */
         fun table(head0: List<String>, frac0: FloatArray, rows0: List<Pair<List<String>, Int>>, dropEmpty: Boolean = false) {
             val keep = head0.indices.filter { i -> !dropEmpty || rows0.any { it.first.getOrNull(i).orEmpty().isNotBlank() } }
@@ -259,24 +320,27 @@ object Pdf {
         }
 
         /** Actual anchors and separate numbered labels, shared with the on-screen map. */
-        fun bodyDiagram(x: Float, top: Float, width: Float, pins: List<Pair<Int, String>>, art: (Boolean) -> android.graphics.Bitmap?) {
+        fun bodyDiagram(x: Float, top: Float, width: Float, pins: List<Pair<Int, String>>, art: (Boolean) -> android.graphics.Bitmap?,
+            view: com.suryaprakash.medlog.pictogram.View = com.suryaprakash.medlog.pictogram.WHOLE) {
             if (full) return
             val marks = BodyMarkers.layout(pins)
             val fig = width / 2f - 4f
-            val u = fig / 100f
+            val vw = view.x1 - view.x0; val vh = view.y1 - view.y0; val u = fig / vw
+            val figH = vh * u
             val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)
             for ((k, back) in listOf(0 to false, 1 to true)) {
                 val ox = x + k * (fig + 8f)
-                art(back)?.let { c.drawBitmap(it, null, RectF(ox, top, ox + 100f * u, top + 170f * u), paint) }
+                art(back)?.let { c.drawBitmap(it, null, RectF(ox, top, ox + fig, top + figH), paint) }
                 tp.textSize = 8f; tp.typeface = regular; tp.color = SOFT
                 val lbl = if (back) "Back" else "Front"
-                c.drawText(lbl, ox + (fig - tp.measureText(lbl)) / 2, top + 170f * u + 12f, tp)
-                for (mark in marks.filter { it.back == back }) {
-                    if (mark.all) art(back)?.let { a -> c.drawBitmap(a, null, RectF(ox, top, ox + 100f * u, top + 170f * u), Paint(paint).apply {
+                c.drawText(lbl, ox + (fig - tp.measureText(lbl)) / 2, top + figH + 12f, tp)
+                for (mark in marks.filter { it.back == back && it.x in view.x0..view.x1 && it.y in view.y0..view.y1 }) {
+                    if (mark.all) art(back)?.let { a -> c.drawBitmap(a, null, RectF(ox, top, ox + fig, top + figH), Paint(paint).apply {
                         colorFilter = android.graphics.PorterDuffColorFilter(AMBER, android.graphics.PorterDuff.Mode.SRC_IN); alpha = 70
                     }) }
-                    val ax = ox + mark.x * u; val ay = top + mark.y * u
-                    val lx = ox + mark.labelX * u; val ly = top + mark.labelY * u
+                    val ax = ox + (mark.x - view.x0) * u; val ay = top + (mark.y - view.y0) * u
+                    val lx = ox + (mark.labelX.coerceIn(view.x0 + 7f, view.x1 - 7f) - view.x0) * u
+                    val ly = top + (mark.labelY.coerceIn(view.y0 + 7f, view.y1 - 7f) - view.y0) * u
                     paint.color = SOFT; paint.strokeWidth = 0.8f
                     c.drawLine(ax, ay, lx, ly, paint)
                     paint.color = INK; c.drawCircle(ax, ay, 2.5f * u, paint)
@@ -346,6 +410,57 @@ object Pdf {
             c.drawText("Oldest", left, y + 7f, tp)
             val latest = "Latest"; c.drawText(latest, W - M - tp.measureText(latest), y + 7f, tp)
             y += 12f
+        }
+
+        /** Large visual trend and body/depth map beside the exact episode rows. */
+        fun trendTable(values: List<Int>, label: String, fixedMax: Int?, rows: List<Pair<String, String>>,
+            pins: List<Pair<Int, String>>, depths: List<String>, bodyView: com.suryaprakash.medlog.pictogram.View,
+            note: String? = null,
+            art: (Boolean) -> android.graphics.Bitmap?) {
+            val leftW = 158f; val gap = 12f; val tableX = M + leftW + gap; val tableW = W - M - tableX
+            val dateW = 86f; val detailW = tableW - dateW - 8f
+            val layouts = rows.map { (date, detail) ->
+                layout(date, 8f, regular, INK, (dateW - 5f).toInt()) to layout(detail, 8f, regular, INK, detailW.toInt())
+            }
+            val tableH = 18f + layouts.sumOf { maxOf(it.first.height, it.second.height) + 7 }.toFloat()
+            val visualH = if (pins.isNotEmpty()) 184f else 94f
+            val h = maxOf(tableH, visualH)
+            if (!ensure(h + 8f)) return
+            val top = y
+            tp.textSize = 8.5f; tp.typeface = bold; tp.color = SOFT; c.drawText(label, M, top + 10f, tp)
+            val plotTop = top + 18f; val plotH = 52f; val graphLeft = M + 16f; val graphW = leftW - 18f
+            val maximum = (fixedMax ?: values.maxOrNull() ?: 1).coerceAtLeast(1)
+            c.drawLine(graphLeft, plotTop, graphLeft + graphW, plotTop, lp); c.drawLine(graphLeft, plotTop + plotH / 2, graphLeft + graphW, plotTop + plotH / 2, lp)
+            c.drawLine(graphLeft, plotTop + plotH, graphLeft + graphW, plotTop + plotH, lp)
+            tp.textSize = 7f; tp.typeface = regular; tp.color = SOFT; c.drawText("$maximum", M, plotTop + 5f, tp); c.drawText("0", M, plotTop + plotH, tp)
+            val pts = values.mapIndexed { i, v ->
+                (if (values.size == 1) graphLeft + graphW / 2 else graphLeft + graphW * i / (values.size - 1)) to
+                    (plotTop + plotH - plotH * v.coerceIn(0, maximum) / maximum)
+            }
+            val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER; strokeWidth = 2.2f; style = Paint.Style.STROKE }
+            val dot = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER; style = Paint.Style.FILL }
+            for (i in 1 until pts.size) c.drawLine(pts[i-1].first, pts[i-1].second, pts[i].first, pts[i].second, line)
+            pts.forEach { c.drawCircle(it.first, it.second, 3f, dot) }
+            tp.textSize = 7f; tp.color = SOFT; c.drawText("Oldest", graphLeft, plotTop + plotH + 10f, tp)
+            val latest = "Latest"; c.drawText(latest, graphLeft + graphW - tp.measureText(latest), plotTop + plotH + 10f, tp)
+            note?.let { n -> val l = layout(n, 7f, regular, SOFT, leftW.toInt()); c.save(); c.translate(M, plotTop + plotH + 14f); l.draw(c); c.restore() }
+            if (pins.isNotEmpty()) {
+                bodyDiagram(M, top + 86f, 92f, pins, art, bodyView)
+                if (depths.isNotEmpty()) {
+                    val l = layout("Depth: ${depths.joinToString(", ")}", 7.5f, regular, SOFT, leftW.toInt())
+                    c.save(); c.translate(M, top + 166f); l.draw(c); c.restore()
+                }
+            }
+            c.drawRect(tableX, top, tableX + tableW, top + 17f, Paint().apply { color = 0xFFF3F1ED.toInt() })
+            tp.textSize = 8f; tp.typeface = medium; tp.color = SOFT; c.drawText("Date", tableX + 3f, top + 11f, tp); c.drawText("Specific recorded details", tableX + dateW, top + 11f, tp)
+            var ty = top + 18f
+            layouts.forEach { (dl, xl) ->
+                val rh = maxOf(dl.height, xl.height) + 7f
+                c.save(); c.translate(tableX + 3f, ty + 3f); dl.draw(c); c.restore()
+                c.save(); c.translate(tableX + dateW, ty + 3f); xl.draw(c); c.restore()
+                ty += rh; c.drawLine(tableX, ty - 1f, tableX + tableW, ty - 1f, lp)
+            }
+            y = top + h + 8f
         }
 
         fun entry(e: DoctorNote.Entry, art: (Boolean) -> android.graphics.Bitmap?) {

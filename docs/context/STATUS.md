@@ -4,9 +4,10 @@ Update this at the end of every chat: what changed, what's open, what wasn't ver
 
 ## Now
 - Repository baseline: **2.17.0** (`0d5e5bdf42c53f8c2f2a84babc0d5cd6ba8e8476`) on branch `main-mxp0m4`.
-- Unreleased local changes: doctor PDF condensed to a four-part clinical summary; helper notifications state the alert reason,
+- Unreleased local changes: doctor PDF condensed to a four-part clinical dashboard with highlighted metrics, side-by-side line charts,
+  episode tables, and the app's localized body/depth maps; helper notifications state the alert reason,
   expose two direct actions plus **More options**, and the full alert screen includes every action and **Dismiss alert**.
-- Verified: all 243 debug unit tests and `assembleDebug` passed on 12 Oct 2026. The report sample is four pages.
+- Verified: all 244 debug unit tests and `assembleDebug` passed on 12 Oct 2026. The report sample is four pages.
 - Still needs phone verification: notification action visibility on the owner's Android version, lock-screen layout at largest text,
   and the exact report generated from the owner's live database.
 - 2.14.0: SMS only for SOS (app first, SMS after 90 s with no answer: `SosPlan`); helper alerts use Meeting Timer's

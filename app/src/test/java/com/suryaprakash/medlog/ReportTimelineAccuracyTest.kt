@@ -35,6 +35,10 @@ class ReportTimelineAccuracyTest {
         assertTrue(Pdf.includeGlanceFact("Blood", "blood present"))
         assertTrue(Pdf.includeGlanceFact("Colour", "green"))
     }
+    @Test fun reportUsesTheAppsLocalizedBodyView() {
+        assertEquals(com.suryaprakash.medlog.pictogram.viewFor("stomach"), Pdf.localizedView(listOf(1 to "front:50,66")))
+        assertEquals(com.suryaprakash.medlog.pictogram.viewFor("back"), Pdf.localizedView(listOf(1 to "back:44,72")))
+    }
     @Test fun vomitingSummaryMatchesEveryDatedEntry() {
         val report = build("vomiting", listOf("2026-09-28T07:45" to false, "2026-09-28T08:43" to false,
             "2026-09-29T18:06" to true, "2026-09-30T09:01" to false, "2026-10-02T22:19" to false))
