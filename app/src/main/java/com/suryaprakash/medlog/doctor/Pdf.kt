@@ -95,6 +95,18 @@ object Pdf {
         problemId in setOf("back_pain", "neck_pain", "shoulder_pain", "arm_pain", "hip_pain", "knee_pain", "leg_pain", "foot_pain", "body_ache", "cramps", "joint_swelling")
     }
 
+    /** Every symptom occurrence in the chosen dates gets a dated row, including one-off entries. */
+    internal fun selectedEntryRows(n: DoctorNote): List<List<String>> {
+        val problemByNumber = n.symptoms.associate { it.n to it.problemId }
+        return n.entries.filter { it.noted }.sortedByDescending { it.at }.map { e ->
+            val problemId = problemByNumber[e.symptomNumber].orEmpty()
+            val full = (listOfNotNull(e.site, reportDepth(problemId, e.depth)) +
+                e.facts.filter { includeEpisodeFact(it.first, it.second) }.take(7).map { "${it.first}: ${it.second}" } +
+                listOfNotNull(e.remark)).filter { it.isNotBlank() }.distinct().joinToString("; ")
+            listOf(e.date, e.name, full.ifBlank { "Symptom reported" }.let { if (it.length <= 220) it else it.take(217).substringBeforeLast(' ') + "…" })
+        }
+    }
+
     fun write(ctx: Context, n: DoctorNote, nut: com.suryaprakash.medlog.nutrition.Nutrition.Report? = null): File {
         val doc = PdfDocument()
         ReportValidation.requireAccurate(n)
@@ -137,6 +149,12 @@ object Pdf {
                 n.symptoms.map { r -> listOf("${r.n}. ${r.name}", "${r.reportCount}",
                     r.sevLow?.let { "${it}–${r.sevHigh ?: it}/10" }.orEmpty(), r.lastNoted.orEmpty()) to
                     when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK } })
+        }
+        val selectedEntries = selectedEntryRows(n)
+        if (selectedEntries.isNotEmpty()) {
+            w.section("Dated entries in selected period")
+            w.table(listOf("Date", "Issue", "Specific recorded details"), floatArrayOf(0.20f, 0.20f, 0.60f),
+                selectedEntries.map { it to INK })
         }
         if (n.readings.isNotEmpty()) { w.section("Latest readings"); n.readings.forEach { w.text(it, 10f) } }
 
@@ -188,7 +206,7 @@ object Pdf {
             w.pair("Recurring issues — full recorded history", n.period, 15f)
             issueDetails(recurring.take(2))
         }
-        if (recurring.size > 2) {
+        if (recurring.size > 2 && !hasNutrition) {
             w.page()
             w.pair("Other recurring issues and treatment", n.period, 15f)
             val detailed = if (recurring.size > 4) recurring.drop(2).take(1) else recurring.drop(2)
@@ -201,6 +219,13 @@ object Pdf {
                     summarized.map { r -> listOf(r.name, "${r.reportCount}", r.sevLow?.let { "${it}–${r.sevHigh ?: it}/10" }.orEmpty(), r.lastNoted.orEmpty()) to
                         when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK } })
             }
+        }
+        if (recurring.size > 2 && hasNutrition) {
+            w.section("Other active recurring issues")
+            w.text("Seen within the last 6 weeks. Full dated entries remain in MedLog.", 8.5f, color = SOFT)
+            w.table(listOf("Issue", "Reports", "Severity", "Last noted"), floatArrayOf(0.31f, 0.12f, 0.17f, 0.40f),
+                recurring.drop(2).map { r -> listOf(r.name, "${r.reportCount}", r.sevLow?.let { "${it}–${r.sevHigh ?: it}/10" }.orEmpty(), r.lastNoted.orEmpty()) to
+                    when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK } })
         }
         val treatmentDetails = !hasNutrition && (n.medicines.isNotEmpty() || n.links.isNotEmpty())
         if (treatmentDetails) {

@@ -98,6 +98,17 @@ class ReportTimelineAccuracyTest {
         assertTrue(merged.symptoms.single().problemId == "cough")
         assertEquals(1, merged.symptoms.single().reportCount)
     }
+    @Test fun oneOffBackPainEntryIsPrintedWithItsDateAndDetails() {
+        val report = build("back_pain", listOf("2026-10-02T22:17" to false))
+        val enriched = report.copy(entries = report.entries.map { it.copy(site = "Left lower back", depth = "In the muscle", remark = "Worse while walking") })
+        val rows = Pdf.selectedEntryRows(enriched)
+        assertEquals(1, rows.size)
+        assertEquals("Back pain", rows.single()[1])
+        assertTrue(rows.single()[0].contains("2 October 2026"))
+        assertTrue(rows.single()[2].contains("Left lower back"))
+        assertTrue(rows.single()[2].contains("In the muscle"))
+        assertTrue(rows.single()[2].contains("Worse while walking"))
+    }
     @Test
     @Config(shadows = [RecordingPdfDocument::class])
     fun pdfLayoutContainsReconciledEntries() {
