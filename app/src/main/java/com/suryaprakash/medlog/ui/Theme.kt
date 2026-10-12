@@ -27,7 +27,9 @@ data class Palette(
     val card: Color,        // raised surfaces
     val ink: Color,         // primary text
     val inkSoft: Color,     // secondary text
-    val line: Color,        // separators
+    val line: Color,        // separators (decorative only)
+    /** The edge of anything you can tap or type in: a thin line, just 3:1 against white (WCAG 1.4.11), so it reads without looking heavy. */
+    val outline: Color = Color(0xFF949490),
     val fill: Color,        // quiet button fill
     val brand: Color,
     val onBrand: Color,
@@ -48,19 +50,28 @@ data class Palette(
  * 60 / 30 / 10 (docs/DESIGN.md).
  * 60 — white and greys: a light grey page, white cards lifted by a soft shadow, near-black text.
  * 30 — the primary teal: the one main action on a page, the hero card, chosen things and the current tab.
- * 10 — accents: each feature's own icon colour (Medicines orange, Food green, Readings pink, Doctor blue,
+ * 10 — accents: each feature's own icon colour (Medicines orange, Food cocoa brown (green means only "done"), Readings pink, Doctor blue,
  *      My health purple, History teal) and the status colours (red urgent/SOS, amber watch, green OK).
  */
 val Warm = Palette(
-    paper = Color(0xFFF2F2F0), card = Color(0xFFFFFFFF), ink = Color(0xFF141414), inkSoft = Color(0xFF45454A),
-    line = Color(0xFFDDDDD8), fill = Color(0xFFE9E9E5), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
+    paper = Color(0xFFECECE8), card = Color(0xFFFFFFFF), ink = Color(0xFF141414), inkSoft = Color(0xFF45454A),
+    line = Color(0xFFDDDDD8), fill = Color(0xFFE3E3DD), brand = Color(0xFF0A6B63), onBrand = Color.White, brandSoft = Color(0xFFDDEFEC),
     ok = Color(0xFF1B6B2E), okSoft = Color(0xFFE2F2E6), amber = Color(0xFF8A4B00), amberSoft = Color(0xFFFFF0D6),
     red = Color(0xFFC0271F), redSoft = Color(0xFFFCE8E5), focus = Color(0xFF2F5DA8), figureBg = Color(0xFFFFFFFF),
-    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF1E9150), tintOrange = Color(0xFFEA7310), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
+    tintBlue = Color(0xFF2266DD), tintGreen = Color(0xFF8A5A44), tintOrange = Color(0xFFC4600A), tintPurple = Color(0xFF7447D6), tintPink = Color(0xFFD9406F), tintTeal = Color(0xFF0E857B),
 )
 
+/**
+ * The accent of each mode: teal for your own health, a calm blue for helping. A different hue, not a lighter shade,
+ * so it's plain which you're in; used sparingly (the chosen mode, the current tab, the one main action on a page).
+ */
+val MY_BRAND = Color(0xFF0A6B63)
+val HELPER_BRAND = Color(0xFF33589E)
+// no teal anywhere in helping: the teal feature colour becomes a slate blue-grey, so the only accent is the helper blue
+val HelperMode = Warm.copy(brand = HELPER_BRAND, brandSoft = Color(0xFFE7EDF7), tintTeal = Color(0xFF52667A), focus = HELPER_BRAND)
+
 val HighContrast = Warm.copy(
-    paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, fill = Color(0xFFE0E0E0),
+    paper = Color.White, card = Color.White, ink = Color.Black, inkSoft = Color(0xFF1A1A1A), line = Color.Black, outline = Color.Black, fill = Color(0xFFE0E0E0),
     brand = Color(0xFF00332F), brandSoft = Color(0xFFD6ECE9), ok = Color(0xFF004D12), amber = Color(0xFF5C3100), red = Color(0xFF8C0000),
 )
 
@@ -91,13 +102,51 @@ val Big = Scale(huge = 54.sp, question = 36.sp, title = 33.sp, headline = 25.sp,
 val AppFont: FontFamily = FontFamily.Default
 val Atkinson: FontFamily = AppFont
 
+/**
+ * Hindi and Tamil in full-size Noto Sans (not the phone's squeezed "UI" versions), so they read as large as English.
+ * Latin letters and numbers inside them fall back to the phone's own font.
+ */
+val Devanagari = FontFamily(
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_devanagari_bold, FontWeight.Bold),
+)
+val TamilFont = FontFamily(
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(com.suryaprakash.medlog.R.font.noto_tamil_bold, FontWeight.Bold),
+)
+
+/** How each language is set: its font, a size factor so its letters match English letters in height, and line spacing. */
+data class Script(val code: String, val family: FontFamily, val size: Float, val lines: Float) {
+    val indic get() = family != AppFont
+    val locale: androidx.compose.ui.text.intl.LocaleList get() = androidx.compose.ui.text.intl.LocaleList(if (code == "en") "en-IN" else "$code-IN")
+}
+
+// Devanagari letters stand 0.62 em tall against English capitals at 0.71 em; Tamil letters match English lower case
+// (0.55 vs 0.53 em) but carry more detail. Both have marks above and below, so they get more room between lines.
+fun scriptFor(tag: String?): Script = when (tag?.substringBefore('-')?.lowercase()) {
+    "hi", "mr" -> Script("hi", Devanagari, 1.1f, 1.5f)
+    "ta" -> Script("ta", TamilFont, 1.05f, 1.5f)
+    else -> Script("en", AppFont, 1f, 1.4f)
+}
+
+val LocalScript = staticCompositionLocalOf { scriptFor("en") }
+
 val LocalPalette = staticCompositionLocalOf { Warm }
 val LocalScale = staticCompositionLocalOf { Standard }
 val LocalSettings = staticCompositionLocalOf { Settings() }
 
 @Composable
 fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
-    val palette = if (settings.highContrast) HighContrast else Warm
+    val helping = settings.role == "helper"
+    val palette = when {
+        settings.highContrast -> if (helping) HighContrast.copy(brand = Color(0xFF1F3C73), brandSoft = Color(0xFFDCE4F2), tintTeal = Color(0xFF3A4D60)) else HighContrast
+        helping -> HelperMode
+        else -> Warm
+    }
     // Large words: the whole layout (words, spacing, buttons) grows together by about 1.2x, so it stays in proportion
     // and never gets crowded; the choice shows first, then after a short pause the change eases in over 0.6 s
     val scale = Standard
@@ -105,21 +154,27 @@ fun MedTheme(settings: Settings, content: @Composable () -> Unit) {
         androidx.compose.animation.core.tween(if (settings.lessMotion) 0 else 600, delayMillis = if (settings.lessMotion) 0 else 250), label = "zoom")
     val density = androidx.compose.ui.platform.LocalDensity.current
     val weight = if (settings.boldText) FontWeight.Medium else FontWeight.Normal
-    val base = TextStyle(fontFamily = AppFont, fontWeight = weight, color = palette.ink, fontSize = scale.body, lineHeight = scale.body * 1.4f)
+    val script = scriptFor(settings.languages.firstOrNull())
+    // no colour in the style: words take the colour of what they sit on (white on a blue button, ink on a card)
+    val base = TextStyle(fontFamily = script.family, fontWeight = weight, fontSize = scale.body, lineHeight = scale.body * script.lines,
+        localeList = script.locale)
     MaterialTheme(
         colorScheme = lightColorScheme(
             primary = palette.brand, onPrimary = palette.onBrand, background = palette.paper, surface = palette.card,
-            onBackground = palette.ink, onSurface = palette.ink, error = palette.red, outline = palette.line,
+            onBackground = palette.ink, onSurface = palette.ink, error = palette.red, outline = palette.line, onSurfaceVariant = palette.inkSoft, primaryContainer = palette.brandSoft, onPrimaryContainer = palette.ink,
+            secondary = palette.brand, onSecondary = palette.onBrand, tertiary = palette.brand, onTertiary = palette.onBrand, tertiaryContainer = palette.brandSoft,
+            surfaceVariant = palette.fill, surfaceTint = palette.card, inversePrimary = palette.brandSoft,
+            surfaceContainerHigh = palette.card, surfaceContainerLow = palette.card, secondaryContainer = palette.brandSoft, onSecondaryContainer = palette.ink,
         ),
         typography = MaterialTheme.typography.copy(
             bodyLarge = base, bodyMedium = base, bodySmall = base.copy(fontSize = scale.small),
-            titleLarge = base.copy(fontSize = scale.title, fontWeight = FontWeight.Bold, lineHeight = scale.title * 1.15f),
+            titleLarge = base.copy(fontSize = scale.title, fontWeight = FontWeight.Bold, lineHeight = scale.title * (script.lines - 0.25f)),
             labelLarge = base.copy(fontSize = scale.button, fontWeight = FontWeight.SemiBold),
         ),
     ) {
-        CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings,
-            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * zoom, density.fontScale)) {
-            androidx.compose.material3.ProvideTextStyle(base, content)
+        CompositionLocalProvider(LocalPalette provides palette, LocalScale provides scale, LocalSettings provides settings, LocalScript provides script,
+            androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density * zoom, density.fontScale * script.size)) {
+            CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides palette.ink) { androidx.compose.material3.ProvideTextStyle(base, content) }
         }
     }
 }

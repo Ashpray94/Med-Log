@@ -69,8 +69,24 @@ object Scheduler {
         val now = System.currentTimeMillis()
         val meds = app.db.medicines().active()
         // make sure dose rows exist for the next 2 days (and the last few hours, after a restart)
-        for (m in meds) for (t in times(m, now - 3 * HOUR, now + 2 * DAY)) app.db.doses().insert(Dose(medicineId = m.id, scheduledAt = t))
+        reconcileSchedules(ctx)
+        for (m in meds) for (t in times(m, maxOf(now - 3 * HOUR, m.changedAt.takeIf { m.changeNote == "times changed" } ?: m.startDate), now + 2 * DAY))
+        {
+            app.db.doses().restoreScheduled(m.id, t)
+            app.db.doses().insert(Dose(medicineId = m.id, scheduledAt = t, snapshot = com.suryaprakash.medlog.data.DoseSnapshot.encode(m)))
+        }
         arm(ctx, nextWake(ctx, now))
+    }
+
+    /** Auditable cancellation, never deletion, so the correction also syncs to helpers. */
+    suspend fun reconcileSchedules(ctx: Context, db: com.suryaprakash.medlog.data.MedDb = ctx.medlog.db) {
+        val medicines = db.medicines().all().associateBy { it.id }
+        for (d in db.doses().everything()) {
+            val m = medicines[d.medicineId] ?: continue
+            if (com.suryaprakash.medlog.data.MedicineSchedule.obsolete(m, d)) {
+                if (db.doses().cancelUnconfirmed(d.id, d.updatedAt) > 0 && db === ctx.medlog.db) DoseAlert.cancel(ctx, d.id)
+            }
+        }
     }
 
     private suspend fun nextWake(ctx: Context, now: Long): Long {
@@ -84,6 +100,7 @@ object Scheduler {
             for (t in events(d, m, s.snoozeMinutes, s.escalateMinutes, s.escalateCriticalMinutes, s.useMeetingTimer)) if (t > now - 1000) next = minOf(next, t)
         }
         Care.nextWake(ctx, now)?.let { next = minOf(next, it) }
+        runCatching { com.suryaprakash.medlog.care.HelperCare.nextWake(ctx, now) }.getOrNull()?.let { next = minOf(next, it) }
         return next
     }
 
@@ -117,11 +134,14 @@ object Scheduler {
         val app = ctx.medlog
         val s = app.settings.value
         val now = System.currentTimeMillis()
+        reconcileSchedules(ctx)
         val medsById = app.db.medicines().all().associateBy { it.id }
         val toShow = ArrayList<Dose>()
         var louder = false
         for (d in app.db.doses().open()) {
             val m = medsById[d.medicineId] ?: continue
+            // a stopped medicine never rings or alerts anyone: close its open dose
+            if (!m.active) { app.db.doses().update(d.copy(status = DoseStatus.SKIPPED, reason = "Stopped", actedAt = now, snoozeUntil = null)); DoseAlert.cancel(ctx, d.id); continue }
             var dose = d
             // missed
             if (now >= d.scheduledAt + MISS_AFTER) {
@@ -135,7 +155,7 @@ object Scheduler {
                 dose = dose.copy(helperAlerted = true)
                 val name = app.repo.profile().name.ifBlank { "Your family member" }
                 val t = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date(d.scheduledAt))
-                Alerts.send(ctx, Alerts.Type.MISSED_DOSE, com.suryaprakash.medlog.help.Wording.missedDose(name, t, m.name))
+                Alerts.send(ctx, Alerts.Type.MISSED_DOSE, com.suryaprakash.medlog.help.Wording.missedDose(name, t, m.name, feed = m.form == "feed"))
             }
             // first reminder (or after snooze), then repeats
             val base = d.snoozeUntil ?: d.scheduledAt
@@ -149,6 +169,18 @@ object Scheduler {
         }
         if (toShow.isNotEmpty()) DoseAlert.show(ctx, toShow, louder)
         Care.tick(ctx, now)
+        runCatching { com.suryaprakash.medlog.care.HelperCare.tick(ctx, now) }
+        reschedule(ctx)
+    }
+
+    /** A medicine was stopped: its open doses are skipped ("Stopped"), so nothing rings or alerts for them. */
+    suspend fun stopMedicine(ctx: Context, m: Medicine) {
+        val app = ctx.medlog
+        val db = app.viewDb
+        val open = db.doses().open().filter { it.medicineId == m.id }
+        db.doses().skipOpen(m.id, "Stopped", System.currentTimeMillis())
+        open.forEach { DoseAlert.cancel(ctx, it.id) }
+        app.refreshWidgets()
         reschedule(ctx)
     }
 
@@ -166,11 +198,16 @@ object Scheduler {
     enum class Taken { OK, ALREADY }
 
     /** Marks a dose taken. Returns ALREADY if it was already taken (the double-dose guard asks first). */
-    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false): Taken {
+    /** [at]: when it was really taken, for noting it afterwards (at night, or for an earlier day); now if null. */
+    suspend fun take(ctx: Context, doseId: Long, force: Boolean = false, at: Long? = null): Taken = lock.withLock {
         val app = ctx.medlog
-        val d = app.db.doses().get(doseId) ?: return Taken.OK
-        if (d.status == DoseStatus.TAKEN && !force) return Taken.ALREADY
-        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = System.currentTimeMillis(), snoozeUntil = null))
+        val d = app.db.doses().get(doseId) ?: return@withLock Taken.OK
+        if (d.status == DoseStatus.TAKEN && !force) {
+            // already taken: only the time changes
+            if (at != null) { app.db.doses().update(d.copy(actedAt = at)); app.refreshWidgets() }
+            return@withLock Taken.ALREADY
+        }
+        app.db.doses().update(d.copy(status = DoseStatus.TAKEN, actedAt = at ?: System.currentTimeMillis(), reason = null, snoozeUntil = null))
         app.db.medicines().get(d.medicineId)?.let { m -> countDown(ctx, m) }
         if (force && d.status == DoseStatus.TAKEN) {
             val m = app.db.medicines().get(d.medicineId)
@@ -178,9 +215,9 @@ object Scheduler {
         }
         DoseAlert.cancel(ctx, doseId)
         app.refreshWidgets()
-        reschedule(ctx)
-        return Taken.OK
-    }
+        // Release the action lock before rescheduling (reschedule uses the same mutex).
+        return@withLock Taken.OK
+    }.also { reschedule(ctx) }
 
     /** Takes back a "taken" tapped by mistake: the dose is open again and the pill count goes back up. */
     suspend fun untake(ctx: Context, doseId: Long) {
@@ -231,7 +268,7 @@ object Scheduler {
         return app.db.doses().between(now - 3 * HOUR, now + 2 * DAY)
             .filter { it.status == DoseStatus.DUE || it.status == DoseStatus.SNOOZED }
             .sortedBy { it.scheduledAt }
-            .firstNotNullOfOrNull { d -> meds[d.medicineId]?.let { d to it } }
+            .firstNotNullOfOrNull { d -> meds[d.medicineId]?.takeIf { it.active }?.let { d to it } }
     }
 
     fun today(zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {

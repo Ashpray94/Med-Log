@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ExpandLess
@@ -112,6 +113,7 @@ import com.suryaprakash.medlog.ui.ValueRow
 import com.suryaprakash.medlog.ui.YesNo
 import com.suryaprakash.medlog.ui.rememberContactPicker
 import com.suryaprakash.medlog.ui.rememberPermissionAsker
+import com.suryaprakash.medlog.ui.lift
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -133,11 +135,11 @@ private object Onboard {
 }
 
 private enum class S { WELCOME, WHO, ORDER, SIZE, READ, LANGS, NAME, BORN, SEX, CONDITIONS, SYMPTOMS, MEDS, TREATMENTS, ALLERGY, RISKS,
-    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, CHECKIN, PERMISSIONS, WIDGET, DONE }
+    DOCTORS, DOCTOR_FORM, HELPERS, HELPER_FORM, EMERGENCIES, LIMITS, CHECKIN, PERMISSIONS, WIDGET, DONE }
 
 /** Pages that count in the progress bar. */
 private val COUNTED = listOf(S.WHO, S.SIZE, S.LANGS, S.NAME, S.BORN, S.SEX, S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS,
-    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
+    S.DOCTORS, S.HELPERS, S.EMERGENCIES, S.LIMITS, S.CHECKIN, S.PERMISSIONS, S.WIDGET)
 
 @Composable
 fun OnboardingScreen(nav: Nav) {
@@ -192,10 +194,10 @@ fun OnboardingScreen(nav: Nav) {
                 if (uri != null) scope.launch {
                     runCatching { com.suryaprakash.medlog.data.SetupFile.import(ctx, uri) }
                         .onSuccess { Onboard.step = 0; nav.home(Route.Home) }
-                        .onFailure { setupError = "That file isn't a MedLog setup file." }
+                        .onFailure { setupError = "That file isn't a setup file." }
                 }
             }
-            FlowScreen("MedLog", "Welcome to MedLog", hint = "Everything stays on this phone.",
+            FlowScreen("MedLog", "Welcome", hint = "Everything stays on this phone.",
                 primary = "Start", onPrimary = { go(S.WHO) }, secondary = "Skip", onSecondary = { confirmSkip = true }) {
                 WelcomeCarousel()
                 // room kept for a message, so nothing moves when one appears
@@ -211,7 +213,7 @@ fun OnboardingScreen(nav: Nav) {
             // one person can be both: keep their own health, and help someone else (more people can be added later)
             var own by remember { mutableStateOf(s.role != "helper") }
             var helps by remember { mutableStateOf(Onboard.alsoHelps || s.role == "helper") }
-            FlowScreen(task, "How will you use MedLog?", hint = "Tap one or both.", step = n, steps = total, onBack = { back() }, primary = "Next", primaryEnabled = own || helps, onPrimary = {
+            FlowScreen(task, "How will you use this?", hint = "Tap one or both.", step = n, steps = total, onBack = { back() }, primary = "Next", primaryEnabled = own || helps, onPrimary = {
                 Onboard.alsoHelps = helps
                 when {
                     !own -> { app.settings.update { it.copy(role = "helper", onboarded = true) }; Onboard.step = 0; PairMode.helping = true; nav.home(Route.HelperHome); nav.go(Route.Pair) }
@@ -222,7 +224,7 @@ fun OnboardingScreen(nav: Nav) {
                 val p = com.suryaprakash.medlog.ui.LocalPalette.current
                 com.suryaprakash.medlog.ui.ChoicePair(
                     com.suryaprakash.medlog.ui.BigOption("My health", "Track how I feel and my medicines", own, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Person, p.tintBlue, 60.dp) }) { own = !own },
-                    com.suryaprakash.medlog.ui.BigOption("I help someone", "Get their alerts and messages", helps, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, p.tintGreen, 60.dp) }) { helps = !helps },
+                    com.suryaprakash.medlog.ui.BigOption("I help someone", "Get their alerts and messages", helps, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, com.suryaprakash.medlog.ui.HELPER_BRAND, 60.dp) }) { helps = !helps },
                     vertical = true,
                 )
                 Hint("Setting this up for a parent? Choose My health.")
@@ -237,7 +239,7 @@ fun OnboardingScreen(nav: Nav) {
                     com.suryaprakash.medlog.ui.BigOption("Mine first", "My health, then connect to them", false, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Person, p.tintBlue, 60.dp) }) {
                         Onboard.alsoHelps = true; go(S.SIZE)
                     },
-                    com.suryaprakash.medlog.ui.BigOption("Theirs first", "Connect to their phone, then my health", false, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, p.tintGreen, 60.dp) }) {
+                    com.suryaprakash.medlog.ui.BigOption("Theirs first", "Connect to their phone, then my health", false, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Groups, com.suryaprakash.medlog.ui.HELPER_BRAND, 60.dp) }) {
                         Onboard.alsoHelps = false; go(S.SIZE); PairMode.helping = true; nav.go(Route.Pair)
                     },
                     vertical = true,
@@ -245,7 +247,7 @@ fun OnboardingScreen(nav: Nav) {
             }
         }
 
-        S.SIZE -> FlowScreen(task, "Make MedLog easy for you", hint = "Pick a word size, and anything that's harder for you.", step = n, steps = total, onBack = { back() },
+        S.SIZE -> FlowScreen(task, "Make it easy for you", hint = "Pick a word size, and anything that's harder for you.", step = n, steps = total, onBack = { back() },
             primary = "Next", onPrimary = { next() }) {
             // one group per kind of difficulty, as an accordion: all closed at first, one open at a time
             val p = com.suryaprakash.medlog.ui.LocalPalette.current
@@ -284,7 +286,7 @@ fun OnboardingScreen(nav: Nav) {
         // ───────────── read aloud ─────────────
         S.READ -> {
             val now = when { !s.readAloud -> 2; s.autoRead -> 0; else -> 1 }
-            FlowScreen(task, "Should MedLog read pages out loud?", step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
+            FlowScreen(task, "Should pages be read out loud?", step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
                 val p = com.suryaprakash.medlog.ui.LocalPalette.current
                 com.suryaprakash.medlog.ui.ChoiceCards(listOf(
                     com.suryaprakash.medlog.ui.BigOption("Read every page", "Good if reading is hard", now == 0, { com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.RecordVoiceOver, p.tintBlue, 64.dp) }) {
@@ -310,8 +312,8 @@ fun OnboardingScreen(nav: Nav) {
                         val sh = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
                         Column(
                             Modifier.weight(1f).fillMaxHeight().heightIn(min = sc.target + 16.dp).clip(sh)
-                                .background(if (on) androidx.compose.ui.graphics.Color(0xFFBFE0DA) else p.card)
-                                .border(if (on) 3.dp else 1.dp, if (on) p.brand else p.line, sh)
+                                .background(if (on) p.brandSoft else p.card)
+                                .then(if (on) Modifier.border(3.dp, p.brand, sh) else Modifier)
                                 .steady(l.name + if (on) ", chosen" else ", not chosen") {
                                     app.settings.update { st -> val list = if (on) st.languages - l.tag else st.languages + l.tag; st.copy(languages = list.ifEmpty { listOf("en-IN") }) }
                                 }.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -337,7 +339,7 @@ fun OnboardingScreen(nav: Nav) {
         S.BORN -> {
             var year by remember { mutableStateOf(pr.dob.take(4)) }
             val ok = year.toIntOrNull()?.let { it in 1900..java.time.LocalDate.now().year } == true
-            FlowScreen(task, "Which year were you born?", hint = "MedLog suggests the problems common at your age.", step = n, steps = total, onBack = { back() },
+            FlowScreen(task, "Which year were you born?", hint = "This shows the problems common at your age first.", step = n, steps = total, onBack = { back() },
                 primary = "Next", primaryEnabled = ok, onPrimary = { if (pr.dob.take(4) != year) update { cur -> cur.copy(dob = "$year-07-01") }; next() },
                 ) {
                 var picking by remember { mutableStateOf(false) }
@@ -409,7 +411,7 @@ fun OnboardingScreen(nav: Nav) {
         // ───────────── medicines ─────────────
         S.MEDS -> {
             val meds by app.db.medicines().activeFlow().collectAsState(emptyList())
-            FlowScreen(task, "Which medicines do you take?", hint = "Add each one once. MedLog reminds you on time.", step = n, steps = total, onBack = { back() },
+            FlowScreen(task, "Which medicines do you take?", hint = "Add each one once. You'll be reminded on time.", step = n, steps = total, onBack = { back() },
                 primary = if (meds.isEmpty()) "I don't take any" else "Next", onPrimary = { next() }) {
                 meds.forEach { m -> MedicineCard(m) { nav.go(Route.MedEdit(m.id)) } }
                 BigButton(if (meds.isEmpty()) "Add a medicine" else "Add another", tone = Tone.SECONDARY, icon = Icons.Rounded.Medication, onClick = { nav.go(Route.MedEdit(null)) })
@@ -443,7 +445,7 @@ fun OnboardingScreen(nav: Nav) {
                 primary = "Next", primaryEnabled = has == false || (has == true && pr.allergies.isNotBlank()), onPrimary = { next() }) {
                 val p = com.suryaprakash.medlog.ui.LocalPalette.current
                 com.suryaprakash.medlog.ui.AnswerCards(listOf(
-                    com.suryaprakash.medlog.ui.Answer("I have no allergies", "Not that I know of", Icons.Rounded.CheckCircle, p.ok, has == false) {
+                    com.suryaprakash.medlog.ui.Answer("I have no allergies", "Not that I know of", Icons.Rounded.CheckCircle, p.brand, has == false) {
                         has = false; update { cur -> cur.copy(allergies = "") }; next() },
                     com.suryaprakash.medlog.ui.Answer("I'm allergic to something", "You'll tell us what next", Icons.Rounded.Warning, p.amber, has == true) {
                         has = true; writing = true },
@@ -453,13 +455,13 @@ fun OnboardingScreen(nav: Nav) {
         }
 
         // ───────────── risks ─────────────
-        S.RISKS -> FlowScreen(task, "Do any of these apply to you?", hint = "It helps MedLog know when to call your family.", step = n, steps = total, onBack = { back() },
+        S.RISKS -> FlowScreen(task, "Do any of these apply to you?", hint = "It helps us know when to call your family.", step = n, steps = total, onBack = { back() },
             primary = if (plan.risks.isEmpty()) "None of these" else "Next", onPrimary = { next() }) {
             CarePlan.RISKS.forEach { (k, l) -> Choice(l, k in plan.risks, multi = true) { savePlan { it.copy(risks = if (k in it.risks) it.risks - k else it.risks + k) } } }
         }
 
         // ───────────── doctors ─────────────
-        S.DOCTORS -> FlowScreen(task, "Who are your doctors?", hint = "Add each doctor with what they treat. MedLog then offers the right one to call.", step = n, steps = total,
+        S.DOCTORS -> FlowScreen(task, "Who are your doctors?", hint = "Add each doctor with what they treat, so the right one is offered to call.", step = n, steps = total,
             onBack = { back() }, primary = if (plan.doctors.isEmpty()) "Add a doctor" else "Next",
             onPrimary = { if (plan.doctors.isEmpty()) { Onboard.editingDoctor = -1; go(S.DOCTOR_FORM) } else go(S.HELPERS) },
             secondary = if (plan.doctors.isEmpty()) "Skip for now" else null, onSecondary = { go(S.HELPERS) }) {
@@ -467,7 +469,7 @@ fun OnboardingScreen(nav: Nav) {
                 Group {
                     plan.doctors.forEachIndexed { i, d ->
                         if (i > 0) GroupLine()
-                        ValueRow(d.name, d.speciality, sub = d.phone.ifBlank { null }) { Onboard.editingDoctor = i; go(S.DOCTOR_FORM) }
+                        ValueRow(d.name, d.speciality, sub = listOf(d.hospital, d.phone).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null }) { Onboard.editingDoctor = i; go(S.DOCTOR_FORM) }
                     }
                 }
                 BigButton("Add another doctor", tone = Tone.SECONDARY, icon = Icons.Rounded.PersonAdd, onClick = { Onboard.editingDoctor = -1; go(S.DOCTOR_FORM) })
@@ -477,8 +479,8 @@ fun OnboardingScreen(nav: Nav) {
 
         // ───────────── helpers ─────────────
         S.HELPERS -> HelpersStep(nav, n, total, first, onBack = { go(S.DOCTORS) }, onEdit = { Onboard.editingHelper = it; go(S.HELPER_FORM) }) {
-            // the first time here, suggest emergencies from what they said
-            if (plan.emergencies.isEmpty()) savePlan { it.copy(emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
+            // the first time here, suggest emergencies from what they said; an empty choice they made is kept (B02)
+            if (!plan.emergenciesAsked && plan.emergencies.isEmpty()) savePlan { it.copy(emergenciesAsked = true, emergencies = CarePlan.emergenciesFor(it.risks, pr.conditions.split(",").map { c -> c.trim() })) }
             go(S.EMERGENCIES)
         }
         S.HELPER_FORM -> HelperForm { go(S.HELPERS) }
@@ -488,14 +490,26 @@ fun OnboardingScreen(nav: Nav) {
             hint = "Your helpers are called straight away.",
             step = n, steps = total, onBack = { back() }, primary = "Next", onPrimary = { next() }) {
             SymptomGrid(CarePlan.EMERGENCIES.filter { app.catalogue.problem(it) != null }, plan.emergencies.toList()) { id ->
-                savePlan { it.copy(emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+                savePlan { it.copy(emergenciesAsked = true, emergencies = if (id in it.emergencies) it.emergencies - id else it.emergencies + id) }
+            }
+        }
+
+        // ───────────── personal limits (the helper sets them; opens the limits page, which comes back here) ─────────────
+        S.LIMITS -> {
+            val isSet = com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)
+            FlowScreen(task, "Personal limits, for the helper",
+                hint = "If you are the helper, set the numbers the doctor agreed for blood pressure, oxygen, sugar and temperature. The app then warns only when they are crossed. You can do this later in Settings → Helper controls.",
+                step = n, steps = total, onBack = { back() },
+                primary = if (isSet) "Next" else "Set limits now", onPrimary = { if (isSet) next() else nav.go(Route.Limits) },
+                secondary = if (isSet) "Change limits" else "Later", onSecondary = { if (isSet) nav.go(Route.Limits) else next() }) {
+                if (isSet) Body("Limits are set. ${com.suryaprakash.medlog.clinical.LimitsForm.summary(plan.limits)}.", bold = true)
             }
         }
 
         // ───────────── check-in ─────────────
         S.CHECKIN -> {
             val opts = listOf("08:00" to ("Morning" to "8 am"), "10:00" to ("Mid-morning" to "10 am"), "13:00" to ("Afternoon" to "1 pm"), "18:00" to ("Evening" to "6 pm"))
-            FlowScreen(task, "When should MedLog ask how you are?", hint = "Once a day. If you don't answer within 2 hours, your helpers get a message.", step = n, steps = total,
+            FlowScreen(task, "When should we ask how you are?", hint = "Once a day. If you don't answer within 2 hours, your helpers get a message.", step = n, steps = total,
                 onBack = { back() }, primary = "Next", onPrimary = { scope.launch { Scheduler.reschedule(ctx) }; next() }) {
                 opts.forEach { (t, l) ->
                     val part = com.suryaprakash.medlog.ui.dayPart(t.substringBefore(":").toInt())
@@ -511,7 +525,7 @@ fun OnboardingScreen(nav: Nav) {
         S.PERMISSIONS -> PermissionsStep(n, total, onBack = { back() }) { next() }
 
         // ───────────── widget ─────────────
-        S.WIDGET -> FlowScreen(task, "Put MedLog on your home screen", hint = "One tap notes how you feel. No need to open the app.", step = n, steps = total,
+        S.WIDGET -> FlowScreen(task, "Put it on your home screen", hint = "One tap notes how you feel. No need to open the app.", step = n, steps = total,
             onBack = { back() }, primary = "Add to home screen",
             onPrimary = { pinWidget(ctx); scope.launch { delay(600); next() } },
             secondary = "Not now", onSecondary = { next() }) {
@@ -537,18 +551,20 @@ private fun DoctorForm(plan: CarePlan, onSave: (List<CarePlan.Doctor>) -> Unit, 
     var name by remember(i) { mutableStateOf(old?.name ?: "") }
     var phone by remember(i) { mutableStateOf(old?.phone ?: "") }
     var spec by remember(i) { mutableStateOf(old?.speciality ?: "Family doctor") }
+    var hospital by remember(i) { mutableStateOf(old?.hospital ?: "") }
     val pick = rememberContactPicker { n, ph -> if (name.isBlank()) name = n; phone = ph }
     FlowScreen("Doctor", if (old == null) "Add a doctor" else "Change ${old.name}", onBack = onBack,
-        primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
-            val d = CarePlan.Doctor(name.trim(), spec, phone.trim())
+        primary = "Done", primaryEnabled = name.isNotBlank(), onPrimary = {
+            val d = CarePlan.Doctor(name.trim(), spec, phone.trim(), hospital.trim())
             onSave(if (old == null) plan.doctors + d else plan.doctors.mapIndexed { k, x -> if (k == i) d else x })
         }, secondary = if (old != null) "Remove this doctor" else null, onSecondary = { onSave(plan.doctors.filterIndexed { k, _ -> k != i }) }) {
         BigField("Doctor's name", name, { name = it }, hint = "For example: Dr. Rao")
+        BigField("Hospital or clinic", hospital, { hospital = it }, hint = "For example: City Hospital")
         Section("What do they treat?")
         FlowRowOf { CarePlan.SPECIALITIES.forEach { sp -> Chip(sp, spec == sp) { spec = sp } } }
         Section("Phone number")
         BigButton("Choose from contacts", tone = Tone.SECONDARY, icon = Icons.Rounded.Contacts, onClick = pick)
-        BigField("Or type it", phone, { phone = it }, keyboard = KeyboardType.Phone)
+        BigField("Mobile number", phone, { phone = it }, keyboard = KeyboardType.Phone)
     }
 }
 
@@ -571,7 +587,7 @@ private fun HelpersStep(nav: Nav, n: Int?, total: Int, first: String, onBack: ()
             if (helpers.size < 5) BigButton("Add another helper", tone = Tone.OUTLINE, icon = Icons.Rounded.PersonAdd, onClick = { onEdit(null) })
         }
     }
-    if (askSkip) ConfirmDialog("Continue without a helper?", "Without a helper, MedLog can only call ${s.emergencyNumber} in an emergency.",
+    if (askSkip) ConfirmDialog("Continue without a helper?", "Without a helper, only ${s.emergencyNumber} can be called in an emergency.",
         yes = "Add a helper", no = "Continue anyway", onYes = { askSkip = false; onEdit(null) }, onNo = { askSkip = false; next() })
 }
 
@@ -588,7 +604,7 @@ private fun HelperForm(back: () -> Unit) {
     val ok = h.name.isNotBlank() && h.phone.count(Char::isDigit) >= 6
     var confirmRemove by remember { mutableStateOf(false) }
     FlowScreen("Helper", if (id == null) "Add a helper" else "Change ${h.name}", onBack = back,
-        primary = "Save", primaryEnabled = ok, onPrimary = {
+        primary = "Done", primaryEnabled = ok, onPrimary = {
             scope.launch {
                 if (id == null) app.db.helpers().insert(h.copy(name = h.name.trim(), phone = h.phone.trim(), sortOrder = app.db.helpers().all().size))
                 else app.db.helpers().update(h.copy(name = h.name.trim(), phone = h.phone.trim()))
@@ -600,10 +616,10 @@ private fun HelperForm(back: () -> Unit) {
         BigField("Phone number", h.phone, { h = h.copy(phone = it) }, keyboard = KeyboardType.Phone)
         RelationField(h.relation, relations) { h = h.copy(relation = it) }
         Section("What should they get?")
-        com.suryaprakash.medlog.ui.Toggle("Calls and texts if I need help", h.sos, "With where you are") { h = h.copy(sos = it) }
-        com.suryaprakash.medlog.ui.Toggle("A text if I miss a medicine", h.alerts) { h = h.copy(alerts = it) }
+        com.suryaprakash.medlog.ui.Toggle("Alerted and called if I need help", h.sos, "With where you are") { h = h.copy(sos = it) }
+        com.suryaprakash.medlog.ui.Toggle("Told in the app if I miss a medicine", h.alerts) { h = h.copy(alerts = it) }
     }
-    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be called or texted if you need help.", yes = "Keep", no = "Remove",
+    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be alerted or called if you need help.", yes = "Keep", no = "Remove",
         onYes = { confirmRemove = false }, onNo = { confirmRemove = false; scope.launch { id?.let { app.db.helpers().delete(it) }; back() } })
 }
 
@@ -613,8 +629,8 @@ private fun HelpSteps(emergency: String) {
     val p = com.suryaprakash.medlog.ui.LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val steps = listOf(
-        Triple(Icons.Rounded.Sms, p.tintBlue, "A text with where you are" to "The moment you ask for help"),
-        Triple(Icons.Rounded.Call, p.tintGreen, "A call, one person at a time" to "Until someone answers"),
+        Triple(Icons.Rounded.Sms, p.tintBlue, "An alert on their phones, with where you are" to "The moment you ask for help. A text only if nobody answers"),
+        Triple(Icons.Rounded.Call, p.brand, "A call, one person at a time" to "Until someone answers"),
         Triple(Icons.Rounded.LocalHospital, p.red, "Then $emergency" to "If nobody answers"),
     )
     steps.forEachIndexed { i, (icon, tint, words) ->
@@ -622,7 +638,7 @@ private fun HelpSteps(emergency: String) {
             Icon(Icons.Rounded.ArrowDownward, null, tint = p.inkSoft.copy(alpha = 0.5f), modifier = Modifier.size(24.dp))
         }
         val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
-        Row(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(horizontal = 18.dp, vertical = 16.dp),
+        Row(Modifier.fillMaxWidth().clip(sh).background(p.card).padding(horizontal = 18.dp, vertical = 16.dp),
             verticalAlignment = Alignment.CenterVertically) {
             com.suryaprakash.medlog.ui.OptionIcon(icon, tint, 64.dp)
             Spacer(Modifier.width(16.dp))
@@ -647,14 +663,14 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
     var more by remember { mutableStateOf(false) }
     var confirmRemove by remember { mutableStateOf(false) }
     fun text() {
-        val body = "Hi $name, I've added you as my helper in MedLog. If I need help, you'll get a text and a call." + if (first.isNotBlank()) " – $first" else ""
+        val body = "Hi $name, I've added you as my helper in MedLog. If I need help, you'll get an alert in the app and a call." + if (first.isNotBlank()) " – $first" else ""
         runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${h.phone}")).putExtra("sms_body", body)) }
     }
     val bold = androidx.compose.ui.text.font.FontWeight.Bold
     val sh = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
     val order = listOf("first", "second", "third", "fourth", "fifth")[i.coerceAtMost(4)]
     val before = all.getOrNull(i - 1)?.name?.substringBefore(" ")
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh)) {
+    Column(Modifier.fillMaxWidth().clip(sh).background(p.card)) {
         Column(Modifier.fillMaxWidth().padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(76.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(21.dp)).background(p.fill), contentAlignment = Alignment.Center) {
@@ -662,7 +678,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
                 }
                 Spacer(Modifier.width(16.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(h.name, fontSize = sc.cardTitle, fontWeight = bold, color = p.ink, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(h.name, fontSize = sc.cardTitle, fontWeight = bold, color = p.ink)
                     Text(listOfNotNull(h.relation.ifBlank { null }, h.phone).joinToString(" · "), fontSize = sc.body, color = p.inkSoft, maxLines = 1)
                 }
             }
@@ -697,7 +713,7 @@ private fun HelperCard(nav: Nav, h: Helper, i: Int, all: List<Helper>, first: St
         add("Change $name's details" to { more = false; onEdit(h.id) })
         add("Remove $name" to { more = false; confirmRemove = true })
     }) { more = false }
-    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be called or texted if you need help.", yes = "Keep $name", no = "Remove $name",
+    if (confirmRemove) ConfirmDialog("Remove ${h.name}?", "${h.name} won't be alerted or called if you need help.", yes = "Keep $name", no = "Remove $name",
         onYes = { confirmRemove = false }, onNo = { confirmRemove = false; scope.launch { app.db.helpers().delete(h.id) } })
 }
 
@@ -735,7 +751,7 @@ private fun PermissionsStep(n: Int?, total: Int, onBack: () -> Unit, next: () ->
     val runtime = listOf(
         Triple("Reminders", Icons.Rounded.Notifications to pal.tintOrange, Perms.NOTIFY),
         Triple("Texts", Icons.Rounded.Sms to pal.tintBlue, Perms.SMS),
-        Triple("Calls", Icons.Rounded.Call to pal.tintGreen, Perms.CALL),
+        Triple("Calls", Icons.Rounded.Call to pal.brand, Perms.CALL),
         Triple("Location", Icons.Rounded.LocationOn to pal.tintPink, Perms.LOCATION),
     )
     val missing = runtime.filter { !Perms.has(ctx, *it.third) }
@@ -744,7 +760,7 @@ private fun PermissionsStep(n: Int?, total: Int, onBack: () -> Unit, next: () ->
         if (!Perms.fullScreenOk(ctx)) add(Triple("Show alarms on the lock screen", Icons.Rounded.Notifications) { Perms.openFullScreen(ctx) })
         if (!Perms.batteryOk(ctx)) add(Triple("Keep working when the phone sleeps", Icons.Rounded.BatteryChargingFull) { Perms.openBattery(ctx) })
     }
-    FlowScreen("Setting up", "Allow MedLog to look after you", hint = "Turn each one on, then tap Allow on the phone's message.", step = n, steps = total, onBack = onBack,
+    FlowScreen("Setting up", "Allow this phone to look after you", hint = "Turn each one on, then tap Allow on the phone's message.", step = n, steps = total, onBack = onBack,
         primary = if (missing.size > 1) "Allow all" else if (missing.isNotEmpty()) "Allow" else "Next", onPrimary = { if (missing.isNotEmpty()) ask(missing.flatMap { it.third.toList() }.toTypedArray()) else next() },
         secondary = if (missing.isNotEmpty()) "Not now" else null, onSecondary = next) {
         Group {
@@ -793,7 +809,7 @@ private fun WidgetPreview(onAdd: () -> Unit) {
     val wall = androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.Color(0xFFDCE6EE), androidx.compose.ui.graphics.Color(0xFFE9E4DA)))
     // the home screen
     Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(wall)
-        .steady("The MedLog widget. Tap to add it to your home screen", onClick = onAdd).padding(18.dp)) {
+        .steady("The home-screen widget. Tap to add it", onClick = onAdd).padding(18.dp)) {
         // the widget
         val wsh = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
         Column(Modifier.fillMaxWidth().clip(wsh).background(p.card).padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -836,7 +852,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
     val meds by app.db.medicines().activeFlow().collectAsState(emptyList())
     val name = pr.name.substringBefore(" ")
     FlowScreen("Setting up", if (name.isBlank()) "You're all set" else "You're all set, $name", hint = "Change anything later in Settings.",
-        onBack = { Onboard.step = S.WIDGET.ordinal }, primary = "Start using MedLog", onPrimary = {
+        onBack = { Onboard.step = S.WIDGET.ordinal }, primary = "Start", onPrimary = {
             scope.launch {
                 app.settings.update { it.copy(onboarded = true, role = "self") }
                 Scheduler.reschedule(ctx)
@@ -857,6 +873,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
             Triple("Illnesses", count(illnesses), Icons.Rounded.MonitorHeart to p.tintPink),
             Triple("Emergencies", count(plan.emergencies.size), Icons.Rounded.Sos to p.red),
             Triple("Check-in", checkIn, Icons.Rounded.Alarm to p.tintOrange),
+            Triple("Limits", if (com.suryaprakash.medlog.clinical.LimitsForm.isSet(plan.limits)) "Set" else "Not set", Icons.Rounded.Tune to p.tintTeal),
         )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             facts.chunked(2).forEach { row ->
@@ -870,7 +887,7 @@ private fun DoneStep(nav: Nav, pr: Profile, plan: CarePlan) {
             com.suryaprakash.medlog.ui.OptionIcon(Icons.Rounded.Warning, p.amber, 40.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Body("MedLog is not a doctor", bold = true)
+                Body("This is not a doctor", bold = true)
                 Hint(if (app.catalogue.reviewed) "In an emergency, press SOS." else "In an emergency, press SOS. Follow your doctor's advice.")
             }
         }
@@ -883,7 +900,7 @@ private fun FactTile(label: String, value: String, icon: androidx.compose.ui.gra
     val p = LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     val sh = androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)
-    Row(modifier.clip(sh).background(p.card).border(1.dp, p.line, sh).padding(horizontal = 14.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(modifier.clip(sh).background(p.card).padding(horizontal = 14.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
         com.suryaprakash.medlog.ui.OptionIcon(icon, tint, 40.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -924,32 +941,18 @@ private fun WelcomeCarousel() {
         Slide(Icons.Rounded.Sos, p.red, "Help in one tap", "Your family is called and told where you are."),
         Slide(Icons.Rounded.Description, p.tintPurple, "One page for the doctor", "What happened, when, and how bad."),
     )
-    val pager = androidx.compose.foundation.pager.rememberPagerState { slides.size }
-    LaunchedEffect(still) {
-        if (still) return@LaunchedEffect
-        while (true) { kotlinx.coroutines.delay(3500); pager.animateScrollToPage((pager.currentPage + 1) % slides.size) }
-    }
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        // portrait cards with the next one peeking in, so it's clear they can be swiped by thumb too
-        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth(), pageSpacing = 14.dp,
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 40.dp)) { i ->
-            val sl = slides[i]
-            val sh = androidx.compose.foundation.shape.RoundedCornerShape(32.dp)
-            Column(
-                Modifier.fillMaxWidth().height(if (sc.big) 420.dp else 380.dp).clip(sh).background(sl.tint.copy(alpha = 0.10f)).padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-            ) {
-                com.suryaprakash.medlog.ui.IconTile(sl.icon, sl.tint, 104.dp)
-                Spacer(Modifier.height(28.dp))
-                Text(sl.title, fontSize = sc.title, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, minLines = 2)
-                Spacer(Modifier.height(8.dp))
-                Text(sl.sub, fontSize = sc.body, color = p.inkSoft, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, minLines = 2)
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            repeat(slides.size) { i ->
-                Box(Modifier.height(8.dp).width(if (i == pager.currentPage) 24.dp else 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
-                    .background(if (i == pager.currentPage) p.brand else p.line))
+    @Suppress("UNUSED_VARIABLE") val unusedStill = still
+    // four plain points, one under the other: nothing slides sideways or moves by itself
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        slides.forEach { sl ->
+            Row(Modifier.fillMaxWidth().lift(androidx.compose.foundation.shape.RoundedCornerShape(sc.radius)).clip(androidx.compose.foundation.shape.RoundedCornerShape(sc.radius))
+                .background(p.card).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                com.suryaprakash.medlog.ui.IconTile(sl.icon, sl.tint, 56.dp)
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sl.title, fontSize = sc.headline, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink)
+                    Text(sl.sub, fontSize = sc.body, color = p.inkSoft)
+                }
             }
         }
     }
@@ -975,8 +978,7 @@ private fun YearSheet(current: Int?, onDone: (Int) -> Unit, onDismiss: () -> Uni
     val now = java.time.LocalDate.now().year
     val years = remember { (1920..now).toList() }
     var pick by remember { mutableStateOf(current ?: 1955) }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Year you were born", fontSize = sc.headline, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink)
             com.suryaprakash.medlog.ui.NumberWheel(years, pick, { pick = it })
@@ -993,11 +995,8 @@ private fun SymptomGrid(ids: List<String>, chosen: List<String>, toggle: (String
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
     com.suryaprakash.medlog.ui.TileGrid(ids, 2, aspect = 1.0f) { id, m ->
         val label = cat.problem(id)?.label ?: id
-        com.suryaprakash.medlog.ui.Tile(label, m, selected = id in chosen, onClick = { toggle(id) }) {
-            com.suryaprakash.medlog.pictogram.SpriteIcon(id, 92.dp)
-            Spacer(Modifier.size(8.dp))
-            com.suryaprakash.medlog.ui.Text(label, fontSize = sc.body, lineHeight = sc.body * 1.15f, maxLines = 2,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        com.suryaprakash.medlog.ui.PicTile(label, m, picture = 84.dp, selected = id in chosen, onClick = { toggle(id) }) {
+            com.suryaprakash.medlog.pictogram.SpriteIcon(id, 84.dp)
         }
     }
 }
@@ -1009,7 +1008,7 @@ private val SECTIONS = listOf(
     "about you" to setOf(S.NAME, S.BORN, S.SEX),
     "health questions" to setOf(S.CONDITIONS, S.SYMPTOMS, S.MEDS, S.TREATMENTS, S.ALLERGY, S.RISKS),
     "doctors" to setOf(S.DOCTORS, S.DOCTOR_FORM),
-    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES),
+    "helpers" to setOf(S.HELPERS, S.HELPER_FORM, S.EMERGENCIES, S.LIMITS),
     "daily check-in" to setOf(S.CHECKIN),
     "phone settings" to setOf(S.PERMISSIONS, S.WIDGET),
 )
@@ -1025,8 +1024,7 @@ private fun SkipSheet(section: String, onSection: () -> Unit, onAll: () -> Unit,
 private fun OptionsSheet(title: String, help: String, options: List<Pair<String, () -> Unit>>, onDismiss: () -> Unit) {
     val p = com.suryaprakash.medlog.ui.LocalPalette.current
     val sc = com.suryaprakash.medlog.ui.LocalScale.current
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.card,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.card) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(title, fontSize = sc.headline, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = p.ink)
             Body(help)
@@ -1062,8 +1060,8 @@ private fun AccessRow(title: String, icon: androidx.compose.ui.graphics.vector.I
                 val csh = androidx.compose.foundation.shape.RoundedCornerShape(18.dp)
                 Row(
                     Modifier.fillMaxWidth().clip(csh)
-                        .background(if (c.on) androidx.compose.ui.graphics.Color(0xFFBFE0DA) else p.card)
-                        .border(if (c.on) 3.dp else 1.dp, if (c.on) p.brand else p.line, csh)
+                        .background(if (c.on) p.brandSoft else p.card)
+                        .then(if (c.on) Modifier.border(3.dp, p.brand, csh) else Modifier)
                         .steady(c.title + ". " + c.sub + if (c.on) ", chosen" else ", not chosen", onClick = c.toggle)
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,

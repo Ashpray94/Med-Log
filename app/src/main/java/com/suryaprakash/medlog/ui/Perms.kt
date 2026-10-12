@@ -13,6 +13,8 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 
 /** Plain-language permission list (plan 12, 16). Each has one "Allow" button. */
@@ -35,13 +37,13 @@ object Perms {
     val CALENDAR = arrayOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR)
 
     fun list(role: String) = if (role == "helper") listOf(
-        P("notify", "Let MedLog alert you", "So you hear when someone needs you.", NOTIFY, true),
+        P("notify", "Let this phone alert you", "So you hear when someone needs you.", NOTIFY, true),
         P("nearby", "Find the phone nearby", "So messages arrive without internet, over Bluetooth.", NEARBY, true),
     ) else listOf(
-        P("mic", "Let MedLog hear you", "So you can talk instead of typing. Your voice stays on this phone.", MIC, true),
-        P("notify", "Let MedLog remind you", "For medicine times and check-ins.", NOTIFY, true),
-        P("sms", "Send help messages", "So MedLog can text your helpers in an SOS. Uses SMS, not internet.", SMS, true),
-        P("call", "Call your helpers", "So MedLog can call your helpers in an SOS.", CALL, true),
+        P("mic", "Let this phone hear you", "So you can talk instead of typing. Your voice stays on this phone.", MIC, true),
+        P("notify", "Let this phone remind you", "For medicine times and check-ins.", NOTIFY, true),
+        P("sms", "Send help messages", "Used only in an SOS, when no helper answers in the app. Uses SMS, not internet.", SMS, true),
+        P("call", "Call your helpers", "So your helpers can be called in an SOS.", CALL, true),
         P("location", "Share where you are in an SOS", "Only sent in an SOS message, only to your helpers.", LOCATION, false),
         P("nearby", "Reach phones in your home", "So your family's phones ring when you tap a help message.", NEARBY, false),
     )
@@ -79,8 +81,87 @@ object Perms {
     }
 }
 
+/** The words people see in Android's permission screen for each permission. */
+private fun permWord(p: String) = when (p) {
+    Manifest.permission.SEND_SMS -> "SMS"
+    Manifest.permission.CALL_PHONE, Manifest.permission.READ_PHONE_STATE -> "Phone"
+    Manifest.permission.RECORD_AUDIO -> "Microphone"
+    Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION -> "Location"
+    Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR -> "Calendar"
+    "android.permission.POST_NOTIFICATIONS" -> "Notifications"
+    else -> "Nearby devices"
+}
+
+private tailrec fun Context.activity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.activity()
+    else -> null
+}
+
+/**
+ * Asks Android for [perms]. When Android doesn't even show its question (the person said "Don't ask again" before,
+ * or, on Android 13 and newer, SMS and Phone are "restricted" for apps installed from a file), it opens this app's
+ * settings with plain steps instead of silently doing nothing. Coming back to the app checks again, so a card
+ * asking for a permission goes away as soon as it's allowed.
+ */
 @Composable
 fun rememberPermissionAsker(onResult: (Boolean) -> Unit): (Array<String>) -> Unit {
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r -> onResult(r.values.all { it }) }
-    return { perms -> if (perms.isEmpty()) onResult(true) else launcher.launch(perms) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val result = androidx.compose.runtime.rememberUpdatedState(onResult)
+    var last by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Array<String>?>(null) }
+    var askedAt by androidx.compose.runtime.remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+    var blocked by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<List<String>>(emptyList()) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        val denied = r.filterValues { !it }.keys
+        val act = ctx.activity()
+        // no question was shown: the answer came back at once, and Android wouldn't explain it either
+        val silent = System.currentTimeMillis() - askedAt < 700 && denied.none { act?.shouldShowRequestPermissionRationale(it) == true }
+        // SMS is "restricted" on Android 13 and newer for apps installed from a file: Android shows its own
+        // "App was denied access" note instead of the question, so the steps follow that note too
+        val restricted = Build.VERSION.SDK_INT >= 33 && Manifest.permission.SEND_SMS in denied && act?.shouldShowRequestPermissionRationale(Manifest.permission.SEND_SMS) != true
+        if (denied.isNotEmpty() && (silent || restricted)) blocked = denied.map(::permWord).distinct()
+        result.value(denied.isEmpty())
+    }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) last?.let { p -> result.value(Perms.has(ctx, *p)) }
+        }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+    if (blocked.isNotEmpty()) androidx.compose.ui.window.Dialog(onDismissRequest = { blocked = emptyList() }) {
+        val names = blocked.joinToString(" and ")
+        Card {
+            Title("Allow it in Settings")
+            if ("SMS" in blocked) {
+                Body("Android holds back SMS for apps installed from a file. Allow it once; updates keep it:")
+                Body("1. Tap Open Settings.\n2. Tap ⋮ at the top right, then Allow restricted settings, and confirm.\n3. Come back here and turn it on again.", bold = true)
+            } else {
+                Body("Android didn't show the question here, so please turn it on in Settings:")
+                Body("1. Tap Open Settings.\n2. Tap Permissions, then $names, then Allow.", bold = true)
+                Hint("If $names is greyed out: tap ⋮ at the top right of that screen, then Allow restricted settings, and try again.")
+            }
+            BigButton("Open Settings", onClick = { blocked = emptyList(); Perms.openAppSettings(ctx) })
+            BigButton("Not now", tone = Tone.SECONDARY, onClick = { blocked = emptyList() })
+        }
+    }
+    return { perms ->
+        if (perms.isEmpty()) result.value(true)
+        else { last = perms; askedAt = System.currentTimeMillis(); launcher.launch(perms) }
+    }
+}
+
+/** True while all of [perms] are allowed; checked again each time the app comes back to the front. */
+@Composable
+fun rememberAllowed(vararg perms: String): Boolean {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var ok by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Perms.has(ctx, *perms)) }
+    val owner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val obs = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) ok = Perms.has(ctx, *perms) }
+        owner.lifecycle.addObserver(obs)
+        onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+    return ok
 }

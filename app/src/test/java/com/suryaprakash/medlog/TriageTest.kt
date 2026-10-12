@@ -41,7 +41,6 @@ class TriageTest {
             "lips swelling after the tablet" to "allergic_reaction",
             "I fell and couldn't get up" to "fall",
             "sugar is 45" to "low_sugar",
-            "oxygen is 86" to "low_oxygen",
             "fever 104 degrees" to "fever",
             "fever and confused" to "fever",
             "bleeding won't stop" to "bleeding",
@@ -61,10 +60,17 @@ class TriageTest {
     @Test fun mustBeAmber() {
         assertEquals(Level.AMBER, level("vomiting, can't keep water down", "vomiting"))
         assertEquals(Level.AMBER, level("cough for 4 weeks", "cough"))
-        assertEquals(Level.AMBER, level("bp is 190 by 100", "high_bp"))
+        // over 55 a BP number alone is not judged until the helper sets limits (W2), so this is a younger person
+        assertEquals(Level.AMBER, level("bp is 190 by 100", "high_bp", person = elder.copy(ageYears = 45)))
         assertEquals(Level.AMBER, level("mild chest pain", "chest_pain"))
         assertEquals(Level.AMBER, level("fever 100.8", "fever"))
         assertEquals(Level.AMBER, level("only one leg is swollen and painful", "swollen_ankles"))
+    }
+
+    @Test fun lowOxygenIsRedForAYoungerPerson() {
+        // changed with W2: for over 55 the same number is AMBER until the helper sets a red line (see ClinicalRulesTest)
+        assertEquals(Level.RED, level("oxygen is 86", "low_oxygen", person = elder.copy(ageYears = 45)))
+        assertEquals(Level.AMBER, level("oxygen is 86", "low_oxygen"))
     }
 
     @Test fun manyVomitsInADayIsAmber() {

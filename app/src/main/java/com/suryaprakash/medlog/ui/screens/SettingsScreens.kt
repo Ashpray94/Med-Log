@@ -86,7 +86,7 @@ fun SettingsScreen(nav: Nav) {
     LaunchedEffect(Unit) { profile = app.repo.profile() }
 
     if (locked) {
-        Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        Screen("Settings", "Settings are locked by your helper. Easy mode can still be changed.", onHome = { nav.home() }) {
             BigButton("Easy mode and reading aloud", icon = Icons.Rounded.TextFields, onClick = { nav.go(Route.EasySettings) })
             Card {
                 Body("Helper PIN", bold = true)
@@ -102,14 +102,15 @@ fun SettingsScreen(nav: Nav) {
     when (section) {
         "me" -> Screen("My details", "Your details for the doctor page.", onHome = { nav.home() }, onBack = { section = null }) {
             BigField("Name", profile.name, { profile = profile.copy(name = it) })
-            BigField("Date of birth (YYYY-MM-DD)", profile.dob, { profile = profile.copy(dob = it) }, hint = "For example 1948-03-12")
+            BigField("Year of birth", profile.dob.take(4), { y -> val v = y.filter(Char::isDigit).take(4); profile = profile.copy(dob = if (v.length == 4) "$v-07-01" else v) },
+                keyboard = KeyboardType.Number, hint = "For example 1948")
             run { val o = listOf("F" to "Woman", "M" to "Man", "" to "Not said"); com.suryaprakash.medlog.ui.Segmented(o.map { it.second }, o.indexOfFirst { it.first == profile.sex }) { profile = profile.copy(sex = o[it].first) } }
             BigField("Blood group", profile.bloodGroup, { profile = profile.copy(bloodGroup = it) })
             BigField("Hospital ID", profile.hospitalId, { profile = profile.copy(hospitalId = it) })
             BigField("Illnesses", profile.conditions, { profile = profile.copy(conditions = it) }, lines = 2)
             BigField("Allergies", profile.allergies, { profile = profile.copy(allergies = it) }, lines = 2)
             Toggle("I take a blood thinner", profile.onBloodThinner) { profile = profile.copy(onBloodThinner = it) }
-            BigButton("Save", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
+            BigButton("Done", tone = Tone.PRIMARY, onClick = { scope.launch { app.db.profile().put(profile); section = null } })
         }
         "reminders" -> Screen("Medicine reminders", "How reminders work.", onHome = { nav.home() }, onBack = { section = null }) {
             Body("Remind again after", bold = true)
@@ -121,7 +122,7 @@ fun SettingsScreen(nav: Nav) {
             CalendarPicker()
             Title("Meeting Timer")
             val mt = CalendarSync.meetingTimerInstalled(ctx)
-            Toggle("Show reminders in Meeting Timer", s.useMeetingTimer && mt, if (mt) "Meeting Timer shows the medicine card; MedLog steps in if it doesn't within 2 minutes." else "Meeting Timer is not installed on this phone.") { on ->
+            Toggle("Show reminders in Meeting Timer", s.useMeetingTimer && mt, if (mt) "Meeting Timer shows the medicine card; this app steps in if it doesn't within 2 minutes." else "Meeting Timer is not installed on this phone.") { on ->
                 if (mt) { app.settings.update { it.copy(useMeetingTimer = on) }; scope.launch { Scheduler.reschedule(ctx) } }
             }
             if (mt) BigButton("Open Meeting Timer", tone = Tone.SECONDARY, onClick = { CalendarSync.openMeetingTimer(ctx) })
@@ -131,7 +132,7 @@ fun SettingsScreen(nav: Nav) {
             if (s.checkInEnabled) run { val o = listOf("08:00", "09:00", "10:00", "11:00"); com.suryaprakash.medlog.ui.Segmented(o, o.indexOf(s.checkInTime)) { i -> app.settings.update { it.copy(checkInTime = o[i]) }; scope.launch { Scheduler.reschedule(ctx) } } }
             Toggle("Fall detection", s.fallDetection, "Asks \"Did you fall?\" after a hard fall, then starts SOS if you don't answer. Uses more battery. Can be wrong.") { on -> app.settings.update { it.copy(fallDetection = on) }; FallService.sync(ctx) }
             Toggle("Sunday summary", s.weeklySummary, "A short spoken summary of your week.") { on -> app.settings.update { it.copy(weeklySummary = on) } }
-            Toggle("Always-there buttons", s.persistentNotification, "Tell and Help buttons in your notifications, even on the lock screen.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
+            Toggle("Note things from the lock screen", s.persistentNotification, "A Speak button in your notifications. Works without unlocking.") { on -> app.settings.update { it.copy(persistentNotification = on) }; QuickNotification.sync(ctx) }
             Toggle("I have diabetes", s.diabetic, "Shows sugar readings next to meals.") { on -> app.settings.update { it.copy(diabetic = on) } }
             Body("Glasses of water a day", bold = true)
             run { val o = listOf(6, 8, 10); com.suryaprakash.medlog.ui.Segmented(o.map { "$it" }, o.indexOf(s.waterGoal)) { i -> app.settings.update { it.copy(waterGoal = o[i]) } } }
@@ -146,21 +147,25 @@ fun SettingsScreen(nav: Nav) {
             if (s.internetLink) {
                 var relay by remember { mutableStateOf(s.relayUrl) }
                 BigField("Relay address (optional)", relay, { relay = it.trim() }, hint = "Leave empty to use ${Relay.DEFAULT_URL}. If you change it, pair helper phones again.")
-                if (relay != s.relayUrl) BigButton("Save address", tone = Tone.QUIET, enabled = relay.isEmpty() || relay.startsWith("https://"), onClick = { app.settings.update { it.copy(relayUrl = relay) } })
+                if (relay != s.relayUrl) BigButton("Done", tone = Tone.QUIET, enabled = relay.isEmpty() || relay.startsWith("https://"), onClick = { app.settings.update { it.copy(relayUrl = relay) } })
             }
             Title("WhatsApp group call (extra)")
-            Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so phone calls and SMS always follow.")
+            Hint("Optional. MedLog opens your family SOS group and presses the call button. It needs internet and can stop working when WhatsApp changes, so the SOS still goes on to SMS and phone calls if nobody answers.")
             BigField("Family group invite link", s.whatsappGroupLink, { v -> app.settings.update { it.copy(whatsappGroupLink = v.trim()) } }, hint = "In WhatsApp: group info → Invite via link → Copy link")
             val enabled = WhatsAppCallService.isEnabled(ctx)
             Toggle("Use WhatsApp group call in SOS", s.whatsappSos, if (enabled) "Ready" else "Needs the MedLog SOS helper turned on in Accessibility") { on -> app.settings.update { it.copy(whatsappSos = on) } }
             if (s.whatsappSos && !enabled) BigButton("Turn on in Accessibility", tone = Tone.QUIET, onClick = { Perms.open(ctx, Intent(AndroidSettings.ACTION_ACCESSIBILITY_SETTINGS)) })
         }
         "lang" -> LanguagesSection(onBack = { section = null }, onHome = { nav.home() })
-        "update" -> Screen("Updates", "Check for a new version of MedLog and install it.", onHome = { nav.home() }, onBack = { section = null }) {
+        "update" -> Screen("Updates", "Check for a new version and install it.", onHome = { nav.home() }, onBack = { section = null }) {
             UpdateCard(auto = true)
-            Hint("You're on MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. MedLog also checks once a day by itself.")
+            Hint("You're on version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME}. It also checks once a day by itself.")
         }
         "helperlock" -> Screen("Helper controls", "Things a helper can set.", onHome = { nav.home() }, onBack = { section = null }) {
+            val limitsPlan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
+            com.suryaprakash.medlog.ui.Group {
+                com.suryaprakash.medlog.ui.ValueRow("Personal limits", com.suryaprakash.medlog.clinical.LimitsForm.summary(limitsPlan.limits), sub = "Numbers the doctor agreed") { nav.go(Route.Limits) }
+            }
             Body("Hide what isn't needed", bold = true)
             listOf("meds" to "Medicines", "food" to "Food & water", "readings" to "BP, sugar & more", "reports" to "How am I doing", "doctor" to "For doctor", "help" to "Help").forEach { (k, l) ->
                 Toggle("Show $l", k !in s.hidden) { on -> app.settings.update { it.copy(hidden = if (on) it.hidden - k else it.hidden + k) } }
@@ -173,7 +178,7 @@ fun SettingsScreen(nav: Nav) {
             }
         }
         "doctors" -> DoctorsSection(onBack = { section = null })
-        else -> Screen("Settings", "Choose what to change.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        else -> Screen("Settings", "Choose what to change.", onHome = { nav.home() }) {
             val helpers by app.db.helpers().flow().collectAsState(emptyList())
             val plan = com.suryaprakash.medlog.data.CarePlan.parse(profile.plan)
             fun langs() = s.languages.joinToString(", ") { t -> com.suryaprakash.medlog.clinical.Lang.ALL.firstOrNull { it.tag == t }?.name ?: t }
@@ -203,6 +208,8 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("SOS", "Calls ${s.emergencyNumber} last") { section = "sos" }
             }
+            ConnectionSettings(nav)
+            SharingSettings()
             com.suryaprakash.medlog.ui.Section("This phone")
             com.suryaprakash.medlog.ui.Group {
                 com.suryaprakash.medlog.ui.ValueRow("Home-screen widget", "Add") { pinWidget(ctx) }
@@ -224,8 +231,13 @@ fun SettingsScreen(nav: Nav) {
                 com.suryaprakash.medlog.ui.ValueRow("Helper controls", if (s.helperPin.isNotBlank()) "PIN set" else null, sub = "Hide features, lock settings") { section = "helperlock" }
                 com.suryaprakash.medlog.ui.GroupLine()
                 com.suryaprakash.medlog.ui.ValueRow("Privacy", null) { nav.go(Route.Privacy) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("Report a problem", null, sub = "Send a picture and your words") { com.suryaprakash.medlog.feedback.Capture.openFeedback(ctx, nav) }
+                com.suryaprakash.medlog.ui.GroupLine()
+                com.suryaprakash.medlog.ui.ValueRow("My reports", null) { nav.go(Route.MyReports) }
             }
-            Hint("MedLog ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
+            Toggle("Shake to report a problem", s.shakeOn, "Shake the phone twice to report what you see. Can start by accident if your hands shake.") { on -> app.settings.update { it.copy(shakeToReport = on) } }
+            Hint("Version ${com.suryaprakash.medlog.BuildConfig.VERSION_NAME} · clinical content ${app.catalogue.version}${if (!app.catalogue.reviewed) " (not yet doctor-reviewed)" else ""}")
         }
     }
 }
@@ -243,31 +255,33 @@ private fun DoctorsSection(onBack: () -> Unit) {
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var spec by remember { mutableStateOf("Family doctor") }
+    var hospital by remember { mutableStateOf("") }
     val pick = com.suryaprakash.medlog.ui.rememberContactPicker { n, ph -> if (name.isBlank()) name = n; phone = ph }
     val e = editing
     if (e != null) {
         com.suryaprakash.medlog.ui.FlowScreen("Doctor", if (e < 0) "Add a doctor" else "Change ${name.ifBlank { "doctor" }}", onBack = { editing = null },
-            primary = "Save", primaryEnabled = name.isNotBlank(), onPrimary = {
-                val d = com.suryaprakash.medlog.data.CarePlan.Doctor(name.trim(), spec, phone.trim())
+            primary = "Done", primaryEnabled = name.isNotBlank(), onPrimary = {
+                val d = com.suryaprakash.medlog.data.CarePlan.Doctor(name.trim(), spec, phone.trim(), hospital.trim())
                 save(if (e < 0) plan.doctors + d else plan.doctors.mapIndexed { i, x -> if (i == e) d else x }); editing = null
             }, secondary = if (e >= 0) "Remove this doctor" else null, onSecondary = { save(plan.doctors.filterIndexed { i, _ -> i != e }); editing = null }) {
             BigField("Doctor's name", name, { name = it }, hint = "For example: Dr. Rao")
+            BigField("Hospital or clinic", hospital, { hospital = it }, hint = "For example: City Hospital")
             com.suryaprakash.medlog.ui.Section("What do they treat?")
             com.suryaprakash.medlog.ui.FlowRowOf { com.suryaprakash.medlog.data.CarePlan.SPECIALITIES.forEach { sp -> com.suryaprakash.medlog.ui.Chip(sp, spec == sp) { spec = sp } } }
             com.suryaprakash.medlog.ui.Section("Phone number")
             BigButton("Choose from contacts", tone = Tone.SECONDARY, onClick = pick)
-            BigField("Or type it", phone, { phone = it }, keyboard = KeyboardType.Phone)
+            BigField("Mobile number", phone, { phone = it }, keyboard = KeyboardType.Phone)
         }
         return
     }
     Screen("My doctors", "Your doctors and what they treat.", onHome = null, onBack = onBack, actions = {
-        BigButton("Add a doctor", onClick = { name = ""; phone = ""; spec = "Family doctor"; editing = -1 })
+        BigButton("Add a doctor", onClick = { name = ""; phone = ""; spec = "Family doctor"; hospital = ""; editing = -1 })
     }) {
-        if (plan.doctors.isEmpty()) Hint("No doctors yet. Add each doctor with what they treat, so MedLog offers the right one to call.")
+        if (plan.doctors.isEmpty()) Hint("No doctors yet. Add each doctor with what they treat, so the right one is offered to call.")
         else com.suryaprakash.medlog.ui.Group {
             plan.doctors.forEachIndexed { i, d ->
                 if (i > 0) com.suryaprakash.medlog.ui.GroupLine()
-                com.suryaprakash.medlog.ui.ValueRow(d.name, d.speciality, sub = d.phone.ifBlank { null }) { name = d.name; phone = d.phone; spec = d.speciality; editing = i }
+                com.suryaprakash.medlog.ui.ValueRow(d.name, d.speciality, sub = listOf(d.hospital, d.phone).filter { it.isNotBlank() }.joinToString(" · ").ifBlank { null }) { name = d.name; phone = d.phone; spec = d.speciality; hospital = d.hospital; editing = i }
             }
         }
     }
@@ -282,7 +296,7 @@ private fun CalendarPicker() {
     var granted by remember { mutableStateOf(Perms.has(ctx, *Perms.CALENDAR)) }
     val ask = rememberPermissionAsker { granted = it }
     if (!granted) {
-        Hint("Put medicine times into your Google Calendar. Android syncs them; MedLog itself never uses the internet.")
+        Hint("Put medicine times into your Google Calendar. Android syncs them; this app itself never sends them online.")
         BigButton("Allow calendar", tone = Tone.QUIET, onClick = { ask(Perms.CALENDAR) })
         return
     }
@@ -302,7 +316,7 @@ fun EasySettingsScreen(nav: Nav) {
     val s = LocalSettings.current
     val speakerOk by app.speaker.available.collectAsState()
     fun set(f: (com.suryaprakash.medlog.data.Settings) -> com.suryaprakash.medlog.data.Settings) = app.settings.update(f)
-    Screen("Seeing and hearing", "Change how MedLog looks and sounds.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Seeing and hearing", "Change how it looks and sounds.", onHome = { nav.home() }, onBack = { nav.back() }) {
         com.suryaprakash.medlog.ui.Section("Text size")
         com.suryaprakash.medlog.ui.Choice("Regular", !s.bigMode) { set { it.copy(bigMode = false) } }
         com.suryaprakash.medlog.ui.Choice("Large", s.bigMode) { set { it.copy(bigMode = true) } }
@@ -373,7 +387,7 @@ fun PermissionList(role: String) {
 @Composable
 fun PermissionsScreen(nav: Nav) {
     val s = LocalSettings.current
-    Screen("Permissions", "MedLog needs these to remind you and get help. Tap Allow on each one that isn't ticked.", onHome = { nav.home() }, onBack = { nav.back() }) {
+    Screen("Permissions", "These are needed to remind you and get help. Tap Allow on each one that isn't ticked.", onHome = { nav.home() }, onBack = { nav.back() }) {
         PermissionList(s.role)
     }
 }
@@ -396,18 +410,18 @@ fun BackupScreen(nav: Nav) {
         if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.export(ctx, uri); "Setup file saved." }.getOrElse { "Could not save: ${it.message}" } }
     }
     val loadSetup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
-        if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.import(ctx, uri); "Setup loaded." }.getOrElse { "That file isn't a MedLog setup file." } }
+        if (uri != null) scope.launch { status = runCatching { com.suryaprakash.medlog.data.SetupFile.import(ctx, uri); "Setup loaded." }.getOrElse { "That file isn't a setup file." } }
     }
     Screen("Backup and new phone", "Save a locked copy of everything, or bring it back on a new phone.", onHome = { nav.home() }, onBack = { nav.back() }) {
         Title("Setup file")
         Body("Your details, helpers, languages, messages and settings, in one file. Load it on a new phone to skip the setup questions. It has no notes or readings.")
-        BigButton("Save setup file", onClick = { saveSetup.launch("MedLog-setup-${java.time.LocalDate.now()}.json") })
+        BigButton("Keep a setup file", onClick = { saveSetup.launch("MedLog-setup-${java.time.LocalDate.now()}.json") })
         BigButton("Load setup file", tone = Tone.SECONDARY, onClick = { loadSetup.launch(arrayOf("application/json", "application/octet-stream", "*/*")) })
         Hint("Keep the file private: it has your name, illnesses and helpers' numbers.")
         Title("Full backup")
         Body("The backup is locked with a password. Keep the password safe; without it the backup can't be opened.")
         BigField("Backup password", password, { password = it }, keyboard = KeyboardType.Password, hint = "At least 6 letters or numbers")
-        BigButton("Save a backup", enabled = password.length >= 6, onClick = { save.launch("MedLog-backup-${java.time.LocalDate.now()}.medlog") })
+        BigButton("Make a backup copy", enabled = password.length >= 6, onClick = { save.launch("MedLog-backup-${java.time.LocalDate.now()}.medlog") })
         BigButton("Restore a backup", tone = Tone.SECONDARY, enabled = password.length >= 6, onClick = { open.launch(arrayOf("*/*")) })
         status?.let { Card() { Body(it, bold = true) } }
         Hint("You choose where the file goes: this phone, an SD card, a computer, or your own Drive.")
@@ -415,6 +429,37 @@ fun BackupScreen(nav: Nav) {
 }
 
 /** New version: check, download, install. On Settings → Updates, and on the home screen when one is ready. */
+/**
+ * Tells about a new version once in the phone's lifetime (owner: "once in lifetime for a user, never shown again"), as a
+ * bottom sheet on Home. After that, new versions are only under Settings → Updates.
+ */
+@Composable
+fun UpdateSheetOnce() {
+    val ctx = LocalContext.current
+    val app = ctx.medlog
+    val p = LocalPalette.current
+    val sc = LocalScale.current
+    val update by com.suryaprakash.medlog.Updater.state.collectAsState()
+    var seen by remember { mutableStateOf(UpdateSheet.seen(app.settings.getString(UpdateSheet.KEY))) }
+    val show = !seen && update is com.suryaprakash.medlog.Updater.State.Available
+    LaunchedEffect(show) { if (show) app.settings.putString(UpdateSheet.KEY, "1") }   // shown = never again, whatever is tapped
+    if (!show) return
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = { seen = true }, containerColor = p.paper) {
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Text("A new version is ready", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
+            UpdateCard()
+            Hint("From now on, new versions wait in Settings → Updates.")
+            BigButton("Later", tone = Tone.SECONDARY, onClick = { seen = true })
+        }
+    }
+}
+
+/** The once-in-a-lifetime rule for the update sheet, kept pure for its test. */
+object UpdateSheet {
+    const val KEY = "update_sheet_seen"
+    fun seen(stored: String?) = stored == "1"
+}
+
 @Composable
 fun UpdateCard(auto: Boolean = false) {
     val ctx = LocalContext.current
@@ -423,21 +468,27 @@ fun UpdateCard(auto: Boolean = false) {
     val st by com.suryaprakash.medlog.Updater.state.collectAsState()
     var canInstall by remember { mutableStateOf(com.suryaprakash.medlog.Updater.canInstall(ctx)) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) { canInstall = com.suryaprakash.medlog.Updater.canInstall(ctx); onPauseOrDispose {} }
-    androidx.compose.runtime.LaunchedEffect(Unit) { if (auto && st is com.suryaprakash.medlog.Updater.State.Idle) com.suryaprakash.medlog.Updater.check(ctx) }
+    // opening Updates always asks again (an earlier "up to date" may be old), unless a download is under way
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        if (auto && st !is com.suryaprakash.medlog.Updater.State.Downloading && st !is com.suryaprakash.medlog.Updater.State.Installing) com.suryaprakash.medlog.Updater.check(ctx)
+    }
     when (val s = st) {
         is com.suryaprakash.medlog.Updater.State.Available -> Card(border = p.ok) {
-            Body("A new MedLog is ready: ${s.release.name}", bold = true)
+            Body("A new version is ready: ${s.release.name}", bold = true)
             if (s.release.notes.isNotBlank()) Body(s.release.notes)
             if (!canInstall) {
-                Body("First, let MedLog install updates. Turn on the switch, then come back.")
+                Body("First, allow updates to install. Turn on the switch, then come back.")
                 BigButton("Allow updates", tone = Tone.QUIET, onClick = { com.suryaprakash.medlog.Updater.openInstallPermission(ctx) })
-            } else BigButton("Update now", tone = Tone.OK, onClick = { scope.launch { com.suryaprakash.medlog.Updater.install(ctx, s.release) } })
+            } else BigButton("Update now", tone = Tone.PRIMARY, onClick = { scope.launch { com.suryaprakash.medlog.Updater.install(ctx, s.release) } })
             Hint("Your notes and settings stay. Android will ask you to confirm.")
         }
         is com.suryaprakash.medlog.Updater.State.Downloading -> Card() { Body("Downloading… ${s.percent}%", bold = true) }
         com.suryaprakash.medlog.Updater.State.Installing -> Card() { Body("Installing… Tap Update when Android asks.", bold = true) }
         com.suryaprakash.medlog.Updater.State.Checking -> Card { Body("Checking…") }
-        com.suryaprakash.medlog.Updater.State.UpToDate -> Card(border = p.ok) { Body("MedLog is up to date.", bold = true) }
+        com.suryaprakash.medlog.Updater.State.UpToDate -> Card(border = p.ok) {
+            Body("You have the newest version.", bold = true)
+            BigButton("Check again", tone = Tone.SECONDARY, onClick = { scope.launch { com.suryaprakash.medlog.Updater.check(ctx) } })
+        }
         is com.suryaprakash.medlog.Updater.State.Failed -> Card(border = p.amber) {
             Body(s.why, bold = true)
             BigButton("Try again", tone = Tone.QUIET, onClick = { scope.launch { com.suryaprakash.medlog.Updater.check(ctx) } })
@@ -459,22 +510,23 @@ fun PrivacyScreen(nav: Nav) {
             Body("MedLog uses the internet for one thing only: passing help alerts to your helpers' phones when they are far away. Each alert is locked with a key only their phone has. You can turn this off in Settings → SOS.")
         }
         Body("Things leave the phone only when you choose:")
-        listOf("SOS and help messages: by SMS and phone calls to your helpers", "Helper phones: by Bluetooth nearby, or the internet far away, locked with a key", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
+        listOf("Alerts and help messages: only to your helpers' app. SMS and phone calls only in an SOS, when nobody answers in the app", "Helper phones: by Bluetooth nearby, or the internet far away, locked with a key", "Your doctor page: when you tap Share or Print", "Google Calendar: only if you turn it on", "WhatsApp: only if you turn it on for SOS").forEach { Body("• $it") }
         Body("Your notes are locked (encrypted) on the phone. No ads. No tracking.")
         BigButton("Open App info", tone = Tone.SECONDARY, onClick = { Perms.openAppSettings(ctx) })
-        if (!confirm) BigButton("Delete everything", tone = Tone.SECONDARY, onClick = { confirm = true })
+        if (!confirm) BigButton("Remove everything", tone = Tone.SECONDARY, onClick = { confirm = true })
         else Card(border = p.red) {
             Body("This deletes all notes, medicines and helpers from this phone. It cannot be undone.", bold = true)
             BigButton("Yes, delete everything", tone = Tone.DANGER, onClick = {
                 scope.launch {
-                    app.db.clearAllTables()
+                    // wiping the database must not run on the main thread
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { app.db.clearAllTables() }
                     java.io.File(ctx.filesDir, "audio").deleteRecursively(); java.io.File(ctx.filesDir, "photos").deleteRecursively()
                     app.settings.update { com.suryaprakash.medlog.data.Settings() }
                     Scheduler.reschedule(ctx)
                     nav.home(Route.Onboarding)
                 }
             })
-            BigButton("No, keep it", tone = Tone.OK, onClick = { confirm = false })
+            BigButton("No, keep it", tone = Tone.PRIMARY, onClick = { confirm = false })
         }
     }
 }

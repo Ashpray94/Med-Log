@@ -42,7 +42,21 @@ class I18nTest {
         assertTrue(files.isNotEmpty())
         for (f in files) {
             val o = JSONObject(f.readText())
-            for (k in o.keys()) assertEquals("${f.name}: $k", slot.findAll(k).map { it.value }.sorted().toList(), slot.findAll(o.getString(k)).map { it.value }.sorted().toList())
+            for (k in o.keys()) {
+                // a plural ending ("item{1}") may be left out: Hindi and Tamil don't add an "s"
+                val plural = Regex("[A-Za-z](\\{\\d\\})").findAll(k).map { it.groupValues[1] }.toSet()
+                val want = slot.findAll(k).map { it.value }.toSet()
+                val got = slot.findAll(o.getString(k)).map { it.value }.toSet()
+                assertTrue("${f.name}: $k has a slot the English doesn't", want.containsAll(got))
+                assertTrue("${f.name}: $k drops a slot that isn't a plural ending", plural.containsAll(want - got))
+            }
         }
+    }
+
+    /** "1 item" and "3 items" both match "{0} item{1}", whose translation needs no plural ending. */
+    @Test fun pluralEndings() {
+        I18n.useMap("hi", mapOf("{0} item{1}" to "{0} चीज़ें"))
+        assertEquals("1 चीज़ें", I18n.tr("1 item"))
+        assertEquals("3 चीज़ें", I18n.tr("3 items"))
     }
 }

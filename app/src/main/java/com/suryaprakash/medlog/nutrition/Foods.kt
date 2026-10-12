@@ -496,6 +496,20 @@ object Feeds {
         val protein get() = parts.sumOf { it.protein }
     }
 
+    /** The recipe kept in the feed itself ([com.suryaprakash.medlog.data.Medicine.strength]), or, for feeds set up before 2.10, in settings. */
+    fun infoOf(m: com.suryaprakash.medlog.data.Medicine, legacy: String?): Info? =
+        m.strength.takeIf { it.startsWith("{") }?.let { s -> runCatching { parse(JSONObject(s)) }.getOrNull() } ?: infoFrom(legacy, m.id)
+
+    fun encode(i: Info): String {
+        val a = JSONArray(); i.parts.forEach { p -> a.put(JSONObject().put("name", p.name).put("amount", p.amount).put("kcal", p.kcal).put("protein", p.protein)) }
+        return JSONObject().put("parts", a).put("tube", i.tube).toString()
+    }
+
+    private fun parse(o: JSONObject): Info {
+        val a = o.getJSONArray("parts")
+        return Info((0 until a.length()).map { i -> a.getJSONObject(i).let { Part(it.getString("name"), it.optString("amount"), it.getDouble("kcal"), it.getDouble("protein")) } }, o.optBoolean("tube"))
+    }
+
     fun infoFrom(json: String?, medId: Long): Info? = runCatching {
         JSONObject(json ?: "{}").optJSONObject("$medId")?.let { o ->
             val a = o.getJSONArray("parts")

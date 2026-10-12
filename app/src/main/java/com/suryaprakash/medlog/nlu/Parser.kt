@@ -317,8 +317,9 @@ class Parser(private val cat: Catalogue) {
             if (chesty && Regex("arm|jaw|back|shoulder|neck").containsMatchIn(it.groupValues[1])) put(owner, "armJaw", true)
         }
         Regex("\\b(?:for|since|from|past|last)\\s+(\\d{1,3}|a|an|one)\\s+(minute|hour|day|week|month)s?\\b").find(c)?.let { put(owner, "duration", it.value.trim()) }
-        Regex("\\b(\\d{1,2})\\s+weeks?\\b").find(c)?.let { if (owner.problemId in setOf("cough", "hoarse", "mouth_ulcer", "wound_not_healing", "lump", "swallowing", "weight_loss", "hair_loss")) put(owner, "weeks", it.groupValues[1].toInt()) }
-        Regex("\\b(\\d{1,2})\\s+months?\\b").find(c)?.let { if (owner.problemId in setOf("cough", "hoarse", "lump", "weight_loss", "swallowing")) put(owner, "weeks", it.groupValues[1].toInt() * 4) }
+        Regex("\\b(\\d{1,2})\\s+weeks?\\b").find(c)?.let { if (owner.problemId in setOf("cough", "hoarse", "mouth_ulcer", "wound_not_healing", "lump", "swallowing", "weight_loss", "hair_loss")) put(owner, "days", it.groupValues[1].toInt() * 7) }
+        Regex("\\b(\\d{1,2})\\s+months?\\b").find(c)?.let { if (owner.problemId in setOf("cough", "hoarse", "lump", "weight_loss", "swallowing")) put(owner, "days", it.groupValues[1].toInt() * 30) }
+        Regex("\\b(\\d{1,3})\\s+days?\\b").find(c)?.let { if (owner.problemId in setOf("cough", "hoarse", "mouth_ulcer", "wound_not_healing", "lump", "swallowing", "weight_loss", "hair_loss")) put(owner, "days", it.groupValues[1].toInt()) }
         Regex("\\b(\\d)\\s+pillows?\\b").find(c)?.let { put(owner, "pillows", it.groupValues[1].toInt()) }
         Regex("\\b(\\d{1,2})\\s+hours?\\b").find(c)?.let { if (pid in setOf("no_urine")) put(owner, "hours", it.groupValues[1].toInt()) }
         Regex("\\b(\\d{1,3})\\s+(minutes?|hours?)\\s+on the floor\\b").find(c)?.let {

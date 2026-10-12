@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.suryaprakash.medlog.data.DAY
+import com.suryaprakash.medlog.data.planned
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Kind
 import com.suryaprakash.medlog.medlog
@@ -68,6 +69,8 @@ import com.suryaprakash.medlog.ui.SectionHeader
 import com.suryaprakash.medlog.ui.Segmented
 import com.suryaprakash.medlog.ui.Text
 import com.suryaprakash.medlog.ui.steady
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import com.suryaprakash.medlog.ui.lift
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.time.Instant
@@ -103,116 +106,144 @@ private data class Bar(val from: Long, val v: Double?)
 private val PERIODS = listOf(7 to "W", 30 to "M", 182 to "6M", 365 to "Y")
 private val SPAN_WORDS = mapOf(7 to "week", 30 to "month", 182 to "6 months", 365 to "year")
 
+/** Everything My health and each measure's page show, read once: readings by type, and a value a day for the rest. */
+private class HealthData(val points: Map<String, List<Point>>, val daily: Map<String, Map<LocalDate, Double>>)
+
+private suspend fun loadHealth(ctx: android.content.Context): HealthData {
+    val app = ctx.medlog
+    val zone = ZoneId.systemDefault()
+    val now = System.currentTimeMillis()
+    val since = now - 365 * DAY
+    val points = app.viewDb.notes().kindSince(Kind.READING, since).mapNotNull { n ->
+        runCatching { JSONObject(n.details) }.getOrNull()?.let { o -> o.getString("type") to Point(n.occurredAt, o.getDouble("v1"), o.optDouble("v2").takeIf { !it.isNaN() }) }
+    }.groupBy({ it.first }, { it.second }).mapValues { e -> e.value.sortedBy { it.at } }
+    fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
+    val water = app.viewDb.notes().kindSince(Kind.WATER, since).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
+    // problems: counted the one way used everywhere (a running "times today" is not added up twice)
+    val symptoms = com.suryaprakash.medlog.data.Occurrences.perDayOf(app.viewDb.notes().symptomsSince(since), zone).mapValues { it.value.toDouble() }
+    // medicines only: feeds are counted on their own, so a missed feed never lowers "medicines taken"
+    val feedIds = app.viewDb.medicines().all().filter { it.form == "feed" }.map { it.id }.toSet()
+    val meds = app.viewDb.doses().between(since, now).planned().filter { it.scheduledAt <= now && it.medicineId !in feedIds }.groupBy { day(it.scheduledAt) }
+        .mapValues { e -> 100.0 * e.value.count { it.status == DoseStatus.TAKEN } / e.value.size }
+    return HealthData(points, mapOf("water" to water, "symptoms" to symptoms, "meds" to meds))
+}
+
 /**
- * My health, like the Health app: one big chart for the chosen measure, with the time span switchable,
- * and every measure below as a row with its latest value and a small trend line. Tap a row to chart it.
+ * My health: the nutrition verdict, then every measure as a row with its latest value and date. Each row opens that
+ * measure's own page, with its chart and every entry. Measures with nothing yet are one line that leads to adding them.
  */
 @Composable
 fun ReportsScreen(nav: Nav) {
     val ctx = LocalContext.current
-    val app = ctx.medlog
+    val p = LocalPalette.current
+    var data by remember { mutableStateOf<HealthData?>(null) }
+    var nutrition by remember { mutableStateOf<com.suryaprakash.medlog.nutrition.Nutrition.Report?>(null) }
+    LaunchedEffect(Unit) { data = loadHealth(ctx); nutrition = com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, 14) }
+    Screen("My health", "Your numbers over time. Tap a measure to see its chart and every entry.", onHome = { nav.home() }, onBack = { nav.back() },
+        subtitle = "Your numbers over time") {
+        val d = data ?: run { com.suryaprakash.medlog.ui.Loading(); return@Screen }
+        fun has(m: Metric) = if (m.bars) d.daily[m.key].orEmpty().isNotEmpty() else d.points[m.key].orEmpty().isNotEmpty()
+        val (withData, without) = METRICS.partition { has(it) }
+        if (withData.isNotEmpty()) {
+            SectionHeader("Measures", "Tap one to see its chart", null)
+            Group {
+                withData.forEachIndexed { i, m ->
+                    if (i > 0) GroupLine()
+                    MetricRow(m, d.points[m.key].orEmpty(), d.daily[m.key].orEmpty()) { nav.go(com.suryaprakash.medlog.ui.Route.Measure(m.key)) }
+                }
+            }
+        }
+        // ── nutrition: the verdict and three numbers; the card opens the full report ──
+        nutrition?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }?.let { r ->
+            SectionHeader("Nutrition", "Last 2 weeks", "Report") { nav.go(com.suryaprakash.medlog.ui.Route.Nutrition) }
+            NutritionSummary(r)
+        }
+        if (without.isNotEmpty()) Group {
+            com.suryaprakash.medlog.ui.NavRow("Not recorded yet", sub = without.joinToString(", ") { it.name }) { nav.go(com.suryaprakash.medlog.ui.Route.Readings) }
+        }
+        @Suppress("UNUSED_EXPRESSION") p
+    }
+}
+
+/**
+ * One measure on its own page: the latest value and the range, a chart for the chosen span (week, month, six months or
+ * year), and every entry, newest first. A chart needs two points; with one, the reading is shown on its own.
+ */
+@Composable
+fun MeasureScreen(nav: Nav, key: String) {
+    val ctx = LocalContext.current
     val p = LocalPalette.current
     val sc = LocalScale.current
+    val metric = METRICS.firstOrNull { it.key == key } ?: METRICS.first()
     var days by remember { mutableIntStateOf(30) }
-    var chosen by remember { mutableStateOf<String?>(null) }
-    var points by remember { mutableStateOf<Map<String, List<Point>>>(emptyMap()) }
-    var daily by remember { mutableStateOf<Map<String, Map<LocalDate, Double>>>(emptyMap()) }
-    var nutrition by remember { mutableStateOf<com.suryaprakash.medlog.nutrition.Nutrition.Report?>(null) }
-    LaunchedEffect(Unit) { nutrition = com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, 14) }
+    var data by remember { mutableStateOf<HealthData?>(null) }
+    LaunchedEffect(Unit) { data = loadHealth(ctx) }
     val zone = ZoneId.systemDefault()
     val now = System.currentTimeMillis()
     val from = now - days * DAY
-
-    LaunchedEffect(days) {
-        val since = now - 365 * DAY
-        points = app.db.notes().kindSince(Kind.READING, since).mapNotNull { n ->
-            runCatching { JSONObject(n.details) }.getOrNull()?.let { o -> o.getString("type") to Point(n.occurredAt, o.getDouble("v1"), o.optDouble("v2").takeIf { !it.isNaN() }) }
-        }.groupBy({ it.first }, { it.second }).mapValues { e -> e.value.sortedBy { it.at } }
-        fun day(t: Long) = Instant.ofEpochMilli(t).atZone(zone).toLocalDate()
-        val water = app.db.notes().kindSince(Kind.WATER, since).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 }.toDouble() }
-        val symptoms = app.db.notes().symptomsSince(since).groupBy { day(it.occurredAt) }.mapValues { it.value.size.toDouble() }
-        val meds = app.db.doses().between(since, now).filter { it.scheduledAt <= now }.groupBy { day(it.scheduledAt) }
-            .mapValues { e -> 100.0 * e.value.count { it.status == DoseStatus.TAKEN } / e.value.size }
-        daily = mapOf("water" to water, "symptoms" to symptoms, "meds" to meds)
-        // open on the first measure that has something to show
-        if (chosen == null) chosen = METRICS.firstOrNull { m -> if (m.bars) daily[m.key].orEmpty().isNotEmpty() else points[m.key].orEmpty().isNotEmpty() }?.key ?: "weight"
-    }
-
-    // the chosen span, cut into bars: a day each for a week or a month, a week each for six months, a month each for a year
-    fun bars(key: String): List<Bar> {
-        val d = daily[key] ?: return emptyList()
-        val today = LocalDate.now(zone)
-        val sum = key != "meds"
-        fun agg(vals: List<Double>) = if (vals.isEmpty()) null else if (sum) vals.sum() / (if (days > 30) vals.size.coerceAtLeast(1) else 1) else vals.average()
-        return when {
-            days <= 30 -> (days - 1 downTo 0).map { k -> today.minusDays(k.toLong()).let { dd -> Bar(dd.atStartOfDay(zone).toInstant().toEpochMilli(), d[dd]) } }
-            days <= 182 -> (25 downTo 0).map { k ->
-                val start = today.minusWeeks(k.toLong()).minusDays(6)
-                Bar(start.atStartOfDay(zone).toInstant().toEpochMilli(), agg((0..6).mapNotNull { d[start.plusDays(it.toLong())] }))
-            }
-            else -> (11 downTo 0).map { k ->
-                val m = today.withDayOfMonth(1).minusMonths(k.toLong())
-                Bar(m.atStartOfDay(zone).toInstant().toEpochMilli(), agg((0 until m.lengthOfMonth()).mapNotNull { d[m.plusDays(it.toLong())] }))
-            }
-        }
-    }
-
-    fun has(m: Metric) = if (m.bars) daily[m.key].orEmpty().isNotEmpty() else points[m.key].orEmpty().isNotEmpty()
-    val metric = METRICS.first { it.key == (chosen ?: "weight") }
-
-    Screen("My health", "Your numbers over time. Choose week, month, six months or year. Tap a measure to see its chart.", onHome = { nav.home() }, onBack = { nav.back() },
-        subtitle = "Your numbers over time") {
+    Screen(metric.name, "${metric.name} over time, and every entry.", onHome = { nav.home() }, onBack = { nav.back() }) {
+        val d = data ?: run { com.suryaprakash.medlog.ui.Loading(); return@Screen }
         Segmented(PERIODS.map { it.second }, PERIODS.indexOfFirst { it.first == days }) { days = PERIODS[it].first }
-
-        // ── the big chart ──
         val tint = metric.tint(p)
-        val inSpan = points[metric.key].orEmpty().filter { it.at >= from }
-        val bs = if (metric.bars) bars(metric.key) else emptyList()
+        val inSpan = d.points[metric.key].orEmpty().filter { it.at >= from }
+        val bs = if (metric.bars) bars(d.daily[metric.key].orEmpty(), metric.key, days, zone) else emptyList()
         val (headline, caption) = summaryOf(metric, inSpan, bs, days)
         val csh = RoundedCornerShape(sc.radius)
-        Column(Modifier.fillMaxWidth().clip(csh).background(p.card).border(1.dp, p.line, csh).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OptionIcon(metric.icon, tint, 44.dp)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(metric.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
-                    Text(caption, fontSize = sc.small * 0.88f, color = p.inkSoft)
-                }
-            }
+        Column(Modifier.fillMaxWidth().lift(csh).clip(csh).background(p.card).padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            if (headline == "No data") { Text(caption, fontSize = sc.body, color = p.inkSoft); return@Column }
+            Text(caption, fontSize = sc.small, color = p.inkSoft)
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(headline, fontSize = if (headline == "No data") sc.headline else sc.title * 1.2f, fontWeight = FontWeight.Bold, color = if (headline == "No data") p.inkSoft else p.ink)
                 Spacer(Modifier.width(6.dp))
                 if (headline != "No data") Text(metric.unit, fontSize = sc.body, color = p.inkSoft, modifier = Modifier.padding(bottom = 6.dp))
             }
-            if (headline == "No data") Text(if (metric.bars) "Nothing noted in this time." else "No ${metric.name.lowercase()} readings in this time. Add one from BP & sugar.", fontSize = sc.body, color = p.inkSoft)
-            else if (metric.bars) BarChart(bs, tint, metric.unit, days) else LineChart(inSpan, from, now, tint, metric.normal, days)
-        }
-
-        // ── nutrition: the verdict and three numbers, the full report one tap away ──
-        nutrition?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }?.let { r ->
-            SectionHeader("Nutrition", "Last 2 weeks", "Report") { nav.go(com.suryaprakash.medlog.ui.Route.Nutrition) }
-            NutritionSummary(r)
-        }
-
-        // ── every measure ──
-        val (withData, without) = METRICS.partition { has(it) }
-        if (withData.isNotEmpty()) {
-            SectionHeader("All measures", "Tap one to see its chart", null)
-            Group {
-                withData.forEachIndexed { i, m ->
-                    if (i > 0) GroupLine()
-                    MetricRow(m, points[m.key].orEmpty(), daily[m.key].orEmpty(), m.key == chosen) { chosen = m.key }
+            val enough = if (metric.bars) bs.count { it.v != null } >= 2 else inSpan.size >= 2
+            when {
+                !enough -> Text("The chart appears once there are two or more entries in this time.", fontSize = sc.small, color = p.inkSoft)
+                // the chart starts where the entries do, so a few readings aren't squeezed against one edge
+                metric.bars -> BarChart(bs.dropWhile { it.v == null }.let { if (it.size >= 7) it else bs.takeLast(7) }, tint, metric.unit, days)
+                else -> {
+                    val first = inSpan.minOf { it.at }
+                    val start = maxOf(from, first - maxOf((now - first) / 10, DAY / 2))
+                    LineChart(inSpan, start, now, tint, metric.normal, if (now - start <= 8 * DAY) 7 else days)
                 }
             }
         }
-        if (without.isNotEmpty()) {
-            SectionHeader("No data yet", "Add readings from BP & sugar, or Food & water", null)
-            Group {
-                without.forEachIndexed { i, m ->
-                    if (i > 0) GroupLine()
-                    MetricRow(m, emptyList(), emptyMap(), m.key == chosen) { chosen = m.key }
-                }
+        // ── every entry, newest first ──
+        val entries: List<Pair<Long, String>> = if (metric.bars)
+            d.daily[metric.key].orEmpty().entries.sortedByDescending { it.key }.take(60).map { (day, v) ->
+                day.atStartOfDay(zone).toInstant().toEpochMilli() to when (metric.key) { "meds" -> "${v.toInt()}% taken"; "water" -> "${v.toInt()} glass${if (v.toInt() == 1) "" else "es"}"; else -> "${v.toInt()} noted" }
             }
+        else d.points[metric.key].orEmpty().sortedByDescending { it.at }.take(60).map { pt ->
+            pt.at to ((if (pt.v2 != null) "${pt.v.toInt()}/${pt.v2.toInt()}" else fmt1(pt.v)) + " " + metric.unit)
+        }
+        if (entries.isNotEmpty()) {
+            SectionHeader("Every entry", "${entries.size} shown, newest first", null)
+            com.suryaprakash.medlog.ui.Timeline(entries.map { (at, words) ->
+                com.suryaprakash.medlog.ui.TimelineItem(if (metric.bars) SimpleDateFormat("EEE d MMM", com.suryaprakash.medlog.speech.I18n.locale).format(Date(at))
+                    else "${dayLabel(at)} ${timeLabel(at)}".trim(), words)
+            })
+        }
+        com.suryaprakash.medlog.ui.BigButton(when (metric.key) { "water" -> "Add water"; "meds" -> "Open Medicines"; "symptoms" -> "Open History"; else -> "Add a reading" }, tone = com.suryaprakash.medlog.ui.Tone.SECONDARY, height = 52.dp,
+            onClick = { nav.go(if (metric.key == "water") com.suryaprakash.medlog.ui.Route.Food else if (metric.key == "meds") com.suryaprakash.medlog.ui.Route.Meds
+                else if (metric.key == "symptoms") com.suryaprakash.medlog.ui.Route.Notes else com.suryaprakash.medlog.ui.Route.Readings) })
+    }
+}
+
+/** The chosen span, cut into bars: a day each for a week or a month, a week each for six months, a month each for a year. */
+private fun bars(d: Map<LocalDate, Double>, key: String, days: Int, zone: ZoneId): List<Bar> {
+    val today = LocalDate.now(zone)
+    val sum = key != "meds"
+    fun agg(vals: List<Double>) = if (vals.isEmpty()) null else if (sum) vals.sum() / (if (days > 30) vals.size.coerceAtLeast(1) else 1) else vals.average()
+    return when {
+        days <= 30 -> (days - 1 downTo 0).map { k -> today.minusDays(k.toLong()).let { dd -> Bar(dd.atStartOfDay(zone).toInstant().toEpochMilli(), d[dd]) } }
+        days <= 182 -> (25 downTo 0).map { k ->
+            val start = today.minusWeeks(k.toLong()).minusDays(6)
+            Bar(start.atStartOfDay(zone).toInstant().toEpochMilli(), agg((0..6).mapNotNull { d[start.plusDays(it.toLong())] }))
+        }
+        else -> (11 downTo 0).map { k ->
+            val m = today.withDayOfMonth(1).minusMonths(k.toLong())
+            Bar(m.atStartOfDay(zone).toInstant().toEpochMilli(), agg((0 until m.lengthOfMonth()).mapNotNull { d[m.plusDays(it.toLong())] }))
         }
     }
 }
@@ -233,46 +264,42 @@ private fun summaryOf(m: Metric, pts: List<Point>, bars: List<Bar>, days: Int): 
     val last = pts.last()
     val latest = if (last.v2 != null) "${last.v.toInt()}/${last.v2.toInt()}" else fmt1(last.v)
     val lo = pts.minOf { it.v }; val hi = pts.maxOf { it.v }
-    return latest to "Latest, ${SimpleDateFormat("d MMMM", Locale.getDefault()).format(Date(last.at))} · range ${fmt1(lo)} to ${fmt1(hi)}"
+    return latest to "Latest, ${SimpleDateFormat("d MMMM", com.suryaprakash.medlog.speech.I18n.locale).format(Date(last.at))} · range ${fmt1(lo)} to ${fmt1(hi)}"
 }
 
-/** One measure in the list: icon, name, latest value, and a small trend line. */
+/** One measure in the list: icon, name, the latest value and when; it opens the measure's own page. */
 @Composable
-private fun MetricRow(m: Metric, pts: List<Point>, daily: Map<LocalDate, Double>, selected: Boolean, onClick: () -> Unit) {
+private fun MetricRow(m: Metric, pts: List<Point>, daily: Map<LocalDate, Double>, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val tint = m.tint(p)
-    val latest = when {
-        m.bars && daily.isNotEmpty() -> daily.maxBy { it.key }.let { (d, v) -> "${if (m.key == "water" || m.key == "symptoms") v.toInt() else "${v.toInt()}%"}" + if (m.key == "water") " glasses" else if (m.key == "symptoms") " noted" else "" }
-        pts.isNotEmpty() -> pts.last().let { if (it.v2 != null) "${it.v.toInt()}/${it.v2.toInt()}" else fmt1(it.v) } + " " + m.unit.substringBefore(" ")
-        else -> "No data"
+    val (latest, whenText) = when {
+        m.bars && daily.isNotEmpty() -> daily.maxBy { it.key }.let { (d, v) ->
+            (when (m.key) { "water" -> "${v.toInt()} glass${if (v.toInt() == 1) "" else "es"}"; "symptoms" -> "${v.toInt()} noted"; else -> "${v.toInt()}% taken" }) to
+                (if (d == LocalDate.now()) "Today" else d.format(java.time.format.DateTimeFormatter.ofPattern("d MMM", com.suryaprakash.medlog.speech.I18n.locale)))
+        }
+        pts.isNotEmpty() -> pts.last().let { (if (it.v2 != null) "${it.v.toInt()}/${it.v2.toInt()}" else fmt1(it.v)) + " " + m.unit.substringBefore(" ") to "${dayLabel(it.at)} ${timeLabel(it.at)}".trim() }
+        else -> "No data" to ""
     }
-    Row(Modifier.fillMaxWidth().background(if (selected) p.brandSoft.copy(alpha = 0.6f) else Color.Transparent).steady("${m.name}, $latest", onClick = onClick)
+    Row(Modifier.fillMaxWidth().steady("${m.name}, $latest, $whenText. Opens its chart.", onClick = onClick)
         .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
         OptionIcon(m.icon, tint, 44.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
-            Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(latest, fontSize = sc.small, color = if (latest == "No data") p.inkSoft else p.ink, maxLines = 1)
+            Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+            Text(latest, fontSize = sc.small, color = p.ink, maxLines = 1)
         }
-        val series = if (m.bars) daily.entries.sortedBy { it.key }.takeLast(14).map { it.value } else pts.takeLast(14).map { it.v }
-        if (series.size >= 2) Canvas(Modifier.width(72.dp).height(32.dp)) {
-            val lo = series.min(); val hi = series.max().let { if (it == lo) lo + 1 else it }
-            val path = Path()
-            series.forEachIndexed { i, v ->
-                val o = Offset(i * size.width / (series.size - 1), (size.height - (v - lo) / (hi - lo) * size.height).toFloat())
-                if (i == 0) path.moveTo(o.x, o.y) else path.lineTo(o.x, o.y)
-            }
-            drawPath(path, tint, style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round))
-        }
+        Text(whenText, fontSize = sc.small, color = p.inkSoft, maxLines = 1)
+        Spacer(Modifier.width(6.dp))
+        androidx.compose.material3.Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft)
     }
 }
 
 private fun dateLabel(t: Long, days: Int) = SimpleDateFormat(if (days > 182) "MMM" else "d MMM", Locale.getDefault()).format(Date(t))
 
 /**
- * A chart area that fits the card when it can, and scrolls sideways when it can't: it opens on the newest end,
- * and the value labels stay put on the right. [content] draws the chart and its dates at the given width.
+ * A chart area that always fits the card, whatever the span (a year is twelve month bars, never a sideways scroll
+ * that hides part of it); the value labels sit on the right. [content] draws the chart and its dates at the given width.
  */
 @Composable
 private fun ScrollingChart(minWidth: Dp, hi: String, mid: String, lo: String, content: @Composable (Dp) -> Unit) {
@@ -280,11 +307,9 @@ private fun ScrollingChart(minWidth: Dp, hi: String, mid: String, lo: String, co
     val sc = LocalScale.current
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
         val avail = maxWidth - 44.dp
-        val w = if (minWidth > avail) minWidth else avail
-        val state = androidx.compose.foundation.rememberScrollState()
-        LaunchedEffect(w) { state.scrollTo(state.maxValue) }
+        @Suppress("UNUSED_VARIABLE") val unused = minWidth
         Row {
-            Box(Modifier.width(avail).horizontalScroll(state)) { Box(Modifier.width(w)) { content(w) } }
+            Box(Modifier.width(avail)) { content(avail) }
             Column(Modifier.width(44.dp).height(200.dp).padding(start = 8.dp), verticalArrangement = Arrangement.SpaceBetween) {
                 listOf(hi, mid, lo).forEach { Text(it, fontSize = sc.small * 0.8f, color = p.inkSoft) }
             }
@@ -314,7 +339,7 @@ private fun LineChart(pts: List<Point>, from: Long, to: Long, tint: Color, norma
     val lo = lo0 - pad; val hi = hi0 + pad
     // room for each day: a week fits; longer spans scroll
     val perDay = when { days <= 7 -> 0.dp; days <= 30 -> 14.dp; days <= 182 -> 5.dp; else -> 3.dp }
-    ScrollingChart(perDay * days, fmt1(hi), fmt1((hi + lo) / 2), fmt1(lo)) { w ->
+    ScrollingChart(perDay * days, axis(hi), axis((hi + lo) / 2), axis(lo)) { w ->
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Canvas(Modifier.width(w).height(200.dp).semantics { contentDescription = "Chart of ${pts.size} readings" }) {
                 fun x(t: Long) = ((t - from).toFloat() / (to - from)) * size.width
@@ -339,9 +364,10 @@ private fun LineChart(pts: List<Point>, from: Long, to: Long, tint: Color, norma
 @Composable
 private fun BarChart(bars: List<Bar>, tint: Color, unit: String, days: Int) {
     val p = LocalPalette.current
-    val hi = (bars.mapNotNull { it.v }.maxOrNull() ?: 1.0).coerceAtLeast(if (unit == "%") 100.0 else 1.0)
+    // counts: a top that halves into a whole number (8 and 4, not 7 and 3.5)
+    val hi = (bars.mapNotNull { it.v }.maxOrNull() ?: 1.0).let { if (unit == "%") it.coerceAtLeast(100.0) else (kotlin.math.ceil(it / 2) * 2).coerceAtLeast(2.0) }
     if (bars.isEmpty()) return
-    ScrollingChart(28.dp * bars.size, fmt1(hi), fmt1(hi / 2), "0") { w ->
+    ScrollingChart(28.dp * bars.size, axis(hi), axis(hi / 2), "0") { w ->
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Canvas(Modifier.width(w).height(200.dp).semantics { contentDescription = "Bar chart" }) {
                 repeat(4) { k -> val yy = size.height * k / 3f; drawLine(p.line, Offset(0f, yy), Offset(size.width, yy), 1.dp.toPx()) }
@@ -356,3 +382,6 @@ private fun BarChart(bars: List<Bar>, tint: Color, unit: String, days: Int) {
         }
     }
 }
+
+/** An axis label: whole numbers from 10 up (175, not 175.8); one decimal below (like a temperature step). */
+private fun axis(v: Double) = if (kotlin.math.abs(v) >= 10) "${kotlin.math.round(v).toInt()}" else fmt1(v)

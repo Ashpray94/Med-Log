@@ -1,18 +1,20 @@
-Updates straight over 2.7 and keeps your data.
+MedLog VERSION makes doctor summaries faster and safer to review. Install over the existing app to preserve records.
 
 ## What's new
-- **A calmer, clearer look.** White screens, grey surfaces and one accent colour. On every screen, the most important thing is the biggest.
-- **Tap, don't talk.** Voice input is gone. "How are you feeling" shows the problems you've had before, then the ones common for your age and illnesses, with a search box. Tap Speak in the search box to use your phone's own speech typing.
-- **Yes and No look different.** Yes is green with a tick. No is white with a cross.
-- **Clear choices.** Chosen answers have a tick and a coloured outline.
-- **A new, detailed setup, one question per page.** It covers your doctors and what each one treats, illnesses, what you feel these days, medicines, treatments, risks, your own emergencies, a daily check-in, and whether to read pages aloud.
-- **Your own emergencies.** Mark falls, chest pain and others as emergencies. When you note one, your helpers are called straight away.
-- **Helper alarms like Meeting Timer.** When you send a message, the helper's phone shows it with a 30-second countdown. If nobody answers, it rings non-stop until someone does.
-- **A simpler helper screen.** Your latest message and their reply come first.
-- **One widget that does the job.** Tap a symptom and it's saved. Tap a message and it's sent. The widget shows who answered. It's light and easy to read.
-- **Connecting a helper's phone no longer asks for their number again.** Just pick them from your helpers.
-- **Doctor page:** Share and Print stay at the bottom. Choose how far back in one tap. Call the right doctor.
-- **Read aloud** is now a button in the corner where there's no bottom bar. It only reads pages by itself if you choose that.
-- **Smaller app:** about 50 MB less, and no microphone permission.
+- **Every selected symptom entry is shown.** The report now includes a dated table for every symptom recorded inside the chosen period, including a single back-pain entry and its location, depth and notes.
+- **One-week reports keep recurring history.** An ailment with repeated entries remains in the doctor report when it was seen within the last six weeks, even when its earlier entries fall outside the selected week.
+- **No empty report pages.** Recurring-detail pages are created only when they contain recurring history; nutrition follows the overview directly when there are no active recurring issues.
+- **PDF overlap fixed.** Graph notes, body maps, written locations and depth labels now use measured spacing, and issue headings stay with their details.
+- **Four-page limit protected.** Detailed charts are reserved for recurring issues; single reports remain in the overview so nutrition is not silently pushed out.
+- **Simple symptom totals.** Times noted means the number of symptom notes in the selected period. Daily graphs and last-noted times match the dated entries. Improvement updates are separate.
+- **Four-page clinical dashboard.** Important findings and questions for the doctor are highlighted; recurring issues retain their dated details.
+- **Comparable line charts.** Severity uses a 0–10 scale and frequency charts share one report-wide scale, with a clear ten-step grid.
+- **Clear body locations.** Larger markers use the app's localized body maps, with the recorded location also written in words.
+- **Unambiguous depth.** Tissue depth is asked and shown only for relevant musculoskeletal problems. Different answers remain attached to their dated entries.
+- **Accurate feed outcomes.** Given, food given instead, skipped/not given, missed, and unanswered entries are counted separately.
+- **Honest nutrition totals.** Feed protein and calories are included when ingredient nutrition is entered. Missing recipe values are labelled and never treated as zero.
+- **Useful alerts.** Notifications state their purpose and provide direct actions, More options, and Dismiss alert.
 
-Install **MedLog-VERSION-arm64.apk** on most phones.
+Counts describe recorded notes, not independently confirmed episodes. Missing clinical or nutrition details are never invented.
+
+Install MedLog-VERSION-arm64.apk on most phones; use the armv7 APK for older phones.

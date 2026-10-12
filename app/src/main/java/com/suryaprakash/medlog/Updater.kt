@@ -80,9 +80,10 @@ object Updater {
         }
     }
 
-    /** At most once a day, when MedLog opens. */
+    /** Each time the app comes to the front (at most every 30 minutes); a new version then shows on Home. */
     suspend fun dailyCheck(ctx: Context) {
-        if (System.currentTimeMillis() - ctx.medlog.settings.getLong("update_checked") > 20 * 3600_000L) check(ctx, quiet = true)
+        val busy = state.value is State.Downloading || state.value is State.Installing
+        if (!busy && System.currentTimeMillis() - ctx.medlog.settings.getLong("update_checked") > 30 * 60_000L) check(ctx, quiet = true)
     }
 
     fun canInstall(ctx: Context) = Build.VERSION.SDK_INT < 26 || ctx.packageManager.canRequestPackageInstalls()
@@ -114,7 +115,7 @@ object Updater {
                 val sum = md.digest().joinToString("") { "%02x".format(it) }
                 if (sum != r.sha256) error("The download was damaged. Please try again.")
             } finally { c.disconnect() }
-            if (!sameSigner(ctx, file)) error("This file isn't from MedLog, so it wasn't installed.")
+            if (!sameSigner(ctx, file)) error("This phone has a copy of MedLog made with a different key, so it can't update itself. Save a backup, uninstall MedLog, and install the new version once; after that, updates work.")
             state.value = State.Installing
             val pi = ctx.packageManager.packageInstaller
             val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
@@ -135,21 +136,25 @@ object Updater {
         }
     }
 
-    /** The downloaded file must be signed by the same key as this MedLog. */
+    /**
+     * The downloaded file must be signed by the same key as this MedLog. Some phones can't read the signature out of a
+     * file that isn't installed yet; then Android's own check decides (it never lets a different key update an app).
+     */
     private fun sameSigner(ctx: Context, apk: File): Boolean = runCatching {
         val pm = ctx.packageManager
-        if (Build.VERSION.SDK_INT >= 28) {
-            val flag = PackageManager.GET_SIGNING_CERTIFICATES
-            val mine = pm.getPackageInfo(ctx.packageName, flag).signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
-            val theirs = pm.getPackageArchiveInfo(apk.path, flag)?.signingInfo?.apkContentsSigners?.map { it.toCharsString() }?.toSet().orEmpty()
-            mine.isNotEmpty() && mine == theirs
-        } else {
-            @Suppress("DEPRECATION") val flag = PackageManager.GET_SIGNATURES
-            @Suppress("DEPRECATION") val mine = pm.getPackageInfo(ctx.packageName, flag).signatures?.map { it.toCharsString() }?.toSet().orEmpty()
-            @Suppress("DEPRECATION") val theirs = pm.getPackageArchiveInfo(apk.path, flag)?.signatures?.map { it.toCharsString() }?.toSet().orEmpty()
-            mine.isNotEmpty() && mine == theirs
+        fun certs(info: android.content.pm.PackageInfo?): Set<String> {
+            info ?: return emptySet()
+            val s = if (Build.VERSION.SDK_INT >= 28) info.signingInfo?.let { if (it.hasMultipleSigners()) it.apkContentsSigners else it.signingCertificateHistory } else null
+            @Suppress("DEPRECATION") return (s ?: info.signatures)?.map { it.toCharsString() }?.toSet().orEmpty()
         }
-    }.getOrDefault(false)
+        @Suppress("DEPRECATION") val flags = if (Build.VERSION.SDK_INT >= 28) PackageManager.GET_SIGNING_CERTIFICATES or PackageManager.GET_SIGNATURES else PackageManager.GET_SIGNATURES
+        val mine = certs(pm.getPackageInfo(ctx.packageName, flags))
+        val theirs = certs(pm.getPackageArchiveInfo(apk.path, flags)).ifEmpty {
+            @Suppress("DEPRECATION") certs(pm.getPackageArchiveInfo(apk.path, PackageManager.GET_SIGNATURES))
+        }
+        if (mine.isEmpty() || theirs.isEmpty()) { Log.w(TAG, "signature unreadable (mine=${mine.size}, file=${theirs.size}); Android will check it"); true }
+        else (mine intersect theirs).isNotEmpty()
+    }.getOrDefault(true)
 }
 
 /** Android's answer about the update: show its "Update?" box, or report what went wrong. */
@@ -161,6 +166,8 @@ class UpdateReceiver : BroadcastReceiver() {
                 confirm?.let { runCatching { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
             }
             PackageInstaller.STATUS_SUCCESS -> Updater.state.value = Updater.State.Idle
+            PackageInstaller.STATUS_FAILURE_CONFLICT, PackageInstaller.STATUS_FAILURE_INCOMPATIBLE -> Updater.state.value = Updater.State.Failed(
+                "This phone has a copy of MedLog made with a different key, so it can't update itself. Save a backup, uninstall MedLog, and install the new version once; after that, updates work.")
             else -> Updater.state.value = Updater.State.Failed(intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)?.let { "The update didn't install ($it)." } ?: "The update didn't install.")
         }
     }

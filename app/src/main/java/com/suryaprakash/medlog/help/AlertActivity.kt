@@ -1,6 +1,7 @@
 package com.suryaprakash.medlog.help
 
 import android.app.KeyguardManager
+import com.suryaprakash.medlog.ui.tr
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import com.suryaprakash.medlog.ui.steady
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
@@ -57,6 +57,8 @@ import kotlinx.coroutines.launch
  * SOS progress, "Did you fall?", the morning check-in, and (on a helper's phone) an incoming alert.
  */
 class AlertActivity : ComponentActivity() {
+    override fun onDestroy() { if (isFinishing) AlertSound.stop(); super.onDestroy() }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
@@ -99,6 +101,7 @@ class AlertActivity : ComponentActivity() {
         val (title, say) = when (val ph = phase) {
             is Sos.Phase.Countdown -> "Calling for help in ${ph.seconds}" to "Calling for help in ${ph.seconds} seconds. Tap Cancel to stop."
             Sos.Phase.Messaging -> "Getting help" to "Messaging your helpers."
+            is Sos.Phase.AppAlert -> "Alerting your helpers" to "Your helpers' phones are ringing. Waiting for an answer."
             is Sos.Phase.WhatsApp -> (if (ph.started) "WhatsApp call started" else "Starting WhatsApp call") to "Starting a WhatsApp call with your family."
             is Sos.Phase.Calling -> "Calling ${ph.name}" to "Calling ${ph.name}."
             is Sos.Phase.Answered -> "Did ${ph.name} answer?" to "Did ${ph.name} answer? Is help coming? If you don't tap, I will call the next person."
@@ -110,7 +113,7 @@ class AlertActivity : ComponentActivity() {
         // which step of the three SOS is on: 1 message family, 2 call family, 3 call the ambulance
         val step = when (phase) {
             is Sos.Phase.Countdown -> 0
-            Sos.Phase.Messaging -> 1
+            Sos.Phase.Messaging, is Sos.Phase.AppAlert -> 1
             is Sos.Phase.WhatsApp, is Sos.Phase.Calling, is Sos.Phase.Answered -> 2
             is Sos.Phase.EmergencyCountdown, is Sos.Phase.EmergencyCalling -> 3
             else -> 4
@@ -127,10 +130,11 @@ class AlertActivity : ComponentActivity() {
                     is Sos.Phase.Countdown -> Text("${ph.seconds}", fontSize = sc.huge * 2.2f, fontWeight = FontWeight.Bold, color = fg)
                     is Sos.Phase.EmergencyCountdown -> Text("${ph.seconds}", fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = fg)
                     is Sos.Phase.Answered -> Text("${ph.secondsLeft}", fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = fg)
+                    is Sos.Phase.AppAlert -> Text("${ph.secondsLeft}", fontSize = sc.huge * 1.4f, fontWeight = FontWeight.Bold, color = fg)
                     else -> androidx.compose.material3.Icon(if (calm) Icons.Rounded.Check else Icons.Rounded.Call, null, tint = fg, modifier = Modifier.size(56.dp))
                 }
                 Text(title, fontSize = sc.headline * 1.15f, fontWeight = FontWeight.Bold, color = fg, textAlign = TextAlign.Center)
-                if (phase is Sos.Phase.Countdown) Text("Then your family is messaged and called", fontSize = sc.small, color = fg.copy(alpha = 0.9f), textAlign = TextAlign.Center)
+                if (phase is Sos.Phase.Countdown) Text("Then your family is alerted and called", fontSize = sc.small, color = fg.copy(alpha = 0.9f), textAlign = TextAlign.Center)
             }
             // the one thing to do now
             when (val ph = phase) {
@@ -139,30 +143,51 @@ class AlertActivity : ComponentActivity() {
                     BigButton("Don't wait – start now", tone = Tone.DANGER, onClick = { Sos.answer.value = "go" })
                 }
                 is Sos.Phase.Answered -> {
-                    BigButton("Yes, help is coming", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = { Sos.helpComing() })
+                    BigButton("Yes, help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.5f, onClick = { Sos.helpComing() })
                     BigButton("No, call the next person", tone = Tone.DANGER, icon = Icons.Rounded.Call, onClick = { Sos.next() })
                 }
+                is Sos.Phase.AppAlert -> {
+                    BigButton("Help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
+                    BigButton("Send SMS now", tone = Tone.DANGER, onClick = { Sos.answer.value = "go" })
+                }
                 is Sos.Phase.WhatsApp -> {
-                    if (ph.started) BigButton("Help is coming", tone = Tone.OK, icon = Icons.Rounded.Check, onClick = { Sos.helpComing() })
+                    if (ph.started) BigButton("Help is coming", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, onClick = { Sos.helpComing() })
                     BigButton("Call helpers one by one", tone = Tone.DANGER, icon = Icons.Rounded.Call, onClick = { Sos.next() })
                 }
                 is Sos.Phase.EmergencyCountdown -> {
                     BigButton("Call ${ph.number} now", tone = Tone.DANGER, icon = Icons.Rounded.Call, height = sc.target * 1.5f, onClick = { Sos.answer.value = "go" })
-                    BigButton("Help is already coming", tone = Tone.OK, onClick = { Sos.helpComing() })
+                    BigButton("Help is already coming", tone = Tone.PRIMARY, onClick = { Sos.helpComing() })
                 }
-                Sos.Phase.HelpComing, Sos.Phase.Cancelled, Sos.Phase.Idle -> BigButton("Close", tone = Tone.OK, height = sc.target * 1.3f, onClick = onClose)
-                else -> BigButton("Help is coming – stop calling", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
+                Sos.Phase.HelpComing, Sos.Phase.Cancelled, Sos.Phase.Idle -> BigButton("Close", tone = Tone.PRIMARY, height = sc.target * 1.3f, onClick = onClose)
+                else -> BigButton("Help is coming – stop calling", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 1.3f, onClick = { Sos.helpComing() })
             }
-            // the three steps, so it is clear what has happened and what comes next
-            Card {
+            // if there's time: what happened, in pictures. Helpers get it straight away. Nothing waits for it.
+            if (!calm || phase is Sos.Phase.HelpComing) {
+                var picked by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(Sos.kind.value) }
+                com.suryaprakash.medlog.ui.SectionHeader("What happened?", if (picked == null) "If you can, tap one. Help is coming anyway." else "Sent to your helpers", null)
+                val kinds = Sos.KINDS
+                com.suryaprakash.medlog.ui.TileGrid(kinds, 4, aspect = 0.66f) { (id, label), mod ->
+                    com.suryaprakash.medlog.ui.PicTile(label, mod, picture = 44.dp, selected = picked == id, onClick = {
+                        picked = id
+                        com.suryaprakash.medlog.help.Nearby.broadcast(this@AlertActivity, "SOS", "What happened: $label")
+                        medlog.scope.launch { medlog.repo.addEvent(com.suryaprakash.medlog.data.Kind.SOS, "SOS: $label") }
+                    }) {
+                        com.suryaprakash.medlog.pictogram.SpriteIcon(id, 44.dp)
+                    }
+                }
+            }
+            // the three steps, so it is clear what has happened and what comes next. Only steps that really ran get a tick.
+            var reached by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(0) }
+            if (step in 1..3 && step > reached) reached = step
+            if (!(calm && reached == 0)) Card {
                 val steps = listOf(
-                    "Message family" to (if (sent.isNotEmpty()) "Sent to ${sent.joinToString(", ")}" else "Your location by text"),
+                    "Message family" to (if (sent.isNotEmpty()) "SMS sent to ${sent.joinToString(", ")}" else "Their app first, SMS only if nobody answers"),
                     "Call family, one by one" to ((phase as? Sos.Phase.Calling)?.let { "Calling ${it.name} now" } ?: "On speaker"),
                     "Call ${com.suryaprakash.medlog.ui.LocalSettings.current.emergencyNumber}" to "If nobody answers",
                 )
                 steps.forEachIndexed { i, (name, sub) ->
                     val n = i + 1
-                    val done = step > n || (calm && step == 4 && phase is Sos.Phase.HelpComing && n < 3)
+                    val done = n < reached && (step > n) || (phase is Sos.Phase.HelpComing && n == reached)
                     val now = step == n
                     androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                         androidx.compose.foundation.layout.Box(
@@ -199,7 +224,7 @@ class AlertActivity : ComponentActivity() {
         }
         Screen("Did you fall?", "Did you fall? Are you OK?", onHome = null, background = p.redSoft) {
             Text("$left", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, fontSize = sc.huge * 2f, fontWeight = FontWeight.Bold, color = p.red)
-            BigButton("I'm OK", tone = Tone.OK, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
+            BigButton("I'm OK", tone = Tone.PRIMARY, icon = Icons.Rounded.Check, height = sc.target * 2f, onClick = {
                 done = true; medlog.scope.launch { medlog.repo.addEvent(Kind.FALL_ALERT, "Possible fall: said I'm OK") }; medlog.speaker.say("Good. I'm glad you're OK."); onClose()
             })
             BigButton("I fell – I need help", tone = Tone.DANGER, height = sc.target * 1.5f, onClick = { done = true; Sos.start(this@AlertActivity, "I fell", countdown = false); onClose() })
@@ -222,87 +247,45 @@ class AlertActivity : ComponentActivity() {
                 savedFeedback(this@AlertActivity)
                 if (route != null) openApp(route) else { medlog.speaker.say("Thank you. Have a good day."); onClose() }
             }
-            BigButton("😊  Good", tone = Tone.OK, height = sc.target * 1.5f, onClick = { answer("good", null) })
+            BigButton("😊  Good", tone = Tone.PRIMARY, height = sc.target * 1.5f, onClick = { answer("good", null) })
             BigButton("😐  OK", tone = Tone.QUIET, height = sc.target * 1.5f, onClick = { answer("ok", null) })
             BigButton("😟  Not well", tone = Tone.AMBER, height = sc.target * 1.5f, onClick = { answer("not well", "tell") })
             BigButton("Tell how I feel", tone = Tone.SECONDARY, onClick = { answer("told", "tell") })
         }
     }
 
-    /**
-     * On a helper's phone: someone needs you. Built like Meeting Timer's alert: a dark card at the bottom with a
-     * status dot and "Answer within", the message as the title, who and when, a big 0:30 countdown with a bar,
-     * one big "I'm coming", and smaller replies under it. The card turns red in the last ten seconds and stays
-     * red while the alarm rings. Answering anything stops it and tells the other helpers.
-     */
+    /** The complete helper alert. Notifications carry the common actions; this screen adds every safe choice. */
     @Composable
     private fun HelperAlertPanel(from: String, text: String, kind: String, id: Long, onClose: () -> Unit) {
-        val sc = LocalScale.current
-        val urgent = kind in setOf("SOS", "DANGER", "FALL")
-        val deadline by AlertSound.deadline.collectAsState()
-        val screaming by AlertSound.screaming.collectAsState()
-        var now by remember { mutableStateOf(System.currentTimeMillis()) }
-        LaunchedEffect(Unit) { while (true) { now = System.currentTimeMillis(); delay(200) } }
-        val left = deadline?.let { ((it - now + 999) / 1000).toInt().coerceAtLeast(0) } ?: 0
-        val red = urgent || screaming || (deadline != null && left <= 10)
-        val card = if (red) Color(0xFFB3261E) else Color(0xFF1F2023)
-        val at = remember { java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault()).format(java.util.Date()) }
-        fun reply(r: String) {
-            AlertSound.stop()
-            medlog.scope.launch { if (id > 0) medlog.db.inbox().ack(id); Nearby.reply(this@AlertActivity, r) }
+        val replies = remember(kind) { AlertReplies.forKind(kind) }
+        var answered by remember { mutableStateOf(false) }
+        fun reply(r: Reply) {
+            if (answered) return
+            answered = true
+            val mid = intent.getStringExtra("mid").orEmpty(); val pairId = intent.getStringExtra("pairId")?.ifEmpty { null }
+            val app = applicationContext
+            medlog.scope.launch {
+                val say = AlertAnswer.perform(app, r.code, kind, text, from, id, mid, pairId)
+                say?.let { s -> android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(app, tr(s), android.widget.Toast.LENGTH_LONG).show() } }
+            }
             onClose()
         }
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000)).padding(12.dp), contentAlignment = Alignment.BottomCenter) {
-            androidx.compose.foundation.layout.Column(
-                Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(card).padding(22.dp),
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(14.dp),
-            ) {
-                // status line
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    androidx.compose.foundation.layout.Box(Modifier.size(12.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (red) Color.White else Color(0xFF4ADE80)))
-                    Spacer(Modifier.width(10.dp))
-                    Text(when { screaming -> "Nobody has answered"; deadline == null -> "Message"; else -> "Answer within" }, color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold)
-                }
-                // the message, then who and when
-                Text(text, color = Color.White, fontSize = sc.question, fontWeight = FontWeight.Bold, lineHeight = sc.question * 1.15f)
-                Text("$from · $at", color = Color.White.copy(alpha = 0.75f), fontSize = sc.body)
-                // flip-clock countdown and bar
-                if (deadline != null || screaming) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center, modifier = Modifier.fillMaxWidth()) {
-                        listOf("0", ":", "%02d".format(left).take(1), "%02d".format(left).drop(1)).forEach { d ->
-                            if (d == ":") Text(":", color = Color.White, fontSize = sc.huge * 1.2f, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
-                            else androidx.compose.foundation.layout.Box(
-                                Modifier.padding(horizontal = 3.dp).size(width = 64.dp, height = 84.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).background(Color.White.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(d, color = Color.White, fontSize = sc.huge * 1.2f, fontWeight = FontWeight.Bold)
-                                androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(1.dp).background(Color.Black.copy(alpha = 0.35f)))
-                            }
-                        }
-                    }
-                    androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(6.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = 0.2f))) {
-                        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth(left / AlertSound.WINDOW.toFloat()).height(6.dp).background(Color.White))
-                    }
-                }
-                // one big answer, smaller ones under it
-                AlertButton("I'm coming", Color.White, card, sc.target * 1.3f, Modifier.fillMaxWidth()) { reply("coming") }
-                Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
-                    AlertButton("In 5 min", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("5min") }
-                    AlertButton("I'll call", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("call") }
-                    AlertButton("Can't now", Color.White.copy(alpha = 0.16f), Color.White, sc.target, Modifier.weight(1f)) { reply("cant") }
-                }
-                Text("Open MedLog", color = Color.White.copy(alpha = 0.85f), fontSize = sc.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).steady("Open MedLog") { AlertSound.stop(); openApp("helper") }.padding(vertical = 12.dp))
+        Screen(tr(AlertReplies.title(kind, from, text)), tr("Choose what you will do."), onHome = null) {
+            Card(border = if (AlertReplies.urgent(kind)) LocalPalette.current.red else LocalPalette.current.brand) {
+                Body(tr(text), bold = true)
+                Hint(tr("From $from"))
             }
+            replies.forEachIndexed { index, r ->
+                BigButton(tr(r.words), tone = if (index == 0) Tone.PRIMARY else Tone.SECONDARY, onClick = { reply(r) })
+            }
+            BigButton(tr("Dismiss alert"), tone = Tone.QUIET, icon = Icons.Rounded.Close, onClick = {
+                if (!answered) {
+                    answered = true
+                    Loud.done(this@AlertActivity, Loud.alertId(id))
+                    onClose()
+                }
+            })
         }
-    }
-
-    @Composable
-    private fun AlertButton(label: String, bg: Color, fg: Color, height: androidx.compose.ui.unit.Dp, modifier: Modifier, onClick: () -> Unit) {
-        androidx.compose.foundation.layout.Box(
-            modifier.height(height).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).background(bg).steady(label, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) { Text(label, color = fg, fontSize = LocalScale.current.button, fontWeight = FontWeight.Bold, maxLines = 1) }
     }
 
     /** On the person's phone: a helper asked "How are you?". One tap answers them. */
@@ -320,7 +303,7 @@ class AlertActivity : ComponentActivity() {
                     else -> { medlog.speaker.say("Thank you. I told $from."); onClose() }
                 }
             }
-            BigButton("😊  I'm good", tone = Tone.OK, height = sc.target * 1.5f, onClick = { answer("good") })
+            BigButton("😊  I'm good", tone = Tone.PRIMARY, height = sc.target * 1.5f, onClick = { answer("good") })
             BigButton("😐  I'm OK", tone = Tone.QUIET, height = sc.target * 1.5f, onClick = { answer("ok") })
             BigButton("😟  Not so well", tone = Tone.AMBER, height = sc.target * 1.5f, onClick = { answer("notwell") })
             BigButton("Please call me", tone = Tone.SECONDARY, icon = Icons.Rounded.Call, onClick = { answer("call") })

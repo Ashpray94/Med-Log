@@ -119,15 +119,20 @@ object BodyArt {
         val key = "$back/${view}/$sample"
         cache.get(key)?.let { return it }
         val dec = synchronized(decoders) {
-            decoders.getOrPut(back) {
-                ctx.applicationContext.assets.open(if (back) "sprites/body_back.png" else "sprites/body_front.png").use {
-                    if (android.os.Build.VERSION.SDK_INT >= 31) android.graphics.BitmapRegionDecoder.newInstance(it)
-                    else @Suppress("DEPRECATION") android.graphics.BitmapRegionDecoder.newInstance(it, false)
-                }!!
-            }
+            decoders[back] ?: ctx.applicationContext.assets.open(if (back) "sprites/body_back.png" else "sprites/body_front.png").use {
+                if (android.os.Build.VERSION.SDK_INT >= 31) android.graphics.BitmapRegionDecoder.newInstance(it)
+                else @Suppress("DEPRECATION") android.graphics.BitmapRegionDecoder.newInstance(it, false)
+            }?.also { decoders[back] = it }
         }
         val r = android.graphics.Rect((view.x0 * UNIT_PX).toInt(), (view.y0 * UNIT_PX).toInt(), (view.x1 * UNIT_PX).toInt(), (view.y1 * UNIT_PX).toInt())
-        val bmp = synchronized(dec) { dec.decodeRegion(r, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }) } ?: return null
+        val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = sample }
+        val bmp = if (dec != null) synchronized(dec) { dec.decodeRegion(r, options) } else {
+            // A decoder may be unavailable. Use the same asset and crop, rather than crashing.
+            val full = ctx.applicationContext.assets.open(if (back) "sprites/body_back.png" else "sprites/body_front.png").use {
+                android.graphics.BitmapFactory.decodeStream(it, null, options)
+            } ?: return null
+            android.graphics.Bitmap.createBitmap(full, r.left / sample, r.top / sample, r.width() / sample, r.height() / sample)
+        } ?: return null
         cache.put(key, bmp)
         return bmp
     }

@@ -255,10 +255,10 @@
     "wet"
    ]
   },
-  "weeks": {
-   "label": "For how many weeks",
+  "days": {
+   "label": "For how many days",
    "type": "number",
-   "unit": "weeks"
+   "unit": "days"
   },
   "hitHead": {
    "label": "Hit head",
@@ -448,6 +448,11 @@
     "about a palm",
     "bigger than a palm"
    ]
+  },
+  "daysNoMotion": {
+   "label": "Days without a motion",
+   "type": "number",
+   "unit": "days"
   }
  },
  "questions": {
@@ -536,8 +541,8 @@
    "priority": 90
   },
   "q_weeks": {
-   "field": "weeks",
-   "ask": "For how many weeks?",
+   "field": "days",
+   "ask": "For how many days?",
    "type": "number",
    "priority": 30
   },
@@ -663,7 +668,7 @@
   },
   "q_stiffneck": {
    "field": "stiffNeck",
-   "ask": "Is your neck stiff?",
+   "ask": "Is your neck stiff, or does it hurt to bend your head down?",
    "type": "yesno",
    "priority": 80
   },
@@ -672,6 +677,12 @@
    "ask": "Did you pass out?",
    "type": "yesno",
    "priority": 95
+  },
+  "q_nomotion": {
+   "field": "daysNoMotion",
+   "ask": "How many days since you last passed stool?",
+   "type": "number",
+   "priority": 86
   }
  },
  "problems": [
@@ -712,7 +723,8 @@
    ],
    "fu": [
     "q_confused",
-    "q_temp"
+    "q_temp",
+    "q_stiffneck"
    ]
   },
   {
@@ -876,7 +888,7 @@
    ],
    "fields": [
     "reading",
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"
@@ -983,6 +995,7 @@
    "fu": [
     "q_worst",
     "q_vision",
+    "q_stiffneck",
     "q_severity"
    ]
   },
@@ -1479,7 +1492,7 @@
     "husky voice"
    ],
    "fields": [
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"
@@ -1879,7 +1892,7 @@
    ],
    "fields": [
     "count",
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"
@@ -2120,7 +2133,7 @@
     "dryWet",
     "colour",
     "blood",
-    "weeks",
+    "days",
     "context"
    ],
    "fu": [
@@ -2515,12 +2528,15 @@
     "malabandha"
    ],
    "fields": [
+    "daysNoMotion",
     "stoolType",
     "count",
     "painful",
     "blood"
    ],
-   "fu": []
+   "fu": [
+    "q_nomotion"
+   ]
   },
   {
    "id": "blood_stool",
@@ -2661,7 +2677,7 @@
    ],
    "fields": [
     "swallowWater",
-    "weeks",
+    "days",
     "context"
    ],
    "fu": [
@@ -3357,7 +3373,7 @@
     "diabetic foot"
    ],
    "fields": [
-    "weeks",
+    "days",
     "redHot",
     "colour",
     "temperature"
@@ -3419,7 +3435,7 @@
     "hair fall"
    ],
    "fields": [
-    "weeks"
+    "days"
    ],
    "fu": []
   },
@@ -4183,7 +4199,7 @@
    "fields": [
     "side",
     "painful",
-    "weeks"
+    "days"
    ],
    "fu": [
     "q_weeks"

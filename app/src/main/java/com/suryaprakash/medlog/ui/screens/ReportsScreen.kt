@@ -1,5 +1,6 @@
 package com.suryaprakash.medlog.ui.screens
 
+import com.suryaprakash.medlog.data.planned
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,15 +56,15 @@ suspend fun buildStats(ctx: android.content.Context, days: Int): Pair<List<Probl
     val zone = ZoneId.systemDefault()
     val end = LocalDate.now().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val start = end - days * DAY
-    val notes = app.db.notes().between(start - days * DAY, end)
+    val notes = app.viewDb.notes().between(start - days * DAY, end)
     val cur = notes.filter { it.occurredAt >= start }
     val prev = notes.filter { it.occurredAt < start }
     val buckets = if (days <= 31) days else 12
     val bucketMs = (end - start) / buckets
     val stats = cur.filter { it.kind == Kind.SYMPTOM && it.problemId != null && factsFromJson(it.details)["better"] == null }.groupBy { it.problemId!! }.map { (pid, list) ->
-        val counts = (0 until buckets).map { b -> list.filter { ((it.occurredAt - start) / bucketMs).toInt() == b }.sumOf { it.count ?: 1 } }
-        val total = list.sumOf { it.count ?: 1 }
-        val before = prev.filter { it.problemId == pid }.sumOf { it.count ?: 1 }
+        val counts = (0 until buckets).map { b -> com.suryaprakash.medlog.data.Occurrences.total(list.filter { ((it.occurredAt - start) / bucketMs).toInt() == b }) }
+        val total = com.suryaprakash.medlog.data.Occurrences.total(list)
+        val before = com.suryaprakash.medlog.data.Occurrences.total(prev.filter { it.problemId == pid })
         val caption = when {
             before == 0 -> "New in this period."
             total < before -> "Less often than before ($total, was $before)."
@@ -79,8 +80,8 @@ suspend fun buildStats(ctx: android.content.Context, days: Int): Pair<List<Probl
         ProblemStat(pid, app.catalogue.problem(pid)?.label ?: pid, counts, total, before, caption, tod, link)
     }.sortedByDescending { it.total }
     // medicines
-    val meds = app.db.medicines().all().associateBy { it.id }
-    val doses = app.db.doses().between(start, minOf(end, System.currentTimeMillis()))
+    val meds = app.viewDb.medicines().all().associateBy { it.id }
+    val doses = app.viewDb.doses().between(start, minOf(end, System.currentTimeMillis())).planned()
     val medLines = ArrayList<String>()
     if (doses.isNotEmpty()) {
         val taken = doses.count { it.status == DoseStatus.TAKEN }

@@ -1,0 +1,30 @@
+/* MedLog: what an alert does not have is hidden here, and nothing of Meeting Timer's look is restyled. */
+
+/* no mute (the app's own alarm has its own controls), no minimize, no guests, no "running late", no calendar link */
+.head-actions, .people, #calBtn, #stack { display: none !important; }
+body #lateBtn.late-only, body.state-late #lateBtn.late-only { display: none !important; }
+body.state-late .actions { grid-template-columns: repeat(2, 1fr); }
+.capsule { display: none !important; }
+
+/* the message itself sits under "who · when", where the meeting's account line was */
+.account {
+  margin-top: 10px;
+  text-align: left;
+  font-size: 15px;
+  line-height: 21px;
+  color: var(--label-2);
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.account:empty { display: none; }
+
+/* longer words (Hindi, Tamil, "Ask another helper") wrap on the small buttons instead of being cut */
+.act { height: auto; min-height: 56px; padding: 8px 6px; text-align: center; }
+.act span { display: block; max-width: 100%; overflow-wrap: anywhere; }
+.join { height: auto; min-height: 48px; padding: 10px 12px; text-align: center; }
+
+/* no countdown is running (the alert was opened after the time was up or from the list) */
+body.no-clock .clock { display: none; }

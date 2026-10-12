@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.StickyNote2
 import androidx.compose.material3.Icon
 import com.suryaprakash.medlog.ui.Text
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -83,6 +84,9 @@ import com.suryaprakash.medlog.ui.Route
 import com.suryaprakash.medlog.ui.Screen
 import com.suryaprakash.medlog.ui.Tone
 import com.suryaprakash.medlog.ui.steady
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -104,14 +108,42 @@ fun DoctorScreen(nav: Nav) {
     var busy by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
     var nut by remember { mutableStateOf<com.suryaprakash.medlog.nutrition.Nutrition.Report?>(null) }
-    LaunchedEffect(days) { note = withContext(Dispatchers.IO) { buildNote(ctx, days) }; nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, minOf(days, 30)) } }
+    val selectedPatient by com.suryaprakash.medlog.data.Viewing.pairId.collectAsState()
+    LaunchedEffect(days, selectedPatient) {
+        note = null; nut = null
+        val db = ctx.medlog.viewDb
+        callbackFlow {
+            val observer = object : androidx.room.InvalidationTracker.Observer("notes", "medicines", "doses", "profile") {
+                override fun onInvalidated(tables: Set<String>) { trySend(Unit) }
+            }
+            db.invalidationTracker.addObserver(observer)
+            trySend(Unit)
+            awaitClose { db.invalidationTracker.removeObserver(observer) }
+        }.conflate().collect {
+            note = withContext(Dispatchers.IO) { buildNote(ctx, days) }
+            nut = withContext(Dispatchers.IO) { com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, days) }
+        }
+    }
     val nutShown = nut?.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() }
     val n = note
     val speak = if (n == null) "Preparing." else "Your summary for the doctor. Most important: " + n.concerns.joinToString(". ").ifBlank { "nothing worrying" } + ". Tap Share to send it, or Print."
-    fun pdf(then: (java.io.File) -> Unit) { scope.launch { busy = true; val f = withContext(Dispatchers.IO) { Pdf.write(ctx, n!!, nutShown) }; busy = false; then(f) } }
+    // the PDF waits for everything: the nutrition page takes a few seconds longer than the rest, and a quick tap on
+    // Share used to make a PDF without it (only the first page)
+    fun pdf(then: (java.io.File) -> Unit) { scope.launch {
+        busy = true
+        try {
+        val f = withContext(Dispatchers.IO) {
+            val r = com.suryaprakash.medlog.nutrition.Nutrition.build(ctx, days).also { nut = it }
+            Pdf.write(ctx, buildNote(ctx, days), r.takeIf { it.loggedDays > 0 || it.weights.isNotEmpty() || it.feeds.isNotEmpty() })
+        }
+        then(f)
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (e: Exception) {
+            android.widget.Toast.makeText(ctx, "Could not prepare the report. Please try again.", android.widget.Toast.LENGTH_LONG).show()
+        } finally { busy = false }
+    } }
 
     var doctors by remember { mutableStateOf<List<com.suryaprakash.medlog.data.CarePlan.Doctor>>(emptyList()) }
-    LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.repo.profile().plan).doctors }
+    LaunchedEffect(Unit) { doctors = com.suryaprakash.medlog.data.CarePlan.parse(ctx.medlog.viewRepo.profile().plan).doctors }
     // the page's job is to be shown or sent: those two actions stay pinned at the bottom, side by side
     Screen("For the doctor", speak, onHome = { nav.home() }, onBack = { nav.back() }, actions = {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -122,13 +154,18 @@ fun DoctorScreen(nav: Nav) {
         // how far back: four choices, one tap, no window
         com.suryaprakash.medlog.ui.Segmented(listOf("1W", "2W", "1M", "3M"), PERIODS.indexOfFirst { it.first == days }) { days = PERIODS[it].first }
         n?.period?.let { com.suryaprakash.medlog.ui.Hint(it) }
-        if (n == null) return@Screen
+        if (n == null) { com.suryaprakash.medlog.ui.Loading(); return@Screen }
 
         Stats(n)
 
         if (n.concerns.isNotEmpty()) {
-            Section("Most important")
-            Group { n.concerns.forEachIndexed { i, c -> if (i > 0) Line(); ConcernRow(c, n.concernLevels.getOrElse(i) { "GREEN" }) } }
+            Section("Symptoms at a glance")
+            // each opens its own history: a symptom's every entry, a medicine's page
+            Group { n.concerns.forEachIndexed { i, c ->
+                if (i > 0) Line()
+                val pid = n.symptoms.firstOrNull { it.name == c.substringBefore(":") }?.problemId
+                ConcernRow(c, n.concernLevels.getOrElse(i) { "GREEN" }) { if (pid != null) nav.go(Route.ProblemHistory(pid)) else nav.go(Route.Meds) }
+            } }
         }
 
         if (n.pins.isNotEmpty()) {
@@ -138,18 +175,28 @@ fun DoctorScreen(nav: Nav) {
 
         Section("Symptoms")
         if (n.symptoms.isEmpty()) Group { Plain("No symptoms noted in this time.") }
-        n.symptoms.forEach { SymptomCard(it, n.days) }
+        n.symptoms.forEach { r -> SymptomCard(r, n.days) { nav.go(Route.ProblemHistory(r.problemId, days)) } }
 
         if (n.medicines.isNotEmpty()) {
             Section("Medicines")
-            Group { n.medicines.forEachIndexed { i, m -> if (i > 0) Line(); MedRow(m) } }
+            // how well doses were taken belongs here, with the medicines, in words: how many, of how many, over how long
+            run {
+                val due = n.medicines.filter { !it.asNeeded }.sumOf { it.due }
+                val done = n.medicines.filter { !it.asNeeded }.sumOf { it.done }
+                if (due > 0) Text("$done of $due doses taken in ${n.days} days (${done * 100 / due}%)", fontSize = LocalScale.current.body,
+                    color = if (done * 100 / due < 80) LocalPalette.current.amber else LocalPalette.current.inkSoft, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
+            }
+            Group { n.medicines.forEachIndexed { i, m -> if (i > 0) Line(); MedRow(m) { nav.go(Route.Meds) } } }
         }
 
         if (n.tiles.isNotEmpty()) {
             Section("Readings")
             n.tiles.chunked(2).forEach { row ->
                 Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    row.forEach { ReadingCard(it, Modifier.weight(1f).fillMaxHeight()) }
+                    row.forEach { r -> ReadingCard(r, Modifier.weight(1f).fillMaxHeight()) {
+                        val key = mapOf("BP" to "bp", "Blood sugar" to "sugar", "SpO₂" to "spo2", "Temperature" to "temp", "Pulse" to "pulse", "Weight" to "weight")[r.name]
+                        nav.go(if (key != null) Route.Measure(key) else Route.Readings)
+                    } }
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
@@ -180,7 +227,7 @@ fun DoctorScreen(nav: Nav) {
             Group {
                 doctors.forEachIndexed { i, d ->
                     if (i > 0) Line()
-                    com.suryaprakash.medlog.ui.ValueRow(d.name, if (d.phone.isNotBlank()) "Call" else null, sub = d.speciality,
+                    com.suryaprakash.medlog.ui.ValueRow(d.name, if (d.phone.isNotBlank()) "Call" else null, sub = listOf(d.speciality, d.hospital).filter { it.isNotBlank() }.joinToString(" · "),
                         onClick = if (d.phone.isNotBlank()) ({ com.suryaprakash.medlog.help.Calls.call(ctx, d.phone) }) else null)
                 }
             }
@@ -197,7 +244,7 @@ fun DoctorScreen(nav: Nav) {
 
     if (asking) AddQuestionDialog(onDismiss = { asking = false }) { q ->
         asking = false
-        scope.launch { ctx.medlog.repo.addQuestion(q); note = buildNote(ctx, days) }
+        scope.launch { ctx.medlog.viewRepo.addQuestion(q); note = buildNote(ctx, days) }
     }
 }
 
@@ -260,8 +307,9 @@ private fun Stats(n: DoctorNote) {
     val pct = if (due == 0) null else done * 100 / due
     Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         StatCard("${n.symptoms.size}", "Symptoms", p.ink, p.card)
-        StatCard("${urgent + watch}", "Need care", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
-        if (pct != null) StatCard("$pct%", "Doses taken", if (pct < 80) p.amber else p.ink, p.card)
+        StatCard("${n.symptoms.sumOf { it.reportCount }}", "Notes", if (urgent > 0) p.red else if (watch > 0) p.amber else p.ink, p.card)
+        // doses taken are told with the medicines below, where they make sense
+        @Suppress("UNUSED_VARIABLE") val unused = pct
     }
 }
 
@@ -278,15 +326,15 @@ private fun RowScope.StatCard(value: String, label: String, fg: Color, bg: Color
 }
 
 @Composable
-private fun ConcernRow(text: String, level: String) {
+private fun ConcernRow(text: String, level: String, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val title = text.substringBefore(":")
     val rest = text.substringAfter(":", "").trim()
     val date = Regex("""\(([^()]*)\)$""").find(rest)?.groupValues?.get(1)
     val what = rest.removeSuffix(date?.let { "($it)" } ?: "").trim()
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(start = 16.dp)) {
-        Box(Modifier.padding(vertical = 16.dp).width(4.dp).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(levelColor(level, p)))
+    // the level is said by its tag beside the name; no bar down the side
+    Row(Modifier.fillMaxWidth().steady("$title. Opens its history.", onClick = onClick).padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f).padding(horizontal = 14.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.Top) {
                 Text(title, fontSize = sc.body, fontWeight = FontWeight.Bold, color = p.ink, modifier = Modifier.weight(1f))
@@ -295,6 +343,7 @@ private fun ConcernRow(text: String, level: String) {
             if (what.isNotEmpty()) Text(what.replaceFirstChar(Char::uppercase), fontSize = sc.body, color = p.ink)
             date?.let { Text(it, fontSize = sc.small, color = p.inkSoft) }
         }
+        Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, null, tint = p.inkSoft, modifier = Modifier.padding(end = 12.dp).size(24.dp))
     }
 }
 
@@ -302,45 +351,46 @@ private fun ConcernRow(text: String, level: String) {
 
 /** Front and/or back with numbered pins. Pain "all over" tints the whole figure. */
 @Composable
-private fun BodyPins(n: DoctorNote) {
+private fun BodyPins(n: DoctorNote) = RecordedBodyMap(n.pins, n.symptoms.associate { it.n to it.name })
+
+/** Dots stay at the recorded position. Offset numbered labels connect with lines, avoiding overlap. */
+@Composable
+fun RecordedBodyMap(pins: List<Pair<Int, String>>, labels: Map<Int, String>, compact: Boolean = false) {
     val ctx = LocalContext.current
     val p = LocalPalette.current
     val sc = LocalScale.current
-    val urgency = n.symptoms.associate { it.n to it.urgent }
-    val views = listOf(false, true).filter { b -> n.pins.any { it.second.startsWith("back") == b } }
-    Column(Modifier.fillMaxWidth().padding(vertical = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+    val marks = remember(pins) { com.suryaprakash.medlog.doctor.BodyMarkers.layout(pins) }
+    val views = listOf(false, true).filter { back -> marks.any { it.back == back } }
+    Column(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
             for (back in views) {
                 val art by produceState<ImageBitmap?>(null, back) { value = withContext(Dispatchers.IO) { BodyArt.bitmap(ctx, back, WHOLE, 500)?.asImageBitmap() } }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val mine = n.pins.filter { it.second.startsWith("back") == back }
-                    Canvas(Modifier.height(280.dp).aspectRatio(100f / 170f)) {
+                    Canvas(Modifier.height(if (compact) 190.dp else 280.dp).aspectRatio(100f / 170f)) {
                         val u = size.width / 100f
-                        val box = IntSize(size.width.toInt(), size.height.toInt())
-                        art?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = box) }
-                        mine.filter { it.second.endsWith(":all") }.forEach { (num, _) ->
-                            art?.let { drawImage(it, dstOffset = IntOffset.Zero, dstSize = box, alpha = 0.4f, colorFilter = ColorFilter.tint(levelColor(urgency[num] ?: "GREEN", p), BlendMode.SrcIn)) }
-                        }
+                        art?.let { drawImage(it, dstSize = IntSize(size.width.toInt(), size.height.toInt())) }
                         val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                            color = android.graphics.Color.WHITE; textSize = 12.dp.toPx(); textAlign = android.graphics.Paint.Align.CENTER; isFakeBoldText = true
+                            color = android.graphics.Color.WHITE; textSize = 10f * u; textAlign = android.graphics.Paint.Align.CENTER; isFakeBoldText = true
                         }
-                        for ((num, code) in mine) {
-                            val xy = if (code.endsWith(":all")) listOf(50f, 62f) else code.substringAfter(":").split(",").mapNotNull { it.toFloatOrNull() }
-                            if (xy.size != 2) continue
-                            val c = Offset(xy[0] * u, xy[1] * u)
-                            drawCircle(Color.White, 12.dp.toPx(), c)
-                            drawCircle(levelColor(urgency[num] ?: "GREEN", p), 10.dp.toPx(), c)
-                            drawContext.canvas.nativeCanvas.drawText("$num", c.x, c.y + 4.3.dp.toPx(), paint)
+                        for (mark in marks.filter { it.back == back }) {
+                            val anchor = Offset(mark.x * u, mark.y * u)
+                            val label = Offset(mark.labelX * u, mark.labelY * u)
+                            if (mark.all) art?.let { drawImage(it, dstSize = IntSize(size.width.toInt(), size.height.toInt()), alpha = 0.25f,
+                                colorFilter = ColorFilter.tint(p.brand, BlendMode.SrcIn)) }
+                            drawLine(p.inkSoft, anchor, label, 1.2f * u)
+                            drawCircle(p.brand, 2.5f * u, anchor)
+                            drawCircle(Color.White, 10f * u, label)
+                            drawCircle(p.brand, 8.5f * u, label)
+                            drawContext.canvas.nativeCanvas.drawText("${mark.number}", label.x, label.y + 3.5f * u, paint)
                         }
                     }
-                    Spacer(Modifier.height(8.dp))
                     Text(if (back) "Back" else "Front", fontSize = sc.small, color = p.inkSoft)
                 }
             }
         }
-        if (n.pins.any { it.second.endsWith(":all") }) {
-            Spacer(Modifier.height(10.dp))
-            Text("Shaded body: felt all over", fontSize = sc.small, color = p.inkSoft)
+        marks.map { it.number }.distinct().forEach { number ->
+            Text("$number. ${labels[number].orEmpty()}" + if (marks.any { it.number == number && it.all }) " - all over" else "",
+                fontSize = sc.small, color = p.ink, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp))
         }
     }
 }
@@ -349,12 +399,12 @@ private fun BodyPins(n: DoctorNote) {
 
 /** One symptom: its name, two numbers as cards, when it happened, then plain facts. */
 @Composable
-private fun SymptomCard(r: DoctorNote.Row, days: Int) {
+private fun SymptomCard(r: DoctorNote.Row, days: Int, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val tone = levelColor(r.urgent, p)
     Group {
-        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().steady("${r.name}. Opens every time it was noted.", onClick = onClick).padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("${r.n}", fontSize = sc.small, fontWeight = FontWeight.Bold, color = Color.White,
                 modifier = Modifier.size(28.dp).clip(CircleShape).background(tone).wrapContentSize(Alignment.Center))
             Spacer(Modifier.width(12.dp))
@@ -365,11 +415,12 @@ private fun SymptomCard(r: DoctorNote.Row, days: Int) {
         }
         // the two numbers a doctor asks first
         Row(Modifier.padding(horizontal = 16.dp).height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            MiniCard("Times", if (r.total == 1) "Once" else "${r.total}", if (r.total > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
-            r.sevHigh?.let { MiniCard("Worst pain", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
+            MiniCard("Times noted", "${r.reportCount}", if (r.reportCount > 1) "in ${r.daysWith} day${if (r.daysWith == 1) "" else "s"}" else null)
+            r.sevHigh?.let { MiniCard("Highest severity", "$it of 10", sevWord(it), sevColor(it, p)) } ?: Spacer(Modifier.weight(1f))
         }
-        if (r.daily.count { it > 0 } > 1) DayStrip(r.daily, tone, days)
+        if (r.daily.isNotEmpty()) DayStrip(r.daily, tone, days)
         Spacer(Modifier.height(4.dp))
+        r.lastNoted?.let { Line(); Fact("Last noted", it) }
         r.began?.let { Line(); Fact("Started", it) }
         r.trend?.let { t ->
             Line()
@@ -381,8 +432,8 @@ private fun SymptomCard(r: DoctorNote.Row, days: Int) {
         }
         if (r.places.isNotEmpty()) { Line(); Fact("Where", r.places.joinToString(", ")) }
         if (r.feels.isNotEmpty()) { Line(); Fact("What it feels like", r.feels.joinToString(", ")) }
-        if (r.flags.isNotEmpty()) { Line(); Fact("Warning signs", r.flags.joinToString(", ") { it.replaceFirstChar(Char::uppercase) }, p.red) }
-        r.quote?.let { Line(); Fact("In the patient's words", "“$it”") }
+
+        r.quote?.let { Line(); Fact("Additional note" + (r.quoteDate?.let { date -> " · $date" } ?: ""), "“$it”") }
         Spacer(Modifier.height(4.dp))
     }
 }
@@ -408,18 +459,24 @@ private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
     val sc = LocalScale.current
     val max = (daily.maxOrNull() ?: 1).coerceAtLeast(1)
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text("Each bar is one day", fontSize = sc.small, color = p.inkSoft)
-        Canvas(Modifier.fillMaxWidth().height(32.dp)) {
+        Text("Times noted each day", fontSize = sc.small, color = p.inkSoft)
+        Canvas(Modifier.fillMaxWidth().height(48.dp)) {
             val slot = size.width / daily.size
             val bw = (slot * 0.64f).coerceAtLeast(1.5f)
             daily.forEachIndexed { i, v ->
                 val x = i * slot + (slot - bw) / 2
-                val bh = if (v == 0) 2.dp.toPx() else size.height * (0.3f + 0.7f * v / max)
+                val plotHeight = size.height - 14.dp.toPx()
+                val bh = if (v == 0) 2.dp.toPx() else plotHeight * v / max
                 drawRoundRect(if (v == 0) Color(0x1F000000) else tone, Offset(x, size.height - bh), Size(bw, bh), CornerRadius(minOf(bw / 2, 3.dp.toPx())))
+                if (v > 0 && daily.size <= 31) {
+                    val label = "$v"
+                    val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.DKGRAY; textSize = 12.dp.toPx() }
+                    drawContext.canvas.nativeCanvas.drawText(label, x + bw/2 - paint.measureText(label)/2, size.height - bh - 3.dp.toPx(), paint)
+                }
             }
         }
         Row {
-            Text("$days days ago", fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
+            Text("${days - 1} days ago", fontSize = sc.small, color = p.inkSoft, modifier = Modifier.weight(1f))
             Text("Today", fontSize = sc.small, color = p.inkSoft)
         }
     }
@@ -428,11 +485,11 @@ private fun DayStrip(daily: List<Int>, tone: Color, days: Int) {
 // ───────────────────────── medicines & readings ─────────────────────────
 
 @Composable
-private fun MedRow(m: DoctorNote.Med) {
+private fun MedRow(m: DoctorNote.Med, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
     val low = m.due > 0 && m.done * 100 / m.due < 80
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().steady("${m.name}. Opens Medicines.", onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.Top) {
             Column(Modifier.weight(1f)) {
                 Text(m.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
@@ -456,10 +513,10 @@ private fun plainDose(d: String) = d.replace(" OD", ", once a day").replace(" BD
     .replace(" QID", ", 4 times a day").replace("as needed", "when needed").trim().trimStart(',').trim()
 
 @Composable
-private fun ReadingCard(r: DoctorNote.Reading, modifier: Modifier) {
+private fun ReadingCard(r: DoctorNote.Reading, modifier: Modifier, onClick: () -> Unit) {
     val p = LocalPalette.current
     val sc = LocalScale.current
-    Column(modifier.clip(RoundedCornerShape(18.dp)).background(p.card).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(p.card).steady("${r.name} ${r.latest}. Opens its chart.", onClick = onClick).padding(16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(r.name, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = if (r.off) p.red else p.inkSoft)
         Text(r.latest, fontSize = sc.title, fontWeight = FontWeight.Bold, color = if (r.off) p.red else p.ink, maxLines = 1)
         Text(r.unit, fontSize = sc.small, color = p.inkSoft)

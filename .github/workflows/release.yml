@@ -15,6 +15,16 @@ on:
     branches: [main, master, master-ejlvhp]
     paths-ignore: ["README.md", "PLAN.md", "RELEASE_NOTES.md", "docs/**", "design/**"]
   workflow_dispatch:
+    inputs:
+      publish_prod:
+        description: Publish validated build to production
+        type: boolean
+        default: false
+      data_safety_confirmation:
+        description: Type BACKUP_VERIFIED only after a fresh full export is copied off the phone, or a second device is verified to hold all current records
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -26,6 +36,16 @@ jobs:
       SIGNING: ${{ secrets.MEDLOG_SIGNING }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require verified production-data backup
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_prod == true
+        env:
+          DATA_SAFETY_CONFIRMATION: ${{ inputs.data_safety_confirmation }}
+        run: |
+          if [ "$DATA_SAFETY_CONFIRMATION" != "BACKUP_VERIFIED" ]; then
+            echo "::error::Production release blocked. First make a fresh full MedLog export and copy it off the phone, or verify every current record exists on a second device. Then rerun with data_safety_confirmation=BACKUP_VERIFIED."
+            exit 1
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -47,6 +67,11 @@ jobs:
           elif [ -f signing/release.properties ]; then
             cp signing/medlog-release.jks "$K"; P=signing/release.properties
             PUBLISH=yes
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # asked for a release by hand: without the real key it could never install over the app on a phone,
+            # so stop here and say why, rather than build something that looks fine and isn't
+            echo "::error::MEDLOG_SIGNING is not set. Add it (see signing/README.md, or run scripts/make_signing_secret.ps1 on the PC), then run this again."
+            exit 1
           else
             P="$RUNNER_TEMP/oneoff.txt"; PW="$(openssl rand -hex 16)"
             printf 'storePassword=%s\nkeyAlias=medlog\nkeyPassword=%s\n' "$PW" "$PW" > "$P"
@@ -60,6 +85,9 @@ jobs:
             echo "MEDLOG_KEY_PASSWORD=$KP"; echo "PUBLISH=$PUBLISH"; } >> "$GITHUB_ENV"
 
       - name: Test and build
+        env:
+          # lets the app send "Report a problem" to the private feedback repo; empty on forks
+          MEDLOG_FEEDBACK_TOKEN: ${{ secrets.MEDLOG_FEEDBACK_TOKEN }}
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleRelease
 
       - name: Name the files
@@ -79,12 +107,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: MedLog-${{ steps.files.outputs.version }}
-          path: out/*.apk
+          path: |
+            out/*
+            app/build/test-results/testDebugUnitTest/*.xml
 
       - uses: softprops/action-gh-release@v2
-        if: env.PUBLISH == 'yes'
-        # some repositories don't let workflows make releases; the build itself still counts
-        continue-on-error: true
+        # Production publication is manual so the required phone-data check cannot be bypassed by a push.
+        if: env.PUBLISH == 'yes' && github.event_name == 'workflow_dispatch' && inputs.publish_prod == true && inputs.data_safety_confirmation == 'BACKUP_VERIFIED'
         with:
           tag_name: v${{ steps.files.outputs.version }}
           name: MedLog ${{ steps.files.outputs.version }}

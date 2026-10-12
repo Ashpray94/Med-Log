@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'">
+  <title>Alert</title>
+  <link rel="stylesheet" href="widget.css">
+  <link rel="stylesheet" href="alert.css">
+</head>
+<body class="pre state-normal no-glass">
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-min" viewBox="0 0 16 16"><path d="M4.5 8h7"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 16 16"><path d="M9.25 3.5h3.25v3.25M6.75 12.5H3.5V9.25M12.5 3.5 9 7M3.5 12.5 7 9"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 16 16"><path d="M4.5 6.25 8 9.75l3.5-3.5"/></symbol>
+    <symbol id="i-video" viewBox="0 0 24 24"><path d="M5.5 6h7.5a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H5.5a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3Zm11.5 4.1 3.4-2.2c.6-.4 1.4 0 1.4.8v6.6c0 .8-.8 1.2-1.4.8L17 13.9Z"/></symbol>
+    <symbol id="i-snooze" viewBox="0 0 24 24"><circle cx="12" cy="13.5" r="7"/><path d="M12 10.5v3.2l2.2 1.6M4.8 4.2 2.8 6.2M19.2 4.2l2 2"/></symbol>
+    <symbol id="i-late" viewBox="0 0 24 24"><path d="M20.5 3.5 10.3 13.7M20.5 3.5 14 20.5l-3.7-6.8L3.5 10Z"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 16 16"><path d="M10.6 3.2a1.3 1.3 0 0 1 1.9 0l.3.3a1.3 1.3 0 0 1 0 1.9L6 12.2l-2.8.6.6-2.8Z"/></symbol>
+    <symbol id="i-open" viewBox="0 0 16 16"><path d="M9.5 3h3.5v3.5M13 3 8 8M11.5 9.5V12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1h2.5"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 16 16"><path class="spk" d="M2.75 6.25h2L8 3.5v9L4.75 9.75h-2Z"/><path class="wave" d="M10.5 5.75a3.2 3.2 0 0 1 0 4.5M12.5 4a5.6 5.6 0 0 1 0 8"/><path class="slash" d="m10.25 6 4 4m0-4-4 4"/></symbol>
+  </svg>
+
+  <div class="stage" id="stage">
+    <!-- full widget -->
+    <section class="surface card" id="card">
+      <div class="lens"><canvas class="glass"></canvas><canvas class="glass"></canvas><div class="rim"><canvas class="glass-sharp"></canvas></div></div>
+      <div class="material"></div>
+      <div class="tint"></div>
+      <div class="sheen"></div>
+      <div class="content">
+        <header class="head">
+          <div class="status"><span class="dot"></span><span class="status-text" id="status" aria-live="polite">Starts in</span></div>
+          <div class="head-actions">
+            <button class="mute pill-btn" title="Mute alarm"><svg><use href="#i-sound"/></svg><span class="mute-label">Mute</span></button>
+            <button class="icon-btn" id="minimize" title="Minimize"><svg><use href="#i-min"/></svg></button>
+          </div>
+        </header>
+
+        <!-- two or more meetings at once: compact rows in one card (about 2.5 visible, the rest scroll) -->
+        <div class="stack" id="stack" role="list"></div>
+
+        <div class="info">
+          <div class="title-row">
+            <h1 class="title" id="title"></h1>
+            <button class="icon-btn cal-btn" id="calBtn" hidden><svg><use href="#i-open"/></svg></button>
+          </div>
+          <p class="meta"><span id="when"></span><span class="sep">·</span><span id="service"></span></p>
+        </div>
+
+        <div class="clock" id="clock" role="timer">
+          <div class="flip" id="flipMin">
+            <div class="flip-card">
+              <div class="half top"><span></span></div>
+              <div class="half bottom"><span></span></div>
+              <div class="flap top"><span></span></div>
+              <div class="flap bottom"><span></span></div>
+            </div>
+            <div class="flip-label" id="labelMin">Minutes</div>
+          </div>
+          <div class="colon"><i></i><i></i></div>
+          <div class="flip" id="flipSec">
+            <div class="flip-card">
+              <div class="half top"><span></span></div>
+              <div class="half bottom"><span></span></div>
+              <div class="flap top"><span></span></div>
+              <div class="flap bottom"><span></span></div>
+            </div>
+            <div class="flip-label" id="labelSec">Seconds</div>
+          </div>
+        </div>
+
+
+        <div class="people" id="people">
+          <button class="people-toggle" id="peopleToggle" aria-expanded="false">
+            <span class="avatars" id="avatars"></span>
+            <span class="people-text">
+              <span class="people-primary" id="guestCount"></span>
+              <span class="people-secondary" id="organizer"></span>
+            </span>
+            <svg class="chev"><use href="#i-chev"/></svg>
+          </button>
+          <div class="people-panel">
+            <div class="people-inner">
+              <div class="rsvp-summary" id="summary"></div>
+              <ul class="people-list" id="peopleList"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="action-zone">
+          <button class="join" id="join">
+            <svg class="join-icon"><use href="#i-video"/></svg>
+            <span id="joinLabel">Join meeting</span>
+          </button>
+
+          <div class="actions" id="actions">
+            <button class="act" id="snoozeBtn"><svg><use href="#i-snooze"/></svg><span id="snoozeLabel">Snooze 5 min</span></button>
+            <button class="act late-only" id="lateBtn"><svg><use href="#i-late"/></svg><span>Running late</span></button>
+            <button class="act" id="dismissBtn"><svg><use href="#i-x"/></svg><span>Dismiss</span></button>
+          </div>
+          <div class="late-picker" id="latePicker">
+            <p class="late-q">Let the guests know you’ll be about</p>
+            <div class="late-options">
+              <button data-min="5">5 min</button>
+              <button data-min="10">10 min</button>
+              <button data-min="15">15 min</button>
+            </div>
+            <button class="late-cancel" id="lateCancel">Cancel</button>
+          </div>
+        </div>
+        <p class="account" id="account"></p>
+      </div>
+    </section>
+
+    <!-- minimized: the timer alone -->
+    <section class="surface capsule" id="capsule">
+      <div class="lens"><canvas class="glass"></canvas><canvas class="glass"></canvas><div class="rim"><canvas class="glass-sharp"></canvas></div></div>
+      <div class="material"></div>
+      <div class="tint"></div>
+      <div class="sheen"></div>
+      <div class="capsule-content">
+        <span class="cap-icon"><svg><use href="#i-video"/></svg></span>
+        <div class="cap-text">
+          <span class="cap-title-row"><span class="cap-title" id="miniTitle"></span><span class="cap-more" id="miniMore" hidden></span></span>
+          <span class="cap-time"><span class="cap-label" id="miniLabel">Starts in</span><span class="countdown mini" id="mini"></span></span>
+        </div>
+        <div class="capsule-actions">
+          <button class="mute icon-btn" title="Mute alarm"><svg><use href="#i-sound"/></svg></button>
+          <button class="icon-btn" id="expand" title="Expand"><svg><use href="#i-expand"/></svg></button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="host-alert.js"></script>
+  <script src="widget.js"></script>
+</body>
+</html>

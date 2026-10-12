@@ -26,6 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import com.suryaprakash.medlog.ui.lift
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -76,7 +78,7 @@ fun NutritionScreen(nav: Nav) {
     val rep = r
     Screen("Nutrition", rep?.headline?.text ?: "Preparing.", onHome = { nav.home() }, onBack = { nav.back() }, subtitle = "What went in, and weight") {
         Segmented(SPANS.map { it.second }, SPANS.indexOfFirst { it.first == days }) { days = SPANS[it].first }
-        if (rep == null) return@Screen
+        if (rep == null) { com.suryaprakash.medlog.ui.Loading(); return@Screen }
         NutritionSummary(rep)
 
         // the charts
@@ -89,36 +91,63 @@ fun NutritionScreen(nav: Nav) {
 
         // the detail
         SectionHeader("Day by day", "${rep.loggedDays} of ${rep.days.size} days logged", null)
+        // the days with something noted, one line each; a run of empty days is one small pill ("13 days not noted")
+        val fmt = DateTimeFormatter.ofPattern("EEE, d MMM", com.suryaprakash.medlog.speech.I18n.locale)
+        val short = DateTimeFormatter.ofPattern("d MMM", com.suryaprakash.medlog.speech.I18n.locale)
+        val runs = mutableListOf<List<com.suryaprakash.medlog.nutrition.Nutrition.Day>>()
+        rep.days.reversed().forEach { d -> if (runs.isNotEmpty() && !d.logged && !runs.last().first().logged) runs[runs.lastIndex] = runs.last() + d else runs += listOf(d) }
         Group {
-            rep.days.reversed().forEachIndexed { i, d ->
+            runs.forEachIndexed { i, run ->
                 if (i > 0) GroupLine()
-                ValueRow(d.date.format(DateTimeFormatter.ofPattern("EEE, d MMM")),
-                    if (d.logged) "${d.kcal.roundToInt()} kcal" else "Nothing logged",
-                    sub = if (d.logged) "${d.protein.roundToInt()} g protein · ${d.water} glasses water · " + d.items.joinToString(", ").take(90) else null,
-                    valueColor = if (!d.logged) p.inkSoft else rep.kcalTarget?.let { t -> if (d.kcal < t * 0.6) p.red else if (d.kcal < t * 0.85) p.amber else null })
+                val d = run.first()
+                if (d.logged) ValueRow(d.date.format(fmt), "${d.kcal.roundToInt()} kcal", sub = "${d.protein.roundToInt()} g protein · ${d.water} glasses of water",
+                    valueColor = rep.kcalTarget?.let { t -> if (d.kcal < t * 0.6) p.red else if (d.kcal < t * 0.85) p.amber else null })
+                else Box(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp)) {
+                    val words = if (run.size == 1) "Nothing noted · ${d.date.format(short)}" else "${run.size} days not noted · ${run.last().date.format(short)} – ${d.date.format(short)}"
+                    Text(words, fontSize = sc.small, fontWeight = FontWeight.SemiBold, color = p.inkSoft,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(p.fill).padding(horizontal = 12.dp, vertical = 6.dp))
+                }
             }
         }
         if (rep.missed.isNotEmpty()) {
             SectionHeader("Missed feeds", "${rep.missed.size} in this time", null)
+            // each feed named once, then its missed times day by day ("Today: 10 AM, 1 PM · Yesterday: 7 AM")
             Group {
-                rep.missed.sortedByDescending { it.at }.take(20).forEachIndexed { i, m ->
+                rep.missed.groupBy { it.feed }.entries.forEachIndexed { i, (feed, ms) ->
                     if (i > 0) GroupLine()
-                    ValueRow(m.feed, "${m.ml.roundToInt()} ml", sub = "${dayLabel(m.at)} ${timeLabel(m.at)}", valueColor = p.red)
+                    val byDay = ms.sortedByDescending { it.at }.groupBy { dayLabel(it.at).ifBlank { "Today" } }
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                        Text("$feed · ${ms.size} missed", fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        byDay.forEach { (day, l) ->
+                            Text("$day: " + l.sortedBy { it.at }.joinToString(", ") { chipTime(it.at) }, fontSize = sc.small, color = p.red, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
                 }
             }
         }
-        if (rep.feeds.isNotEmpty() || rep.changes.isNotEmpty()) {
-            SectionHeader("Feeds and changes", "What's given now, and what changed", null)
+        if (rep.feedLines.isNotEmpty()) {
+            SectionHeader("Feeds", "Given now", null)
             Group {
-                (rep.feeds.map { it to false } + rep.changes.map { it to true }).forEachIndexed { i, (t, change) ->
+                rep.feedLines.forEachIndexed { i, f ->
                     if (i > 0) GroupLine()
-                    ValueRow(t, if (change) "Changed" else "Now", valueColor = if (change) p.amber else null)
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                        Text(f.name, fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        Text(listOfNotNull(f.detail, f.since).joinToString(" · "), fontSize = sc.small, color = p.inkSoft)
+                    }
                 }
             }
         }
         if (rep.observed.isNotEmpty()) {
             SectionHeader("Also noticed", "Problems that affect eating", null)
-            Group { rep.observed.forEachIndexed { i, t -> if (i > 0) GroupLine(); ValueRow(t, null) } }
+            Group {
+                rep.observed.forEachIndexed { i, t ->
+                    if (i > 0) GroupLine()
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+                        Text(t.substringBefore(": "), fontSize = sc.body, fontWeight = FontWeight.SemiBold, color = p.ink)
+                        if (": " in t) Text(t.substringAfter(": ").replaceFirstChar(Char::uppercase), fontSize = sc.small, color = p.inkSoft)
+                    }
+                }
+            }
         }
         SectionHeader("Targets", if (rep.targetsFromDoctor) "Set by the doctor" else "About 30 kcal and 1 g protein per kg · doctor to confirm", "Change") { targets = true }
         Group {
@@ -140,7 +169,8 @@ fun NutritionSummary(rep: Nutrition.Report, onOpen: (() -> Unit)? = null) {
     val sc = LocalScale.current
     val edge = levelColor(p, rep.headline.level)
     val sh = RoundedCornerShape(sc.radius)
-    Column(Modifier.fillMaxWidth().clip(sh).background(p.card).border(2.dp, edge, sh)
+    @Suppress("UNUSED_VARIABLE") val unusedEdge = edge
+    Column(Modifier.fillMaxWidth().lift(sh).clip(sh).background(p.card)
         .then(if (onOpen != null) Modifier.padding(0.dp) else Modifier).padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(rep.headline.text, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink, lineHeight = sc.headline * 1.25f)
         rep.findings.drop(1).take(4).forEach { f ->
@@ -167,7 +197,7 @@ private fun Stat(label: String, value: String, sub: String, color: Color?, modif
     val p = LocalPalette.current
     val sc = LocalScale.current
     val sh = RoundedCornerShape(sc.radius)
-    Column(modifier.clip(sh).background(p.card).border(1.dp, p.line, sh).padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(modifier.clip(sh).background(p.card).padding(14.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(label, fontSize = sc.small * 0.88f, color = p.inkSoft)
         Text(value, fontSize = sc.headline, fontWeight = FontWeight.Bold, color = color ?: p.ink, maxLines = 1)
         Text(sub, fontSize = sc.small * 0.8f, color = p.inkSoft, lineHeight = sc.small)
@@ -181,7 +211,7 @@ private fun IntakeChart(rep: Nutrition.Report) {
     val t = rep.kcalTarget
     val hi = maxOf(rep.days.maxOfOrNull { it.kcal } ?: 0.0, t ?: 0.0, 500.0) * 1.1
     val sh = RoundedCornerShape(LocalScale.current.radius)
-    Box(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(16.dp)) {
+    Box(Modifier.fillMaxWidth().clip(sh).background(p.card).padding(16.dp)) {
         Canvas(Modifier.fillMaxWidth().height(160.dp).semantics { contentDescription = "Calories each day" }) {
             val w = size.width / rep.days.size
             rep.days.forEachIndexed { i, d ->
@@ -204,7 +234,7 @@ private fun WeightChart(weights: List<Pair<Long, Double>>) {
     val lo = weights.minOf { it.second } - 1; val hi = weights.maxOf { it.second } + 1
     val from = weights.first().first; val to = weights.last().first.coerceAtLeast(from + 1)
     val sh = RoundedCornerShape(LocalScale.current.radius)
-    Box(Modifier.fillMaxWidth().clip(sh).background(p.card).border(1.dp, p.line, sh).padding(16.dp)) {
+    Box(Modifier.fillMaxWidth().clip(sh).background(p.card).padding(16.dp)) {
         Canvas(Modifier.fillMaxWidth().height(120.dp).semantics { contentDescription = "Weight over time" }) {
             fun o(t: Long, v: Double) = Offset(((t - from).toFloat() / (to - from)) * size.width, (size.height - (v - lo) / (hi - lo) * size.height).toFloat())
             for (i in 1 until weights.size) drawLine(p.tintPurple, o(weights[i - 1].first, weights[i - 1].second), o(weights[i].first, weights[i].second), 3.dp.toPx())
@@ -221,8 +251,7 @@ private fun TargetsSheet(kcal: Double?, protein: Double?, onDone: (Double?, Doub
     val sc = LocalScale.current
     var k by remember { mutableStateOf(kcal?.roundToInt()?.toString() ?: "") }
     var pr by remember { mutableStateOf(protein?.roundToInt()?.toString() ?: "") }
-    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = p.paper,
-        sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    com.suryaprakash.medlog.ui.AppSheet(onDismissRequest = onDismiss, containerColor = p.paper) {
         Column(Modifier.fillMaxWidth().padding(horizontal = sc.margin).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Text("Daily targets", fontSize = sc.headline, fontWeight = FontWeight.Bold, color = p.ink)
             Hint("As advised by the doctor or dietitian. Leave empty to work them out from weight.")
@@ -230,7 +259,7 @@ private fun TargetsSheet(kcal: Double?, protein: Double?, onDone: (Double?, Doub
                 com.suryaprakash.medlog.ui.BigField("Calories (kcal)", k, { k = it.filter(Char::isDigit).take(4) }, Modifier.weight(1f), keyboard = androidx.compose.ui.text.input.KeyboardType.Number)
                 com.suryaprakash.medlog.ui.BigField("Protein (g)", pr, { pr = it.filter(Char::isDigit).take(3) }, Modifier.weight(1f), keyboard = androidx.compose.ui.text.input.KeyboardType.Number)
             }
-            BigButton("Save targets", onClick = { onDone(k.toDoubleOrNull(), pr.toDoubleOrNull()) })
+            BigButton("Done", onClick = { onDone(k.toDoubleOrNull(), pr.toDoubleOrNull()) })
         }
     }
 }
