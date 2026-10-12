@@ -20,6 +20,11 @@ on:
         description: Publish validated build to production
         type: boolean
         default: false
+      data_safety_confirmation:
+        description: Type BACKUP_VERIFIED only after a fresh full export is copied off the phone, or a second device is verified to hold all current records
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -31,6 +36,16 @@ jobs:
       SIGNING: ${{ secrets.MEDLOG_SIGNING }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Require verified production-data backup
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_prod == true
+        env:
+          DATA_SAFETY_CONFIRMATION: ${{ inputs.data_safety_confirmation }}
+        run: |
+          if [ "$DATA_SAFETY_CONFIRMATION" != "BACKUP_VERIFIED" ]; then
+            echo "::error::Production release blocked. First make a fresh full MedLog export and copy it off the phone, or verify every current record exists on a second device. Then rerun with data_safety_confirmation=BACKUP_VERIFIED."
+            exit 1
+          fi
 
       - uses: actions/setup-java@v4
         with:
@@ -97,7 +112,8 @@ jobs:
             app/build/test-results/testDebugUnitTest/*.xml
 
       - uses: softprops/action-gh-release@v2
-        if: env.PUBLISH == 'yes' && (github.event_name == 'push' || inputs.publish_prod == true)
+        # Production publication is manual so the required phone-data check cannot be bypassed by a push.
+        if: env.PUBLISH == 'yes' && github.event_name == 'workflow_dispatch' && inputs.publish_prod == true && inputs.data_safety_confirmation == 'BACKUP_VERIFIED'
         with:
           tag_name: v${{ steps.files.outputs.version }}
           name: MedLog ${{ steps.files.outputs.version }}

@@ -40,6 +40,7 @@ Work on branch `main-mxp0m4`. PR #1 is the open draft for it.
 ## Hard rules
 
 - Never commit signing keys or keystores. The key lives only in the `MEDLOG_SIGNING` GitHub secret.
+- Never publish or install a production build until the current production data has a fresh, verified full `.medlog` export copied off the phone, or a second physical device has been checked to contain all current records. Follow the production data gate in `docs/context/WORKFLOW.md`; `adb install -r` and sync are not backups.
 - No model names or identifiers in commits, PRs, code or docs.
 - Tests must pass before every push. Run `python3 scripts/keep_eol.py` before committing (CRLF files).
 - Say plainly what was and wasn't verified (the cloud machine has no phone: alarms, SMS, Bluetooth, widgets, speech
