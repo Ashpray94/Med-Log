@@ -1,16 +1,7 @@
 package com.suryaprakash.medlog.help
 
-import android.annotation.SuppressLint
 import android.app.KeyguardManager
-import android.webkit.JavascriptInterface
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.runtime.DisposableEffect
 import com.suryaprakash.medlog.ui.tr
-import org.json.JSONArray
-import org.json.JSONObject
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -21,7 +12,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import com.suryaprakash.medlog.ui.steady
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Call
@@ -264,84 +254,38 @@ class AlertActivity : ComponentActivity() {
         }
     }
 
-    /**
-     * On a helper's phone: someone needs you. This is Meeting Timer's reminder, unchanged in look (its own page, in
-     * assets/alert/): a dark card at the bottom with a status dot, the alert's title, who and when, a flip-clock
-     * countdown, one big answer and two smaller ones. The three answers are [AlertReplies] 1, 2 and 3. The card turns
-     * red in the last ten seconds (and all the time for SOS, danger and a fall) and stays red while the alarm rings.
-     * The sound and buzzing are [AlertSound], not the page. Answering anything stops it and tells the other helpers.
-     */
-    @SuppressLint("SetJavaScriptEnabled")
+    /** The complete helper alert. Notifications carry the common actions; this screen adds every safe choice. */
     @Composable
     private fun HelperAlertPanel(from: String, text: String, kind: String, id: Long, onClose: () -> Unit) {
-        val urgent = AlertReplies.urgent(kind)
         val replies = remember(kind) { AlertReplies.forKind(kind) }
-        val deadline by AlertSound.deadline.collectAsState()
-        val screaming by AlertSound.screaming.collectAsState()
-        val at = remember { java.text.SimpleDateFormat("h:mm a", com.suryaprakash.medlog.speech.I18n.locale).format(java.util.Date()) }
-        val dm = resources.displayMetrics
-        val cardWidth = minOf((dm.widthPixels / dm.density).toInt() - 24, 420)
-        var ready by remember { mutableStateOf(false) }
         var answered by remember { mutableStateOf(false) }
-        fun reply(i: Int) {
+        fun reply(r: Reply) {
             if (answered) return
             answered = true
             val mid = intent.getStringExtra("mid").orEmpty(); val pairId = intent.getStringExtra("pairId")?.ifEmpty { null }
             val app = applicationContext
             medlog.scope.launch {
-                val say = AlertAnswer.perform(app, replies[i].code, kind, text, from, id, mid, pairId)
+                val say = AlertAnswer.perform(app, r.code, kind, text, from, id, mid, pairId)
                 say?.let { s -> android.os.Handler(android.os.Looper.getMainLooper()).post { android.widget.Toast.makeText(app, tr(s), android.widget.Toast.LENGTH_LONG).show() } }
             }
             onClose()
         }
-        // what the page shows: the alert where Meeting Timer had a meeting; the countdown runs to the app's own deadline
-        fun alertJson(): JSONObject {
-            val start = deadline ?: System.currentTimeMillis()
-            return JSONObject().put("key", "alert").put("title", tr(AlertReplies.title(kind, from, text))).put("start", start).put("end", start + 3_600_000L)
-                .put("who", from).put("at", at).put("text", tr(text)).put("link", JSONObject.NULL).put("attendees", JSONArray())
-                .put("clock", deadline != null || screaming)
-                .put("replies", JSONArray(replies.map { JSONObject().put("code", it.code).put("words", tr(it.words)) }))
-                .put("words", JSONObject()
-                    .put("status", JSONObject().put("normal", tr("Answer within")).put("warn", tr("Answer now")).put("late", tr("Nobody has answered")))
-                    .put("min", tr("Minutes")).put("sec", tr("Seconds")).put("minLate", tr("Minutes late")).put("secLate", tr("Seconds late")))
-        }
-        fun js(name: String, payload: String) = "window.__hostEmit && window.__hostEmit('$name', ${payload.replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")})"
-        val web = remember {
-            WebView(this@AlertActivity).apply {
-                setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                isVerticalScrollBarEnabled = false; isHorizontalScrollBarEnabled = false; overScrollMode = android.view.View.OVER_SCROLL_NEVER
-                settings.javaScriptEnabled = true
-                settings.allowFileAccess = false; settings.allowContentAccess = false
-                addJavascriptInterface(AlertBridge { i -> runOnUiThread { reply(i) } }, "AndroidHost")
-                webViewClient = object : WebViewClient() {
-                    override fun onPageFinished(view: WebView, url: String) {
-                        val m = alertJson()
-                        evaluateJavascript(js("init", JSONObject().put("meeting", m).put("platform", "android").put("pad", 12).put("systemGlass", false)
-                            .put("cardWidth", cardWidth).put("miniSize", 34).put("lead", 0).put("warn", if (urgent) 3_600_000L else 10_000L)
-                            .put("sound", false).put("snoozeMinutes", AlertSnooze.MINUTES).toString()), null)
-                        evaluateJavascript(js("meeting", m.toString()), null)
-                        postDelayed({ evaluateJavascript(js("enter", "null"), null) }, 60)
-                        ready = true
-                    }
-                }
-                loadUrl("file:///android_asset/alert/widget.html")
+        Screen(tr(AlertReplies.title(kind, from, text)), tr("Choose what you will do."), onHome = null) {
+            Card(border = if (AlertReplies.urgent(kind)) LocalPalette.current.red else LocalPalette.current.brand) {
+                Body(tr(text), bold = true)
+                Hint(tr("From $from"))
             }
+            replies.forEachIndexed { index, r ->
+                BigButton(tr(r.words), tone = if (index == 0) Tone.PRIMARY else Tone.SECONDARY, onClick = { reply(r) })
+            }
+            BigButton(tr("Dismiss alert"), tone = Tone.QUIET, icon = Icons.Rounded.Close, onClick = {
+                if (!answered) {
+                    answered = true
+                    Loud.done(this@AlertActivity, Loud.alertId(id))
+                    onClose()
+                }
+            })
         }
-        DisposableEffect(Unit) { onDispose { web.destroy() } }
-        // the deadline arrives (or the alarm turns continuous) after the page is up: show it
-        LaunchedEffect(ready, deadline, screaming) { if (ready) web.evaluateJavascript(js("meeting", alertJson().toString()), null) }
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().background(Color(0xCC000000))) {
-            androidx.compose.ui.viewinterop.AndroidView(factory = { web }, modifier = Modifier.fillMaxSize().navigationBarsPadding())
-            Text("Open the app", color = Color.White.copy(alpha = 0.85f), fontSize = LocalScale.current.body, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center,
-                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                    .steady("Open the app") { Loud.silence(); openApp("helper") }.padding(horizontal = 20.dp, vertical = 12.dp))
-        }
-    }
-
-    /** The page's answers: `action('join')` is answer 1, `'snooze'` answer 2, `'dismiss'` answer 3. */
-    class AlertBridge(val onAnswer: (Int) -> Unit) {
-        @JavascriptInterface
-        fun action(type: String, minutes: Int) = onAnswer(when (type) { "join" -> 0; "snooze" -> 1; else -> 2 })
     }
 
     /** On the person's phone: a helper asked "How are you?". One tap answers them. */

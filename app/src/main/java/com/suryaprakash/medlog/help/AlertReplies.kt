@@ -4,9 +4,9 @@ package com.suryaprakash.medlog.help
 data class Reply(val code: String, val words: String)
 
 /**
- * The three answers on every helper alert, in one place. The alert screen, the notification buttons and the
- * helper's home card all read this table, so they can never disagree. Exactly three, always in this order:
- * 1 answering, 2 later or skip, 3 asking someone else.
+ * The useful answers for a helper alert, in one place. Notifications show the first two and open the alert
+ * screen for the remaining choices. The alert screen also provides a separate "Dismiss alert" action which
+ * silences the alarm without claiming that the task was handled.
  */
 object AlertReplies {
     const val COMING = "coming"
@@ -18,7 +18,7 @@ object AlertReplies {
     const val SKIP = "skip"
 
     private val RED = listOf(Reply(COMING, "I'm coming"), Reply(IN_5, "In 5 min"), Reply(ASK, "Ask another helper"))
-    private val DOSE = listOf(Reply(GIVE, "I'll give it"), Reply(SKIP_DOSE, "Skip this dose"), Reply(ASK, "Ask another helper"))
+    private val DOSE = listOf(Reply(GIVE, "I'll give it"), Reply(IN_5, "In 5 min"), Reply(SKIP_DOSE, "Skip this dose"), Reply(ASK, "Ask another helper"))
     private val OTHER = listOf(Reply(HANDLE, "I'll handle it"), Reply(SKIP, "Skip"), Reply(ASK, "Ask another helper"))
 
     fun forType(type: Alerts.Type): List<Reply> = when (type) {

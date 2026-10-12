@@ -37,14 +37,28 @@ object Pdf {
     private const val RED = 0xFFB3261E.toInt()
     private const val AMBER = 0xFF8A4B00.toInt()
 
+    /** Keep abnormal positives; omit routine reassuring answers to red-flag questions from the glance report. */
+    internal fun includeGlanceFact(label: String, value: String): Boolean {
+        val l = label.lowercase(); val v = value.lowercase()
+        return when {
+            "blood" in l && ("no blood" in v || v == "no" || v == "false") -> false
+            "coffee" in l && ("not like" in v || v == "no" || v == "false") -> false
+            "forceful" in l && ("not forceful" in v || v == "no" || v == "false") -> false
+            "keep water" in l && "can keep" in v -> false
+            "passed urine" in l && "passed urine" in v -> false
+            "tookmedicine" in l && v == "tookmedicine: false" -> false
+            else -> true
+        }
+    }
+
     fun write(ctx: Context, n: DoctorNote, nut: com.suryaprakash.medlog.nutrition.Nutrition.Report? = null): File {
         val doc = PdfDocument()
         ReportValidation.requireAccurate(n)
         val w = Writer(doc, n.period, n.footer)
         w.page()
 
-        // ── heading ──
-        w.pair("Patient-reported symptoms", n.period, 15f)
+        // Page 1: information a clinician needs before opening the detailed history.
+        w.pair("Patient-reported health summary", n.period, 15f)
         w.text(n.patient, 11f, bold = true)
         // only what was recorded: no "none known" or "none recorded" rows
         if (n.allergies.isNotBlank()) w.kv("Allergies", n.allergies, RED)
@@ -52,42 +66,63 @@ object Pdf {
         if (n.currentMeds.isNotBlank()) w.kv("Medicines", n.currentMeds)
         w.rule()
 
-        // Overview uses the same note counts as the page and the dated appendix.
-        if (n.symptoms.isNotEmpty()) {
-            w.section("Symptoms in the selected period")
-            w.text("Counts show how often a symptom was noted, not how many episodes occurred.", 10f, color = SOFT)
-            w.table(listOf("Symptom", "Times noted", "Last noted", "Started (if given)"), floatArrayOf(0.22f, 0.12f, 0.30f, 0.36f),
-                n.symptoms.map { r -> listOf("${r.n}. ${r.name}", "${r.reportCount}", r.lastNoted.orEmpty(), r.began.orEmpty()) to INK })
-            if (n.pins.isNotEmpty()) {
-                w.section("Body locations - overview")
-                w.mapBlock(n.pins) { back -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 500) }
-                n.symptoms.filter { row -> n.pins.any { it.first == row.n } }.forEach { w.text("${it.n}. ${it.name}", 10f) }
-                w.text("Dots mark the locations given. Lines connect each dot to its numbered label.", 9f, color = SOFT)
-            }
+        if (n.concerns.isNotEmpty()) {
+            w.section("Priorities for review")
+            n.concerns.forEachIndexed { i, concern -> w.text("${i + 1}. $concern", 11f, bold = true,
+                color = when (n.concernLevels.getOrNull(i)) { "RED" -> RED; "AMBER" -> AMBER; else -> INK }) }
         }
+        if (n.symptoms.isNotEmpty()) {
+            w.section("Symptom overview")
+            w.table(listOf("Symptom", "Reports", "Severity", "Last noted"), floatArrayOf(0.30f, 0.12f, 0.18f, 0.40f),
+                n.symptoms.map { r -> listOf("${r.n}. ${r.name}", "${r.reportCount}",
+                    r.sevLow?.let { "${it}–${r.sevHigh ?: it}/10" }.orEmpty(), r.lastNoted.orEmpty()) to
+                    when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK } })
+        }
+        if (n.readings.isNotEmpty()) { w.section("Latest readings"); n.readings.forEach { w.text(it, 10f) } }
+        if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
         if (n.medicines.isNotEmpty()) {
             w.section("Medicines in this period")
-            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.26f, 0.2f, 0.14f, 0.4f), n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
+            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
+                n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
         }
-        if (n.readings.isNotEmpty()) { w.section("Readings"); n.readings.forEach { w.text(it, 10f) } }
-        if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text(it, 10f, color = SOFT) } }
-        if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
-        // One symptom, one graph and every dated entry. Depth is included only when supplied.
-        for (r in n.symptoms) {
-            w.page()
-            w.pair("${r.n}. ${r.name}", n.period, 15f)
-            w.text("${r.name} was noted ${r.reportCount} ${if (r.reportCount == 1) "time" else "times"} in this period.", 12f, bold = true)
-            r.lastNoted?.let { w.kv("Last noted", it) }
-            r.began?.let { w.kv("Started", it) }
-            r.quote?.let { w.kv("Remark", it + r.quoteDate?.let { date -> " ($date)" }.orEmpty()) }
-            w.chart(r.daily, n.from, n.to)
-            w.section("Entries - oldest first")
-            for (entry in n.entries.filter { it.symptomNumber == r.n }) w.entry(entry) { back ->
-                com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, com.suryaprakash.medlog.pictogram.WHOLE, 500)
+
+        // Pages 2–3: each recurring issue at a glance, while preserving what changed between reports.
+        fun issueDetails(rows: List<DoctorNote.Row>) {
+            rows.forEach { r ->
+                w.section("${r.n}. ${r.name}")
+                w.text(listOfNotNull("${r.reportCount} report${if (r.reportCount == 1) "" else "s"}",
+                    r.sevLow?.let { "severity ${it}–${r.sevHigh ?: it}/10; latest ${r.sevLast ?: it}/10" },
+                    r.began?.let { "started $it" }, r.lastNoted?.let { "last $it" }, r.trend?.let { "reported $it" })
+                    .joinToString(" · "), 9.5f, bold = true,
+                    color = when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK })
+                val reports = n.entries.filter { it.symptomNumber == r.n && it.noted }
+                val severities = reports.mapNotNull { e -> e.facts.firstNotNullOfOrNull { (_, value) ->
+                    Regex("(\\d+)\\s*out of 10", RegexOption.IGNORE_CASE).find(value)?.groupValues?.getOrNull(1)?.toIntOrNull()
+                } }
+                if (severities.size >= 2) w.miniTrend(severities, "Recorded severity — oldest to latest", 10)
+                else w.miniTrend(r.daily, "Report frequency by day — not a recovery measure")
+                if (reports.isNotEmpty()) {
+                    w.table(listOf("Date", "Specific recorded details"), floatArrayOf(0.25f, 0.75f), reports.map { e ->
+                        val details = (listOfNotNull(e.site, e.depth) + e.facts.filter { includeGlanceFact(it.first, it.second) }
+                            .map { "${it.first}: ${it.second}" } + listOfNotNull(e.remark))
+                            .filter { it.isNotBlank() }.distinct().joinToString("; ")
+                        listOf(e.date, details.ifBlank { "Symptom reported" }) to INK
+                    })
+                }
+                val updates = n.entries.count { it.symptomNumber == r.n && !it.noted }
+                if (updates > 0) w.text("$updates improvement/update entr${if (updates == 1) "y" else "ies"} recorded separately.", 8.5f, color = SOFT)
             }
         }
-        // ── nutrition: its own page, verdict first, detail after ──
-        // only when food or feeds were logged; days with nothing logged, and "nothing logged" findings, are left out
+        w.page()
+        w.pair("Recurring issues — report detail", n.period, 15f)
+        issueDetails(n.symptoms.take(2))
+
+        w.page()
+        w.pair("Other issues and treatment", n.period, 15f)
+        issueDetails(n.symptoms.drop(2))
+        if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text("•  $it", 10f) } }
+
+        // Page 4: nutrition. Only recent representative days are printed; totals cover the selected period.
         nut?.takeIf { r -> r.days.any { it.logged } || r.feeds.isNotEmpty() }?.let { r ->
             w.page()
             w.pair("Nutrition and weight", n.period, 15f)
@@ -103,11 +138,12 @@ object Pdf {
             if (r.feeds.isNotEmpty()) w.kv("Feeds", r.feeds.joinToString("; "))
             w.rule()
             if (logged.isNotEmpty()) {
-                w.section("Day by day")
+                w.section("Recent logged days")
                 w.table(listOf("Day", "kcal", "Protein", "Water", "What went in"), floatArrayOf(0.14f, 0.09f, 0.1f, 0.08f, 0.59f),
-                    logged.reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), "${d.kcal.toInt()}",
-                        "${d.protein.toInt()} g", if (d.water > 0) "${d.water}" else "", d.items.joinToString(", ")) to
+                    logged.takeLast(7).reversed().map { d -> listOf(d.date.format(java.time.format.DateTimeFormatter.ofPattern("EEE d MMM")), "${d.kcal.toInt()}",
+                        "${d.protein.toInt()} g", if (d.water > 0) "${d.water}" else "", d.items.joinToString(", ").take(110)) to
                         (r.kcalTarget?.let { t -> if (d.kcal < t * 0.6) RED else if (d.kcal < t * 0.85) AMBER else INK } ?: INK) }, dropEmpty = true)
+                if (logged.size > 7) w.text("${logged.size - 7} earlier logged days remain available in MedLog.", 9f, color = SOFT)
             }
             if (r.changes.isNotEmpty()) { w.section("What changed"); r.changes.forEach { w.text("•  $it", 10f) } }
             if (r.observed.isNotEmpty()) { w.section("Also noticed"); r.observed.forEach { w.text("•  $it", 10f) } }
@@ -129,6 +165,7 @@ object Pdf {
         lateinit var c: Canvas
         var y = M
         var n = 0
+        var full = false
         val tp = TextPaint(Paint.ANTI_ALIAS_FLAG)
         val bottom = H - 64f
         val regular: Typeface = Typeface.create("sans-serif", Typeface.NORMAL)
@@ -136,9 +173,13 @@ object Pdf {
         val medium: Typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
         val lp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = LINE; strokeWidth = 0.8f }
 
-        fun page() { finish(); n++; page = doc.startPage(PdfDocument.PageInfo.Builder(W, H, n).create()); c = page!!.canvas; y = M; if (n > 1) { text(period, 9f, color = SOFT); gap(5f) } }
-        fun finish() { page?.let { footer("$footerText  Page $n"); doc.finishPage(it) }; page = null }
-        private fun ensure(h: Float) { if (y + h > bottom) page() }
+        fun page() {
+            if (n >= 4) { full = true; return }
+            finish(); n++; page = doc.startPage(PdfDocument.PageInfo.Builder(W, H, n).create()); c = page!!.canvas; y = M
+            if (n > 1) { text(period, 9f, color = SOFT); gap(5f) }
+        }
+        fun finish() { page?.let { footer("$footerText  Page $n · Full dated record remains in MedLog"); doc.finishPage(it) }; page = null }
+        private fun ensure(h: Float): Boolean { if (full) return false; if (y + h > bottom) page(); return !full }
 
         private fun layout(s: String, size: Float, tf: Typeface, color: Int, width: Int): StaticLayout {
             tp.textSize = size; tp.typeface = tf; tp.color = color
@@ -149,7 +190,7 @@ object Pdf {
             val l = layout(s, size, if (bold) this.bold else regular, color, (W - 2 * M - right).toInt())
             var first = 0
             while (first < l.lineCount) {
-                ensure(l.getLineBottom(first).toFloat() - l.getLineTop(first))
+                if (!ensure(l.getLineBottom(first).toFloat() - l.getLineTop(first))) return
                 var last = first
                 while (last + 1 < l.lineCount && y + l.getLineBottom(last+1) - l.getLineTop(first) <= bottom) last++
                 val top = l.getLineTop(first); val height = l.getLineBottom(last)-top
@@ -160,6 +201,7 @@ object Pdf {
         }
 
         fun pair(left: String, right: String, size: Float) {
+            if (!ensure(size + 10f)) return
             tp.textSize = size; tp.typeface = bold; tp.color = INK
             c.drawText(left, M, y + size, tp)
             tp.textSize = 10f; tp.typeface = regular; tp.color = SOFT
@@ -172,17 +214,17 @@ object Pdf {
             val vl = layout(v, 10f, if (color == RED) bold else regular, color, (W - 2 * M - 76 - right).toInt())
             val height = maxOf(kl.height, vl.height).toFloat()
             if (height > bottom - M - 30) { text("$k: $v", 10f, color = color, right = right); return }
-            ensure(height)
+            if (!ensure(height)) return
             c.save(); c.translate(M, y + 0.5f); kl.draw(c); c.restore()
             c.save(); c.translate(M + 76, y); vl.draw(c); c.restore()
             y += maxOf(kl.height, vl.height) + 3f
         }
 
-        fun rule() { y += 4f; c.drawLine(M, y, W - M, y, lp); y += 10f }
-        fun gap(h: Float) { y += h }
+        fun rule() { if (!ensure(14f)) return; y += 4f; c.drawLine(M, y, W - M, y, lp); y += 10f }
+        fun gap(h: Float) { if (ensure(h)) y += h }
 
         fun section(title: String, right: Float = 0f) {
-            ensure(28f)
+            if (!ensure(28f)) return
             y += 6f
             tp.textSize = 10f; tp.typeface = bold; tp.color = SOFT
             c.drawText(title.uppercase(), M, y + 10f, tp.apply { letterSpacing = 0.06f })
@@ -200,7 +242,7 @@ object Pdf {
             val total = W - 2 * M
             val xs = FloatArray(frac.size) { i -> M + total * frac.take(i).sum() }
             val ws = FloatArray(frac.size) { total * frac[it] - 6f }
-            ensure(16f)
+            if (!ensure(16f)) return
             tp.textSize = 8.5f; tp.typeface = medium; tp.color = SOFT
             head.forEachIndexed { i, h -> c.drawText(h, xs[i], y + 9f, tp) }
             y += 14f
@@ -208,7 +250,7 @@ object Pdf {
             for ((cells, color) in rows) {
                 val ls = cells.mapIndexed { i, s -> layout(s, 9f, if (i == 1) bold else regular, if (i <= 1) color else INK, ws[i].toInt().coerceAtLeast(20)) }
                 val h = ls.maxOf { it.height } + 7f
-                ensure(h)
+                if (!ensure(h)) break
                 ls.forEachIndexed { i, l -> c.save(); c.translate(xs[i], y + 3f); l.draw(c); c.restore() }
                 y += h
                 c.drawLine(M, y - 1f, W - M, y - 1f, lp)
@@ -218,6 +260,7 @@ object Pdf {
 
         /** Actual anchors and separate numbered labels, shared with the on-screen map. */
         fun bodyDiagram(x: Float, top: Float, width: Float, pins: List<Pair<Int, String>>, art: (Boolean) -> android.graphics.Bitmap?) {
+            if (full) return
             val marks = BodyMarkers.layout(pins)
             val fig = width / 2f - 4f
             val u = fig / 100f
@@ -247,14 +290,14 @@ object Pdf {
 
         fun mapBlock(pins: List<Pair<Int, String>>, art: (Boolean) -> android.graphics.Bitmap?) {
             val width = 220f; val h = (width/2-4) * 1.7f + 18f
-            ensure(h)
+            if (!ensure(h)) return
             bodyDiagram(M, y, width, pins, art)
             y += h + 6f
         }
 
         fun chart(daily: List<Int>, from: Long, to: Long) {
             if (daily.isEmpty()) return
-            ensure(112f)
+            if (!ensure(112f)) return
             text("Times noted each day", 10f, bold = true)
             val top = y; val height = 52f; val width = W - 2*M - 20f
             val maximum = (daily.maxOrNull() ?: 0).coerceAtLeast(1)
@@ -276,13 +319,33 @@ object Pdf {
             text("An empty day means the symptom was not noted that day.", 9f, color = SOFT)
         }
 
+        /** A compact, explicitly labelled trend used beside each ailment summary. */
+        fun miniTrend(values: List<Int>, label: String, fixedMax: Int? = null) {
+            if (values.isEmpty() || !ensure(48f)) return
+            text(label, 8.5f, bold = true, color = SOFT)
+            val top = y; val height = 24f; val width = W - 2 * M
+            val maximum = (fixedMax ?: values.maxOrNull() ?: 1).coerceAtLeast(1)
+            val slot = width / values.size.coerceAtLeast(1)
+            val bar = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER }
+            values.forEachIndexed { i, value ->
+                val h = height * value.coerceIn(0, maximum) / maximum
+                c.drawRect(M + i * slot + 1f, top + height - h, M + (i + 1) * slot - 1f, top + height, bar)
+            }
+            c.drawLine(M, top + height, W - M, top + height, lp)
+            y = top + height + 3f
+            tp.textSize = 7.5f; tp.typeface = regular; tp.color = SOFT
+            c.drawText("Oldest", M, y + 7f, tp)
+            val latest = "Latest"; c.drawText(latest, W - M - tp.measureText(latest), y + 7f, tp)
+            y += 12f
+        }
+
         fun entry(e: DoctorNote.Entry, art: (Boolean) -> android.graphics.Bitmap?) {
             val fields = listOfNotNull(e.site?.let { "Location" to it }, e.depth?.let { "Depth" to it }) + e.facts
             val map = e.pins.isNotEmpty()
             val right = if (map) 180f else 0f
             val width = (W-2*M-76-right).toInt()
             val height = maxOf(if (map) 166f else 0f, fields.sumOf { maxOf(layout(it.first, 9.5f, medium, SOFT, 70).height, layout(it.second, 10f, regular, INK, width).height) + 3 }.toFloat()) + 46f
-            ensure(height.coerceAtMost(bottom-M))
+            if (!ensure(height.coerceAtMost(bottom-M))) return
             text(e.date + if (e.noted) " - symptom noted" else " - update", 11f, bold = true)
             val top = y
             if (map) bodyDiagram(W-M-170f, top, 170f, e.pins.map { e.symptomNumber to it }, art)

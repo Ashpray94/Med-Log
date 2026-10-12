@@ -3,7 +3,12 @@
 Update this at the end of every chat: what changed, what's open, what wasn't verified.
 
 ## Now
-- Released: **2.14.1** (versionCode 2141): 2.14.0 plus the feedback token (MEDLOG_FEEDBACK_TOKEN secret added)., branch `main-mxp0m4`, draft PR #1.
+- Repository baseline: **2.17.0** (`0d5e5bdf42c53f8c2f2a84babc0d5cd6ba8e8476`) on branch `main-mxp0m4`.
+- Unreleased local changes: doctor PDF condensed to a four-part clinical summary; helper notifications state the alert reason,
+  expose two direct actions plus **More options**, and the full alert screen includes every action and **Dismiss alert**.
+- Verified: all 243 debug unit tests and `assembleDebug` passed on 12 Oct 2026. The report sample is four pages.
+- Still needs phone verification: notification action visibility on the owner's Android version, lock-screen layout at largest text,
+  and the exact report generated from the owner's live database.
 - 2.14.0: SMS only for SOS (app first, SMS after 90 s with no answer: `SosPlan`); helper alerts use Meeting Timer's
   reminder page (`assets/alert/`) with exactly 3 replies per alert (`help/AlertReplies.kt`); personal limits and
   cancer-care rules; trusted links; "They match" pairing; stopped medicines close their doses; shake to report

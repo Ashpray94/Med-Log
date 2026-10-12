@@ -417,7 +417,7 @@ object Nearby {
         }
     }
 
-    /** The helper's alarm: sound, the full-screen alert and a notification with the three answers for this kind of alert. */
+    /** The helper's alarm: the reason, two immediate actions, and a route to the complete set of choices. */
     internal fun ring(ctx: Context, id: Long, mid: String, pairId: String, from: String, text: String, kind: String) {
         val urgent = AlertReplies.urgent(kind)
         AlertSound.start(ctx, urgent = urgent)
@@ -429,15 +429,18 @@ object Nearby {
         val nid = Loud.alertId(id)
         // loud, but never pinned: a swipe (even of the pop-up) silences it and leaves a quiet reminder until answered
         val b = NotificationCompat.Builder(ctx, MedLogApp.CH_ALERT).setSmallIcon(R.drawable.ic_stat)
-            .setContentTitle(com.suryaprakash.medlog.ui.tr(Wording.alertTitle(from, urgent))).setContentText(com.suryaprakash.medlog.ui.tr(text))
+            .setContentTitle(com.suryaprakash.medlog.ui.tr(AlertReplies.title(kind, from, text))).setContentText(com.suryaprakash.medlog.ui.tr(text))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(com.suryaprakash.medlog.ui.tr(text)))
             .setPriority(NotificationCompat.PRIORITY_MAX).setCategory(NotificationCompat.CATEGORY_ALARM)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setFullScreenIntent(pi, true).setContentIntent(pi).setAutoCancel(false)
             .setDeleteIntent(SilenceReceiver.intent(ctx, nid, "$from: $text", "Not answered yet. Tap to answer.", pi))
-        // the same three answers as the alert screen
-        AlertReplies.forKind(kind).forEachIndexed { slot, r ->
+        // Android reliably exposes at most three compact actions. Keep two direct answers and use the third
+        // for the additional choices; tapping the notification does the same.
+        AlertReplies.forKind(kind).take(2).forEachIndexed { slot, r ->
             b.addAction(0, com.suryaprakash.medlog.ui.tr(r.words), AlertReplyReceiver.intent(ctx, id, r.code, mid, pairId.ifEmpty { null }, slot, kind, text, from))
         }
+        b.addAction(0, com.suryaprakash.medlog.ui.tr("More options"), pi)
         runCatching { androidx.core.app.NotificationManagerCompat.from(ctx).notify(nid, b.build()) }
         runCatching { ctx.startActivity(open) }
     }

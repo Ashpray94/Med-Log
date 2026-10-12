@@ -28,6 +28,13 @@ class ReportTimelineAccuracyTest {
         }
         return DoctorNoteBuilder(app.catalogue, app.describe).build(Profile(), at("2026-09-20", "00:00"), at("2026-10-04", "00:00"), notes, emptyList(), emptyList(), now = at("2026-10-03", "08:00"))
     }
+    @Test fun glanceReportOmitsNormalRedFlagAnswers() {
+        assertFalse(Pdf.includeGlanceFact("Blood", "no blood"))
+        assertFalse(Pdf.includeGlanceFact("Looks like coffee grounds", "not like coffee grounds"))
+        assertFalse(Pdf.includeGlanceFact("Forceful vomiting", "not forceful"))
+        assertTrue(Pdf.includeGlanceFact("Blood", "blood present"))
+        assertTrue(Pdf.includeGlanceFact("Colour", "green"))
+    }
     @Test fun vomitingSummaryMatchesEveryDatedEntry() {
         val report = build("vomiting", listOf("2026-09-28T07:45" to false, "2026-09-28T08:43" to false,
             "2026-09-29T18:06" to true, "2026-09-30T09:01" to false, "2026-10-02T22:19" to false))
@@ -61,13 +68,14 @@ class ReportTimelineAccuracyTest {
     @Test
     @Config(shadows = [RecordingPdfDocument::class])
     fun pdfLayoutContainsReconciledEntries() {
+        RecordingPdfDocument.pages.clear()
         val report = build("vomiting", listOf("2026-09-28T07:45" to false, "2026-09-28T08:43" to false,
             "2026-09-29T18:06" to true, "2026-09-30T09:01" to false, "2026-10-02T22:19" to false))
         val sample = report.copy(patient = "Example patient", pins = listOf(1 to "front:40,96", 1 to "front:51,92", 1 to "front:53,105"),
             entries = report.entries.mapIndexed { i, e -> if (!e.noted) e else e.copy(pins = listOf("front:${40+i*3},96"), site = "Upper stomach", depth = if (i == 0) "Deep inside" else null, remark = if (i == 0) "Example remark supplied with this entry." else null) })
         val file = Pdf.write(app, sample)
         assertTrue(file.exists())
-        assertTrue(RecordingPdfDocument.pages.size >= 2)
+        assertTrue(RecordingPdfDocument.pages.size in 2..4)
     }
 
     @Test fun crowdedLabelsKeepRecordedAnchorsWithoutOverlap() {
