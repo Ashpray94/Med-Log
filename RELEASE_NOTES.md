@@ -1,6 +1,8 @@
 MedLog VERSION makes doctor summaries faster and safer to review. Install over the existing app to preserve records.
 
 ## What's new
+- **One-week reports keep recurring history.** An ailment with repeated entries remains in the doctor report when it was seen within the last six weeks, even when its earlier entries fall outside the selected week.
+- **No empty report pages.** Recurring-detail pages are created only when they contain recurring history; nutrition follows the overview directly when there are no active recurring issues.
 - **PDF overlap fixed.** Graph notes, body maps, written locations and depth labels now use measured spacing, and issue headings stay with their details.
 - **Four-page limit protected.** Detailed charts are reserved for recurring issues; single reports remain in the overview so nutrition is not silently pushed out.
 - **Simple symptom totals.** Times noted means the number of symptom notes in the selected period. Daily graphs and last-noted times match the dated entries. Improvement updates are separate.

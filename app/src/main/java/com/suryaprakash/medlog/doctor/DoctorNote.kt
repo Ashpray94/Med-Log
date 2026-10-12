@@ -47,6 +47,9 @@ data class DoctorNote(
     val days: Int = 14,
     val from: Long = 0, val to: Long = 0,
     val entries: List<Entry> = emptyList(),
+    /** Full recorded history for ailments present in the selected period; overview totals above remain period-only. */
+    val recurringSymptoms: List<Row> = emptyList(),
+    val recurringEntries: List<Entry> = emptyList(),
 ) {
     data class Row(
         val n: Int, val name: String, val urgent: String, val whenText: String, val where: String, val nature: String, val notes: String,
@@ -61,6 +64,19 @@ data class DoctorNote(
         val facts: List<Pair<String, String>>, val remark: String?)
     data class Med(val name: String, val dose: String, val taken: String, val change: String, val done: Int = 0, val due: Int = 0, val asNeeded: Boolean = false)
     data class Reading(val name: String, val latest: String, val unit: String, val range: String?, val count: Int, val date: String, val off: Boolean)
+}
+
+/** Attach older occurrences without changing the selected-period overview, totals, medicines, or nutrition. */
+internal fun DoctorNote.withRecurringHistory(history: DoctorNote, activeSince: Long): DoctorNote {
+    val selectedByProblem = symptoms.associateBy { it.problemId }
+    val latestByNumber = history.entries.filter { it.noted }.groupBy { it.symptomNumber }.mapValues { (_, es) -> es.maxOf { it.at } }
+    val historical = history.symptoms.filter { it.reportCount > 1 && (latestByNumber[it.n] ?: Long.MIN_VALUE) >= activeSince }
+    var nextNumber = (symptoms.maxOfOrNull { it.n } ?: 0) + 1
+    val numberMap = historical.associate { row -> row.n to (selectedByProblem[row.problemId]?.n ?: nextNumber++) }
+    return copy(
+        recurringSymptoms = historical.map { it.copy(n = numberMap.getValue(it.n)) },
+        recurringEntries = history.entries.mapNotNull { e -> numberMap[e.symptomNumber]?.let { e.copy(symptomNumber = it) } },
+    )
 }
 
 class DoctorNoteBuilder(private val cat: Catalogue, private val describe: Describe) {

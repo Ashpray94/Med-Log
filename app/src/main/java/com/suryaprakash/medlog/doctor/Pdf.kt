@@ -142,10 +142,12 @@ object Pdf {
 
         // Pages 2–3: each recurring issue at a glance, while preserving what changed between reports.
         // Frequency charts share one scale so their line heights can be compared across ailments.
-        val frequencyScale = maxOf(10, n.symptoms.flatMap { it.daily }.maxOrNull() ?: 0)
+        val recurring = n.recurringSymptoms.ifEmpty { n.symptoms.filter { it.reportCount > 1 } }
+        val detailEntries = n.recurringEntries.ifEmpty { n.entries }
+        val frequencyScale = maxOf(10, recurring.flatMap { it.daily }.maxOrNull() ?: 0)
         fun issueDetails(rows: List<DoctorNote.Row>) {
             rows.forEach { r ->
-                val reports = n.entries.filter { it.symptomNumber == r.n && it.noted }
+                val reports = detailEntries.filter { it.symptomNumber == r.n && it.noted }
                 // Keep a heading with its visual instead of orphaning it at the foot of a page.
                 if (!w.reserve(if (reports.size >= 5) 240f else 215f, lastPage = 3)) return@forEach
                 w.section("${r.n}. ${r.name}")
@@ -177,24 +179,40 @@ object Pdf {
                     else w.trendTable(r.daily, "Report frequency", frequencyScale, rows, pins, recordedLocations, depths, bodyView,
                         listOfNotNull("Frequency does not prove recovery", earlier).joinToString(" · "), art, depthArt)
                 }
-                val updates = n.entries.count { it.symptomNumber == r.n && !it.noted }
+                val updates = detailEntries.count { it.symptomNumber == r.n && !it.noted }
                 if (updates > 0) w.text("$updates improvement/update entr${if (updates == 1) "y" else "ies"} recorded separately.", 8.5f, color = SOFT)
             }
         }
-        w.page()
-        w.pair("Recurring issues — report detail", n.period, 15f)
-        val recurring = n.symptoms.filter { it.reportCount > 1 }
-        issueDetails(recurring.take(2))
-
-        w.page()
-        w.pair("Other recurring issues and treatment", n.period, 15f)
-        issueDetails(recurring.drop(2))
-        if (!hasNutrition && n.medicines.isNotEmpty()) {
-            w.section("Medicines in this period")
-            w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
-                n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
+        if (recurring.isNotEmpty()) {
+            w.page()
+            w.pair("Recurring issues — full recorded history", n.period, 15f)
+            issueDetails(recurring.take(2))
         }
-        if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text("•  $it", 10f) } }
+        if (recurring.size > 2) {
+            w.page()
+            w.pair("Other recurring issues and treatment", n.period, 15f)
+            val detailed = if (recurring.size > 4) recurring.drop(2).take(1) else recurring.drop(2)
+            issueDetails(detailed)
+            val summarized = if (recurring.size > 4) recurring.drop(3) else emptyList()
+            if (summarized.isNotEmpty()) {
+                w.section("Other active recurring issues")
+                w.text("Seen within the last 6 weeks. Full dated entries remain in MedLog.", 8.5f, color = SOFT)
+                w.table(listOf("Issue", "Reports", "Severity", "Last noted"), floatArrayOf(0.31f, 0.12f, 0.17f, 0.40f),
+                    summarized.map { r -> listOf(r.name, "${r.reportCount}", r.sevLow?.let { "${it}–${r.sevHigh ?: it}/10" }.orEmpty(), r.lastNoted.orEmpty()) to
+                        when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK } })
+            }
+        }
+        val treatmentDetails = !hasNutrition && (n.medicines.isNotEmpty() || n.links.isNotEmpty())
+        if (treatmentDetails) {
+            // If no recurring-detail page exists, create one for treatment. Never create a titled blank page.
+            if (recurring.isEmpty()) { w.page(); w.pair("Treatment and timing", n.period, 15f) }
+            if (n.medicines.isNotEmpty()) {
+                w.section("Medicines in this period")
+                w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
+                    n.medicines.map { m -> listOf(m.name, m.dose, m.taken, m.change) to INK }, dropEmpty = true)
+            }
+            if (n.links.isNotEmpty()) { w.section("Timing noticed"); n.links.forEach { w.text("•  $it", 10f) } }
+        }
 
         // Page 4: nutrition. Only recent representative days are printed; totals cover the selected period.
         nut?.takeIf { r -> r.days.any { it.logged } || r.feeds.isNotEmpty() }?.let { r ->

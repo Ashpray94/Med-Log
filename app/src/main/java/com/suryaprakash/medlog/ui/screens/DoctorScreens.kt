@@ -41,6 +41,7 @@ import com.suryaprakash.medlog.data.Kind
 import com.suryaprakash.medlog.doctor.Pdf
 import com.suryaprakash.medlog.doctor.Summary
 import com.suryaprakash.medlog.doctor.SummaryBuilder
+import com.suryaprakash.medlog.doctor.withRecurringHistory
 import com.suryaprakash.medlog.integration.CalendarSync
 import com.suryaprakash.medlog.medlog
 import com.suryaprakash.medlog.ui.BigButton
@@ -77,9 +78,15 @@ suspend fun buildNote(ctx: android.content.Context, days: Int): com.suryaprakash
     val from = LocalDate.now().plusDays(1).minusDays(days.toLong()).atStartOfDay(zone).toInstant().toEpochMilli()
     val db = app.viewDb
     return db.withTransaction {
-        com.suryaprakash.medlog.doctor.DoctorNoteBuilder(app.catalogue, app.describe).build(
-            db.profile().get() ?: com.suryaprakash.medlog.data.Profile(), from, to, db.notes().between(from, to), db.medicines().all(), db.doses().between(from, to),
+        val profile = db.profile().get() ?: com.suryaprakash.medlog.data.Profile()
+        val builder = com.suryaprakash.medlog.doctor.DoctorNoteBuilder(app.catalogue, app.describe)
+        val selected = builder.build(profile, from, to, db.notes().between(from, to), db.medicines().all(), db.doses().between(from, to),
             translit = { com.suryaprakash.medlog.speech.Translit.toLatin(it) })
+        val allSymptoms = db.notes().symptomsSince(0)
+        val historyFrom = allSymptoms.minOfOrNull { it.occurredAt } ?: from
+        val history = builder.build(profile, historyFrom, to, allSymptoms, emptyList(), emptyList(),
+            translit = { com.suryaprakash.medlog.speech.Translit.toLatin(it) })
+        selected.withRecurringHistory(history, to - 42L * com.suryaprakash.medlog.data.DAY)
     }
 }
 

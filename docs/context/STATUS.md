@@ -3,6 +3,7 @@
 Update this at the end of every chat: what changed, what's open, what wasn't verified.
 
 ## Now
+- Release candidate **2.17.3** fixes one-week doctor reports: recurring ailments use full recorded history while they remain active within six weeks, selected-period totals stay period-only, and empty recurring pages are omitted.
 - **Production data incident (12 October 2026):** stop all production installs and migrations. After an in-place 2.17.2 install on the owner's S24, the owner reported that expected production records were missing/replaced. Android still reports the original 30 September install and the app data directory was not cleared, but no `.medlog` export was found in shared storage. Do not attempt a restore or another install until the owner identifies a verified backup or a second device with the complete records.
 - Release candidate: **2.17.2** on branch `main-mxp0m4`; fixes overlapping graph/body/location/depth content found in the owner's 2.17.1 PDF.
 - Doctor PDF is a four-page clinical dashboard with highlighted concerns/questions, comparable line charts, dated episode tables,

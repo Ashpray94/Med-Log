@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.suryaprakash.medlog.data.*
 import com.suryaprakash.medlog.doctor.*
 import com.suryaprakash.medlog.nlu.*
+import com.suryaprakash.medlog.nutrition.Nutrition
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -82,6 +83,21 @@ class ReportTimelineAccuracyTest {
         assertEquals(10, report.entries.count { it.noted })
         assertTrue(ReportValidation.errors(report).isEmpty())
     }
+    @Test fun recurringHistoryIncludesRecentAilmentsOutsideSelectedWeekAndDropsInactiveOnes() {
+        val selected = build("cough", listOf("2026-10-02T22:17" to false))
+        val recent = build("vomiting", listOf("2026-09-28T07:45" to false, "2026-09-30T09:01" to false))
+        val inactive = build("back_pain", listOf("2026-09-21T07:45" to false, "2026-09-22T09:01" to false))
+        val inactiveNumber = 2
+        val history = recent.copy(
+            symptoms = recent.symptoms + inactive.symptoms.map { it.copy(n = inactiveNumber) },
+            entries = recent.entries + inactive.entries.map { it.copy(symptomNumber = inactiveNumber) },
+        )
+        val merged = selected.withRecurringHistory(history, at("2026-09-23", "00:00"))
+        assertEquals(listOf("vomiting"), merged.recurringSymptoms.map { it.problemId })
+        assertEquals(2, merged.recurringEntries.size)
+        assertTrue(merged.symptoms.single().problemId == "cough")
+        assertEquals(1, merged.symptoms.single().reportCount)
+    }
     @Test
     @Config(shadows = [RecordingPdfDocument::class])
     fun pdfLayoutContainsReconciledEntries() {
@@ -92,7 +108,35 @@ class ReportTimelineAccuracyTest {
             entries = report.entries.mapIndexed { i, e -> if (!e.noted) e else e.copy(pins = listOf("front:${40+i*3},96"), site = "Upper stomach", depth = if (i == 0) "Deep inside" else null, remark = if (i == 0) "Example remark supplied with this entry." else null) })
         val file = Pdf.write(app, sample)
         assertTrue(file.exists())
-        assertTrue(RecordingPdfDocument.pages.size in 2..4)
+        assertEquals(2, RecordingPdfDocument.pages.size)
+    }
+
+    @Test
+    @Config(shadows = [RecordingPdfDocument::class])
+    fun oneOffSymptomDoesNotCreateBlankRecurringPages() {
+        RecordingPdfDocument.pages.clear()
+        val report = build("cough", listOf("2026-10-02T22:17" to false))
+        val file = Pdf.write(app, report)
+        assertTrue(file.exists())
+        assertEquals(1, RecordingPdfDocument.pages.size)
+    }
+
+    @Test
+    @Config(shadows = [RecordingPdfDocument::class])
+    fun nutritionFollowsOverviewWithoutBlankRecurringPages() {
+        RecordingPdfDocument.pages.clear()
+        val report = build("cough", listOf("2026-10-02T22:17" to false))
+        val nutrition = Nutrition.Report(
+            days = listOf(Nutrition.Day(java.time.LocalDate.of(2026, 10, 2), 900.0, 35.0, 4, listOf("Food"), true)),
+            kcalTarget = 1800.0, proteinTarget = 60.0, targetsFromDoctor = false,
+            avgKcal = 900.0, avgProtein = 35.0, weights = emptyList(), weightChange = null, weightDays = 0,
+            headline = Nutrition.Finding("Logged nutrition needs review", "AMBER"),
+            findings = listOf(Nutrition.Finding("Logged nutrition needs review", "AMBER")),
+            missed = emptyList(), changes = emptyList(), observed = emptyList(), feeds = emptyList(), loggedDays = 1,
+        )
+        val file = Pdf.write(app, report, nutrition)
+        assertTrue(file.exists())
+        assertEquals(2, RecordingPdfDocument.pages.size)
     }
 
     @Test fun crowdedLabelsKeepRecordedAnchorsWithoutOverlap() {
