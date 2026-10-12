@@ -323,18 +323,27 @@ object Pdf {
         fun miniTrend(values: List<Int>, label: String, fixedMax: Int? = null) {
             if (values.isEmpty() || !ensure(48f)) return
             text(label, 8.5f, bold = true, color = SOFT)
-            val top = y; val height = 24f; val width = W - 2 * M
+            val top = y; val height = 24f; val left = M + 18f; val width = W - M - left
             val maximum = (fixedMax ?: values.maxOrNull() ?: 1).coerceAtLeast(1)
-            val slot = width / values.size.coerceAtLeast(1)
-            val bar = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER }
-            values.forEachIndexed { i, value ->
-                val h = height * value.coerceIn(0, maximum) / maximum
-                c.drawRect(M + i * slot + 1f, top + height - h, M + (i + 1) * slot - 1f, top + height, bar)
+            val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER; strokeWidth = 2f; style = Paint.Style.STROKE }
+            val point = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = AMBER; style = Paint.Style.FILL }
+            c.drawLine(left, top, W - M, top, lp)
+            c.drawLine(left, top + height / 2f, W - M, top + height / 2f, lp)
+            c.drawLine(left, top + height, W - M, top + height, lp)
+            tp.textSize = 7f; tp.typeface = regular; tp.color = SOFT
+            c.drawText("$maximum", M, top + 5f, tp); c.drawText("0", M, top + height, tp)
+            val points = values.mapIndexed { i, value ->
+                val x = if (values.size == 1) left + width / 2f else left + width * i / (values.size - 1)
+                val py = top + height - height * value.coerceIn(0, maximum) / maximum
+                x to py
             }
-            c.drawLine(M, top + height, W - M, top + height, lp)
+            for (i in 1 until points.size) {
+                c.drawLine(points[i - 1].first, points[i - 1].second, points[i].first, points[i].second, line)
+            }
+            points.forEach { (x, py) -> c.drawCircle(x, py, 2.7f, point) }
             y = top + height + 3f
             tp.textSize = 7.5f; tp.typeface = regular; tp.color = SOFT
-            c.drawText("Oldest", M, y + 7f, tp)
+            c.drawText("Oldest", left, y + 7f, tp)
             val latest = "Latest"; c.drawText(latest, W - M - tp.measureText(latest), y + 7f, tp)
             y += 12f
         }
