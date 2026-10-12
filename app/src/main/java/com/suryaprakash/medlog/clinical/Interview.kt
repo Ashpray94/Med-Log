@@ -174,7 +174,9 @@ object Interview {
         p.label.contains("pain", true) || p.label.contains("ache", true)
 
     fun locatable(p: Problem) = p.id !in NOT_LOCATABLE && p.region !in setOf("whole", "mind")
-    fun deepable(p: Problem) = locatable(p) && p.region !in SHALLOW_REGIONS
+    /** Tissue depth is useful for musculoskeletal pain. It is not a meaningful question for bloating or visceral abdominal symptoms. */
+    private val DEPTH_PROBLEMS = setOf("back_pain", "neck_pain", "shoulder_pain", "arm_pain", "hip_pain", "knee_pain", "leg_pain", "foot_pain", "body_ache", "cramps", "joint_swelling")
+    fun deepable(p: Problem) = p.id in DEPTH_PROBLEMS
 
     /** Danger questions that are always core for a problem, even though their priority is lower (B49, B51). */
     private val ALWAYS_CORE = mapOf(

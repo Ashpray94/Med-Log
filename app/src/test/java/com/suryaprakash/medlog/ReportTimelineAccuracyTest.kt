@@ -38,6 +38,19 @@ class ReportTimelineAccuracyTest {
     @Test fun reportUsesTheAppsLocalizedBodyView() {
         assertEquals(com.suryaprakash.medlog.pictogram.viewFor("stomach"), Pdf.localizedView(listOf(1 to "front:50,66")))
         assertEquals(com.suryaprakash.medlog.pictogram.viewFor("back"), Pdf.localizedView(listOf(1 to "back:44,72")))
+        assertEquals(listOf("Upper stomach"), Pdf.locationLabels(listOf(1 to "front:50,66")))
+        assertEquals(listOf("Right lower back"), Pdf.locationLabels(listOf(1 to "back:56,72")))
+    }
+    @Test fun reportUsesTheExistingDepthPictures() {
+        assertEquals("depth_skin", Pdf.depthSprite("On the skin"))
+        assertEquals("depth_under", Pdf.depthSprite("Just under the skin"))
+        assertEquals("depth_muscle", Pdf.depthSprite("In the muscle"))
+        assertEquals("depth_deep", Pdf.depthSprite("Deep inside"))
+        assertEquals("depth_bone", Pdf.depthSprite("In the bone or joint"))
+        assertNull(Pdf.reportDepth("bloating", "In the bone or joint"))
+        assertEquals("In the muscle", Pdf.reportDepth("back_pain", "In the muscle"))
+        assertFalse(com.suryaprakash.medlog.clinical.Interview.deepable(app.catalogue.problem("bloating")!!))
+        assertTrue(com.suryaprakash.medlog.clinical.Interview.deepable(app.catalogue.problem("back_pain")!!))
     }
     @Test fun vomitingSummaryMatchesEveryDatedEntry() {
         val report = build("vomiting", listOf("2026-09-28T07:45" to false, "2026-09-28T08:43" to false,

@@ -152,6 +152,25 @@ class ReportIntegrityHotfixTest {
         assertFalse(r.findings.any { "Eating far too little" in it.text })
     }
 
+    @Test fun nutritionKeepsEveryFeedOutcomeDistinctAndDoesNotInventNutrition() = runBlocking {
+        val mid = app.db.medicines().insert(Medicine(name = "Named feed only", form = "feed", amount = "200 ml", startDate = now - DAY, changedAt = now - DAY))
+        app.db.doses().insert(Dose(medicineId = mid, scheduledAt = now - 8 * HOUR, status = DoseStatus.TAKEN, actedAt = now - 8 * HOUR))
+        app.db.doses().insert(Dose(medicineId = mid, scheduledAt = now - 7 * HOUR, status = DoseStatus.SKIPPED, reason = FOOD_INSTEAD))
+        app.db.doses().insert(Dose(medicineId = mid, scheduledAt = now - 6 * HOUR, status = DoseStatus.SKIPPED, reason = "Not given"))
+        app.db.doses().insert(Dose(medicineId = mid, scheduledAt = now - 5 * HOUR, status = DoseStatus.MISSED))
+        val r = com.suryaprakash.medlog.nutrition.Nutrition.build(app, 14, now)
+        assertEquals(1, r.feedCounts.given)
+        assertEquals(1, r.feedCounts.foodInstead)
+        assertEquals(1, r.feedCounts.notGiven)
+        assertEquals(1, r.feedCounts.missed)
+        assertEquals(0, r.feedCounts.unanswered)
+        assertEquals(2, r.missed.size)
+        assertEquals(1, r.feedNutritionUnknown)
+        assertNull(r.kcalPct)
+        assertNull(r.proteinPct)
+        assertTrue(r.findings.any { "recipe nutrition was not entered" in it.text })
+    }
+
     @Test fun medicineEditsKeepIdentityAndPastDoseDetails() = runBlocking {
         val mid = app.db.medicines().insert(Medicine(name = "Test feed", form = "feed", amount = "100 ml", asNeeded = true, strength = "old recipe"))
         val old = app.db.medicines().get(mid)!!

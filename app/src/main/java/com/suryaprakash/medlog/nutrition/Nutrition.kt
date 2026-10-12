@@ -9,6 +9,8 @@ import android.content.Context
 import com.suryaprakash.medlog.data.DAY
 import com.suryaprakash.medlog.data.DoseStatus
 import com.suryaprakash.medlog.data.Kind
+import com.suryaprakash.medlog.data.Outcome
+import com.suryaprakash.medlog.data.outcome
 import com.suryaprakash.medlog.medlog
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -30,6 +32,16 @@ object Nutrition {
     const val PROTEIN_PER_KG = 1.0
 
     data class FeedLine(val name: String, val detail: String, val since: String?)
+    data class FeedCounts(val given: Int = 0, val foodInstead: Int = 0, val notGiven: Int = 0, val missed: Int = 0, val unanswered: Int = 0) {
+        val total get() = given + foodInstead + notGiven + missed + unanswered
+        fun words() = listOfNotNull(
+            given.takeIf { it > 0 }?.let { "$it given" },
+            foodInstead.takeIf { it > 0 }?.let { "$it food given instead" },
+            notGiven.takeIf { it > 0 }?.let { "$it skipped/not given" },
+            missed.takeIf { it > 0 }?.let { "$it missed" },
+            unanswered.takeIf { it > 0 }?.let { "$it unanswered" },
+        ).joinToString("; ")
+    }
     data class Day(val date: LocalDate, val kcal: Double, val protein: Double, val water: Int, val items: List<String>, val logged: Boolean)
     data class Finding(val text: String, val level: String)   // RED, AMBER, GREEN
     data class Missed(val at: Long, val feed: String, val ml: Double)
@@ -43,9 +55,12 @@ object Nutrition {
         val feeds: List<String>, val loggedDays: Int,
         /** each feed given now, short: its name, how much and how often, and when it started or changed (if lately) */
         val feedLines: List<FeedLine> = emptyList(),
+        val feedCounts: FeedCounts = FeedCounts(),
+        /** Given feeds whose recipe had no calorie/protein values; excluded from nutrition totals. */
+        val feedNutritionUnknown: Int = 0,
     ) {
-        val kcalPct get() = kcalTarget?.let { (100 * avgKcal / it).roundToInt() }
-        val proteinPct get() = proteinTarget?.let { (100 * avgProtein / it).roundToInt() }
+        val kcalPct get() = if (feedNutritionUnknown == 0) kcalTarget?.let { (100 * avgKcal / it).roundToInt() } else null
+        val proteinPct get() = if (feedNutritionUnknown == 0) proteinTarget?.let { (100 * avgProtein / it).roundToInt() } else null
     }
 
     fun targetKcal(ctx: Context) = ctx.medlog.settings.getString("kcal_target")?.toDoubleOrNull()
@@ -83,13 +98,23 @@ object Nutrition {
         val infoJson = app.settings.getString("feed_info")
         val doses = db.doses().between(from, now).shown().filter { it.medicineId in meds && it.reason != "Stopped" && !MedicineSchedule.obsolete(meds.getValue(it.medicineId), it) }
         val missed = mutableListOf<Missed>()
+        var feedCounts = FeedCounts()
+        var feedNutritionUnknown = 0
         doses.forEach { dz ->
             val m = meds[dz.medicineId]?.let { com.suryaprakash.medlog.data.DoseSnapshot.medicine(dz, it) } ?: return@forEach
             val ml = Feeds.ml(m.amount)
             val info = Feeds.infoOf(m, infoJson)
-            when {
-                dz.status == DoseStatus.TAKEN && (dz.actedAt ?: dz.scheduledAt) in from..now -> add(day(dz.actedAt ?: dz.scheduledAt), info?.kcal ?: 0.0, info?.protein ?: 0.0, "${m.name} ${ml.roundToInt()} ml")
-                dz.status != DoseStatus.TAKEN && (dz.status == DoseStatus.MISSED || dz.status == DoseStatus.SKIPPED || dz.scheduledAt < now - 2 * 3600_000L) -> missed.add(Missed(dz.scheduledAt, m.name, ml))
+            when (dz.outcome(now)) {
+                Outcome.GIVEN -> if ((dz.actedAt ?: dz.scheduledAt) in from..now) {
+                    if (info != null && info.parts.isNotEmpty()) add(day(dz.actedAt ?: dz.scheduledAt), info.kcal, info.protein, "${m.name} ${ml.roundToInt()} ml")
+                    else { add(day(dz.actedAt ?: dz.scheduledAt), 0.0, 0.0, "${m.name} ${ml.roundToInt()} ml (nutrition not entered)"); feedNutritionUnknown++ }
+                    feedCounts = feedCounts.copy(given = feedCounts.given + 1)
+                }
+                Outcome.FOOD_INSTEAD -> feedCounts = feedCounts.copy(foodInstead = feedCounts.foodInstead + 1)
+                Outcome.NOT_GIVEN -> { feedCounts = feedCounts.copy(notGiven = feedCounts.notGiven + 1); missed.add(Missed(dz.scheduledAt, m.name, ml)) }
+                Outcome.MISSED -> { feedCounts = feedCounts.copy(missed = feedCounts.missed + 1); missed.add(Missed(dz.scheduledAt, m.name, ml)) }
+                Outcome.DUE -> if (dz.scheduledAt < now - 2 * 3600_000L) feedCounts = feedCounts.copy(unanswered = feedCounts.unanswered + 1)
+                Outcome.LATER -> Unit
             }
         }
         val water = ReportIntegrity.notes(db.notes().kindSince(Kind.WATER, from), from, now + 1, now).groupBy { day(it.occurredAt) }.mapValues { e -> e.value.sumOf { it.count ?: 1 } }
@@ -120,7 +145,7 @@ object Nutrition {
         // what the numbers say, worst first
         val findings = mutableListOf<Finding>()
         if (logged.isEmpty()) findings.add(Finding("No food or feeds logged in this time", "AMBER"))
-        kTarget?.takeIf { logged.isNotEmpty() }?.let { t ->
+        kTarget?.takeIf { logged.isNotEmpty() && feedNutritionUnknown == 0 }?.let { t ->
             val pct = 100 * avgKcal / t
             when {
                 pct < 60 -> findings.add(Finding("Low logged calories: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day (${pct.roundToInt()}%)", "RED"))
@@ -128,7 +153,7 @@ object Nutrition {
                 else -> findings.add(Finding("Logged calories meet the target: ${avgKcal.roundToInt()} of ${t.roundToInt()} kcal a day", "GREEN"))
             }
         }
-        pTarget?.takeIf { logged.isNotEmpty() }?.let { t ->
+        pTarget?.takeIf { logged.isNotEmpty() && feedNutritionUnknown == 0 }?.let { t ->
             val pct = 100 * avgProtein / t
             if (pct < 80) findings.add(Finding("Low logged protein: ${avgProtein.roundToInt()} of ${t.roundToInt()} g a day (${pct.roundToInt()}%)", if (pct < 60) "RED" else "AMBER"))
             else findings.add(Finding("Logged protein meets the target: ${avgProtein.roundToInt()} of ${t.roundToInt()} g a day", "GREEN"))
@@ -142,7 +167,9 @@ object Nutrition {
                 else -> findings.add(Finding("Weight steady: $words", "GREEN"))
             }
         } ?: findings.add(Finding(if (weights.isEmpty()) "No weight recorded" else "Only one weight recorded", "AMBER"))
-        if (missed.isNotEmpty()) findings.add(Finding("${missed.size} feed${if (missed.size == 1) "" else "s"} missed", if (missed.size >= 3) "RED" else "AMBER"))
+        if (feedNutritionUnknown > 0) findings.add(Finding("Calories and protein exclude $feedNutritionUnknown given feed${if (feedNutritionUnknown == 1) "" else "s"} because recipe nutrition was not entered", "AMBER"))
+        if (missed.isNotEmpty()) findings.add(Finding("${missed.size} scheduled feed${if (missed.size == 1) " was" else "s were"} recorded as not given or missed", if (missed.size >= 3) "RED" else "AMBER"))
+        if (feedCounts.unanswered > 0) findings.add(Finding("${feedCounts.unanswered} past feed entr${if (feedCounts.unanswered == 1) "y has" else "ies have"} no recorded outcome", "AMBER"))
         val gaps = dayList.count { !it.logged && it.date != today }
         if (gaps > 0 && logged.isNotEmpty()) findings.add(Finding("Nothing logged on $gaps day${if (gaps == 1) "" else "s"}", "AMBER"))
         if (logged.isNotEmpty()) findings.add(Finding("Based on ${logged.size} logged day(s); incomplete meal records cannot establish total intake", "AMBER"))
@@ -171,7 +198,7 @@ object Nutrition {
                 when { m.startDate >= from -> "Started ${d(m.startDate)}"; m.changedAt >= from -> "${m.changeNote.ifBlank { "Changed" }} ${d(m.changedAt)}"; else -> null })
         }
         val headline = sorted.firstOrNull() ?: Finding("Nothing logged yet", "AMBER")
-        Report(dayList, kTarget, pTarget, docK != null, avgKcal, avgProtein, weights, weightChange, weightDays, headline, sorted, missed, changes, observed, feeds, logged.size, feedLines)
+        Report(dayList, kTarget, pTarget, docK != null, avgKcal, avgProtein, weights, weightChange, weightDays, headline, sorted, missed, changes, observed, feeds, logged.size, feedLines, feedCounts, feedNutritionUnknown)
         }
     }
 }

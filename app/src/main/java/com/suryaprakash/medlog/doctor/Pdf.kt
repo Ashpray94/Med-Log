@@ -62,6 +62,27 @@ object Pdf {
         return com.suryaprakash.medlog.pictogram.viewFor(part?.region)
     }
 
+    /** Plain words for every body marker, using the same hit areas as the in-app body picker. */
+    internal fun locationLabels(pins: List<Pair<Int, String>>): List<String> = BodyMarkers.layout(pins).mapNotNull { mark ->
+        com.suryaprakash.medlog.pictogram.Body.parts.filter { it.back == mark.back }.minByOrNull {
+            val dx = (mark.x - it.cx) / (it.rx + 3f); val dy = (mark.y - it.cy) / (it.ry + 3f); dx * dx + dy * dy
+        }?.label
+    }.distinct()
+
+    /** Match recorded depth words to the depth pictures already used by the interview. */
+    internal fun depthSprite(depth: String): String = when {
+        "bone" in depth.lowercase() || "joint" in depth.lowercase() -> "depth_bone"
+        "muscle" in depth.lowercase() -> "depth_muscle"
+        "under" in depth.lowercase() -> "depth_under"
+        "deep" in depth.lowercase() || "inside" in depth.lowercase() -> "depth_deep"
+        else -> "depth_skin"
+    }
+
+    /** Tissue depth is meaningful only for the musculoskeletal problems that ask this question. */
+    internal fun reportDepth(problemId: String, depth: String?): String? = depth?.takeIf {
+        problemId in setOf("back_pain", "neck_pain", "shoulder_pain", "arm_pain", "hip_pain", "knee_pain", "leg_pain", "foot_pain", "body_ache", "cramps", "joint_swelling")
+    }
+
     fun write(ctx: Context, n: DoctorNote, nut: com.suryaprakash.medlog.nutrition.Nutrition.Report? = null): File {
         val doc = PdfDocument()
         ReportValidation.requireAccurate(n)
@@ -94,6 +115,10 @@ object Pdf {
             n.symptoms.filter { (it.sevHigh ?: 0) >= 7 }.take(2).forEach { add("${it.name}: severity reached ${it.sevHigh}/10" to AMBER) }
         }.distinctBy { it.first }.take(3)
         if (attention.isNotEmpty()) { w.section("Needs attention"); w.callouts(attention) }
+        if (n.questions.isNotEmpty()) {
+            w.section("Discuss with doctor")
+            w.callouts(n.questions.map { "Question: $it" to AMBER })
+        }
         if (n.symptoms.isNotEmpty()) {
             w.section("Symptom overview")
             w.table(listOf("Symptom", "Reports", "Severity", "Last noted"), floatArrayOf(0.30f, 0.12f, 0.18f, 0.40f),
@@ -102,9 +127,10 @@ object Pdf {
                     when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK } })
         }
         if (n.readings.isNotEmpty()) { w.section("Latest readings"); n.readings.forEach { w.text(it, 10f) } }
-        if (n.questions.isNotEmpty()) { w.section("Patient's questions"); n.questions.forEach { w.text("•  $it", 10.5f) } }
 
         // Pages 2–3: each recurring issue at a glance, while preserving what changed between reports.
+        // Frequency charts share one scale so their line heights can be compared across ailments.
+        val frequencyScale = maxOf(10, n.symptoms.flatMap { it.daily }.maxOrNull() ?: 0)
         fun issueDetails(rows: List<DoctorNote.Row>) {
             rows.forEach { r ->
                 w.section("${r.n}. ${r.name}")
@@ -119,17 +145,19 @@ object Pdf {
                 } }
                 if (reports.isNotEmpty()) {
                     val rows = reports.map { e ->
-                        val details = (listOfNotNull(e.site, e.depth) + e.facts.filter { includeGlanceFact(it.first, it.second) }
+                        val details = (listOfNotNull(e.site, reportDepth(r.problemId, e.depth)) + e.facts.filter { includeGlanceFact(it.first, it.second) }
                             .map { "${it.first}: ${it.second}" } + listOfNotNull(e.remark))
                             .filter { it.isNotBlank() }.distinct().joinToString("; ")
                         e.date to details.ifBlank { "Symptom reported" }
                     }
                     val pins = reports.flatMap { e -> e.pins.map { r.n to it } }.distinct()
-                    val depths = reports.mapNotNull { it.depth }.distinct()
+                    val depths = reports.mapNotNull { reportDepth(r.problemId, it.depth) }.distinct()
+                    val recordedLocations = reports.mapNotNull { it.site?.takeIf(String::isNotBlank) }.distinct()
                     val bodyView = localizedView(pins)
                     val art = { back: Boolean -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, bodyView, 500) }
-                    if (severities.size >= 2) w.trendTable(severities, "Recorded severity", 10, rows, pins, depths, bodyView, art = art)
-                    else w.trendTable(r.daily, "Report frequency", null, rows, pins, depths, bodyView, "Frequency does not prove recovery", art)
+                    val depthArt = { depth: String -> com.suryaprakash.medlog.pictogram.Sprites.bitmap(ctx, depthSprite(depth), 160) }
+                    if (severities.size >= 2) w.trendTable(severities, "Recorded severity", 10, rows, pins, recordedLocations, depths, bodyView, art = art, depthArt = depthArt)
+                    else w.trendTable(r.daily, "Report frequency", frequencyScale, rows, pins, recordedLocations, depths, bodyView, "Frequency does not prove recovery", art, depthArt)
                 }
                 val updates = n.entries.count { it.symptomNumber == r.n && !it.noted }
                 if (updates > 0) w.text("$updates improvement/update entr${if (updates == 1) "y" else "ies"} recorded separately.", 8.5f, color = SOFT)
@@ -158,11 +186,12 @@ object Pdf {
             found.drop(1).forEach { f -> w.text("•  ${f.text}", 10.5f, color = if (f.level == "RED") RED else if (f.level == "AMBER") AMBER else INK) }
             w.gap(4f)
             val logged = r.days.filter { it.logged }
-            if (logged.isNotEmpty()) w.kv("Calories", r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
-            if (logged.isNotEmpty()) w.kv("Protein", r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
+            if (logged.isNotEmpty()) w.kv("Calories", if (r.feedNutritionUnknown > 0) "At least ${r.avgKcal.toInt()} kcal a day from entries with nutrition values" else r.kcalTarget?.let { "${r.avgKcal.toInt()} of ${it.toInt()} kcal a day (${r.kcalPct}%)" } ?: "${r.avgKcal.toInt()} kcal a day")
+            if (logged.isNotEmpty()) w.kv("Protein", if (r.feedNutritionUnknown > 0) "At least ${r.avgProtein.toInt()} g a day from entries with nutrition values" else r.proteinTarget?.let { "${r.avgProtein.toInt()} of ${it.toInt()} g a day (${r.proteinPct}%)" } ?: "${r.avgProtein.toInt()} g a day")
             r.weightChange?.let { w.kv("Weight", "${"%.1f".format(r.weights.first().second)} → ${"%.1f".format(r.weights.last().second)} kg in ${r.weightDays} days") }
             if (logged.isNotEmpty()) w.kv("Targets", if (r.targetsFromDoctor) "Set by the doctor" else "30 kcal and 1 g protein per kg (to be confirmed)")
             if (r.feeds.isNotEmpty()) w.kv("Feeds", r.feeds.joinToString("; "))
+            if (r.feedCounts.total > 0) w.kv("Feed outcomes", r.feedCounts.words())
             w.rule()
             if (logged.isNotEmpty()) {
                 w.section("Recent logged days")
@@ -341,13 +370,17 @@ object Pdf {
                     val ax = ox + (mark.x - view.x0) * u; val ay = top + (mark.y - view.y0) * u
                     val lx = ox + (mark.labelX.coerceIn(view.x0 + 7f, view.x1 - 7f) - view.x0) * u
                     val ly = top + (mark.labelY.coerceIn(view.y0 + 7f, view.y1 - 7f) - view.y0) * u
-                    paint.color = SOFT; paint.strokeWidth = 0.8f
+                    paint.color = RED; paint.strokeWidth = 1.2f
                     c.drawLine(ax, ay, lx, ly, paint)
-                    paint.color = INK; c.drawCircle(ax, ay, 2.5f * u, paint)
-                    paint.color = Color.WHITE; c.drawCircle(lx, ly, 10f * u, paint)
-                    paint.color = AMBER; c.drawCircle(lx, ly, 8.5f * u, paint)
-                    tp.textSize = 10f * u; tp.typeface = bold; tp.color = Color.WHITE
-                    val t = "${mark.number}"; c.drawText(t, lx - tp.measureText(t)/2, ly + 3.5f*u, tp)
+                    val anchorR = maxOf(4.5f, 4.5f * u)
+                    paint.color = 0x33B3261E; c.drawCircle(ax, ay, anchorR * 1.8f, paint)
+                    paint.color = RED; c.drawCircle(ax, ay, anchorR, paint)
+                    paint.color = Color.WHITE; c.drawCircle(ax, ay, anchorR * 0.34f, paint)
+                    val labelR = maxOf(7f, 8.5f * u)
+                    paint.color = Color.WHITE; c.drawCircle(lx, ly, labelR + 1.5f, paint)
+                    paint.color = RED; c.drawCircle(lx, ly, labelR, paint)
+                    tp.textSize = maxOf(8f, 10f * u); tp.typeface = bold; tp.color = Color.WHITE
+                    val t = "${mark.number}"; c.drawText(t, lx - tp.measureText(t)/2, ly + tp.textSize * 0.34f, tp)
                 }
             }
         }
@@ -414,9 +447,9 @@ object Pdf {
 
         /** Large visual trend and body/depth map beside the exact episode rows. */
         fun trendTable(values: List<Int>, label: String, fixedMax: Int?, rows: List<Pair<String, String>>,
-            pins: List<Pair<Int, String>>, depths: List<String>, bodyView: com.suryaprakash.medlog.pictogram.View,
+            pins: List<Pair<Int, String>>, recordedLocations: List<String>, depths: List<String>, bodyView: com.suryaprakash.medlog.pictogram.View,
             note: String? = null,
-            art: (Boolean) -> android.graphics.Bitmap?) {
+            art: (Boolean) -> android.graphics.Bitmap?, depthArt: (String) -> android.graphics.Bitmap? = { null }) {
             val leftW = 158f; val gap = 12f; val tableX = M + leftW + gap; val tableW = W - M - tableX
             val dateW = 86f; val detailW = tableW - dateW - 8f
             val layouts = rows.map { (date, detail) ->
@@ -430,9 +463,17 @@ object Pdf {
             tp.textSize = 8.5f; tp.typeface = bold; tp.color = SOFT; c.drawText(label, M, top + 10f, tp)
             val plotTop = top + 18f; val plotH = 52f; val graphLeft = M + 16f; val graphW = leftW - 18f
             val maximum = (fixedMax ?: values.maxOrNull() ?: 1).coerceAtLeast(1)
-            c.drawLine(graphLeft, plotTop, graphLeft + graphW, plotTop, lp); c.drawLine(graphLeft, plotTop + plotH / 2, graphLeft + graphW, plotTop + plotH / 2, lp)
-            c.drawLine(graphLeft, plotTop + plotH, graphLeft + graphW, plotTop + plotH, lp)
-            tp.textSize = 7f; tp.typeface = regular; tp.color = SOFT; c.drawText("$maximum", M, plotTop + 5f, tp); c.drawText("0", M, plotTop + plotH, tp)
+            c.drawRoundRect(RectF(M - 5f, plotTop - 6f, M + leftW, plotTop + plotH + 17f), 7f, 7f,
+                Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFF7F6F3.toInt() })
+            val grid = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFE4E0D9.toInt(); strokeWidth = 0.55f }
+            for (step in 0..10) {
+                val gy = plotTop + plotH * step / 10f
+                c.drawLine(graphLeft, gy, graphLeft + graphW, gy, grid)
+            }
+            tp.textSize = 7f; tp.typeface = regular; tp.color = SOFT
+            c.drawText("$maximum", M, plotTop + 5f, tp)
+            c.drawText("${maximum / 2f}".removeSuffix(".0"), M, plotTop + plotH / 2f + 3f, tp)
+            c.drawText("0", M, plotTop + plotH, tp)
             val pts = values.mapIndexed { i, v ->
                 (if (values.size == 1) graphLeft + graphW / 2 else graphLeft + graphW * i / (values.size - 1)) to
                     (plotTop + plotH - plotH * v.coerceIn(0, maximum) / maximum)
@@ -446,9 +487,25 @@ object Pdf {
             note?.let { n -> val l = layout(n, 7f, regular, SOFT, leftW.toInt()); c.save(); c.translate(M, plotTop + plotH + 14f); l.draw(c); c.restore() }
             if (pins.isNotEmpty()) {
                 bodyDiagram(M, top + 86f, 92f, pins, art, bodyView)
+                val locations = recordedLocations.ifEmpty { locationLabels(pins) }
+                if (locations.isNotEmpty()) {
+                    val words = if (locations.size == 1) locations.single() else "Varies by dated report; see table"
+                    val l = layout("Location: $words", 7.5f, medium, INK, leftW.toInt())
+                    c.save(); c.translate(M, top + 158f); l.draw(c); c.restore()
+                }
                 if (depths.isNotEmpty()) {
-                    val l = layout("Depth: ${depths.joinToString(", ")}", 7.5f, regular, SOFT, leftW.toInt())
-                    c.save(); c.translate(M, top + 166f); l.draw(c); c.restore()
+                    val shown = if (depths.size == 1) depths else emptyList()
+                    var dx = M; val dy = top + 174f
+                    shown.forEach { depth ->
+                        depthArt(depth)?.let { bmp -> c.drawBitmap(bmp, null, RectF(dx, dy - 14f, dx + 18f, dy + 4f), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)) }
+                        val caption = layout(depth, 7f, regular, SOFT, 42)
+                        c.save(); c.translate(dx + 20f, dy - 10f); caption.draw(c); c.restore()
+                        dx += 51f
+                    }
+                    if (depths.size > 1) {
+                        val l = layout("Depth: Varies by dated report; see table", 7f, medium, INK, leftW.toInt())
+                        c.save(); c.translate(M, dy - 10f); l.draw(c); c.restore()
+                    }
                 }
             }
             c.drawRect(tableX, top, tableX + tableW, top + 17f, Paint().apply { color = 0xFFF3F1ED.toInt() })
