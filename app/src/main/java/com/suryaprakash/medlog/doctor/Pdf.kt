@@ -53,6 +53,18 @@ object Pdf {
         }
     }
 
+    /** Remove duplicated/internal answers from dated rows while retaining clinically useful observations. */
+    internal fun includeEpisodeFact(label: String, value: String): Boolean {
+        val l = label.lowercase(); val v = value.lowercase()
+        if (!includeGlanceFact(label, value)) return false
+        return when {
+            l == "started" || l == "which side" -> false
+            l == "medicinetaken" || l == "tookmedicine" || "tookmedicine:" in v -> false
+            l == "diagnosed" && ("not seen" in v || "not known" in v) -> false
+            else -> true
+        }
+    }
+
     /** Use the same ailment-localized crop as the in-app body picker, inferred from the recorded pin. */
     internal fun localizedView(pins: List<Pair<Int, String>>): com.suryaprakash.medlog.pictogram.View {
         val mark = BodyMarkers.layout(pins).firstOrNull() ?: return com.suryaprakash.medlog.pictogram.WHOLE
@@ -133,31 +145,37 @@ object Pdf {
         val frequencyScale = maxOf(10, n.symptoms.flatMap { it.daily }.maxOrNull() ?: 0)
         fun issueDetails(rows: List<DoctorNote.Row>) {
             rows.forEach { r ->
+                val reports = n.entries.filter { it.symptomNumber == r.n && it.noted }
+                // Keep a heading with its visual instead of orphaning it at the foot of a page.
+                if (!w.reserve(if (reports.size >= 5) 240f else 215f, lastPage = 3)) return@forEach
                 w.section("${r.n}. ${r.name}")
                 w.text(listOfNotNull("${r.reportCount} report${if (r.reportCount == 1) "" else "s"}",
                     r.sevLow?.let { "severity ${it}–${r.sevHigh ?: it}/10; latest ${r.sevLast ?: it}/10" },
                     r.began?.let { "started $it" }, r.lastNoted?.let { "last $it" }, r.trend?.let { "reported $it" })
                     .joinToString(" · "), 9.5f, bold = true,
                     color = when (r.urgent) { "RED" -> RED; "AMBER" -> AMBER; else -> INK })
-                val reports = n.entries.filter { it.symptomNumber == r.n && it.noted }
                 val severities = reports.mapNotNull { e -> e.facts.firstNotNullOfOrNull { (_, value) ->
                     Regex("(\\d+)\\s*out of 10", RegexOption.IGNORE_CASE).find(value)?.groupValues?.getOrNull(1)?.toIntOrNull()
                 } }
                 if (reports.isNotEmpty()) {
-                    val rows = reports.map { e ->
-                        val details = (listOfNotNull(e.site, reportDepth(r.problemId, e.depth)) + e.facts.filter { includeGlanceFact(it.first, it.second) }
-                            .map { "${it.first}: ${it.second}" } + listOfNotNull(e.remark))
+                    val allRows = reports.map { e ->
+                        val full = (listOfNotNull(e.site, reportDepth(r.problemId, e.depth)) + e.facts.filter { includeEpisodeFact(it.first, it.second) }
+                            .take(7).map { "${it.first}: ${it.second}" } + listOfNotNull(e.remark))
                             .filter { it.isNotBlank() }.distinct().joinToString("; ")
+                        val details = if (full.length <= 240) full else full.take(237).substringBeforeLast(' ') + "…"
                         e.date to details.ifBlank { "Symptom reported" }
                     }
+                    val rows = allRows.takeLast(3)
+                    val earlier = (allRows.size - rows.size).takeIf { it > 0 }?.let { "$it earlier dated report${if (it == 1) "" else "s"} remain in MedLog." }
                     val pins = reports.flatMap { e -> e.pins.map { r.n to it } }.distinct()
                     val depths = reports.mapNotNull { reportDepth(r.problemId, it.depth) }.distinct()
                     val recordedLocations = reports.mapNotNull { it.site?.takeIf(String::isNotBlank) }.distinct()
                     val bodyView = localizedView(pins)
                     val art = { back: Boolean -> com.suryaprakash.medlog.pictogram.BodyArt.bitmap(ctx, back, bodyView, 500) }
                     val depthArt = { depth: String -> com.suryaprakash.medlog.pictogram.Sprites.bitmap(ctx, depthSprite(depth), 160) }
-                    if (severities.size >= 2) w.trendTable(severities, "Recorded severity", 10, rows, pins, recordedLocations, depths, bodyView, art = art, depthArt = depthArt)
-                    else w.trendTable(r.daily, "Report frequency", frequencyScale, rows, pins, recordedLocations, depths, bodyView, "Frequency does not prove recovery", art, depthArt)
+                    if (severities.size >= 2) w.trendTable(severities, "Recorded severity", 10, rows, pins, recordedLocations, depths, bodyView, earlier, art, depthArt)
+                    else w.trendTable(r.daily, "Report frequency", frequencyScale, rows, pins, recordedLocations, depths, bodyView,
+                        listOfNotNull("Frequency does not prove recovery", earlier).joinToString(" · "), art, depthArt)
                 }
                 val updates = n.entries.count { it.symptomNumber == r.n && !it.noted }
                 if (updates > 0) w.text("$updates improvement/update entr${if (updates == 1) "y" else "ies"} recorded separately.", 8.5f, color = SOFT)
@@ -165,11 +183,12 @@ object Pdf {
         }
         w.page()
         w.pair("Recurring issues — report detail", n.period, 15f)
-        issueDetails(n.symptoms.take(2))
+        val recurring = n.symptoms.filter { it.reportCount > 1 }
+        issueDetails(recurring.take(2))
 
         w.page()
-        w.pair("Other issues and treatment", n.period, 15f)
-        issueDetails(n.symptoms.drop(2))
+        w.pair("Other recurring issues and treatment", n.period, 15f)
+        issueDetails(recurring.drop(2))
         if (!hasNutrition && n.medicines.isNotEmpty()) {
             w.section("Medicines in this period")
             w.table(listOf("Medicine", "Dose", "Taken", "Changes / notes"), floatArrayOf(0.25f, 0.22f, 0.12f, 0.41f),
@@ -241,6 +260,11 @@ object Pdf {
         }
         fun finish() { page?.let { footer("$footerText  Page $n · Full dated record remains in MedLog"); doc.finishPage(it) }; page = null }
         private fun ensure(h: Float): Boolean { if (full) return false; if (y + h > bottom) page(); return !full }
+        fun reserve(h: Float, lastPage: Int): Boolean {
+            if (y + h <= bottom) return true
+            if (n >= lastPage) return false
+            return ensure(h)
+        }
 
         private fun layout(s: String, size: Float, tf: Typeface, color: Int, width: Int): StaticLayout {
             tp.textSize = size; tp.typeface = tf; tp.color = color
@@ -456,7 +480,17 @@ object Pdf {
                 layout(date, 8f, regular, INK, (dateW - 5f).toInt()) to layout(detail, 8f, regular, INK, detailW.toInt())
             }
             val tableH = 18f + layouts.sumOf { maxOf(it.first.height, it.second.height) + 7 }.toFloat()
-            val visualH = if (pins.isNotEmpty()) 184f else 94f
+            val noteLayout = note?.let { layout(it, 7f, regular, SOFT, leftW.toInt()) }
+            val bodyTopOffset = if (noteLayout != null) 104f else 86f
+            val locations = recordedLocations.ifEmpty { locationLabels(pins) }
+            val locationWords = when (locations.size) { 0 -> null; 1 -> locations.single(); else -> "Varies by dated report; see table" }
+            val locationLayout = locationWords?.let { layout("Location: $it", 7.5f, medium, INK, leftW.toInt()) }
+            val variedDepthLayout = depths.takeIf { it.size > 1 }?.let { layout("Depth: Varies by dated report; see table", 7f, medium, INK, leftW.toInt()) }
+            val figureWidth = 92f / 2f - 4f
+            val figureHeight = (bodyView.y1 - bodyView.y0) * (figureWidth / (bodyView.x1 - bodyView.x0))
+            val depthHeight = when { depths.size == 1 -> 22f; variedDepthLayout != null -> variedDepthLayout.height.toFloat(); else -> 0f }
+            val detailHeight = (locationLayout?.height?.toFloat() ?: 0f) + (if (locationLayout != null && depthHeight > 0f) 5f else 0f) + depthHeight
+            val visualH = if (pins.isNotEmpty()) bodyTopOffset + figureHeight + 20f + detailHeight else 94f
             val h = maxOf(tableH, visualH)
             if (!ensure(h + 8f)) return
             val top = y
@@ -484,27 +518,26 @@ object Pdf {
             pts.forEach { c.drawCircle(it.first, it.second, 3f, dot) }
             tp.textSize = 7f; tp.color = SOFT; c.drawText("Oldest", graphLeft, plotTop + plotH + 10f, tp)
             val latest = "Latest"; c.drawText(latest, graphLeft + graphW - tp.measureText(latest), plotTop + plotH + 10f, tp)
-            note?.let { n -> val l = layout(n, 7f, regular, SOFT, leftW.toInt()); c.save(); c.translate(M, plotTop + plotH + 14f); l.draw(c); c.restore() }
+            noteLayout?.let { l -> c.save(); c.translate(M, plotTop + plotH + 16f); l.draw(c); c.restore() }
             if (pins.isNotEmpty()) {
-                bodyDiagram(M, top + 86f, 92f, pins, art, bodyView)
-                val locations = recordedLocations.ifEmpty { locationLabels(pins) }
-                if (locations.isNotEmpty()) {
-                    val words = if (locations.size == 1) locations.single() else "Varies by dated report; see table"
-                    val l = layout("Location: $words", 7.5f, medium, INK, leftW.toInt())
-                    c.save(); c.translate(M, top + 158f); l.draw(c); c.restore()
+                val bodyTop = top + bodyTopOffset
+                bodyDiagram(M, bodyTop, 92f, pins, art, bodyView)
+                var detailTop = bodyTop + figureHeight + 20f
+                locationLayout?.let { l ->
+                    c.save(); c.translate(M, detailTop); l.draw(c); c.restore()
+                    detailTop += l.height + 5f
                 }
                 if (depths.isNotEmpty()) {
                     val shown = if (depths.size == 1) depths else emptyList()
-                    var dx = M; val dy = top + 174f
+                    var dx = M; val dy = detailTop + 10f
                     shown.forEach { depth ->
                         depthArt(depth)?.let { bmp -> c.drawBitmap(bmp, null, RectF(dx, dy - 14f, dx + 18f, dy + 4f), Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG)) }
                         val caption = layout(depth, 7f, regular, SOFT, 42)
                         c.save(); c.translate(dx + 20f, dy - 10f); caption.draw(c); c.restore()
                         dx += 51f
                     }
-                    if (depths.size > 1) {
-                        val l = layout("Depth: Varies by dated report; see table", 7f, medium, INK, leftW.toInt())
-                        c.save(); c.translate(M, dy - 10f); l.draw(c); c.restore()
+                    variedDepthLayout?.let { l ->
+                        c.save(); c.translate(M, detailTop); l.draw(c); c.restore()
                     }
                 }
             }

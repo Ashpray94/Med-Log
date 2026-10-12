@@ -3,7 +3,7 @@
 Update this at the end of every chat: what changed, what's open, what wasn't verified.
 
 ## Now
-- Release candidate: **2.17.1** on branch `main-mxp0m4`.
+- Release candidate: **2.17.2** on branch `main-mxp0m4`; fixes overlapping graph/body/location/depth content found in the owner's 2.17.1 PDF.
 - Doctor PDF is a four-page clinical dashboard with highlighted concerns/questions, comparable line charts, dated episode tables,
   larger localized body markers, written locations, and non-ambiguous musculoskeletal depth details.
 - Feed outcomes are separated correctly; food-given-instead is complete rather than missed. Protein/calories include feeds only when

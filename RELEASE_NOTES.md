@@ -1,6 +1,8 @@
 MedLog VERSION makes doctor summaries faster and safer to review. Install over the existing app to preserve records.
 
 ## What's new
+- **PDF overlap fixed.** Graph notes, body maps, written locations and depth labels now use measured spacing, and issue headings stay with their details.
+- **Four-page limit protected.** Detailed charts are reserved for recurring issues; single reports remain in the overview so nutrition is not silently pushed out.
 - **Simple symptom totals.** Times noted means the number of symptom notes in the selected period. Daily graphs and last-noted times match the dated entries. Improvement updates are separate.
 - **Four-page clinical dashboard.** Important findings and questions for the doctor are highlighted; recurring issues retain their dated details.
 - **Comparable line charts.** Severity uses a 0–10 scale and frequency charts share one report-wide scale, with a clear ten-step grid.
